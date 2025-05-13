@@ -1,0 +1,34 @@
+# Файлы окружения (НИКОГДА не добавляйте их в Git!)
+.env*
+
+# Базы данных SQLite
+*.db
+*.db-journal*
+*.sqlite
+*.sqlite3
+
+# Лог-файлы
+*.log
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальные окружения (если используете)
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Специфичные для IDE/редакторов
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

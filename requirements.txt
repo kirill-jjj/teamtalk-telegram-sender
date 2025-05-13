@@ -1,0 +1,6 @@
+aiogram
+SQLAlchemy
+aiosqlite
+pytalk-ex
+python-dotenv
+uvloop
