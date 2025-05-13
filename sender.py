@@ -860,12 +860,19 @@ async def who_command_handler(
 
     users_word_total_val = ""
     if language == "ru":
-        if user_count_val == 1: users_word_total_val = get_text("who_users_count_singular", "ru")
-        elif 1 < user_count_val < 5: users_word_total_val = get_text("who_users_count_plural_2_4", "ru")
-        else: users_word_total_val = get_text("who_users_count_plural_5_more", "ru")
-    else: 
-        users_word_total_val = get_text("who_users_count_singular", "en") if user_count_val == 1 else get_text("who_users_count_plural_5_more", "en")
+        last_digit = user_count_val % 10
+        last_two_digits = user_count_val % 100
 
+        if last_two_digits >= 11 and last_two_digits <= 19:
+            users_word_total_val = get_text("who_users_count_plural_5_more", "ru")
+        elif last_digit == 1:
+            users_word_total_val = get_text("who_users_count_singular", "ru")
+        elif last_digit >= 2 and last_digit <= 4:
+            users_word_total_val = get_text("who_users_count_plural_2_4", "ru")
+        else:
+            users_word_total_val = get_text("who_users_count_plural_5_more", "ru")
+    else: # en
+        users_word_total_val = get_text("who_users_count_singular", "en") if user_count_val == 1 else get_text("who_users_count_plural_5_more", "en")
 
     text_reply = get_text("who_header", language, user_count=user_count_val, users_word=users_word_total_val)
 
