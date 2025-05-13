@@ -5,15 +5,15 @@ import os
 import sys
 import uuid
 from collections.abc import Callable, Coroutine
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
 try:
     import uvloop
     uvloop.install()
-    logging.info("Using uvloop.")
 except ImportError:
-    logging.info("uvloop not found, using standard asyncio loop.")
+    pass
 
 import pytalk
 from aiogram import Bot, Dispatcher, F, Router, html
@@ -48,6 +48,192 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 ttstr = pytalk.instance.sdk.ttstr
 
+LOCALIZED_STRINGS = {
+    "start_hello": {"en": "Hello! Use /help to see available commands.", "ru": "Привет! Используйте /help для просмотра доступных команд."},
+    "deeplink_invalid_or_expired": {"en": "Invalid or expired deeplink.", "ru": "Недействительная или истекшая ссылка."},
+    "deeplink_wrong_account": {"en": "This confirmation link was intended for a different Telegram account.", "ru": "Эта ссылка для подтверждения предназначена для другого Telegram аккаунта."},
+    "deeplink_subscribed": {"en": "You have successfully subscribed to notifications.", "ru": "Вы успешно подписались на уведомления."},
+    "deeplink_already_subscribed": {"en": "You are already subscribed to notifications.", "ru": "Вы уже подписаны на уведомления."},
+    "deeplink_unsubscribed": {"en": "You have successfully unsubscribed from notifications.", "ru": "Вы успешно отписались от уведомления."},
+    "deeplink_not_subscribed": {"en": "You were not subscribed to notifications.", "ru": "Вы не были подписаны на уведомления."},
+    "deeplink_noon_confirm_missing_payload": {"en": "Error: Missing TeamTalk username in confirmation link.", "ru": "Ошибка: В ссылке подтверждения отсутствует имя пользователя TeamTalk."},
+    "deeplink_noon_confirmed": {"en": "'Not on online' notifications enabled for TeamTalk user '{tt_username}'. You will receive silent notifications when this user is online on TeamTalk.", "ru": "Уведомления 'не в сети' включены для пользователя TeamTalk '{tt_username}'. Вы будете получать тихие уведомления, когда этот пользователь в сети TeamTalk."},
+    "deeplink_invalid_action": {"en": "Invalid deeplink action.", "ru": "Неверное действие deeplink."},
+    "error_occurred": {"en": "An error occurred.", "ru": "Произошла ошибка."},
+    "tt_bot_not_connected": {"en": "TeamTalk bot is not connected.", "ru": "Бот TeamTalk не подключен."},
+    "tt_error_getting_users": {"en": "Error getting users from TeamTalk.", "ru": "Ошибка получения пользователей из TeamTalk."},
+    "who_channel_in": {"en": "in {channel_name}", "ru": "в {channel_name}"},
+    "who_channel_under_server": {"en": "under server", "ru": "под сервером"},
+    "who_channel_root": {"en": "in root channel", "ru": "в корневом канале"},
+    "who_channel_unknown_location": {"en": "in unknown location", "ru": "в неизвестном месте"},
+    "who_user_unknown": {"en": "unknown user", "ru": "неизвестный пользователь"},
+    "who_and_separator": {"en": " and ", "ru": " и "},
+    "who_users_count_singular": {"en": "user", "ru": "пользователь"},
+    "who_users_count_plural_2_4": {"en": "users", "ru": "пользователя"},
+    "who_users_count_plural_5_more": {"en": "users", "ru": "пользователей"},
+    "who_header": {"en": "There are {user_count} {users_word} on the server:\n", "ru": "На сервере сейчас {user_count} {users_word}:\n"},
+    "who_no_users_online": {"en": "No users found online.", "ru": "Пользователей онлайн не найдено."},
+    "cl_prompt": {"en": "Please specify the language. Example: /cl en or /cl ru.", "ru": "Укажите язык. Пример: /cl en или /cl ru."},
+    "cl_changed": {"en": "Language changed to {new_lang}.", "ru": "Язык изменен на {new_lang}."},
+    "notify_all_set": {"en": "Join and leave notifications are enabled.", "ru": "Уведомления о входах и выходах включены."},
+    "notify_join_off_set": {"en": "Only leave notifications are enabled.", "ru": "Включены только уведомления о выходах."},
+    "notify_leave_off_set": {"en": "Only join notifications are enabled.", "ru": "Включены только уведомления о входах."},
+    "notify_none_set": {"en": "Join and leave notifications are disabled.", "ru": "Уведомления о входах и выходах отключены."},
+    "mute_prompt_user": {"en": "Please specify username to mute in format: /mute user <username>.", "ru": "Пожалуйста, укажите имя пользователя для мьюта в формате: /mute user <username>."},
+    "mute_username_empty": {"en": "Username cannot be empty.", "ru": "Имя пользователя не может быть пустым."},
+    "mute_already_muted": {"en": "User {username} was already muted.", "ru": "Пользователь {username} уже был замьючен."},
+    "mute_now_muted": {"en": "User {username} is now muted.", "ru": "Пользователь {username} теперь замьючен."},
+    "unmute_prompt_user": {"en": "Please specify username to unmute in format: /unmute user <username>.", "ru": "Пожалуйста, укажите имя пользователя для размьюта в формате: /unmute user <username>."},
+    "unmute_now_unmuted": {"en": "User {username} is now unmuted.", "ru": "Пользователь {username} теперь размьючен."},
+    "unmute_not_in_list": {"en": "User {username} was not in the mute list.", "ru": "Пользователь {username} не был в списке мьюта."},
+    "mute_all_enabled": {"en": "Mute all for join/leave notifications enabled (only exceptions will be notified).", "ru": "Мьют всех для уведомлений о входе/выходе включен (уведомления будут приходить только для исключений)."},
+    "unmute_all_disabled": {"en": "Mute all for join/leave notifications disabled (muted users won't be notified).", "ru": "Мьют всех для уведомлений о входе/выходе выключен (замьюченные пользователи не будут получать уведомления)."},
+    "noon_not_configured": {"en": "The 'not on online' feature is not configured for your account. Please set it up via TeamTalk using `/not on online`.", "ru": "Функция 'не в сети' не настроена для вашего аккаунта. Пожалуйста, настройте ее через TeamTalk командой `/not on online`."},
+    "noon_toggled_enabled": {"en": "'Not on online' notifications are now ENABLED for TeamTalk user '{tt_username}'. You will receive silent notifications when this user is online.", "ru": "Уведомления 'не в сети' теперь ВКЛЮЧЕНЫ для пользователя TeamTalk '{tt_username}'. Вы будете получать тихие уведомления, когда этот пользователь в сети."},
+    "noon_toggled_disabled": {"en": "'Not on online' notifications are now DISABLED for TeamTalk user '{tt_username}'. Notifications will be sent normally.", "ru": "Уведомления 'не в сети' теперь ВЫКЛЮЧЕНЫ для пользователя TeamTalk '{tt_username}'. Уведомления будут приходить как обычно."},
+    "noon_error_updating": {"en": "Error updating settings. Please try again.", "ru": "Ошибка обновления настроек. Пожалуйста, попробуйте снова."},
+    "noon_status_not_configured": {"en": "'Not on online' feature is not configured for your account. Use `/not on online` in TeamTalk to set it up.", "ru": "Функция 'не в сети' не настроена для вашего аккаунта. Используйте `/not on online` в TeamTalk для настройки."},
+    "noon_status_report": {"en": "'Not on online' notifications are {status} for TeamTalk user '{tt_username}'.", "ru": "Уведомления 'не в сети' {status_ru} для пользователя TeamTalk '{tt_username}'."},
+    "noon_status_enabled_en": "ENABLED", "noon_status_disabled_en": "DISABLED",
+    "noon_status_enabled_ru": "ВКЛЮЧЕНА", "noon_status_disabled_ru": "ВЫКЛЮЧЕНА",
+    "callback_invalid_data": {"en": "Invalid data received.", "ru": "Получены неверные данные."},
+    "callback_no_permission": {"en": "You do not have permission to execute this action.", "ru": "У вас нет прав на выполнение этого действия."},
+    "callback_error_find_user_tt": {"en": "Error finding user on TeamTalk.", "ru": "Ошибка поиска пользователя в TeamTalk."},
+    "callback_user_id_info": {"en": "User {user_nickname} has ID: {user_id}", "ru": "Пользователь {user_nickname} имеет ID: {user_id}"},
+    "callback_user_kicked": {"en": "User {user_nickname} kicked from server.", "ru": "Пользователь {user_nickname} был исключен с сервера."},
+    "callback_user_banned_kicked": {"en": "User {user_nickname} banned and kicked from server.", "ru": "Пользователь {user_nickname} был забанен и выкинут с сервера."},
+    "callback_error_action_user": {"en": "Error {action}ing user {user_nickname}: {error}", "ru": "Ошибка {action_ru} пользователя {user_nickname}: {error}"},
+    "callback_action_kick_gerund_ru": "исключения", "callback_action_ban_gerund_ru": "бана",
+    "callback_user_not_found_anymore": {"en": "User not found on server anymore.", "ru": "Пользователь больше не найден на сервере."},
+    "callback_unknown_action": {"en": "Unknown action.", "ru": "Неизвестное действие."},
+    "toggle_ignore_error_processing": {"en": "Error processing request.", "ru": "Ошибка обработки запроса."},
+    "toggle_ignore_error_empty_username": {"en": "Error: Empty username.", "ru": "Ошибка: Пустое имя пользователя."},
+    "toggle_ignore_now_ignored": {"en": "User {nickname} is now ignored.", "ru": "Пользователь {nickname} теперь игнорируется."},
+    "toggle_ignore_no_longer_ignored": {"en": "User {nickname} is no longer ignored.", "ru": "Пользователь {nickname} больше не игнорируется."},
+    "toggle_ignore_button_text": {"en": "Toggle ignore status: {nickname}", "ru": "Переключить статус игнорирования: {nickname}"},
+    "show_users_no_users_online": {"en": "No users online to select.", "ru": "Нет пользователей онлайн для выбора."},
+    "show_users_no_other_users_online": {"en": "No other users online to select.", "ru": "Нет других пользователей онлайн для выбора."},
+    "show_users_select_id": {"en": "Select a user to get ID:", "ru": "Выберите пользователя для получения ID:"},
+    "show_users_select_kick": {"en": "Select a user to kick:", "ru": "Выберите пользователя для кика:"},
+    "show_users_select_ban": {"en": "Select a user to ban:", "ru": "Выберите пользователя для бана:"},
+    "show_users_select_default": {"en": "Select a user:", "ru": "Выберите пользователя:"},
+    "unknown_command": {"en": "Unknown command. Use /help to see available commands.", "ru": "Неизвестная команда. Используйте /help для просмотра доступных команд."},
+    "tt_reply_success": {"en": "Message sent to Telegram successfully.", "ru": "Сообщение успешно отправлено в Telegram."},
+    "tt_reply_fail_invalid_token": {"en": "Failed to send message: Invalid token.", "ru": "Не удалось отправить сообщение: неверный токен."},
+    "tt_reply_fail_api_error": {"en": "Failed to send message: Telegram API Error: {error}", "ru": "Не удалось отправить сообщение: Ошибка Telegram API: {error}"},
+    "tt_reply_fail_generic_error": {"en": "Failed to send message: {error}", "ru": "Не удалось отправить сообщение: {error}"},
+    "tt_subscribe_deeplink_text": {"en": "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}", "ru": "Нажмите на эту ссылку, чтобы подписаться на уведомления (ссылка действительна 5 минут):\n{deeplink_url}"},
+    "tt_subscribe_error": {"en": "An error occurred while processing the subscription request.", "ru": "Произошла ошибка при обработке запроса на подписку."},
+    "tt_unsubscribe_deeplink_text": {"en": "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}", "ru": "Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка действительна 5 минут):\n{deeplink_url}"},
+    "tt_unsubscribe_error": {"en": "An error occurred while processing the unsubscription request.", "ru": "Произошла ошибка при обработке запроса на отписку."},
+    "tt_admin_cmd_no_permission": {"en": "You do not have permission to use this command.", "ru": "У вас нет прав на использование этой команды."},
+    "tt_add_admin_prompt_ids": {"en": "Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432", "ru": "Пожалуйста, укажите Telegram ID после команды. Пример: /add_admin 12345678 98765432"},
+    "tt_add_admin_success": {"en": "Successfully added {count} admin(s).", "ru": "Успешно добавлено администраторов: {count}."},
+    "tt_add_admin_error_already_admin": {"en": "ID {telegram_id} is already an admin or failed to add.", "ru": "ID {telegram_id} уже является администратором или не удалось добавить."},
+    "tt_add_admin_error_invalid_id": {"en": "'{telegram_id_str}' is not a valid numeric Telegram ID.", "ru": "'{telegram_id_str}' не является действительным числовым Telegram ID."},
+    "tt_admin_errors_header": {"en": "Errors:\n- ", "ru": "Ошибки:\n- "},
+    "tt_admin_info_errors_header": {"en": "Info/Errors:\n- ", "ru": "Информация/Ошибки:\n- "},
+    "tt_admin_no_valid_ids": {"en": "No valid IDs provided.", "ru": "Не предоставлено действительных ID."},
+    "tt_admin_error_processing": {"en": "An error occurred while processing the command.", "ru": "Произошла ошибка при обработке команды."},
+    "tt_remove_admin_prompt_ids": {"en": "Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432", "ru": "Пожалуйста, укажите Telegram ID после команды. Пример: /remove_admin 12345678 98765432"},
+    "tt_remove_admin_success": {"en": "Successfully removed {count} admin(s).", "ru": "Успешно удалено администраторов: {count}."},
+    "tt_remove_admin_error_not_found": {"en": "Admin with ID {telegram_id} not found.", "ru": "Администратор с ID {telegram_id} не найден."},
+    "tt_noon_usage": {"en": "Usage: /not on online", "ru": "Использование: /not on online"},
+    "tt_noon_confirm_deeplink_text": {"en": "To enable 'not on online' notifications for your TeamTalk user '{tt_username}', please open this link in Telegram and confirm (link valid for 5 minutes):\n{deeplink_url}", "ru": "Чтобы включить уведомления 'не в сети' для вашего пользователя TeamTalk '{tt_username}', пожалуйста, откройте эту ссылку в Telegram и подтвердите (ссылка действительна 5 минут):\n{deeplink_url}"},
+    "tt_noon_error_processing": {"en": "An error occurred while processing the request.", "ru": "Произошла ошибка при обработке запроса."},
+    "tt_unknown_command": {"en": "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help.", "ru": "Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help."},
+    "tt_forward_message_text": {"en": "Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}", "ru": "Сообщение с сервера {server_name}\nОт {sender_display}:\n\n{message_text}"},
+    "join_notification": {"en": "User {user_nickname} joined server {server_name}", "ru": "{user_nickname} присоединился к серверу {server_name}"},
+    "leave_notification": {"en": "User {user_nickname} left server {server_name}", "ru": "{user_nickname} покинул сервер {server_name}"},
+    "help_text_en": (
+            "This bot forwards messages from a TeamTalk server to Telegram and sends join/leave notifications.\n\n"
+            "**Telegram Commands:**\n"
+            "/who - Show online users.\n"
+            "/id - Get ID of a user (via buttons).\n"
+            "/kick - Kick a user from the server (admin, via buttons).\n"
+            "/ban - Ban a user from the server (admin, via buttons).\n"
+            "/cl `en|ru` - Change bot language.\n"
+            "/notify_all - Enable all join/leave notifications.\n"
+            "/notify_join_off - Disable join notifications.\n"
+            "/notify_leave_off - Disable leave notifications.\n"
+            "/notify_none - Disable all join/leave notifications.\n"
+            "/start - Start bot or process deeplink.\n"
+            "/mute user `<username>` - Add user to mute list (don't receive notifications).\n"
+            "/unmute user `<username>` - Remove user from mute list.\n"
+            "/mute_all - Enable 'mute all' mode (only get notifications for exceptions in the mute list).\n"
+            "/unmute_all - Disable 'mute all' mode (get notifications for everyone except the mute list).\n"
+            "/toggle_noon - Toggle silent notifications if your linked TeamTalk user is online.\n"
+            "/my_noon_status - Check your 'not on online' feature status.\n"
+            "/help - Show this help message.\n\n"
+            "**Note on Mutes and 'Toggle ignore status' Buttons:**\n"
+            "- The 'Toggle ignore status' button under join/leave messages manages your personal mute list for that TeamTalk user.\n"
+            "- When `/mute_all` is **disabled** (default): the mute list contains users you **don't** get notifications from. Pressing the button toggles if the user is in this list.\n"
+            "- When `/mute_all` is **enabled**: the mute list contains users you **do** get notifications from (exceptions). Pressing the button toggles if the user is in this exception list.\n"
+            "- `/unmute_all` always disables `/mute_all` and clears the list.\n\n"
+            "**Note on 'Not on Online' feature (/toggle_noon):**\n"
+            "- First, set it up via TeamTalk: `/not on online` in a private message to the TeamTalk bot.\n"
+            "- After confirming via the link in Telegram, this feature will be active.\n"
+            "- If your linked TeamTalk user is online, Telegram notifications will be silent.\n\n"
+            "**TeamTalk Commands (in private message to the bot):**\n"
+            "/sub - Get a link to subscribe to notifications.\n"
+            "/unsub - Get a link to unsubscribe from notifications.\n"
+            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (ADMIN_USERNAME from .env only).\n"
+            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (ADMIN_USERNAME from .env only).\n"
+            "/not on online - Set up silent notifications for when you are online in TeamTalk.\n"
+            "/help - Show help."
+    ),
+    "help_text_ru": (
+            "Этот бот пересылает сообщения с TeamTalk сервера в Telegram и уведомляет о входе/выходе пользователей.\n\n"
+            "**Команды Telegram:**\n"
+            "/who - Показать онлайн пользователей.\n"
+            "/id - Получить ID пользователя (через кнопки).\n"
+            "/kick - Кикнуть пользователя с сервера (админ, через кнопки).\n"
+            "/ban - Забанить пользователя на сервере (админ, через кнопки).\n"
+            "/cl `en|ru` - Изменить язык бота.\n"
+            "/notify_all - Включить все уведомления.\n"
+            "/notify_join_off - Выключить уведомления о входах.\n"
+            "/notify_leave_off - Выключить уведомления о выходах.\n"
+            "/notify_none - Выключить все уведомления.\n"
+            "/start - Запустить бота или обработать deeplink.\n"
+            "/mute user `<username>` - Добавить пользователя в список мьюта (не получать уведомления).\n"
+            "/unmute user `<username>` - Удалить пользователя из списка мьюта.\n"
+            '/mute_all - Включить режим "мьют всех" (уведомления только для исключений из списка мьюта).\n'
+            '/unmute_all - Выключить режим "мьют всех" (уведомления для всех, кроме списка мьюта).\n'
+            "/toggle_noon - Включить/выключить тихие уведомления, если связанный пользователь TeamTalk онлайн.\n"
+            "/my_noon_status - Проверить статус функции 'не в сети'.\n"
+            "/help - Показать это сообщение.\n\n"
+            "**Примечание по мьютам и кнопкам 'Переключить статус игнорирования':**\n"
+            "- Кнопка 'Переключить статус игнорирования' под сообщениями о входе/выходе управляет вашим персональным списком мьюта для этого пользователя TeamTalk.\n"
+            "- Когда `/mute_all` **выключен** (по умолчанию): список мьюта содержит тех, от кого **не** приходят уведомления. Нажатие кнопки переключает, будет ли пользователь в этом списке.\n"
+            "- Когда `/mute_all` **включен**: список мьюта содержит тех, от кого **приходят** уведомления (исключения). Нажатие кнопки переключает, будет ли пользователь в этом списке исключений.\n"
+            "- `/unmute_all` всегда выключает `/mute_all` и очищает список.\n\n"
+            "**Примечание по функции 'не в сети' (/toggle_noon):**\n"
+            "- Сначала настройте через TeamTalk: `/not on online` в личные сообщения боту TeamTalk.\n"
+            "- После подтверждения по ссылке в Telegram, эта функция будет активна.\n"
+            "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука.\n\n"
+            "**Команды TeamTalk (в личные сообщения боту):**\n"
+            "/sub - Получить ссылку для подписки на уведомления.\n"
+            "/unsub - Получить ссылку для отписки от уведомлений.\n"
+            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ADMIN_USERNAME из .env).\n"
+            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ADMIN_USERNAME из .env).\n"
+            "/not on online - Настроить тихие уведомления, когда вы онлайн в TeamTalk.\n"
+            "/help - Показать справку."
+    )
+}
+
+def get_text(key: str, lang: str, **kwargs) -> str:
+    default_lang = "en"
+    message_template = LOCALIZED_STRINGS.get(key, {}).get(lang)
+    if message_template is None:
+        message_template = LOCALIZED_STRINGS.get(key, {}).get(default_lang, f"[{key}_{lang}]")
+    
+    try:
+        return message_template.format(**kwargs)
+    except KeyError as e:
+        logging.warning(f"Missing placeholder {e} for key '{key}' in lang '{lang}' with kwargs {kwargs}")
+        return message_template
+
+
 class InfoFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == logging.INFO
@@ -67,7 +253,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def load_config(env_path: str | None = None) -> dict[str, str]:
+def load_config(env_path: str | None = None) -> dict[str, Any]:
     load_dotenv(dotenv_path=env_path)
     config_data = {
         "TG_BOT_TOKEN": os.getenv("TG_BOT_TOKEN"),
@@ -93,6 +279,11 @@ def load_config(env_path: str | None = None) -> dict[str, str]:
         raise ValueError("Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file.")
     if not config_data["HOSTNAME"] or not config_data["USERNAME"] or not config_data["PASSWORD"] or not config_data["CHANNEL"] or not config_data["NICKNAME"]:
         raise ValueError("Missing other required environment variables. Check .env file.")
+    if config_data["TG_ADMIN_CHAT_ID"]:
+        try:
+            config_data["TG_ADMIN_CHAT_ID"] = int(config_data["TG_ADMIN_CHAT_ID"])
+        except ValueError:
+            raise ValueError("TG_ADMIN_CHAT_ID must be a valid integer.")
     return config_data
 
 MIN_ARGS_FOR_ENV_PATH = 2
@@ -145,7 +336,41 @@ class UserSettings(Base):
     not_on_online_confirmed = Column(Boolean, default=False)
     __table_args__ = (Index("ix_user_settings_telegram_id", "telegram_id"),)
 
-USER_SETTINGS_CACHE: dict[int, dict[str, Any]] = {}
+@dataclass
+class UserSpecificSettings:
+    language: str = "en"
+    notification_settings: NotificationSetting = NotificationSetting.ALL
+    muted_users_set: set[str] = field(default_factory=set)
+    mute_all_flag: bool = False
+    teamtalk_username: str | None = None
+    not_on_online_enabled: bool = False
+    not_on_online_confirmed: bool = False
+
+    @classmethod
+    def from_db_row(cls, settings_row: UserSettings | None):
+        if not settings_row:
+            return cls()
+        return cls(
+            language=settings_row.language,
+            notification_settings=settings_row.notification_settings,
+            muted_users_set=set(settings_row.muted_users.split(",")) if settings_row.muted_users else set(),
+            mute_all_flag=settings_row.mute_all,
+            teamtalk_username=settings_row.teamtalk_username,
+            not_on_online_enabled=settings_row.not_on_online_enabled,
+            not_on_online_confirmed=settings_row.not_on_online_confirmed,
+        )
+
+    def to_cache_dict(self) -> dict[str, Any]:
+         return {
+            "language": self.language,
+            "notification_settings": self.notification_settings,
+            "mute_settings": {"muted_users": self.muted_users_set, "mute_all": self.mute_all_flag},
+            "teamtalk_username": self.teamtalk_username,
+            "not_on_online_enabled": self.not_on_online_enabled,
+            "not_on_online_confirmed": self.not_on_online_confirmed,
+        }
+
+USER_SETTINGS_CACHE: dict[int, UserSpecificSettings] = {}
 login_complete_time: datetime | None = None
 
 async def load_user_settings_to_cache(session_factory: sessionmaker) -> None:
@@ -154,50 +379,32 @@ async def load_user_settings_to_cache(session_factory: sessionmaker) -> None:
         result = await session.execute(select(UserSettings))
         user_settings_list = result.scalars().all()
         for settings_row in user_settings_list:
-            USER_SETTINGS_CACHE[settings_row.telegram_id] = {
-                "language": settings_row.language,
-                "notification_settings": settings_row.notification_settings,
-                "mute_settings": {"muted_users": set(settings_row.muted_users.split(",")) if settings_row.muted_users else set(), "mute_all": settings_row.mute_all},
-                "teamtalk_username": settings_row.teamtalk_username,
-                "not_on_online_enabled": settings_row.not_on_online_enabled,
-                "not_on_online_confirmed": settings_row.not_on_online_confirmed,
-            }
+            USER_SETTINGS_CACHE[settings_row.telegram_id] = UserSpecificSettings.from_db_row(settings_row)
     logger.info(f"{len(USER_SETTINGS_CACHE)} user settings loaded into cache.")
 
-async def _async_load_user_settings(telegram_id: int, session: AsyncSession):
+async def _async_load_user_settings(telegram_id: int, session: AsyncSession) -> UserSpecificSettings:
     user_settings_row = await session.get(UserSettings, telegram_id)
     if user_settings_row:
-        USER_SETTINGS_CACHE[telegram_id] = {
-            "language": user_settings_row.language,
-            "notification_settings": user_settings_row.notification_settings,
-            "mute_settings": {"muted_users": set(user_settings_row.muted_users.split(",")) if user_settings_row.muted_users else set(), "mute_all": user_settings_row.mute_all},
-            "teamtalk_username": user_settings_row.teamtalk_username,
-            "not_on_online_enabled": user_settings_row.not_on_online_enabled,
-            "not_on_online_confirmed": user_settings_row.not_on_online_confirmed,
-        }
+        specific_settings = UserSpecificSettings.from_db_row(user_settings_row)
+        USER_SETTINGS_CACHE[telegram_id] = specific_settings
+        return specific_settings
     else:
-        default_settings_data = {
-            "language": "en",
-            "notification_settings": NotificationSetting.ALL,
-            "mute_settings": {"muted_users": set(), "mute_all": False},
-            "teamtalk_username": None,
-            "not_on_online_enabled": False,
-            "not_on_online_confirmed": False,
-        }
-        USER_SETTINGS_CACHE[telegram_id] = default_settings_data
+        default_settings = UserSpecificSettings()
+        USER_SETTINGS_CACHE[telegram_id] = default_settings
         new_settings_row = UserSettings(
             telegram_id=telegram_id,
-            language=default_settings_data["language"],
-            notification_settings=default_settings_data["notification_settings"],
-            muted_users="",
-            mute_all=default_settings_data["mute_settings"]["mute_all"],
-            teamtalk_username=default_settings_data["teamtalk_username"],
-            not_on_online_enabled=default_settings_data["not_on_online_enabled"],
-            not_on_online_confirmed=default_settings_data["not_on_online_confirmed"],
+            language=default_settings.language,
+            notification_settings=default_settings.notification_settings,
+            muted_users=",".join(sorted(list(default_settings.muted_users_set))),
+            mute_all=default_settings.mute_all_flag,
+            teamtalk_username=default_settings.teamtalk_username,
+            not_on_online_enabled=default_settings.not_on_online_enabled,
+            not_on_online_confirmed=default_settings.not_on_online_confirmed,
         )
         session.add(new_settings_row)
         await session.commit()
         logger.info(f"Created default settings for user {telegram_id}")
+        return default_settings
 
 async def db_add(session: AsyncSession, model: Base, **kwargs):
     try:
@@ -323,36 +530,23 @@ class UserSettingsMiddleware(BaseMiddleware):
     ) -> Any:
         user_obj = data.get("event_from_user")
         session_obj: AsyncSession | None = data.get("session")
+        user_specific_settings: UserSpecificSettings
 
         if user_obj and session_obj:
             telegram_id_val = user_obj.id
             if telegram_id_val not in USER_SETTINGS_CACHE:
-                await _async_load_user_settings(telegram_id_val, session_obj)
-
-            user_settings_data = USER_SETTINGS_CACHE.get(telegram_id_val, {
-                "language": "en",
-                "notification_settings": NotificationSetting.ALL,
-                "mute_settings": {"muted_users": set(), "mute_all": False},
-                "teamtalk_username": None,
-                "not_on_online_enabled": False,
-                "not_on_online_confirmed": False,
-            })
-            data["user_settings"] = user_settings_data
+                user_specific_settings = await _async_load_user_settings(telegram_id_val, session_obj)
+            else:
+                user_specific_settings = USER_SETTINGS_CACHE[telegram_id_val]
         else:
-            data["user_settings"] = {
-                "language": "en",
-                "notification_settings": NotificationSetting.ALL,
-                "mute_settings": {"muted_users": set(), "mute_all": False},
-                "teamtalk_username": None,
-                "not_on_online_enabled": False,
-                "not_on_online_confirmed": False,
-            }
-        current_user_settings = data["user_settings"]
-        data["language"] = current_user_settings.get("language", "en")
-        data["notification_settings"] = current_user_settings.get("notification_settings", NotificationSetting.ALL)
-        data["mute_settings"] = current_user_settings.get("mute_settings", {"muted_users": set(), "mute_all": False})
+            user_specific_settings = UserSpecificSettings()
 
+        data["user_specific_settings"] = user_specific_settings
+        data["language"] = user_specific_settings.language
+        data["notification_settings"] = user_specific_settings.notification_settings
+        data["mute_settings"] = {"muted_users": user_specific_settings.muted_users_set, "mute_all": user_specific_settings.mute_all_flag}
         return await handler(event, data)
+
 
 class TeamTalkInstanceMiddleware(BaseMiddleware):
     def __init__(self, tt_bot_instance: pytalk.TeamTalkBot):
@@ -388,19 +582,19 @@ async def send_telegram_message(
     if not bot_to_use:
         logger.error(f"No Telegram bot instance available for token: {token}")
         if reply_tt:
-            reply_tt("Failed to send message: Invalid token.")
+            reply_tt(get_text("tt_reply_fail_invalid_token", language))
         return False
 
     send_silently = False
     recipient_settings = USER_SETTINGS_CACHE.get(chat_id)
 
     if recipient_settings and \
-       recipient_settings.get("not_on_online_enabled") and \
-       recipient_settings.get("not_on_online_confirmed") and \
-       recipient_settings.get("teamtalk_username") and \
+       recipient_settings.not_on_online_enabled and \
+       recipient_settings.not_on_online_confirmed and \
+       recipient_settings.teamtalk_username and \
        tt_instance_for_check:
 
-        tt_username_to_check = recipient_settings["teamtalk_username"]
+        tt_username_to_check = recipient_settings.teamtalk_username
         try:
             is_tt_user_online = False
             if tt_instance_for_check.connected and tt_instance_for_check.logged_in:
@@ -411,7 +605,6 @@ async def send_telegram_message(
                         break
             else:
                 logger.warning(f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id}.")
-
 
             if is_tt_user_online:
                 send_silently = True
@@ -446,22 +639,19 @@ async def send_telegram_message(
             except Exception as db_err:
                 logger.error(f"Failed to unsubscribe blocked user {chat_id} from DB: {db_err}")
             message_sent = False
-
         else:
             logger.error(f"Telegram API error sending to {chat_id}: {e}")
             if reply_tt:
-                reply_tt(f"Failed to send message: Telegram API Error: {e}")
+                reply_tt(get_text("tt_reply_fail_api_error", language, error=str(e)))
             message_sent = False
-
     except Exception as e:
         logger.error(f"Error sending Telegram message to {chat_id}: {e}")
         if reply_tt:
-            reply_tt(f"Failed to send message: {e}")
+            reply_tt(get_text("tt_reply_fail_generic_error", language, error=str(e)))
         message_sent = False
 
     if message_sent and reply_tt:
-        reply_tt("Message sent to Telegram successfully." if language == "en" else "Сообщение успешно отправлено в Telegram.")
-
+        reply_tt(get_text("tt_reply_success", language))
     return message_sent
 
 
@@ -478,7 +668,7 @@ async def send_telegram_messages(
     tasks_list = []
     for chat_id_val in chat_ids:
         user_settings_val = USER_SETTINGS_CACHE.get(chat_id_val)
-        language_val = user_settings_val.get("language", "en") if user_settings_val else "en"
+        language_val = user_settings_val.language if user_settings_val else "en"
         text_val = text_generator(language_val)
 
         current_reply_markup_val = None
@@ -501,85 +691,126 @@ admin_router = Router(name="admin_commands")
 callback_router = Router(name="callbacks")
 catch_all_router = Router(name="catch_all")
 
+
+async def _handle_subscribe_deeplink(session: AsyncSession, telegram_id: int, language: str) -> str:
+    if await add_subscriber(session, telegram_id):
+        logger.info(f"User {telegram_id} subscribed via deeplink.")
+        return get_text("deeplink_subscribed", language)
+    return get_text("deeplink_already_subscribed", language)
+
+async def _handle_unsubscribe_deeplink(session: AsyncSession, telegram_id: int, language: str) -> str:
+    if await remove_subscriber(session, telegram_id):
+        logger.info(f"User {telegram_id} unsubscribed via deeplink.")
+        USER_SETTINGS_CACHE.pop(telegram_id, None)
+        logger.info(f"Removed user {telegram_id} from settings cache after unsubscribe.")
+        return get_text("deeplink_unsubscribed", language)
+    return get_text("deeplink_not_subscribed", language)
+
+async def _handle_confirm_noon_deeplink(session: AsyncSession, telegram_id: int, language: str, payload: str | None) -> str:
+    tt_username_from_payload = payload
+    if not tt_username_from_payload:
+        logger.error("Deeplink for 'confirm_not_on_online' missing payload.")
+        return get_text("deeplink_noon_confirm_missing_payload", language)
+
+    db_user_settings = await session.get(UserSettings, telegram_id)
+    if not db_user_settings:
+        db_user_settings = UserSettings(telegram_id=telegram_id)
+        session.add(db_user_settings)
+
+    db_user_settings.teamtalk_username = tt_username_from_payload
+    db_user_settings.not_on_online_enabled = True
+    db_user_settings.not_on_online_confirmed = True
+    await session.commit()
+
+    if telegram_id in USER_SETTINGS_CACHE:
+        USER_SETTINGS_CACHE[telegram_id].teamtalk_username = tt_username_from_payload
+        USER_SETTINGS_CACHE[telegram_id].not_on_online_enabled = True
+        USER_SETTINGS_CACHE[telegram_id].not_on_online_confirmed = True
+    else:
+        await _async_load_user_settings(telegram_id, session)
+
+    logger.info(f"User {telegram_id} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink.")
+    return get_text("deeplink_noon_confirmed", language, tt_username=html.quote(tt_username_from_payload))
+
+DEEPLINK_ACTION_HANDLERS: dict[str, Callable[..., Coroutine[Any, Any, str]]] = {
+    "subscribe": _handle_subscribe_deeplink,
+    "unsubscribe": _handle_unsubscribe_deeplink,
+    "confirm_not_on_online": _handle_confirm_noon_deeplink,
+}
+
 @user_commands_router.message(Command("start"))
 async def start_command_handler(
     message: Message,
     command: CommandObject,
     session: AsyncSession,
     language: str,
-    user_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
     token_val = command.args
     if token_val:
-        await handle_deeplink(message, token_val, session, language, user_settings)
+        await handle_deeplink(message, token_val, session, language, user_specific_settings)
     else:
-        await handle_start_command(message, language)
+        await message.reply(get_text("start_hello", language))
 
-async def handle_start_command(message: Message, language: str):
-    await message.reply("Hello! Use /help to see available commands." if language == "en" else "Привет! Используйте /help для просмотра доступных команд.")
-
-async def handle_deeplink(message: Message, token: str, session: AsyncSession, language: str, user_settings: dict):
+async def handle_deeplink(message: Message, token: str, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
     deeplink_obj = await get_deeplink(session, token)
     if not deeplink_obj:
-        await message.reply("Invalid or expired deeplink." if language == "en" else "Недействительная или истекшая ссылка.")
+        await message.reply(get_text("deeplink_invalid_or_expired", language))
         return
 
     telegram_id_val = message.from_user.id
-    reply_text_val = "An error occurred." if language == "en" else "Произошла ошибка."
+    reply_text_val = get_text("error_occurred", language)
 
     if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != telegram_id_val:
-        await message.reply("This confirmation link was intended for a different Telegram account." if language == "en" else "Эта ссылка для подтверждения предназначена для другого Telegram аккаунта.")
+        await message.reply(get_text("deeplink_wrong_account", language))
         return
 
-    if deeplink_obj.action == "subscribe":
-        if await add_subscriber(session, telegram_id_val):
-            reply_text_val = "You have successfully subscribed to notifications." if language == "en" else "Вы успешно подписались на уведомления."
-            logger.info(f"User {telegram_id_val} subscribed via deeplink {token}")
+    handler = DEEPLINK_ACTION_HANDLERS.get(deeplink_obj.action)
+    if handler:
+        if deeplink_obj.action == "confirm_not_on_online":
+            reply_text_val = await handler(session, telegram_id_val, language, deeplink_obj.payload)
         else:
-            reply_text_val = "You are already subscribed to notifications." if language == "en" else "Вы уже подписаны на уведомления."
-    elif deeplink_obj.action == "unsubscribe":
-        if await remove_subscriber(session, telegram_id_val):
-            reply_text_val = "You have successfully unsubscribed from notifications." if language == "en" else "Вы успешно отписались от уведомления."
-            logger.info(f"User {telegram_id_val} unsubscribed via deeplink {token}")
-            USER_SETTINGS_CACHE.pop(telegram_id_val, None)
-            logger.info(f"Removed user {telegram_id_val} from settings cache after unsubscribe.")
-        else:
-            reply_text_val = "You were not subscribed to notifications." if language == "en" else "Вы не были подписаны на уведомления."
-    elif deeplink_obj.action == "confirm_not_on_online":
-        tt_username_from_payload = deeplink_obj.payload
-        if not tt_username_from_payload:
-            reply_text_val = "Error: Missing TeamTalk username in confirmation link." if language == "en" else "Ошибка: В ссылке подтверждения отсутствует имя пользователя TeamTalk."
-            logger.error(f"Deeplink {token} for 'confirm_not_on_online' missing payload.")
-        else:
-            db_user_settings = await session.get(UserSettings, telegram_id_val)
-            if not db_user_settings:
-                db_user_settings = UserSettings(telegram_id=telegram_id_val)
-                session.add(db_user_settings)
-
-            db_user_settings.teamtalk_username = tt_username_from_payload
-            db_user_settings.not_on_online_enabled = True
-            db_user_settings.not_on_online_confirmed = True
-            await session.commit()
-
-            if telegram_id_val in USER_SETTINGS_CACHE:
-                USER_SETTINGS_CACHE[telegram_id_val]["teamtalk_username"] = tt_username_from_payload
-                USER_SETTINGS_CACHE[telegram_id_val]["not_on_online_enabled"] = True
-                USER_SETTINGS_CACHE[telegram_id_val]["not_on_online_confirmed"] = True
-            else:
-                await _async_load_user_settings(telegram_id_val, session)
-
-            reply_text_val = (f"'Not on online' notifications enabled for TeamTalk user '{html.quote(tt_username_from_payload)}'. "
-                              "You will receive silent notifications when this user is online on TeamTalk."
-                              if language == "en" else
-                              f"Уведомления 'не в сети' включены для пользователя TeamTalk '{html.quote(tt_username_from_payload)}'. "
-                              "Вы будете получать тихие уведомления, когда этот пользователь в сети TeamTalk.")
-            logger.info(f"User {telegram_id_val} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink {token}")
+            reply_text_val = await handler(session, telegram_id_val, language)
     else:
-        reply_text_val = "Invalid deeplink action." if language == "en" else "Неверное действие deeplink."
+        reply_text_val = get_text("deeplink_invalid_action", language)
         logger.warning(f"Invalid deeplink action '{deeplink_obj.action}' for token {token}")
 
     await message.reply(reply_text_val)
     await delete_deeplink(session, token)
+
+
+def _get_user_display_channel_name(user_obj: TeamTalkUser, is_caller_admin: bool, language: str) -> str:
+    channel_obj = user_obj.channel
+    user_display_channel_name_val = ""
+    is_channel_hidden_val = False
+
+    if channel_obj:
+        try:
+            if (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0:
+                is_channel_hidden_val = True
+        except AttributeError:
+            logger.warning(f"Could not determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden.")
+        except Exception as e_chan:
+            logger.error(f"Error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}")
+
+    if is_caller_admin:
+        if channel_obj and channel_obj.id != 1 and channel_obj.id != 0 and channel_obj.id != -1:
+            user_display_channel_name_val = get_text("who_channel_in", language, channel_name=ttstr(channel_obj.name))
+        elif not channel_obj or channel_obj.id in [0, -1]:
+            user_display_channel_name_val = get_text("who_channel_under_server", language)
+        else:
+            user_display_channel_name_val = get_text("who_channel_root", language)
+    elif is_channel_hidden_val:
+        user_display_channel_name_val = get_text("who_channel_under_server", language)
+    elif channel_obj and channel_obj.id != 1 and channel_obj.id != 0 and channel_obj.id != -1:
+        user_display_channel_name_val = get_text("who_channel_in", language, channel_name=ttstr(channel_obj.name))
+    elif not channel_obj or channel_obj.id in [0, -1]:
+        user_display_channel_name_val = get_text("who_channel_under_server", language)
+    else:
+        user_display_channel_name_val = get_text("who_channel_root", language)
+
+    return user_display_channel_name_val or get_text("who_channel_unknown_location", language)
+
 
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
@@ -589,66 +820,27 @@ async def who_command_handler(
     session: AsyncSession
 ):
     if not tt_instance:
-        await message.reply("TeamTalk bot is not connected." if language == "en" else "Бот TeamTalk не подключен.")
+        await message.reply(get_text("tt_bot_not_connected", language))
         return
 
     try:
         all_users_list = tt_instance.server.get_users()
     except Exception as e:
         logger.error(f"Failed to get users from TT: {e}")
-        await message.reply("Error getting users from TeamTalk." if language == "en" else "Ошибка получения пользователей из TeamTalk.")
+        await message.reply(get_text("tt_error_getting_users", language))
         return
 
     is_caller_admin_val = await is_admin(session, message.from_user.id)
-
     users_to_display_count_val = 0
     channels_display_data_val: dict[str, list[str]] = {}
 
     for user_obj in all_users_list:
-        channel_obj = user_obj.channel
-        user_display_channel_name_val = ""
-
-        is_channel_hidden_val = False
-        if channel_obj:
-            try:
-                if (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0:
-                    is_channel_hidden_val = True
-            except AttributeError:
-                logger.warning(f"Could not determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden.")
-            except Exception as e_chan:
-                 logger.error(f"Error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}")
-
-        if is_caller_admin_val:
-            if channel_obj and channel_obj.id != 1 and channel_obj.id != 0 and channel_obj.id != -1:
-                user_display_channel_name_val = (f"in {ttstr(channel_obj.name)}" if language == "en"
-                                             else f"в {ttstr(channel_obj.name)}")
-            elif not channel_obj or channel_obj.id in [0, -1]:
-                user_display_channel_name_val = ("under server" if language == "en"
-                                             else "под сервером")
-            else:
-                user_display_channel_name_val = ("in root channel" if language == "en"
-                                             else "в корневом канале")
-        elif is_channel_hidden_val:
-            user_display_channel_name_val = ("under server" if language == "en"
-                                         else "под сервером")
-        elif channel_obj and channel_obj.id != 1 and channel_obj.id != 0 and channel_obj.id != -1:
-            user_display_channel_name_val = (f"in {ttstr(channel_obj.name)}" if language == "en"
-                                         else f"в {ttstr(channel_obj.name)}")
-        elif not channel_obj or channel_obj.id in [0, -1]:
-            user_display_channel_name_val = ("under server" if language == "en"
-                                         else "под сервером")
-        else:
-            user_display_channel_name_val = ("in root channel" if language == "en"
-                                         else "в корневом канале")
-
-        if not user_display_channel_name_val:
-            user_display_channel_name_val = ("in unknown location" if language == "en" else "в неизвестном месте")
-
+        user_display_channel_name_val = _get_user_display_channel_name(user_obj, is_caller_admin_val, language)
 
         if user_display_channel_name_val not in channels_display_data_val:
             channels_display_data_val[user_display_channel_name_val] = []
 
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or ("unknown user" if language == "en" else "неизвестный пользователь")
+        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("who_user_unknown", language)
         channels_display_data_val[user_display_channel_name_val].append(user_nickname_val)
         users_to_display_count_val += 1
 
@@ -659,29 +851,28 @@ async def who_command_handler(
         user_text_segment_val = ""
         if users_in_channel_list_val:
             if len(users_in_channel_list_val) > 1:
-                user_separator_val = " and " if language == "en" else " и "
+                user_separator_val = get_text("who_and_separator", language)
                 user_list_except_last_segment_val = ", ".join(users_in_channel_list_val[:-1])
                 user_text_segment_val = f"{user_list_except_last_segment_val}{user_separator_val}{users_in_channel_list_val[-1]}"
             else:
                 user_text_segment_val = users_in_channel_list_val[0]
             channel_info_parts_val.append(f"{user_text_segment_val} {display_channel_name_val}")
 
-    users_word_total_localized_val = {
-        "en": "user" if user_count_val == 1 else "users",
-        "ru": "пользователь" if user_count_val == 1 else ("пользователя" if 1 < user_count_val < 5 else "пользователей")
-    }
-    users_word_total_val = users_word_total_localized_val[language]
+    users_word_total_val = ""
+    if language == "ru":
+        if user_count_val == 1: users_word_total_val = get_text("who_users_count_singular", "ru")
+        elif 1 < user_count_val < 5: users_word_total_val = get_text("who_users_count_plural_2_4", "ru")
+        else: users_word_total_val = get_text("who_users_count_plural_5_more", "ru")
+    else: 
+        users_word_total_val = get_text("who_users_count_singular", "en") if user_count_val == 1 else get_text("who_users_count_plural_5_more", "en")
 
-    text_localized_val = {
-        "en": f"There are {user_count_val} {users_word_total_val} on the server:\n",
-        "ru": f"На сервере сейчас {user_count_val} {users_word_total_val}:\n"
-    }
-    text_reply = text_localized_val[language]
+
+    text_reply = get_text("who_header", language, user_count=user_count_val, users_word=users_word_total_val)
 
     if channel_info_parts_val:
         text_reply += "\n".join(channel_info_parts_val)
     else:
-         text_reply += "No users found online." if language == "en" else "Пользователей онлайн не найдено."
+         text_reply += get_text("who_no_users_online", language)
 
     await message.reply(text_reply)
 
@@ -695,18 +886,19 @@ async def id_command_handler(
 
 @user_commands_router.message(Command("help"))
 async def help_command_handler(message: Message, language: str):
-    help_text_val = get_help_text(language)
-    await message.reply(help_text_val)
+    help_text_key = "help_text_ru" if language == "ru" else "help_text_en"
+    await message.reply(get_text(help_text_key, language))
 
 @settings_router.message(Command("cl"))
 async def cl_command_handler(
     message: Message,
     command: CommandObject,
     session: AsyncSession,
-    language: str
+    language: str,
+    user_specific_settings: UserSpecificSettings
 ):
     if not command.args or command.args.lower() not in ["en", "ru"]:
-        await message.reply("Please specify the language. Example: /cl en or /cl ru." if language == "en" else "Укажите язык. Пример: /cl en или /cl ru.")
+        await message.reply(get_text("cl_prompt", language))
         return
 
     new_lang_val = command.args.lower()
@@ -720,14 +912,12 @@ async def cl_command_handler(
         user_settings_obj.language = new_lang_val
     await session.commit()
 
-    if telegram_id_val in USER_SETTINGS_CACHE:
-        USER_SETTINGS_CACHE[telegram_id_val]["language"] = new_lang_val
-    else:
-         await _async_load_user_settings(telegram_id_val, session)
+    user_specific_settings.language = new_lang_val
+    USER_SETTINGS_CACHE[telegram_id_val] = user_specific_settings
 
-    await message.reply(f"Language changed to {new_lang_val}." if new_lang_val == "en" else f"Язык изменен на {new_lang_val}.")
+    await message.reply(get_text("cl_changed", new_lang_val, new_lang=new_lang_val))
 
-async def set_notification_settings_command(message: Message, settings_val: NotificationSetting, session: AsyncSession, language: str):
+async def set_notification_settings_command(message: Message, settings_val: NotificationSetting, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
     telegram_id_val = message.from_user.id
     user_settings_obj = await session.get(UserSettings, telegram_id_val)
     if not user_settings_obj:
@@ -737,64 +927,63 @@ async def set_notification_settings_command(message: Message, settings_val: Noti
         user_settings_obj.notification_settings = settings_val
     await session.commit()
 
-    if telegram_id_val in USER_SETTINGS_CACHE:
-        USER_SETTINGS_CACHE[telegram_id_val]["notification_settings"] = settings_val
-    else:
-         await _async_load_user_settings(telegram_id_val, session)
+    user_specific_settings.notification_settings = settings_val
+    USER_SETTINGS_CACHE[telegram_id_val] = user_specific_settings
 
     settings_messages_map = {
-        NotificationSetting.ALL: "Join and leave notifications are enabled." if language == "en" else "Уведомления о входах и выходах включены.",
-        NotificationSetting.JOIN_OFF: "Only leave notifications are enabled." if language == "en" else "Включены только уведомления о выходах.",
-        NotificationSetting.LEAVE_OFF: "Only join notifications are enabled." if language == "en" else "Включены только уведомления о входах.",
-        NotificationSetting.NONE: "Join and leave notifications are disabled." if language == "en" else "Уведомления о входах и выходах отключены.",
+        NotificationSetting.ALL: get_text("notify_all_set", language),
+        NotificationSetting.JOIN_OFF: get_text("notify_join_off_set", language),
+        NotificationSetting.LEAVE_OFF: get_text("notify_leave_off_set", language),
+        NotificationSetting.NONE: get_text("notify_none_set", language),
     }
     await message.reply(settings_messages_map[settings_val])
 
 @settings_router.message(Command("notify_all"))
-async def notify_all_cmd(message: Message, session: AsyncSession, language: str):
-    await set_notification_settings_command(message, NotificationSetting.ALL, session, language)
+async def notify_all_cmd(message: Message, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
+    await set_notification_settings_command(message, NotificationSetting.ALL, session, language, user_specific_settings)
 
 @settings_router.message(Command("notify_join_off"))
-async def notify_join_off_cmd(message: Message, session: AsyncSession, language: str):
-    await set_notification_settings_command(message, NotificationSetting.JOIN_OFF, session, language)
+async def notify_join_off_cmd(message: Message, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
+    await set_notification_settings_command(message, NotificationSetting.JOIN_OFF, session, language, user_specific_settings)
 
 @settings_router.message(Command("notify_leave_off"))
-async def notify_leave_off_cmd(message: Message, session: AsyncSession, language: str):
-    await set_notification_settings_command(message, NotificationSetting.LEAVE_OFF, session, language)
+async def notify_leave_off_cmd(message: Message, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
+    await set_notification_settings_command(message, NotificationSetting.LEAVE_OFF, session, language, user_specific_settings)
 
 @settings_router.message(Command("notify_none"))
-async def notify_none_cmd(message: Message, session: AsyncSession, language: str):
-    await set_notification_settings_command(message, NotificationSetting.NONE, session, language)
+async def notify_none_cmd(message: Message, session: AsyncSession, language: str, user_specific_settings: UserSpecificSettings):
+    await set_notification_settings_command(message, NotificationSetting.NONE, session, language, user_specific_settings)
 
-async def update_mute_settings_db(session: AsyncSession, telegram_id: int, muted_users_set: set, mute_all_flag: bool):
+async def update_mute_settings_db_and_cache(session: AsyncSession, telegram_id: int, user_specific_settings: UserSpecificSettings):
     user_settings_obj = await session.get(UserSettings, telegram_id)
-    muted_users_str_val = ",".join(sorted(list(muted_users_set)))
+    muted_users_str_val = ",".join(sorted(list(user_specific_settings.muted_users_set)))
     if not user_settings_obj:
-        user_settings_obj = UserSettings(telegram_id=telegram_id, muted_users=muted_users_str_val, mute_all=mute_all_flag)
+        user_settings_obj = UserSettings(
+            telegram_id=telegram_id,
+            muted_users=muted_users_str_val,
+            mute_all=user_specific_settings.mute_all_flag
+        )
         session.add(user_settings_obj)
     else:
         user_settings_obj.muted_users = muted_users_str_val
-        user_settings_obj.mute_all = mute_all_flag
+        user_settings_obj.mute_all = user_specific_settings.mute_all_flag
     await session.commit()
-    if telegram_id in USER_SETTINGS_CACHE:
-        USER_SETTINGS_CACHE[telegram_id]["mute_settings"] = {"muted_users": muted_users_set, "mute_all": mute_all_flag}
-    else:
-        await _async_load_user_settings(telegram_id, session)
+    USER_SETTINGS_CACHE[telegram_id] = user_specific_settings
 
-async def update_mute_user_list(session: AsyncSession, telegram_id: int, username_to_process: str, action: str, current_mute_settings: dict):
-    muted_users_val = current_mute_settings["muted_users"].copy()
-    mute_all_val = current_mute_settings["mute_all"]
 
+async def update_mute_user_list(session: AsyncSession, telegram_id: int, username_to_process: str, action: str, user_specific_settings: UserSpecificSettings):
     if action == "mute":
-        muted_users_val.add(username_to_process)
+        user_specific_settings.muted_users_set.add(username_to_process)
     elif action == "unmute":
-        muted_users_val.discard(username_to_process)
+        user_specific_settings.muted_users_set.discard(username_to_process)
+    await update_mute_settings_db_and_cache(session, telegram_id, user_specific_settings)
 
-    await update_mute_settings_db(session, telegram_id, muted_users_val, mute_all_val)
+async def set_mute_all_state(session: AsyncSession, telegram_id: int, mute_all_flag: bool, user_specific_settings: UserSpecificSettings):
+    user_specific_settings.mute_all_flag = mute_all_flag
+    if not mute_all_flag:
+        user_specific_settings.muted_users_set.clear()
+    await update_mute_settings_db_and_cache(session, telegram_id, user_specific_settings)
 
-async def set_mute_all(session: AsyncSession, telegram_id: int, mute_all_flag: bool, current_mute_settings: dict):
-    muted_users_val = current_mute_settings["muted_users"] if mute_all_flag else set()
-    await update_mute_settings_db(session, telegram_id, muted_users_val, mute_all_flag)
 
 @settings_router.message(Command("mute"))
 async def mute_command_handler(
@@ -802,26 +991,26 @@ async def mute_command_handler(
     command: CommandObject,
     session: AsyncSession,
     language: str,
-    mute_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
     args_val = command.args
     if not args_val or not args_val.startswith("user "):
-        await message.reply("Please specify username to mute in format: /mute user <username>." if language == "en" else "Пожалуйста, укажите имя пользователя для мьюта в формате: /mute user <username>.")
+        await message.reply(get_text("mute_prompt_user", language))
         return
 
     username_to_mute_val = args_val[len("user "):].strip()
     if not username_to_mute_val:
-         await message.reply("Username cannot be empty." if language == "en" else "Имя пользователя не может быть пустым.")
+         await message.reply(get_text("mute_username_empty", language))
          return
 
     telegram_id_val = message.from_user.id
-    was_already_muted = username_to_mute_val in mute_settings["muted_users"]
+    was_already_muted = username_to_mute_val in user_specific_settings.muted_users_set
 
-    if was_already_muted:
-        await message.reply(f"User {html.quote(username_to_mute_val)} was already muted." if language == "en" else f"Пользователь {html.quote(username_to_mute_val)} уже был замьючен.")
+    if was_already_muted and not user_specific_settings.mute_all_flag:
+        await message.reply(get_text("mute_already_muted", language, username=html.quote(username_to_mute_val)))
     else:
-        await update_mute_user_list(session, telegram_id_val, username_to_mute_val, "mute", mute_settings)
-        await message.reply(f"User {html.quote(username_to_mute_val)} is now muted." if language == "en" else f"Пользователь {html.quote(username_to_mute_val)} теперь замьючен.")
+        await update_mute_user_list(session, telegram_id_val, username_to_mute_val, "mute", user_specific_settings)
+        await message.reply(get_text("mute_now_muted", language, username=html.quote(username_to_mute_val)))
 
 @settings_router.message(Command("unmute"))
 async def unmute_command_handler(
@@ -829,26 +1018,26 @@ async def unmute_command_handler(
     command: CommandObject,
     session: AsyncSession,
     language: str,
-    mute_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
     args_val = command.args
     if not args_val or not args_val.startswith("user "):
-        await message.reply("Please specify username to unmute in format: /unmute user <username>." if language == "en" else "Пожалуйста, укажите имя пользователя для размьюта в формате: /unmute user <username>.")
+        await message.reply(get_text("unmute_prompt_user", language))
         return
 
     username_to_unmute_val = args_val[len("user "):].strip()
     if not username_to_unmute_val:
-         await message.reply("Username cannot be empty." if language == "en" else "Имя пользователя не может быть пустым.")
+         await message.reply(get_text("mute_username_empty", language))
          return
 
     telegram_id_val = message.from_user.id
-    was_muted = username_to_unmute_val in mute_settings["muted_users"]
+    was_muted = username_to_unmute_val in user_specific_settings.muted_users_set
 
-    if was_muted:
-        await update_mute_user_list(session, telegram_id_val, username_to_unmute_val, "unmute", mute_settings)
-        await message.reply(f"User {html.quote(username_to_unmute_val)} is now unmuted." if language == "en" else f"Пользователь {html.quote(username_to_unmute_val)} теперь размьючен.")
+    if was_muted or user_specific_settings.mute_all_flag:
+        await update_mute_user_list(session, telegram_id_val, username_to_unmute_val, "unmute", user_specific_settings)
+        await message.reply(get_text("unmute_now_unmuted", language, username=html.quote(username_to_unmute_val)))
     else:
-        await message.reply(f"User {html.quote(username_to_unmute_val)} was not in the mute list." if language == "en" else f"Пользователь {html.quote(username_to_unmute_val)} не был в списке мьюта.")
+        await message.reply(get_text("unmute_not_in_list", language, username=html.quote(username_to_unmute_val)))
 
 
 @settings_router.message(Command("mute_all"))
@@ -856,68 +1045,49 @@ async def mute_all_command_handler(
     message: Message,
     session: AsyncSession,
     language: str,
-    mute_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
-    await set_mute_all(session, message.from_user.id, True, mute_settings)
-    await message.reply("Mute all for join/leave notifications enabled (only exceptions will be notified)." if language == "en" else "Мьют всех для уведомлений о входе/выходе включен (уведомления будут приходить только для исключений).")
+    await set_mute_all_state(session, message.from_user.id, True, user_specific_settings)
+    await message.reply(get_text("mute_all_enabled", language))
 
 @settings_router.message(Command("unmute_all"))
 async def unmute_all_command_handler(
     message: Message,
     session: AsyncSession,
     language: str,
-    mute_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
-    await set_mute_all(session, message.from_user.id, False, mute_settings)
-    await message.reply("Mute all for join/leave notifications disabled (muted users won't be notified)." if language == "en" else "Мьют всех для уведомлений о входе/выходе выключен (замьюченные пользователи не будут получать уведомления).")
+    await set_mute_all_state(session, message.from_user.id, False, user_specific_settings)
+    await message.reply(get_text("unmute_all_disabled", language))
 
 @settings_router.message(Command("toggle_noon"))
 async def toggle_noon_command_handler(
     message: Message,
     session: AsyncSession,
     language: str,
-    user_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
     telegram_id = message.from_user.id
-    current_teamtalk_username = user_settings.get("teamtalk_username")
-    current_enabled_status = user_settings.get("not_on_online_enabled", False)
-    current_confirmed_status = user_settings.get("not_on_online_confirmed", False)
 
-    if not current_teamtalk_username or not current_confirmed_status:
-        await message.reply("The 'not on online' feature is not configured for your account. "
-                            "Please set it up via TeamTalk using `/not on online`."
-                            if language == "en" else
-                            "Функция 'не в сети' не настроена для вашего аккаунта. "
-                            "Пожалуйста, настройте ее через TeamTalk командой `/not on online`.")
+    if not user_specific_settings.teamtalk_username or not user_specific_settings.not_on_online_confirmed:
+        await message.reply(get_text("noon_not_configured", language))
         return
 
-    new_enabled_status = not current_enabled_status
+    new_enabled_status = not user_specific_settings.not_on_online_enabled
 
     db_user_settings = await session.get(UserSettings, telegram_id)
     if db_user_settings:
         db_user_settings.not_on_online_enabled = new_enabled_status
         await session.commit()
 
-        if telegram_id in USER_SETTINGS_CACHE:
-            USER_SETTINGS_CACHE[telegram_id]["not_on_online_enabled"] = new_enabled_status
-        else:
-            await _async_load_user_settings(telegram_id, session)
+        user_specific_settings.not_on_online_enabled = new_enabled_status
+        USER_SETTINGS_CACHE[telegram_id] = user_specific_settings
 
-        if new_enabled_status:
-            reply_text = (f"'Not on online' notifications are now ENABLED for TeamTalk user '{html.quote(current_teamtalk_username)}'. "
-                          "You will receive silent notifications when this user is online."
-                          if language == "en" else
-                          f"Уведомления 'не в сети' теперь ВКЛЮЧЕНЫ для пользователя TeamTalk '{html.quote(current_teamtalk_username)}'. "
-                          "Вы будете получать тихие уведомления, когда этот пользователь в сети.")
-        else:
-            reply_text = (f"'Not on online' notifications are now DISABLED for TeamTalk user '{html.quote(current_teamtalk_username)}'. "
-                          "Notifications will be sent normally."
-                          if language == "en" else
-                          f"Уведомления 'не в сети' теперь ВЫКЛЮЧЕНЫ для пользователя TeamTalk '{html.quote(current_teamtalk_username)}'. "
-                          "Уведомления будут приходить как обычно.")
-        logger.info(f"User {telegram_id} toggled 'not on online' to {new_enabled_status} for TT user {current_teamtalk_username}")
+        reply_key = "noon_toggled_enabled" if new_enabled_status else "noon_toggled_disabled"
+        reply_text = get_text(reply_key, language, tt_username=html.quote(user_specific_settings.teamtalk_username))
+        logger.info(f"User {telegram_id} toggled 'not on online' to {new_enabled_status} for TT user {user_specific_settings.teamtalk_username}")
     else:
-        reply_text = "Error updating settings. Please try again." if language == "en" else "Ошибка обновления настроек. Пожалуйста, попробуйте снова."
+        reply_text = get_text("noon_error_updating", language)
         logger.error(f"Could not find UserSettings for {telegram_id} during toggle_noon.")
 
     await message.reply(reply_text)
@@ -926,25 +1096,20 @@ async def toggle_noon_command_handler(
 async def my_noon_status_command_handler(
     message: Message,
     language: str,
-    user_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
-    telegram_id = message.from_user.id
-    tt_username = user_settings.get("teamtalk_username")
-    enabled = user_settings.get("not_on_online_enabled", False)
-    confirmed = user_settings.get("not_on_online_confirmed", False)
-
-    if not tt_username or not confirmed:
-        reply_text = ("'Not on online' feature is not configured for your account. "
-                      "Use `/not on online` in TeamTalk to set it up."
-                      if language == "en" else
-                      "Функция 'не в сети' не настроена для вашего аккаунта. "
-                      "Используйте `/not on online` в TeamTalk для настройки.")
+    if not user_specific_settings.teamtalk_username or not user_specific_settings.not_on_online_confirmed:
+        reply_text = get_text("noon_status_not_configured", language)
     else:
-        status_text = "ENABLED" if enabled else "DISABLED"
-        status_text_ru = "ВКЛЮЧЕНА" if enabled else "ВЫКЛЮЧЕНА"
-        reply_text = (f"'Not on online' notifications are {status_text} for TeamTalk user '{html.quote(tt_username)}'."
-                      if language == "en" else
-                      f"Уведомления 'не в сети' {status_text_ru} для пользователя TeamTalk '{html.quote(tt_username)}'.")
+        status_key_en = "noon_status_enabled_en" if user_specific_settings.not_on_online_enabled else "noon_status_disabled_en"
+        status_key_ru = "noon_status_enabled_ru" if user_specific_settings.not_on_online_enabled else "noon_status_disabled_ru"
+        reply_text = get_text(
+            "noon_status_report",
+            language,
+            status=get_text(status_key_en, "en"), 
+            status_ru=get_text(status_key_ru, "ru"),
+            tt_username=html.quote(user_specific_settings.teamtalk_username)
+        )
     await message.reply(reply_text)
 
 
@@ -967,6 +1132,53 @@ async def ban_command_handler(
 ):
     await show_user_buttons(message, "ban", language, tt_instance)
 
+
+async def _process_id_action(user_id_val: int, user_nickname_val: str, language: str) -> str:
+    return get_text("callback_user_id_info", language, user_nickname=html.quote(user_nickname_val), user_id=user_id_val)
+
+async def _process_kick_action(
+    user_id_val: int,
+    user_nickname_val: str,
+    tt_instance: TeamTalkInstance,
+    language: str,
+    admin_tg_id: int
+) -> str:
+    try:
+        user_to_act_on = tt_instance.server.get_user(user_id_val)
+        if user_to_act_on:
+            user_to_act_on.kick(from_server=True)
+            logger.info(f"Admin {admin_tg_id} kicked user {user_nickname_val} ({user_id_val})")
+            return get_text("callback_user_kicked", language, user_nickname=html.quote(user_nickname_val))
+        return get_text("callback_user_not_found_anymore", language)
+    except Exception as e:
+        logger.error(f"Error kicking user {user_nickname_val} ({user_id_val}): {e}")
+        return get_text("callback_error_action_user", language, action="kick", action_ru=get_text("callback_action_kick_gerund_ru", "ru"), user_nickname=html.quote(user_nickname_val), error=str(e))
+
+async def _process_ban_action(
+    user_id_val: int,
+    user_nickname_val: str,
+    tt_instance: TeamTalkInstance,
+    language: str,
+    admin_tg_id: int
+) -> str:
+    try:
+        user_to_act_on = tt_instance.server.get_user(user_id_val)
+        if user_to_act_on:
+            user_to_act_on.ban(from_server=True)
+            user_to_act_on.kick(from_server=True)
+            logger.info(f"Admin {admin_tg_id} banned user {user_nickname_val} ({user_id_val})")
+            return get_text("callback_user_banned_kicked", language, user_nickname=html.quote(user_nickname_val))
+        return get_text("callback_user_not_found_anymore", language)
+    except Exception as e:
+        logger.error(f"Error banning user {user_nickname_val} ({user_id_val}): {e}")
+        return get_text("callback_error_action_user", language, action="ban", action_ru=get_text("callback_action_ban_gerund_ru", "ru"), user_nickname=html.quote(user_nickname_val), error=str(e))
+
+USER_ACTION_CALLBACK_HANDLERS = {
+    "id": _process_id_action,
+    "kick": _process_kick_action,
+    "ban": _process_ban_action,
+}
+
 @callback_router.callback_query(F.data.startswith("id:") | F.data.startswith("kick:") | F.data.startswith("ban:"))
 async def process_user_selection(
     callback_query: CallbackQuery,
@@ -981,66 +1193,40 @@ async def process_user_selection(
         user_id_val = int(user_id_str_val)
     except (ValueError, IndexError):
         logger.error(f"Invalid callback data format: {callback_query.data}")
-        await callback_query.message.edit_text("Invalid data received." if language == "en" else "Получены неверные данные.")
+        await callback_query.message.edit_text(get_text("callback_invalid_data", language))
         return
 
     if not tt_instance:
-         await callback_query.message.edit_text("TeamTalk bot is not connected." if language == "en" else "Бот TeamTalk не подключен.")
+         await callback_query.message.edit_text(get_text("tt_bot_not_connected", language))
          return
 
-    reply_text_val = "Unknown action." if language == "en" else "Неизвестное действие."
+    reply_text_val = get_text("callback_unknown_action", language)
+    handler = USER_ACTION_CALLBACK_HANDLERS.get(action_val)
 
-    if action_val == "id":
-        reply_text_val = (f"User {html.quote(user_nickname_val)} has ID: {user_id_val}" if language == "en"
-                      else f"Пользователь {html.quote(user_nickname_val)} имеет ID: {user_id_val}")
-
-    elif action_val in ["kick", "ban"]:
-        if not await is_admin(session, callback_query.from_user.id):
-            await callback_query.answer("You do not have permission to execute this action." if language == "en" else "У вас нет прав на выполнение этого действия.", show_alert=True)
-            return
-
-        try:
-            user_to_act_on = tt_instance.server.get_user(user_id_val)
-        except Exception as e:
-            logger.error(f"Failed to get user {user_id_val} from TT for {action_val}: {e}")
-            await callback_query.message.edit_text("Error finding user on TeamTalk." if language == "en" else "Ошибка поиска пользователя в TeamTalk.")
-            return
-
-        if user_to_act_on:
-            action_past_tense_en = "kicked" if action_val == "kick" else "banned"
-            action_past_tense_ru_val = "исключен" if action_val == "kick" else "забанен"
-            action_gerund_ru_val = "исключения" if action_val == "kick" else "бана"
-
+    if handler:
+        if action_val in ["kick", "ban"]:
+            if not await is_admin(session, callback_query.from_user.id):
+                await callback_query.answer(get_text("callback_no_permission", language), show_alert=True)
+                return
             try:
-                if action_val == "ban":
-                    user_to_act_on.ban(from_server=True)
-                user_to_act_on.kick(from_server=True)
-
-                if action_val == "ban":
-                     reply_text_val = (f"User {html.quote(user_nickname_val)} banned and kicked from server." if language == "en"
-                                   else f"Пользователь {html.quote(user_nickname_val)} был забанен и выкинут с сервера.")
-                else:
-                     reply_text_val = (f"User {html.quote(user_nickname_val)} kicked from server." if language == "en"
-                                   else f"Пользователь {html.quote(user_nickname_val)} был исключен с сервера.")
-                logger.info(f"Admin {callback_query.from_user.id} {action_past_tense_en} user {user_nickname_val} ({user_id_val})")
-
+                reply_text_val = await handler(user_id_val, user_nickname_val, tt_instance, language, callback_query.from_user.id)
             except Exception as e:
-                reply_text_val = (f"Error {action_val}ing user {html.quote(user_nickname_val)}: {e}" if language == "en"
-                              else f"Ошибка {action_gerund_ru_val} пользователя {html.quote(user_nickname_val)}: {e}")
-                logger.error(f"Error {action_val}ing user {user_nickname_val} ({user_id_val}): {e}")
-        else:
-            reply_text_val = "User not found on server anymore." if language == "en" else "Пользователь больше не найден на сервере."
+                logger.error(f"Error in {action_val} handler for {user_nickname_val}: {e}")
+                reply_text_val = get_text("callback_error_find_user_tt", language)
+        elif action_val == "id":
+            reply_text_val = await handler(user_id_val, user_nickname_val, language)
     else:
          logger.warning(f"Unhandled action '{action_val}' in callback query.")
 
     await callback_query.message.edit_text(reply_text_val, reply_markup=None)
+
 
 @callback_router.callback_query(F.data.startswith("toggle_ignore_user:"))
 async def process_toggle_ignore_user(
     callback_query: CallbackQuery,
     session: AsyncSession,
     language: str,
-    mute_settings: dict
+    user_specific_settings: UserSpecificSettings
 ):
     telegram_id_val = callback_query.from_user.id
 
@@ -1050,49 +1236,38 @@ async def process_toggle_ignore_user(
         nickname_from_callback_val = nickname_from_callback_val.strip()
     except ValueError:
         logger.error(f"Invalid callback data for toggle_ignore_user: {callback_query.data} from user {telegram_id_val}")
-        await callback_query.answer("Error processing request.", show_alert=True)
+        await callback_query.answer(get_text("toggle_ignore_error_processing", language), show_alert=True)
         return
 
     if not tt_username_to_toggle_val:
         logger.error(f"Empty username in toggle_ignore_user callback: {callback_query.data} from user {telegram_id_val}")
-        await callback_query.answer("Error: Empty username.", show_alert=True)
+        await callback_query.answer(get_text("toggle_ignore_error_empty_username", language), show_alert=True)
         return
 
-    current_muted_users_val = mute_settings.get("muted_users", set()).copy()
-    current_mute_all_val = mute_settings.get("mute_all", False)
-
-    new_muted_users_val = current_muted_users_val
-
-    if current_mute_all_val:
-        if tt_username_to_toggle_val in new_muted_users_val:
-            new_muted_users_val.discard(tt_username_to_toggle_val)
+    if user_specific_settings.mute_all_flag:
+        if tt_username_to_toggle_val in user_specific_settings.muted_users_set:
+            user_specific_settings.muted_users_set.discard(tt_username_to_toggle_val)
         else:
-            new_muted_users_val.add(tt_username_to_toggle_val)
-    elif tt_username_to_toggle_val in new_muted_users_val:
-        new_muted_users_val.discard(tt_username_to_toggle_val)
+            user_specific_settings.muted_users_set.add(tt_username_to_toggle_val)
     else:
-        new_muted_users_val.add(tt_username_to_toggle_val)
+        if tt_username_to_toggle_val in user_specific_settings.muted_users_set:
+            user_specific_settings.muted_users_set.discard(tt_username_to_toggle_val)
+        else:
+            user_specific_settings.muted_users_set.add(tt_username_to_toggle_val)
 
-    await update_mute_settings_db(session, telegram_id_val, new_muted_users_val, current_mute_all_val)
+    await update_mute_settings_db_and_cache(session, telegram_id_val, user_specific_settings)
 
     user_is_now_effectively_ignored_val = False
-    if current_mute_all_val:
-        user_is_now_effectively_ignored_val = tt_username_to_toggle_val not in new_muted_users_val
+    if user_specific_settings.mute_all_flag:
+        user_is_now_effectively_ignored_val = tt_username_to_toggle_val not in user_specific_settings.muted_users_set
     else:
-        user_is_now_effectively_ignored_val = tt_username_to_toggle_val in new_muted_users_val
+        user_is_now_effectively_ignored_val = tt_username_to_toggle_val in user_specific_settings.muted_users_set
 
-    if user_is_now_effectively_ignored_val:
-        feedback_msg_for_answer_val = f"User {html.quote(nickname_from_callback_val)} is now ignored." if language == "en" \
-                       else f"Пользователь {html.quote(nickname_from_callback_val)} теперь игнорируется."
-    else:
-        feedback_msg_for_answer_val = f"User {html.quote(nickname_from_callback_val)} is no longer ignored." if language == "en" \
-                       else f"Пользователь {html.quote(nickname_from_callback_val)} больше не игнорируется."
+    feedback_key = "toggle_ignore_now_ignored" if user_is_now_effectively_ignored_val else "toggle_ignore_no_longer_ignored"
+    feedback_msg_for_answer_val = get_text(feedback_key, language, nickname=html.quote(nickname_from_callback_val))
 
     button_display_nickname_new_val = html.quote(nickname_from_callback_val)
-    button_text_en_new_val = f"Toggle ignore status: {button_display_nickname_new_val}"
-    button_text_ru_new_val = f"Переключить статус игнорирования: {button_display_nickname_new_val}"
-    button_text_new_val = button_text_ru_new_val if language == "ru" else button_text_en_new_val
-
+    button_text_new_val = get_text("toggle_ignore_button_text", language, nickname=button_display_nickname_new_val)
     callback_data_new_val = f"toggle_ignore_user:{tt_username_to_toggle_val}:{nickname_from_callback_val}"
 
     new_keyboard_val = InlineKeyboardMarkup(inline_keyboard=[
@@ -1117,18 +1292,18 @@ async def process_toggle_ignore_user(
 
 async def show_user_buttons(message: Message, command_type: str, language: str, tt_instance: TeamTalkInstance | None):
     if not tt_instance:
-        await message.reply("TeamTalk bot is not connected." if language == "en" else "Бот TeamTalk не подключен.")
+        await message.reply(get_text("tt_bot_not_connected", language))
         return
 
     try:
         users_list = tt_instance.server.get_users()
     except Exception as e:
         logger.error(f"Failed to get users from TT for {command_type}: {e}")
-        await message.reply("Error getting users from TeamTalk." if language == "en" else "Ошибка получения пользователей из TeamTalk.")
+        await message.reply(get_text("tt_error_getting_users", language))
         return
 
     if not users_list:
-        await message.reply("No users online to select." if language == "en" else "Нет пользователей онлайн для выбора.")
+        await message.reply(get_text("show_users_no_users_online", language))
         return
 
     builder = InlineKeyboardBuilder()
@@ -1136,101 +1311,23 @@ async def show_user_buttons(message: Message, command_type: str, language: str, 
     for user_obj in users_list:
         if user_obj.id == my_user_id_val:
             continue
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or ("unknown user" if language == "en" else "неизвестный пользователь")
+        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("who_user_unknown", language)
         callback_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or "unknown"
         builder.button(text=html.quote(user_nickname_val), callback_data=f"{command_type}:{user_obj.id}:{callback_nickname_val[:30]}")
 
     if not builder._markup:
-         await message.reply("No other users online to select." if language == "en" else "Нет других пользователей онлайн для выбора.")
+         await message.reply(get_text("show_users_no_other_users_online", language))
          return
 
     builder.adjust(2)
-    command_text_localized_map = {
-        "id": ("Select a user to get ID:" if language == "en" else "Выберите пользователя для получения ID:"),
-        "kick": ("Select a user to kick:" if language == "en" else "Выберите пользователя для кика:"),
-        "ban": ("Select a user to ban:" if language == "en" else "Выберите пользователя для бана:")
+    command_text_key_map = {
+        "id": "show_users_select_id",
+        "kick": "show_users_select_kick",
+        "ban": "show_users_select_ban"
     }
-    command_text_val = command_text_localized_map.get(command_type, "Select a user:")
-    await message.reply(command_text_val, reply_markup=builder.as_markup())
+    command_text_key = command_text_key_map.get(command_type, "show_users_select_default")
+    await message.reply(get_text(command_text_key, language), reply_markup=builder.as_markup())
 
-def get_help_text(user_language: str) -> str:
-    if user_language == "ru":
-        help_text_content = (
-            "Этот бот пересылает сообщения с TeamTalk сервера в Telegram и уведомляет о входе/выходе пользователей.\n\n"
-            "**Команды Telegram:**\n"
-            "/who - Показать онлайн пользователей.\n"
-            "/id - Получить ID пользователя (через кнопки).\n"
-            "/kick - Кикнуть пользователя с сервера (админ, через кнопки).\n"
-            "/ban - Забанить пользователя на сервере (админ, через кнопки).\n"
-            "/cl `en|ru` - Изменить язык бота.\n"
-            "/notify_all - Включить все уведомления.\n"
-            "/notify_join_off - Выключить уведомления о входах.\n"
-            "/notify_leave_off - Выключить уведомления о выходах.\n"
-            "/notify_none - Выключить все уведомления.\n"
-            "/start - Запустить бота или обработать deeplink.\n"
-            "/mute user `<username>` - Добавить пользователя в список мьюта (не получать уведомления).\n"
-            "/unmute user `<username>` - Удалить пользователя из списка мьюта.\n"
-            '/mute_all - Включить режим "мьют всех" (уведомления только для исключений из списка мьюта).\n'
-            '/unmute_all - Выключить режим "мьют всех" (уведомления для всех, кроме списка мьюта).\n'
-            "/toggle_noon - Включить/выключить тихие уведомления, если связанный пользователь TeamTalk онлайн.\n"
-            "/my_noon_status - Проверить статус функции 'не в сети'.\n"
-            "/help - Показать это сообщение.\n\n"
-            "**Примечание по мьютам и кнопкам 'Переключить статус игнорирования':**\n"
-            "- Кнопка 'Переключить статус игнорирования' под сообщениями о входе/выходе управляет вашим персональным списком мьюта для этого пользователя TeamTalk.\n"
-            "- Когда `/mute_all` **выключен** (по умолчанию): список мьюта содержит тех, от кого **не** приходят уведомления. Нажатие кнопки переключает, будет ли пользователь в этом списке.\n"
-            "- Когда `/mute_all` **включен**: список мьюта содержит тех, от кого **приходят** уведомления (исключения). Нажатие кнопки переключает, будет ли пользователь в этом списке исключений.\n"
-            "- `/unmute_all` всегда выключает `/mute_all` и очищает список.\n\n"
-            "**Примечание по функции 'не в сети' (/toggle_noon):**\n"
-            "- Сначала настройте через TeamTalk: `/not on online` в личные сообщения боту TeamTalk.\n"
-            "- После подтверждения по ссылке в Telegram, эта функция будет активна.\n"
-            "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука.\n\n"
-            "**Команды TeamTalk (в личные сообщения боту):**\n"
-            "/sub - Получить ссылку для подписки на уведомления.\n"
-            "/unsub - Получить ссылку для отписки от уведомлений.\n"
-            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ADMIN_USERNAME из .env).\n"
-            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ADMIN_USERNAME из .env).\n"
-            "/not on online - Настроить тихие уведомления, когда вы онлайн в TeamTalk.\n"
-            "/help - Показать справку."
-        )
-    else:
-        help_text_content = (
-            "This bot forwards messages from a TeamTalk server to Telegram and sends join/leave notifications.\n\n"
-            "**Telegram Commands:**\n"
-            "/who - Show online users.\n"
-            "/id - Get ID of a user (via buttons).\n"
-            "/kick - Kick a user from the server (admin, via buttons).\n"
-            "/ban - Ban a user from the server (admin, via buttons).\n"
-            "/cl `en|ru` - Change bot language.\n"
-            "/notify_all - Enable all join/leave notifications.\n"
-            "/notify_join_off - Disable join notifications.\n"
-            "/notify_leave_off - Disable leave notifications.\n"
-            "/notify_none - Disable all join/leave notifications.\n"
-            "/start - Start bot or process deeplink.\n"
-            "/mute user `<username>` - Add user to mute list (don't receive notifications).\n"
-            "/unmute user `<username>` - Remove user from mute list.\n"
-            "/mute_all - Enable 'mute all' mode (only get notifications for exceptions in the mute list).\n"
-            "/unmute_all - Disable 'mute all' mode (get notifications for everyone except the mute list).\n"
-            "/toggle_noon - Toggle silent notifications if your linked TeamTalk user is online.\n"
-            "/my_noon_status - Check your 'not on online' feature status.\n"
-            "/help - Show this help message.\n\n"
-            "**Note on Mutes and 'Toggle ignore status' Buttons:**\n"
-            "- The 'Toggle ignore status' button under join/leave messages manages your personal mute list for that TeamTalk user.\n"
-            "- When `/mute_all` is **disabled** (default): the mute list contains users you **don't** get notifications from. Pressing the button toggles if the user is in this list.\n"
-            "- When `/mute_all` is **enabled**: the mute list contains users you **do** get notifications from (exceptions). Pressing the button toggles if the user is in this exception list.\n"
-            "- `/unmute_all` always disables `/mute_all` and clears the list.\n\n"
-            "**Note on 'Not on Online' feature (/toggle_noon):**\n"
-            "- First, set it up via TeamTalk: `/not on online` in a private message to the TeamTalk bot.\n"
-            "- After confirming via the link in Telegram, this feature will be active.\n"
-            "- If your linked TeamTalk user is online, Telegram notifications will be silent.\n\n"
-            "**TeamTalk Commands (in private message to the bot):**\n"
-            "/sub - Get a link to subscribe to notifications.\n"
-            "/unsub - Get a link to unsubscribe from notifications.\n"
-            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (ADMIN_USERNAME from .env only).\n"
-            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (ADMIN_USERNAME from .env only).\n"
-            "/not on online - Set up silent notifications for when you are online in TeamTalk.\n"
-            "/help - Show help."
-        )
-    return help_text_content
 
 async def send_long_tt_reply(reply_method: Callable, text: str, max_len_bytes: int = 511):
     if not text:
@@ -1289,7 +1386,7 @@ async def handle_unknown_command(message: Message, language: str):
     if not message.text:
         return
     logger.info(f"Received unknown message from {message.from_user.id}: {message.text[:50]}")
-    await message.reply("Unknown command. Use /help to see available commands." if language == "en" else "Неизвестная команда. Используйте /help для просмотра доступных команд.")
+    await message.reply(get_text("unknown_command", language))
 
 @tt_bot.event
 async def on_ready():
@@ -1339,7 +1436,6 @@ async def on_my_login(server: PytalkServer) -> None:
         logger.info(f"Status set to: {config['STATUS_TEXT']}")
         login_complete_time = datetime.utcnow()
         logger.info(f"Login sequence complete at {login_complete_time}.")
-
 
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}")
@@ -1492,41 +1588,36 @@ async def on_message(message: TeamTalkMessage) -> None:
     logger.info(f"Received private message from {sender_username_val}: {message_content_val[:100]}")
 
     async with SessionFactory() as session:
+        admin_lang = "en"
+        if config.get("TG_ADMIN_CHAT_ID"):
+            admin_settings = USER_SETTINGS_CACHE.get(config["TG_ADMIN_CHAT_ID"])
+            if admin_settings:
+                admin_lang = admin_settings.language
+        
         if message_content_val.startswith("/sub"):
-            await handle_tt_subscribe_command(message, session)
+            await handle_tt_subscribe_command(message, session, admin_lang)
         elif message_content_val.startswith("/unsub"):
-            await handle_tt_unsubscribe_command(message, session)
+            await handle_tt_unsubscribe_command(message, session, admin_lang)
         elif message_content_val.startswith("/add_admin"):
-            await handle_tt_add_admin_command(message, session)
+            await handle_tt_add_admin_command(message, session, admin_lang)
         elif message_content_val.startswith("/remove_admin"):
-            await handle_tt_remove_admin_command(message, session)
+            await handle_tt_remove_admin_command(message, session, admin_lang)
         elif message_content_val.strip().lower() == "/not on online":
-            await handle_tt_not_on_online_command(message, session)
+            await handle_tt_not_on_online_command(message, session, admin_lang)
         elif message_content_val.startswith("/help"):
-            admin_lang_val = "en"
-            if config["TG_ADMIN_CHAT_ID"]:
-                 admin_settings_val = USER_SETTINGS_CACHE.get(int(config["TG_ADMIN_CHAT_ID"]))
-                 if admin_settings_val:
-                     admin_lang_val = admin_settings_val.get("language", "en")
-            await send_help_message_tt(message, admin_lang_val)
+            await send_help_message_tt(message, admin_lang)
         elif message_content_val.startswith("/"):
-            reply_text_val = "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help."
+            reply_text_val = get_text("tt_unknown_command", admin_lang)
             message.reply(reply_text_val)
             logger.warning(f"Received unknown TT command from {sender_username_val}: {message_content_val}")
-        elif config["TG_ADMIN_CHAT_ID"] and tg_bot_message:
-            admin_lang_val = "en"
-            admin_id_val = int(config["TG_ADMIN_CHAT_ID"])
-            admin_settings_val = USER_SETTINGS_CACHE.get(admin_id_val)
-            if admin_settings_val:
-                admin_lang_val = admin_settings_val.get("language", "en")
-
+        elif config.get("TG_ADMIN_CHAT_ID") and tg_bot_message:
             await forward_tt_message_to_telegram(
                 message=message,
                 server_name_conf=config["SERVER_NAME"],
                 sender_nickname=ttstr(message.user.nickname),
                 message_text=message_content_val,
-                admin_chat_id=admin_id_val,
-                admin_language=admin_lang_val,
+                admin_chat_id=config["TG_ADMIN_CHAT_ID"],
+                admin_language=admin_lang,
                 tt_instance_for_check=current_tt_instance
             )
 
@@ -1547,10 +1638,12 @@ async def forward_tt_message_to_telegram(
          except Exception as e:
              logger.error(f"Could not get server name from TT instance: {e}")
 
-    sender_display_val = sender_nickname or ttstr(message.user.username) or "Unknown User"
+    sender_display_val = sender_nickname or ttstr(message.user.username) or get_text("who_user_unknown", admin_language)
 
-    text_val = (f"Сообщение с сервера {html.quote(server_name_val)}\nОт {html.quote(sender_display_val)}:\n\n{html.quote(message_text)}" if admin_language == "ru"
-            else f"Message from server {html.quote(server_name_val)}\nFrom {html.quote(sender_display_val)}:\n\n{html.quote(message_text)}")
+    text_val = get_text("tt_forward_message_text", admin_language,
+                        server_name=html.quote(server_name_val),
+                        sender_display=html.quote(sender_display_val),
+                        message_text=html.quote(message_text))
 
     asyncio.create_task(send_telegram_message(
         config["TG_BOT_MESSAGE_TOKEN"],
@@ -1561,41 +1654,41 @@ async def forward_tt_message_to_telegram(
         tt_instance_for_check=tt_instance_for_check
     ))
 
-async def handle_tt_subscribe_command(message: TeamTalkMessage, session: AsyncSession):
+async def handle_tt_subscribe_command(message: TeamTalkMessage, session: AsyncSession, language: str):
     try:
         token_val = await create_deeplink(session, "subscribe")
         bot_info_val = await tg_bot_event.get_me()
         deeplink_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
-        reply_text_val = f"Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_val}"
+        reply_text_val = get_text("tt_subscribe_deeplink_text", language, deeplink_url=deeplink_val)
         message.reply(reply_text_val)
         logger.info(f"Generated subscribe deeplink {token_val} for TT user {ttstr(message.user.username)}")
     except Exception as e:
         logger.error(f"Error processing TT subscription for {ttstr(message.user.username)}: {e}")
-        message.reply("An error occurred while processing the subscription request.")
+        message.reply(get_text("tt_subscribe_error", language))
 
-async def handle_tt_unsubscribe_command(message: TeamTalkMessage, session: AsyncSession):
+async def handle_tt_unsubscribe_command(message: TeamTalkMessage, session: AsyncSession, language: str):
     try:
         token_val = await create_deeplink(session, "unsubscribe")
         bot_info_val = await tg_bot_event.get_me()
         deeplink_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
-        reply_text_val = f"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_val}"
+        reply_text_val = get_text("tt_unsubscribe_deeplink_text", language, deeplink_url=deeplink_val)
         message.reply(reply_text_val)
         logger.info(f"Generated unsubscribe deeplink {token_val} for TT user {ttstr(message.user.username)}")
     except Exception as e:
         logger.error(f"Error processing TT unsubscription for {ttstr(message.user.username)}: {e}")
-        message.reply("An error occurred while processing the unsubscription request.")
+        message.reply(get_text("tt_unsubscribe_error", language))
 
-async def handle_tt_add_admin_command(message: TeamTalkMessage, session: AsyncSession):
+async def handle_tt_add_admin_command(message: TeamTalkMessage, session: AsyncSession, language: str):
     sender_username_val = ttstr(message.user.username)
     if not config["ADMIN_USERNAME"] or sender_username_val != config["ADMIN_USERNAME"]:
         logger.warning(f"Unauthorized /add_admin attempt by TT user {sender_username_val}.")
-        message.reply("You do not have permission to use this command.")
+        message.reply(get_text("tt_admin_cmd_no_permission", language))
         return
 
     try:
         parts_list = message.content.split()
         if len(parts_list) < 2:
-            message.reply("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432")
+            message.reply(get_text("tt_add_admin_prompt_ids", language))
             return
 
         telegram_ids_to_add_list = parts_list[1:]
@@ -1608,33 +1701,33 @@ async def handle_tt_add_admin_command(message: TeamTalkMessage, session: AsyncSe
                     added_count_val += 1
                     logger.info(f"Admin {telegram_id_val} added by TT user {sender_username_val}")
                 else:
-                    errors_list.append(f"ID {telegram_id_val} is already an admin or failed to add.")
+                    errors_list.append(get_text("tt_add_admin_error_already_admin", language, telegram_id=telegram_id_val))
             else:
-                errors_list.append(f"'{telegram_id_str_val}' is not a valid numeric Telegram ID.")
+                errors_list.append(get_text("tt_add_admin_error_invalid_id", language, telegram_id_str=telegram_id_str_val))
 
         reply_parts_list = []
         if added_count_val > 0:
-            reply_parts_list.append(f"Successfully added {added_count_val} admin(s).")
+            reply_parts_list.append(get_text("tt_add_admin_success", language, count=added_count_val))
         if errors_list:
-            reply_parts_list.append("Errors:\n- " + "\n- ".join(errors_list))
+            reply_parts_list.append(get_text("tt_admin_errors_header", language) + "\n- ".join(errors_list))
 
-        message.reply("\n".join(reply_parts_list) if reply_parts_list else "No valid IDs provided.")
+        message.reply("\n".join(reply_parts_list) if reply_parts_list else get_text("tt_admin_no_valid_ids", language))
 
     except Exception as e:
         logger.error(f"Error processing /add_admin command from {sender_username_val}: {e}")
-        message.reply("An error occurred while processing the command.")
+        message.reply(get_text("tt_admin_error_processing", language))
 
-async def handle_tt_remove_admin_command(message: TeamTalkMessage, session: AsyncSession):
+async def handle_tt_remove_admin_command(message: TeamTalkMessage, session: AsyncSession, language: str):
     sender_username_val = ttstr(message.user.username)
     if not config["ADMIN_USERNAME"] or sender_username_val != config["ADMIN_USERNAME"]:
         logger.warning(f"Unauthorized /remove_admin attempt by TT user {sender_username_val}.")
-        message.reply("You do not have permission to use this command.")
+        message.reply(get_text("tt_admin_cmd_no_permission", language))
         return
 
     try:
         parts_list = message.content.split()
         if len(parts_list) < 2:
-            message.reply("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432")
+            message.reply(get_text("tt_remove_admin_prompt_ids", language))
             return
 
         telegram_ids_to_remove_list = parts_list[1:]
@@ -1647,27 +1740,27 @@ async def handle_tt_remove_admin_command(message: TeamTalkMessage, session: Asyn
                     removed_count_val += 1
                     logger.info(f"Admin {telegram_id_val} removed by TT user {sender_username_val}")
                 else:
-                    errors_list.append(f"Admin with ID {telegram_id_val} not found.")
+                    errors_list.append(get_text("tt_remove_admin_error_not_found", language, telegram_id=telegram_id_val))
             else:
-                errors_list.append(f"'{telegram_id_str_val}' is not a valid numeric Telegram ID.")
+                errors_list.append(get_text("tt_add_admin_error_invalid_id", language, telegram_id_str=telegram_id_str_val))
 
         reply_parts_list = []
         if removed_count_val > 0:
-            reply_parts_list.append(f"Successfully removed {removed_count_val} admin(s).")
+            reply_parts_list.append(get_text("tt_remove_admin_success", language, count=removed_count_val))
         if errors_list:
-            reply_parts_list.append("Info/Errors:\n- " + "\n- ".join(errors_list))
+            reply_parts_list.append(get_text("tt_admin_info_errors_header", language) + "\n- ".join(errors_list))
 
-        message.reply("\n".join(reply_parts_list) if reply_parts_list else "No valid IDs provided.")
+        message.reply("\n".join(reply_parts_list) if reply_parts_list else get_text("tt_admin_no_valid_ids", language))
 
     except Exception as e:
         logger.error(f"Error processing /remove_admin command from {sender_username_val}: {e}")
-        message.reply("An error occurred while processing the command.")
+        message.reply(get_text("tt_admin_error_processing", language))
 
-async def handle_tt_not_on_online_command(message: TeamTalkMessage, session: AsyncSession):
+async def handle_tt_not_on_online_command(message: TeamTalkMessage, session: AsyncSession, language: str):
     sender_tt_username = ttstr(message.user.username)
 
     if message.content.strip().lower() != "/not on online":
-        message.reply("Usage: /not on online")
+        message.reply(get_text("tt_noon_usage", language))
         return
 
     try:
@@ -1680,17 +1773,16 @@ async def handle_tt_not_on_online_command(message: TeamTalkMessage, session: Asy
         bot_info = await tg_bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
 
-        message.reply(f"To enable 'not on online' notifications for your TeamTalk user '{sender_tt_username}', "
-                      f"please open this link in Telegram and confirm "
-                      f"(link valid for 5 minutes):\n{deeplink_url}")
+        message.reply(get_text("tt_noon_confirm_deeplink_text", language, tt_username=sender_tt_username, deeplink_url=deeplink_url))
         logger.info(f"Generated 'not on online' confirmation deeplink {token} for TT user {sender_tt_username} (generic TG target)")
     except Exception as e:
         logger.error(f"Error processing TT /not on online for {sender_tt_username}: {e}")
-        message.reply("An error occurred while processing the request.")
+        message.reply(get_text("tt_noon_error_processing", language))
 
 
 async def send_help_message_tt(message: TeamTalkMessage, language: str):
-    help_text_val = get_help_text(language)
+    help_text_key = "help_text_ru" if language == "ru" else "help_text_en"
+    help_text_val = get_text(help_text_key, language)
     await send_long_tt_reply(message.reply, help_text_val, max_len_bytes=511)
 
 async def should_notify(telegram_id: int, user_username: str, event_type: str) -> bool:
@@ -1699,8 +1791,9 @@ async def should_notify(telegram_id: int, user_username: str, event_type: str) -
          logger.warning(f"Settings not found in cache for {telegram_id} during should_notify check.")
          return False
 
-    notification_pref_val = user_settings_val.get("notification_settings", NotificationSetting.ALL)
-    mute_settings_val = user_settings_val.get("mute_settings", {"muted_users": set(), "mute_all": False})
+    notification_pref_val = user_settings_val.notification_settings
+    mute_all_val = user_settings_val.mute_all_flag
+    muted_users_set = user_settings_val.muted_users_set
 
     if notification_pref_val == NotificationSetting.NONE:
         return False
@@ -1708,9 +1801,6 @@ async def should_notify(telegram_id: int, user_username: str, event_type: str) -
         return False
     if event_type == "leave" and notification_pref_val == NotificationSetting.LEAVE_OFF:
         return False
-
-    mute_all_val = mute_settings_val.get("mute_all", False)
-    muted_users_set = mute_settings_val.get("muted_users", set())
 
     if mute_all_val:
         return user_username in muted_users_set
@@ -1721,8 +1811,7 @@ async def send_join_leave_notification(
     user: TeamTalkUser,
     tt_instance: TeamTalkInstance
 ):
-    server_obj = user.server
-    server_name_val = config["SERVER_NAME"] or ttstr(tt_instance.server.get_properties().server_name) if tt_instance else "Unknown Server"
+    server_name_val = config["SERVER_NAME"] or (ttstr(tt_instance.server.get_properties().server_name) if tt_instance and tt_instance.connected else "Unknown Server")
     user_nickname_val = ttstr(user.nickname) or ttstr(user.username) or "unknown user"
     user_username_val = ttstr(user.username)
     user_id_val = user.id
@@ -1752,17 +1841,13 @@ async def send_join_leave_notification(
         return
 
     def text_gen(lang_code: str) -> str:
-        if event_type == "join":
-            return (f"{html.quote(user_nickname_val)} присоединился к серверу {html.quote(server_name_val)}" if lang_code == "ru"
-                    else f"User {html.quote(user_nickname_val)} joined server {html.quote(server_name_val)}")
-        return (f"{html.quote(user_nickname_val)} покинул сервер {html.quote(server_name_val)}" if lang_code == "ru"
-                else f"User {html.quote(user_nickname_val)} left server {html.quote(server_name_val)}")
+        key = "join_notification" if event_type == "join" else "leave_notification"
+        return get_text(key, lang_code, user_nickname=html.quote(user_nickname_val), server_name=html.quote(server_name_val))
 
     def markup_gen(tt_user_username: str, tt_user_nickname: str, lang_code: str, recipient_tg_id: int) -> InlineKeyboardMarkup | None:
         button_display_nickname_val = html.quote(tt_user_nickname[:30])
         callback_data_val = f"toggle_ignore_user:{tt_user_username}:{tt_user_nickname[:30]}"
-        button_text_val = (f"Переключить статус игнорирования: {button_display_nickname_val}" if lang_code == "ru"
-                        else f"Toggle ignore status: {button_display_nickname_val}")
+        button_text_val = get_text("toggle_ignore_button_text", lang_code, nickname=button_display_nickname_val)
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=button_text_val, callback_data=callback_data_val)]
         ])
