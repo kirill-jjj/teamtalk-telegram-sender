@@ -145,80 +145,82 @@ LOCALIZED_STRINGS = {
     "tt_forward_message_text": {"en": "Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}", "ru": "Сообщение с сервера {server_name}\nОт {sender_display}:\n\n{message_text}"},
     "join_notification": {"en": "User {user_nickname} joined server {server_name}", "ru": "{user_nickname} присоединился к серверу {server_name}"},
     "leave_notification": {"en": "User {user_nickname} left server {server_name}", "ru": "{user_nickname} покинул сервер {server_name}"},
-    "help_text_en": (
-            "This bot forwards messages from a TeamTalk server to Telegram and sends join/leave notifications.\n\n"
-            "**Telegram Commands:**\n"
-            "/who - Show online users.\n"
-            "/id - Get ID of a user (via buttons).\n"
-            "/kick - Kick a user from the server (admin, via buttons).\n"
-            "/ban - Ban a user from the server (admin, via buttons).\n"
-            "/cl `en|ru` - Change bot language.\n"
-            "/notify_all - Enable all join/leave notifications.\n"
-            "/notify_join_off - Disable join notifications.\n"
-            "/notify_leave_off - Disable leave notifications.\n"
-            "/notify_none - Disable all join/leave notifications.\n"
-            "/start - Start bot or process deeplink.\n"
-            "/mute user `<username>` - Add user to mute list (don't receive notifications).\n"
-            "/unmute user `<username>` - Remove user from mute list.\n"
-            "/mute_all - Enable 'mute all' mode (only get notifications for exceptions in the mute list).\n"
-            "/unmute_all - Disable 'mute all' mode (get notifications for everyone except the mute list).\n"
-            "/toggle_noon - Toggle silent notifications if your linked TeamTalk user is online.\n"
-            "/my_noon_status - Check your 'not on online' feature status.\n"
-            "/help - Show this help message.\n\n"
-            "**Note on Mutes and 'Toggle ignore status' Buttons:**\n"
-            "- The 'Toggle ignore status' button under join/leave messages manages your personal mute list for that TeamTalk user.\n"
-            "- When `/mute_all` is **disabled** (default): the mute list contains users you **don't** get notifications from. Pressing the button toggles if the user is in this list.\n"
-            "- When `/mute_all` is **enabled**: the mute list contains users you **do** get notifications from (exceptions). Pressing the button toggles if the user is in this exception list.\n"
-            "- `/unmute_all` always disables `/mute_all` and clears the list.\n\n"
-            "**Note on 'Not on Online' feature (/toggle_noon):**\n"
-            "- First, set it up via TeamTalk: `/not on online` in a private message to the TeamTalk bot.\n"
-            "- After confirming via the link in Telegram, this feature will be active.\n"
-            "- If your linked TeamTalk user is online, Telegram notifications will be silent.\n\n"
-            "**TeamTalk Commands (in private message to the bot):**\n"
-            "/sub - Get a link to subscribe to notifications.\n"
-            "/unsub - Get a link to unsubscribe from notifications.\n"
-            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (ADMIN_USERNAME from .env only).\n"
-            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (ADMIN_USERNAME from .env only).\n"
-            "/not on online - Set up silent notifications for when you are online in TeamTalk.\n"
-            "/help - Show help."
-    ),
-    "help_text_ru": (
-            "Этот бот пересылает сообщения с TeamTalk сервера в Telegram и уведомляет о входе/выходе пользователей.\n\n"
-            "**Команды Telegram:**\n"
-            "/who - Показать онлайн пользователей.\n"
-            "/id - Получить ID пользователя (через кнопки).\n"
-            "/kick - Кикнуть пользователя с сервера (админ, через кнопки).\n"
-            "/ban - Забанить пользователя на сервере (админ, через кнопки).\n"
-            "/cl `en|ru` - Изменить язык бота.\n"
-            "/notify_all - Включить все уведомления.\n"
-            "/notify_join_off - Выключить уведомления о входах.\n"
-            "/notify_leave_off - Выключить уведомления о выходах.\n"
-            "/notify_none - Выключить все уведомления.\n"
-            "/start - Запустить бота или обработать deeplink.\n"
-            "/mute user `<username>` - Добавить пользователя в список мьюта (не получать уведомления).\n"
-            "/unmute user `<username>` - Удалить пользователя из списка мьюта.\n"
-            '/mute_all - Включить режим "мьют всех" (уведомления только для исключений из списка мьюта).\n'
-            '/unmute_all - Выключить режим "мьют всех" (уведомления для всех, кроме списка мьюта).\n'
-            "/toggle_noon - Включить/выключить тихие уведомления, если связанный пользователь TeamTalk онлайн.\n"
-            "/my_noon_status - Проверить статус функции 'не в сети'.\n"
-            "/help - Показать это сообщение.\n\n"
-            "**Примечание по мьютам и кнопкам 'Переключить статус игнорирования':**\n"
-            "- Кнопка 'Переключить статус игнорирования' под сообщениями о входе/выходе управляет вашим персональным списком мьюта для этого пользователя TeamTalk.\n"
-            "- Когда `/mute_all` **выключен** (по умолчанию): список мьюта содержит тех, от кого **не** приходят уведомления. Нажатие кнопки переключает, будет ли пользователь в этом списке.\n"
-            "- Когда `/mute_all` **включен**: список мьюта содержит тех, от кого **приходят** уведомления (исключения). Нажатие кнопки переключает, будет ли пользователь в этом списке исключений.\n"
-            "- `/unmute_all` всегда выключает `/mute_all` и очищает список.\n\n"
-            "**Примечание по функции 'не в сети' (/toggle_noon):**\n"
-            "- Сначала настройте через TeamTalk: `/not on online` в личные сообщения боту TeamTalk.\n"
-            "- После подтверждения по ссылке в Telegram, эта функция будет активна.\n"
-            "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука.\n\n"
-            "**Команды TeamTalk (в личные сообщения боту):**\n"
-            "/sub - Получить ссылку для подписки на уведомления.\n"
-            "/unsub - Получить ссылку для отписки от уведомлений.\n"
-            "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ADMIN_USERNAME из .env).\n"
-            "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ADMIN_USERNAME из .env).\n"
-            "/not on online - Настроить тихие уведомления, когда вы онлайн в TeamTalk.\n"
-            "/help - Показать справку."
-    )
+    "help_text": {
+        "en": (
+                "This bot forwards messages from a TeamTalk server to Telegram and sends join/leave notifications.\n\n"
+                "**Telegram Commands:**\n"
+                "/who - Show online users.\n"
+                "/id - Get ID of a user (via buttons).\n"
+                "/kick - Kick a user from the server (admin, via buttons).\n"
+                "/ban - Ban a user from the server (admin, via buttons).\n"
+                "/cl `en|ru` - Change bot language.\n"
+                "/notify_all - Enable all join/leave notifications.\n"
+                "/notify_join_off - Disable join notifications.\n"
+                "/notify_leave_off - Disable leave notifications.\n"
+                "/notify_none - Disable all join/leave notifications.\n"
+                "/start - Start bot or process deeplink.\n"
+                "/mute user `<username>` - Add user to mute list (don't receive notifications).\n"
+                "/unmute user `<username>` - Remove user from mute list.\n"
+                "/mute_all - Enable 'mute all' mode (only get notifications for exceptions in the mute list).\n"
+                "/unmute_all - Disable 'mute all' mode (get notifications for everyone except the mute list).\n"
+                "/toggle_noon - Toggle silent notifications if your linked TeamTalk user is online.\n"
+                "/my_noon_status - Check your 'not on online' feature status.\n"
+                "/help - Show this help message.\n\n"
+                "**Note on Mutes and 'Toggle ignore status' Buttons:**\n"
+                "- The 'Toggle ignore status' button under join/leave messages manages your personal mute list for that TeamTalk user.\n"
+                "- When `/mute_all` is **disabled** (default): the mute list contains users you **don't** get notifications from. Pressing the button toggles if the user is in this list.\n"
+                "- When `/mute_all` is **enabled**: the mute list contains users you **do** get notifications from (exceptions). Pressing the button toggles if the user is in this exception list.\n"
+                "- `/unmute_all` always disables `/mute_all` and clears the list.\n\n"
+                "**Note on 'Not on Online' feature (/toggle_noon):**\n"
+                "- First, set it up via TeamTalk: `/not on online` in a private message to the TeamTalk bot.\n"
+                "- After confirming via the link in Telegram, this feature will be active.\n"
+                "- If your linked TeamTalk user is online, Telegram notifications will be silent.\n\n"
+                "**TeamTalk Commands (in private message to the bot):**\n"
+                "/sub - Get a link to subscribe to notifications.\n"
+                "/unsub - Get a link to unsubscribe from notifications.\n"
+                "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (ADMIN_USERNAME from .env only).\n"
+                "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (ADMIN_USERNAME from .env only).\n"
+                "/not on online - Set up silent notifications for when you are online in TeamTalk.\n"
+                "/help - Show help."
+        ),
+        "ru": (
+                "Этот бот пересылает сообщения с TeamTalk сервера в Telegram и уведомляет о входе/выходе пользователей.\n\n"
+                "**Команды Telegram:**\n"
+                "/who - Показать онлайн пользователей.\n"
+                "/id - Получить ID пользователя (через кнопки).\n"
+                "/kick - Кикнуть пользователя с сервера (админ, через кнопки).\n"
+                "/ban - Забанить пользователя на сервере (админ, через кнопки).\n"
+                "/cl `en|ru` - Изменить язык бота.\n"
+                "/notify_all - Включить все уведомления.\n"
+                "/notify_join_off - Выключить уведомления о входах.\n"
+                "/notify_leave_off - Выключить уведомления о выходах.\n"
+                "/notify_none - Выключить все уведомления.\n"
+                "/start - Запустить бота или обработать deeplink.\n"
+                "/mute user `<username>` - Добавить пользователя в список мьюта (не получать уведомления).\n"
+                "/unmute user `<username>` - Удалить пользователя из списка мьюта.\n"
+                '/mute_all - Включить режим "мьют всех" (уведомления только для исключений из списка мьюта).\n'
+                '/unmute_all - Выключить режим "мьют всех" (уведомления для всех, кроме списка мьюта).\n'
+                "/toggle_noon - Включить/выключить тихие уведомления, если связанный пользователь TeamTalk онлайн.\n"
+                "/my_noon_status - Проверить статус функции 'не в сети'.\n"
+                "/help - Показать это сообщение.\n\n"
+                "**Примечание по мьютам и кнопкам 'Переключить статус игнорирования':**\n"
+                "- Кнопка 'Переключить статус игнорирования' под сообщениями о входе/выходе управляет вашим персональным списком мьюта для этого пользователя TeamTalk.\n"
+                "- Когда `/mute_all` **выключен** (по умолчанию): список мьюта содержит тех, от кого **не** приходят уведомления. Нажатие кнопки переключает, будет ли пользователь в этом списке.\n"
+                "- Когда `/mute_all` **включен**: список мьюта содержит тех, от кого **приходят** уведомления (исключения). Нажатие кнопки переключает, будет ли пользователь в этом списке исключений.\n"
+                "- `/unmute_all` всегда выключает `/mute_all` и очищает список.\n\n"
+                "**Примечание по функции 'не в сети' (/toggle_noon):**\n"
+                "- Сначала настройте через TeamTalk: `/not on online` в личные сообщения боту TeamTalk.\n"
+                "- После подтверждения по ссылке в Telegram, эта функция будет активна.\n"
+                "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука.\n\n"
+                "**Команды TeamTalk (в личные сообщения боту):**\n"
+                "/sub - Получить ссылку для подписки на уведомления.\n"
+                "/unsub - Получить ссылку для отписки от уведомлений.\n"
+                "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ADMIN_USERNAME из .env).\n"
+                "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ADMIN_USERNAME из .env).\n"
+                "/not on online - Настроить тихие уведомления, когда вы онлайн в TeamTalk.\n"
+                "/help - Показать справку."
+        ),
+    },
 }
 
 def get_text(key: str, lang: str, **kwargs) -> str:
@@ -893,8 +895,7 @@ async def id_command_handler(
 
 @user_commands_router.message(Command("help"))
 async def help_command_handler(message: Message, language: str):
-    help_text_key = "help_text_ru" if language == "ru" else "help_text_en"
-    await message.reply(get_text(help_text_key, language))
+    await message.reply(get_text("help_text", language))
 
 @settings_router.message(Command("cl"))
 async def cl_command_handler(
@@ -1788,8 +1789,7 @@ async def handle_tt_not_on_online_command(message: TeamTalkMessage, session: Asy
 
 
 async def send_help_message_tt(message: TeamTalkMessage, language: str):
-    help_text_key = "help_text_ru" if language == "ru" else "help_text_en"
-    help_text_val = get_text(help_text_key, language)
+    help_text_val = get_text("help_text", language)
     await send_long_tt_reply(message.reply, help_text_val, max_len_bytes=511)
 
 async def should_notify(telegram_id: int, user_username: str, event_type: str) -> bool:
