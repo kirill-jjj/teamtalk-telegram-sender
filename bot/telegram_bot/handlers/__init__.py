@@ -17,3 +17,4 @@ __all__ = [
     "admin_router",
     "callback_router",
     "catch_all_router",
+]
