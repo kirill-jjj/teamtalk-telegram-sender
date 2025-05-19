@@ -2,7 +2,6 @@ import logging
 from aiogram import Router
 from aiogram.types import Message
 from bot.localization import get_text
-from bot.constants import UNKNOWN_COMMAND
 
 logger = logging.getLogger(__name__)
 catch_all_router = Router(name="catch_all_router")
