@@ -17,10 +17,6 @@ from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
-    WHO_USER_UNKNOWN,
-    JOIN_NOTIFICATION,
-    LEAVE_NOTIFICATION,
-    TOGGLE_IGNORE_BUTTON_TEXT,
     CALLBACK_NICKNAME_MAX_LENGTH,
     INITIAL_LOGIN_IGNORE_DELAY_SECONDS
 )
