@@ -49,8 +49,8 @@ async def on_ready():
     # Use global current_tt_instance, login_complete_time from tt_bot_module
     server_info_obj = pytalk.TeamTalkServerInfo(
         host=app_config["HOSTNAME"],
-        tcpport=app_config["PORT"],
-        udpport=app_config["PORT"], # Assuming TCP and UDP ports are the same
+        tcp_port=app_config["PORT"],
+        udp_port=app_config["PORT"], # Assuming TCP and UDP ports are the same
         username=app_config["USERNAME"],
         password=app_config["PASSWORD"],
         encrypted=app_config["ENCRYPTED"],
