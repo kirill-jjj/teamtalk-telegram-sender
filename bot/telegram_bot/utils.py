@@ -18,15 +18,6 @@ from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.constants import (
     DEFAULT_LANGUAGE,
     CALLBACK_NICKNAME_MAX_LENGTH,
-    WHO_USER_UNKNOWN,
-    SHOW_USERS_NO_USERS_ONLINE,
-    SHOW_USERS_NO_OTHER_USERS_ONLINE,
-    SHOW_USERS_SELECT_ID,
-    SHOW_USERS_SELECT_KICK,
-    SHOW_USERS_SELECT_BAN,
-    SHOW_USERS_SELECT_DEFAULT,
-    TT_BOT_NOT_CONNECTED,
-    TT_ERROR_GETTING_USERS
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
 
