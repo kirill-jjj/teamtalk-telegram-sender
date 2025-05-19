@@ -14,21 +14,6 @@ from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
 from bot.telegram_bot.utils import show_user_buttons
 from bot.constants import (
-    START_HELLO,
-    TT_BOT_NOT_CONNECTED,
-    TT_ERROR_GETTING_USERS,
-    WHO_CHANNEL_IN,
-    WHO_CHANNEL_UNDER_SERVER,
-    WHO_CHANNEL_ROOT,
-    WHO_CHANNEL_UNKNOWN_LOCATION,
-    WHO_USER_UNKNOWN,
-    WHO_AND_SEPARATOR,
-    WHO_USERS_COUNT_SINGULAR,
-    WHO_USERS_COUNT_PLURAL_2_4,
-    WHO_USERS_COUNT_PLURAL_5_MORE,
-    WHO_HEADER,
-    WHO_NO_USERS_ONLINE,
-    HELP_TEXT,
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2
