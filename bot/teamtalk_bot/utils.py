@@ -13,8 +13,6 @@ from pytalk.enums import UserStatusMode
 from bot.config import app_config
 from bot.localization import get_text
 from bot.constants import (
-    WHO_USER_UNKNOWN,
-    TT_FORWARD_MESSAGE_TEXT,
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
     RECONNECT_DELAY_SECONDS,
