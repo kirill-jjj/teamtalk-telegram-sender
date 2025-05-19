@@ -1,6 +1,6 @@
 aiogram
 SQLAlchemy
 aiosqlite
-pytalk-ex
+py-talk-ex
 python-dotenv
 uvloop
