@@ -55,25 +55,16 @@ async def on_ready():
         password=app_config["PASSWORD"],
         encrypted=app_config["ENCRYPTED"],
         nickname=app_config["NICKNAME"]
+        # join_channel_id=app_config.get("CHANNEL_ID_INT", -1), # Пример, если есть такой конфиг
+        # join_channel_password=app_config.get("CHANNEL_PASSWORD")
     )
     try:
         tt_bot_module.login_complete_time = None # Reset before connection attempt
-        # tt_bot.add_server returns the TeamTalkInstance
-        # This instance is stored internally by pytalk.TeamTalkBot in its `teamtalks` list.
-        # We also store it in `current_tt_instance` for easy access.
-        instance = await tt_bot_module.tt_bot.add_server(server_info_obj)
-        if instance: # Successfully added, Pytalk will now try to connect
-            # tt_bot_module.current_tt_instance = instance # Pytalk handles this internally now.
-            # on_my_login will set current_tt_instance correctly.
-            logger.info(f"Initiated connection process for TeamTalk server: {app_config['HOSTNAME']}.")
-        else:
-            logger.error(f"Failed to add TeamTalk server {app_config['HOSTNAME']} to Pytalk. Will attempt reconnect.")
-            asyncio.create_task(_tt_reconnect())
-
+        await tt_bot_module.tt_bot.add_server(server_info_obj)
+        logger.info(f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}.")
     except Exception as e:
         logger.error(f"Error initiating TeamTalk server connection in on_ready: {e}", exc_info=True)
-        asyncio.create_task(_tt_reconnect()) # Schedule a reconnect attempt
-
+        asyncio.create_task(_tt_reconnect())
 
 @tt_bot_module.tt_bot.event
 async def on_my_login(server: PytalkServer):
