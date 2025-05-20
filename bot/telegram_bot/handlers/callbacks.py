@@ -189,8 +189,8 @@ async def process_toggle_ignore_user(
 
     await update_user_settings_in_db(session, telegram_id_val, user_specific_settings)
 
-    feedback_key = TOGGLE_IGNORE_NOW_IGNORED if user_is_now_effectively_ignored_val else TOGGLE_IGNORE_NO_LONGER_IGNORED
-    feedback_msg_for_answer_val = get_text("feedback_key", language, nickname=html.quote(nickname_from_callback_val))
+    feedback_key_str = "TOGGLE_IGNORE_NOW_IGNORED" if user_is_now_effectively_ignored_val else "TOGGLE_IGNORE_NO_LONGER_IGNORED"
+    feedback_msg_for_answer_val = get_text("feedback_key_str", language, nickname=html.quote(nickname_from_callback_val))
 
     # Update the button text/state if needed (though text is static in current implementation)
     # For a dynamic button text (e.g., "Ignore User [Ignored]" vs "Ignore User"), you'd change it here.
