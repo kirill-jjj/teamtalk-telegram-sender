@@ -36,8 +36,8 @@ async def _handle_subscribe_deeplink(
         logger.info(f"User {telegram_id} subscribed via deeplink.")
         # Ensure settings are loaded/created for the new subscriber
         await get_or_create_user_settings(telegram_id, session)
-        return get_text(DEEPLINK_SUBSCRIBED, language)
-    return get_text(DEEPLINK_ALREADY_SUBSCRIBED, language)
+        return get_text("DEEPLINK_SUBSCRIBED", language)
+    return get_text("DEEPLINK_ALREADY_SUBSCRIBED", language)
 
 async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
@@ -51,8 +51,8 @@ async def _handle_unsubscribe_deeplink(
         # Optionally, delete UserSettings row from DB or mark as inactive
         # For now, we just remove from cache; settings row remains for potential re-subscribe.
         logger.info(f"Removed user {telegram_id} from settings cache after unsubscribe.")
-        return get_text(DEEPLINK_UNSUBSCRIBED, language)
-    return get_text(DEEPLINK_NOT_SUBSCRIBED, language)
+        return get_text("DEEPLINK_UNSUBSCRIBED", language)
+    return get_text("DEEPLINK_NOT_SUBSCRIBED", language)
 
 async def _handle_confirm_noon_deeplink(
     session: AsyncSession,
@@ -64,7 +64,7 @@ async def _handle_confirm_noon_deeplink(
     tt_username_from_payload = payload
     if not tt_username_from_payload:
         logger.error("Deeplink for 'confirm_not_on_online' missing payload.")
-        return get_text(DEEPLINK_NOON_CONFIRM_MISSING_PAYLOAD, language)
+        return get_text("DEEPLINK_NOON_CONFIRM_MISSING_PAYLOAD", language)
 
     # Update UserSpecificSettings object directly
     user_specific_settings.teamtalk_username = tt_username_from_payload
@@ -75,7 +75,7 @@ async def _handle_confirm_noon_deeplink(
     await update_user_settings_in_db(session, telegram_id, user_specific_settings)
 
     logger.info(f"User {telegram_id} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink.")
-    return get_text(DEEPLINK_NOON_CONFIRMED, language, tt_username=html.quote(tt_username_from_payload))
+    return get_text("DEEPLINK_NOON_CONFIRMED", language, tt_username=html.quote(tt_username_from_payload))
 
 
 # Define a type for the handler functions
@@ -98,19 +98,19 @@ async def handle_deeplink_payload(
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
-        await message.reply(get_text(ERROR_OCCURRED, language)) # Generic error
+        await message.reply(get_text("ERROR_OCCURRED", language)) # Generic error
         return
 
     deeplink_obj = await db_get_deeplink(session, token)
     if not deeplink_obj:
-        await message.reply(get_text(DEEPLINK_INVALID_OR_EXPIRED, language))
+        await message.reply(get_text("DEEPLINK_INVALID_OR_EXPIRED", language))
         return
 
     telegram_id_val = message.from_user.id
-    reply_text_val = get_text(ERROR_OCCURRED, language) # Default error message
+    reply_text_val = get_text("ERROR_OCCURRED", language) # Default error message
 
     if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != telegram_id_val:
-        await message.reply(get_text(DEEPLINK_WRONG_ACCOUNT, language))
+        await message.reply(get_text("DEEPLINK_WRONG_ACCOUNT", language))
         # Do not delete the deeplink here, it might be for someone else who hasn't clicked yet.
         # Or, if one-time use per link is strict, delete it. For now, let it expire.
         return
@@ -127,9 +127,9 @@ async def handle_deeplink_payload(
                 reply_text_val = await handler(session, telegram_id_val, language, None, user_specific_settings)
         except Exception as e:
             logger.error(f"Error executing deeplink handler for action '{deeplink_obj.action}', token {token}: {e}", exc_info=True)
-            reply_text_val = get_text(ERROR_OCCURRED, language)
+            reply_text_val = get_text("ERROR_OCCURRED", language)
     else:
-        reply_text_val = get_text(DEEPLINK_INVALID_ACTION, language)
+        reply_text_val = get_text("DEEPLINK_INVALID_ACTION", language)
         logger.warning(f"Invalid deeplink action '{deeplink_obj.action}' for token {token}")
 
     await message.reply(reply_text_val)
