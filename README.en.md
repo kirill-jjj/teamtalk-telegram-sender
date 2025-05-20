@@ -48,57 +48,35 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
 
 ## Installation and Setup
 
-1.  **Clone the repository:**
+1.  **Install `uv` (if not already installed):**
+    *   **For Linux and macOS:**
+        ```bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+    *   **For Windows:** The simplest way if you have Python and pip installed is to run `pip install uv`. Other installation methods (e.g., via an installer) can be found on the [official Astral website](https://astral.sh/uv#installation).
+
+2.  **Clone the repository:**
     ```bash
     git clone https://github.com/kirill-jjj/teamtalk-telegram-sender.git
     cd teamtalk-telegram-sender
     ```
 
-2.  **Install dependencies:**
+3.  **Install dependencies (the `uv sync` command will automatically create a virtual environment in a `.venv` folder if it doesn't exist and install all necessary packages into it):**
     ```bash
-    pip install -r requirements.txt
+    uv sync
     ```
+    *(This command prepares the environment with all dependencies.)*
 
-3.  **Configure environment variables:**
-    Copy the `.env.example` file (if present in your repository, otherwise create a new `.env` file) to `.env` and fill in your details:
-    ```dotenv
-    # Telegram Bot Tokens
-    TG_BOT_TOKEN="YOUR_MAIN_TELEGRAM_BOT_TOKEN" # Required
-    TG_EVENT_TOKEN=""               # Optional: Token for notifications (if empty, TG_BOT_TOKEN is used)
-    TG_BOT_MESSAGE_TOKEN=""         # Optional: Token for forwarding PMs from TT (if empty, this feature is inactive)
-    TG_ADMIN_CHAT_ID=""             # Optional: Your Telegram chat ID for receiving PMs from TT and admin notifications
+4.  **Configure environment variables:**
+    Copy the `.env.example` file (if present in your repository, otherwise create `.env` manually) and fill in your details as described earlier in this README.
 
-    # TeamTalk Server Connection
-    HOST_NAME="YOUR_TEAMTALK_SERVER_ADDRESS" # Required
-    PORT="10333"                    # Optional: TeamTalk TCP/UDP port (defaults to 9987 if not specified)
-    ENCRYPTED="0"                   # Optional: 1 for encryption, 0 for none (defaults to 0)
-
-    # TeamTalk Bot Account
-    USER_NAME="BOT_USERNAME_IN_TT"   # Required
-    PASSWORD="BOT_PASSWORD_IN_TT"    # Required
-    CHANNEL="PATH/TO/CHANNEL or CHANNEL_ID" # Required: Channel for the bot to join
-    CHANNEL_PASSWORD=""             # Optional: Password to join the channel
-    NICK_NAME="BOT_NICKNAME_IN_TT"   # Required
-    STATUS_TEXT="Bot's status message" # Optional: Bot's status text in TeamTalk
-    CLIENT_NAME="TTTM Bot"          # Optional: Client name displayed in TT (defaults to TTTM)
-    SERVER_NAME="My Server"        # Optional: Display name of the server in notifications
-
-    # Bot Administration
-    ADMIN_USERNAME=""               # Optional: TeamTalk username (super-admin) who can use /add_admin and /remove_admin in PM with the TT bot
-    GLOBAL_IGNORE_USERNAME=""       # Optional: TeamTalk username whose notifications will be globally ignored
-
-    # Database
-    DATABASE_FILE="bot_data.db"     # Optional: SQLite database file name (defaults to bot_data.db)
-    ```
-    *(Note: If you don't have an `.env.example` file, it's recommended to create one with the variables listed above so users know what to configure.)*
-
-4.  **Run the bot:**
+5.  **Run the bot (using `uv run` to automatically use and sync the correct environment):**
     ```bash
-    python sender.py
+    uv run python sender.py
     ```
     If you want to specify a path to an `.env` file different from the current directory:
     ```bash
-    python sender.py /path/to/your/.env
+    uv run python sender.py /path/to/your/.env
     ```
 
 ## Usage
