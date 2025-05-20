@@ -133,7 +133,7 @@ async def on_my_connection_lost(server: PytalkServer):
 @tt_bot_module.tt_bot.event
 async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
     """Called when the bot is kicked from a channel or the server."""
-    tt_instance_val = channel_obj.teamtalk_instance # Get instance from channel
+    tt_instance_val = channel_obj.teamtalk # Get instance from channel
     # tt_bot_module.current_tt_instance should ideally be this instance.
 
     if not tt_instance_val:
