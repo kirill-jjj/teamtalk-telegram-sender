@@ -52,6 +52,7 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
     *   **For Linux and macOS:**
         ```bash
         curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
         ```
     *   **For Windows:** The simplest way if you have Python and pip installed is to run `pip install uv`. Other installation methods (e.g., via an installer) can be found on the [official Astral website](https://astral.sh/uv#installation).
 
