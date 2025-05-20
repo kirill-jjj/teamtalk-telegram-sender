@@ -10,6 +10,9 @@ except ImportError:
     logging.info("uvloop not found, using default asyncio event loop.")
     pass
 
+from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
+ttstr = sdk.ttstr
+
 from aiogram import Dispatcher
 
 # Setup logging first
