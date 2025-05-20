@@ -33,12 +33,12 @@ async def handle_tt_subscribe_command(
         bot_info_val = await tg_bot_event.get_me() # Get bot's username for the link
         deeplink_url_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
 
-        reply_text_val = get_text(TT_SUBSCRIBE_DEEPLINK_TEXT, bot_language, deeplink_url=deeplink_url_val)
+        reply_text_val = get_text("TT_SUBSCRIBE_DEEPLINK_TEXT", bot_language, deeplink_url=deeplink_url_val)
         tt_message.reply(reply_text_val)
         logger.info(f"Generated subscribe deeplink {token_val} for TT user {ttstr(tt_message.user.username)}")
     except Exception as e:
         logger.error(f"Error processing TT /sub command for {ttstr(tt_message.user.username)}: {e}", exc_info=True)
-        tt_message.reply(get_text(TT_SUBSCRIBE_ERROR, bot_language))
+        tt_message.reply(get_text("TT_SUBSCRIBE_ERROR", bot_language))
 
 
 async def handle_tt_unsubscribe_command(
@@ -51,12 +51,12 @@ async def handle_tt_unsubscribe_command(
         bot_info_val = await tg_bot_event.get_me()
         deeplink_url_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
 
-        reply_text_val = get_text(TT_UNSUBSCRIBE_DEEPLINK_TEXT, bot_language, deeplink_url=deeplink_url_val)
+        reply_text_val = get_text("TT_UNSUBSCRIBE_DEEPLINK_TEXT", bot_language, deeplink_url=deeplink_url_val)
         tt_message.reply(reply_text_val)
         logger.info(f"Generated unsubscribe deeplink {token_val} for TT user {ttstr(tt_message.user.username)}")
     except Exception as e:
         logger.error(f"Error processing TT /unsub command for {ttstr(tt_message.user.username)}: {e}", exc_info=True)
-        tt_message.reply(get_text(TT_UNSUBSCRIBE_ERROR, bot_language))
+        tt_message.reply(get_text("TT_UNSUBSCRIBE_ERROR", bot_language))
 
 
 async def handle_tt_add_admin_command(
@@ -68,13 +68,13 @@ async def handle_tt_add_admin_command(
     # Check against ADMIN_USERNAME from config
     if not app_config.get("ADMIN_USERNAME") or sender_username_val != app_config["ADMIN_USERNAME"]:
         logger.warning(f"Unauthorized /add_admin attempt by TT user {sender_username_val}.")
-        tt_message.reply(get_text(TT_ADMIN_CMD_NO_PERMISSION, bot_language))
+        tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", bot_language))
         return
 
     try:
         parts_list = tt_message.content.split()
         if len(parts_list) < 2: # Command + at least one ID
-            tt_message.reply(get_text(TT_ADD_ADMIN_PROMPT_IDS, bot_language))
+            tt_message.reply(get_text("TT_ADD_ADMIN_PROMPT_IDS", bot_language))
             return
 
         telegram_ids_to_add_list = parts_list[1:]
@@ -88,22 +88,22 @@ async def handle_tt_add_admin_command(
                     added_count_val += 1
                     logger.info(f"Admin TG ID {telegram_id_val} added by TT admin {sender_username_val}")
                 else: # add_admin returned False (likely already exists or DB error)
-                    errors_list.append(get_text(TT_ADD_ADMIN_ERROR_ALREADY_ADMIN, bot_language, telegram_id=telegram_id_val))
+                    errors_list.append(get_text("TT_ADD_ADMIN_ERROR_ALREADY_ADMIN", bot_language, telegram_id=telegram_id_val))
             else:
-                errors_list.append(get_text(TT_ADD_ADMIN_ERROR_INVALID_ID, bot_language, telegram_id_str=telegram_id_str_val))
+                errors_list.append(get_text("TT_ADD_ADMIN_ERROR_INVALID_ID", bot_language, telegram_id_str=telegram_id_str_val))
 
         reply_parts_list = []
         if added_count_val > 0:
-            reply_parts_list.append(get_text(TT_ADD_ADMIN_SUCCESS, bot_language, count=added_count_val))
+            reply_parts_list.append(get_text("TT_ADD_ADMIN_SUCCESS", bot_language, count=added_count_val))
         if errors_list:
-            reply_parts_list.append(get_text(TT_ADMIN_ERRORS_HEADER, bot_language) + "\n- ".join(errors_list))
+            reply_parts_list.append(get_text("TT_ADMIN_ERRORS_HEADER", bot_language) + "\n- ".join(errors_list))
 
-        final_reply = "\n".join(reply_parts_list) if reply_parts_list else get_text(TT_ADMIN_NO_VALID_IDS, bot_language)
+        final_reply = "\n".join(reply_parts_list) if reply_parts_list else get_text("TT_ADMIN_NO_VALID_IDS", bot_language)
         tt_message.reply(final_reply)
 
     except Exception as e:
         logger.error(f"Error processing TT /add_admin command from {sender_username_val}: {e}", exc_info=True)
-        tt_message.reply(get_text(TT_ADMIN_ERROR_PROCESSING, bot_language))
+        tt_message.reply(get_text("TT_ADMIN_ERROR_PROCESSING", bot_language))
 
 
 async def handle_tt_remove_admin_command(
@@ -114,13 +114,13 @@ async def handle_tt_remove_admin_command(
     sender_username_val = ttstr(tt_message.user.username)
     if not app_config.get("ADMIN_USERNAME") or sender_username_val != app_config["ADMIN_USERNAME"]:
         logger.warning(f"Unauthorized /remove_admin attempt by TT user {sender_username_val}.")
-        tt_message.reply(get_text(TT_ADMIN_CMD_NO_PERMISSION, bot_language))
+        tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", bot_language))
         return
 
     try:
         parts_list = tt_message.content.split()
         if len(parts_list) < 2:
-            tt_message.reply(get_text(TT_REMOVE_ADMIN_PROMPT_IDS, bot_language))
+            tt_message.reply(get_text("TT_REMOVE_ADMIN_PROMPT_IDS", bot_language))
             return
 
         telegram_ids_to_remove_list = parts_list[1:]
@@ -134,23 +134,23 @@ async def handle_tt_remove_admin_command(
                     removed_count_val += 1
                     logger.info(f"Admin TG ID {telegram_id_val} removed by TT admin {sender_username_val}")
                 else: # remove_admin_db returned False (not found or DB error)
-                    errors_list.append(get_text(TT_REMOVE_ADMIN_ERROR_NOT_FOUND, bot_language, telegram_id=telegram_id_val))
+                    errors_list.append(get_text("TT_REMOVE_ADMIN_ERROR_NOT_FOUND", bot_language, telegram_id=telegram_id_val))
             else:
-                errors_list.append(get_text(TT_ADD_ADMIN_ERROR_INVALID_ID, bot_language, telegram_id_str=telegram_id_str_val)) # Re-use invalid ID message
+                errors_list.append(get_text("TT_ADD_ADMIN_ERROR_INVALID_ID", bot_language, telegram_id_str=telegram_id_str_val)) # Re-use invalid ID message
 
         reply_parts_list = []
         if removed_count_val > 0:
-            reply_parts_list.append(get_text(TT_REMOVE_ADMIN_SUCCESS, bot_language, count=removed_count_val))
+            reply_parts_list.append(get_text("TT_REMOVE_ADMIN_SUCCESS", bot_language, count=removed_count_val))
         if errors_list:
             # Using TT_ADMIN_INFO_ERRORS_HEADER as it might contain "not found" which is info/error
-            reply_parts_list.append(get_text(TT_ADMIN_INFO_ERRORS_HEADER, bot_language) + "\n- ".join(errors_list))
+            reply_parts_list.append(get_text("TT_ADMIN_INFO_ERRORS_HEADER", bot_language) + "\n- ".join(errors_list))
 
         final_reply = "\n".join(reply_parts_list) if reply_parts_list else get_text(TT_ADMIN_NO_VALID_IDS, bot_language) # Or a specific "no valid IDs to remove"
         tt_message.reply(final_reply)
 
     except Exception as e:
         logger.error(f"Error processing TT /remove_admin command from {sender_username_val}: {e}", exc_info=True)
-        tt_message.reply(get_text(TT_ADMIN_ERROR_PROCESSING, bot_language))
+        tt_message.reply(get_text("TT_ADMIN_ERROR_PROCESSING", bot_language))
 
 
 async def handle_tt_not_on_online_command(
@@ -163,7 +163,7 @@ async def handle_tt_not_on_online_command(
     # Command should be exactly "/not on online" (case-insensitive check in on_message)
     # Here we assume it matched. If arguments were possible, they'd be checked.
     # if tt_message.content.strip().lower() != "/not on online": # This check is usually done before calling handler
-    #     tt_message.reply(get_text(TT_NOON_USAGE, bot_language))
+    #     tt_message.reply(get_text("TT_NOON_USAGE", bot_language))
     #     return
 
     try:
@@ -180,19 +180,19 @@ async def handle_tt_not_on_online_command(
         bot_info = await tg_bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
 
-        reply_text = get_text(TT_NOON_CONFIRM_DEEPLINK_TEXT, bot_language, tt_username=sender_tt_username, deeplink_url=deeplink_url)
+        reply_text = get_text("TT_NOON_CONFIRM_DEEPLINK_TEXT", bot_language, tt_username=sender_tt_username, deeplink_url=deeplink_url)
         tt_message.reply(reply_text)
         logger.info(f"Generated 'not on online' confirmation deeplink {token} for TT user {sender_tt_username}")
     except Exception as e:
         logger.error(f"Error processing TT /not on online command for {sender_tt_username}: {e}", exc_info=True)
-        tt_message.reply(get_text(TT_NOON_ERROR_PROCESSING, bot_language))
+        tt_message.reply(get_text("TT_NOON_ERROR_PROCESSING", bot_language))
 
 
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
     bot_language: str
 ):
-    help_text_val = get_text(HELP_TEXT, bot_language) # Get the full help text object
+    help_text_val = get_text("HELP_TEXT", bot_language) # Get the full help text object
     # The help_text_val is a dict with "en" and "ru" keys, or a string if already resolved.
     # Assuming get_text resolves it to a string based on bot_language.
     await send_long_tt_reply(tt_message.reply, help_text_val)
@@ -203,6 +203,6 @@ async def handle_tt_unknown_command(
     bot_language: str
 ):
     # Use a specific "unknown command" message for TeamTalk if available
-    reply_text_val = get_text(TT_UNKNOWN_COMMAND, bot_language) # Or TT_UNKNOWN_COMMAND_TT
+    reply_text_val = get_text("TT_UNKNOWN_COMMAND", bot_language) # Or TT_UNKNOWN_COMMAND_TT
     tt_message.reply(reply_text_val)
     logger.warning(f"Received unknown TT command from {ttstr(tt_message.user.username)}: {tt_message.content[:100]}")
