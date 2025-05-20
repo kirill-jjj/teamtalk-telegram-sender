@@ -67,7 +67,7 @@ def _generate_join_leave_markup(
     callback_safe_nickname = tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH] # Raw for callback data
 
     callback_data = f"toggle_ignore_user:{tt_user_username}:{callback_safe_nickname}"
-    button_text = get_text(TOGGLE_IGNORE_BUTTON_TEXT, lang_code, nickname=button_display_nickname)
+    button_text = get_text("TOGGLE_IGNORE_BUTTON_TEXT", lang_code, nickname=button_display_nickname)
 
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=button_text, callback_data=callback_data)]
@@ -86,7 +86,7 @@ async def send_join_leave_notification_logic(
              logger.debug(f"Ignoring potential initial sync {event_type} for {ttstr(tt_user.username)} ({tt_user.id}). Bot login too recent.")
         return
 
-    user_nickname_val = ttstr(tt_user.nickname) or ttstr(tt_user.username) or get_text(WHO_USER_UNKNOWN, "en") # Fallback lang for unknown
+    user_nickname_val = ttstr(tt_user.nickname) or ttstr(tt_user.username) or get_text("WHO_USER_UNKNOWN", "en") # Fallback lang for unknown
     user_username_val = ttstr(tt_user.username)
     user_id_val = tt_user.id # For logging
 
@@ -123,7 +123,7 @@ async def send_join_leave_notification_logic(
         return
 
     def text_generator_func(lang_code: str) -> str:
-        key = JOIN_NOTIFICATION if event_type == NOTIFICATION_EVENT_JOIN else LEAVE_NOTIFICATION
+        key = "JOIN_NOTIFICATION" if event_type == NOTIFICATION_EVENT_JOIN else "LEAVE_NOTIFICATION"
         return get_text(key, lang_code, user_nickname=html.quote(user_nickname_val), server_name=html.quote(server_name_val))
 
     await send_telegram_messages_to_list(
