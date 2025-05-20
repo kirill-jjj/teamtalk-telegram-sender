@@ -136,10 +136,10 @@ async def forward_tt_message_to_telegram_admin(
     sender_username = ttstr(message.user.username)
     message_content = message.content
 
-    sender_display_val = sender_nickname or sender_username or get_text(WHO_USER_UNKNOWN, admin_language)
+    sender_display_val = sender_nickname or sender_username or get_text("WHO_USER_UNKNOWN", admin_language)
 
     text_to_send = get_text(
-        TT_FORWARD_MESSAGE_TEXT,
+        "TT_FORWARD_MESSAGE_TEXT",
         admin_language,
         server_name=html.quote(server_name_val),
         sender_display=html.quote(sender_display_val),
