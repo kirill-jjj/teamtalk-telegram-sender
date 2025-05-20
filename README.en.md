@@ -68,7 +68,11 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
     *(This command prepares the environment with all dependencies.)*
 
 4.  **Configure environment variables:**
-    Copy the `.env.example` file (if present in your repository, otherwise create `.env` manually) and fill in your details as described earlier in this README.
+    Copy the `.env.example` file to a new file named `.env`:
+    ```bash
+    cp .env.example .env
+    ```
+    Then, open the `.env` file in a text editor and fill it with your actual data (tokens, server addresses, credentials, etc.), following the comments within the file. **Never commit your `.env` file to version control (Git).**
 
 5.  **Run the bot (using `uv run` to automatically use and sync the correct environment):**
     ```bash
