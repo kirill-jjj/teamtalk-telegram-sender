@@ -39,7 +39,7 @@ async def start_command_handler(
     if token_val:
         await handle_deeplink_payload(message, token_val, session, language, user_specific_settings)
     else:
-        await message.reply(get_text(START_HELLO, language))
+        await message.reply(get_text("START_HELLO", language))
 
 
 def _get_user_display_channel_name(
@@ -65,15 +65,15 @@ def _get_user_display_channel_name(
     # Determine display name based on admin status and channel visibility/type
     if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # Regular channel
         if is_caller_admin or not is_channel_hidden_val:
-            user_display_channel_name_val = get_text(WHO_CHANNEL_IN, language, channel_name=ttstr(channel_obj.name))
+            user_display_channel_name_val = get_text("WHO_CHANNEL_IN", language, channel_name=ttstr(channel_obj.name))
         else: # Hidden channel, non-admin caller
-            user_display_channel_name_val = get_text(WHO_CHANNEL_UNDER_SERVER, language)
+            user_display_channel_name_val = get_text("WHO_CHANNEL_UNDER_SERVER", language)
     elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT: # Root channel
-        user_display_channel_name_val = get_text(WHO_CHANNEL_ROOT, language)
+        user_display_channel_name_val = get_text("WHO_CHANNEL_ROOT", language)
     elif not channel_obj or channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # No specific channel / under server
-        user_display_channel_name_val = get_text(WHO_CHANNEL_UNDER_SERVER, language)
+        user_display_channel_name_val = get_text("WHO_CHANNEL_UNDER_SERVER", language)
     else: # Fallback for any other case
-        user_display_channel_name_val = get_text(WHO_CHANNEL_UNKNOWN_LOCATION, language)
+        user_display_channel_name_val = get_text("WHO_CHANNEL_UNKNOWN_LOCATION", language)
 
     return user_display_channel_name_val
 
@@ -88,14 +88,14 @@ async def who_command_handler(
     if not message.from_user: return
 
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(get_text(TT_BOT_NOT_CONNECTED, language))
+        await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
         return
 
     try:
         all_users_list = tt_instance.server.get_users()
     except Exception as e:
         logger.error(f"Failed to get users from TT for /who: {e}")
-        await message.reply(get_text(TT_ERROR_GETTING_USERS, language))
+        await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
         return
 
     # Check if the calling user is an admin for potentially different views
@@ -115,7 +115,7 @@ async def who_command_handler(
         if user_display_channel_name_val not in channels_display_data_val:
             channels_display_data_val[user_display_channel_name_val] = []
 
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text(WHO_USER_UNKNOWN, language)
+        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", language)
         channels_display_data_val[user_display_channel_name_val].append(html.quote(user_nickname_val))
         users_to_display_count_val += 1
 
@@ -132,7 +132,7 @@ async def who_command_handler(
         user_text_segment_val = ""
         if users_in_channel_list_val:
             if len(users_in_channel_list_val) > 1:
-                user_separator_val = get_text(WHO_AND_SEPARATOR, language)
+                user_separator_val = get_text("WHO_AND_SEPARATOR", language)
                 # Join all but the last with comma, then add separator and the last one
                 user_list_except_last_segment_val = ", ".join(users_in_channel_list_val[:-1])
                 user_text_segment_val = f"{user_list_except_last_segment_val}{user_separator_val}{users_in_channel_list_val[-1]}"
@@ -146,22 +146,22 @@ async def who_command_handler(
         last_digit = user_count_val % 10
         last_two_digits = user_count_val % 100
         if 11 <= last_two_digits <= 19:
-            users_word_total_val = get_text(WHO_USERS_COUNT_PLURAL_5_MORE, "ru")
+            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
         elif last_digit == 1:
-            users_word_total_val = get_text(WHO_USERS_COUNT_SINGULAR, "ru")
+            users_word_total_val = get_text("WHO_USERS_COUNT_SINGULAR", "ru")
         elif 2 <= last_digit <= 4:
-            users_word_total_val = get_text(WHO_USERS_COUNT_PLURAL_2_4, "ru")
+            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_2_4", "ru")
         else:
-            users_word_total_val = get_text(WHO_USERS_COUNT_PLURAL_5_MORE, "ru")
+            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
     else: # en and default
-        users_word_total_val = get_text(WHO_USERS_COUNT_SINGULAR, "en") if user_count_val == 1 else get_text(WHO_USERS_COUNT_PLURAL_5_MORE, "en")
+        users_word_total_val = get_text("WHO_USERS_COUNT_SINGULAR", "en") if user_count_val == 1 else get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "en")
 
-    text_reply = get_text(WHO_HEADER, language, user_count=user_count_val, users_word=users_word_total_val)
+    text_reply = get_text("WHO_HEADER", language, user_count=user_count_val, users_word=users_word_total_val)
 
     if channel_info_parts_val:
         text_reply += "\n".join(channel_info_parts_val)
     elif user_count_val == 0 : # No users at all (after filtering bot itself)
-         text_reply = get_text(WHO_NO_USERS_ONLINE, language) # Override header if truly no one
+         text_reply = get_text("WHO_NO_USERS_ONLINE", language) # Override header if truly no one
     # If user_count_val > 0 but channel_info_parts_val is empty, it means users are in uncategorized state (should be rare)
 
     await message.reply(text_reply, parse_mode="HTML")
@@ -178,4 +178,4 @@ async def id_command_handler(
 
 @user_commands_router.message(Command("help"))
 async def help_command_handler(message: Message, language: str): # From UserSettingsMiddleware
-    await message.reply(get_text(HELP_TEXT, language), parse_mode="Markdown")
+    await message.reply(get_text("HELP_TEXT", language), parse_mode="Markdown")
