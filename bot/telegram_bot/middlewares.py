@@ -11,7 +11,7 @@ from bot.core.user_settings import (
     UserSpecificSettings,
     get_or_create_user_settings
 )
-from bot.teamtalk_bot.bot_instance import current_tt_instance as global_current_tt_instance
+from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
 from bot.constants import DEFAULT_LANGUAGE
 
 
@@ -64,14 +64,26 @@ class UserSettingsMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
+import logging # Убедитесь, что logging импортирован в этом файле
+from typing import Callable, Coroutine, Any
+from aiogram.dispatcher.middlewares.base import BaseMiddleware
+from aiogram.types import TelegramObject
+# ... другие ваши импорты ...
+from bot.teamtalk_bot.bot_instance import current_tt_instance as global_current_tt_instance # Импорт вашей глобальной переменной
+
+logger = logging.getLogger(__name__) # Инициализация логгера для этого модуля, если еще не сделано
+
+from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
+
+# ...
+
 class TeamTalkInstanceMiddleware(BaseMiddleware):
-    # No __init__ needed if it doesn't take parameters beyond self
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        # Provides the current global TeamTalk instance to handlers
-        data["tt_instance"] = global_current_tt_instance
+        actual_tt_instance = tt_bot_module.current_tt_instance
+        data["tt_instance"] = actual_tt_instance
         return await handler(event, data)

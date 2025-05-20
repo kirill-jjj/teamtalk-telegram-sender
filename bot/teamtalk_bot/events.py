@@ -68,10 +68,9 @@ async def on_ready():
 
 @tt_bot_module.tt_bot.event
 async def on_my_login(server: PytalkServer):
-    """Called when the bot successfully logs into a TeamTalk server."""
     tt_instance_val = server.teamtalk_instance
-    tt_bot_module.current_tt_instance = tt_instance_val # Set the global current instance
-    tt_bot_module.login_complete_time = None # Reset, will be set after channel join & status
+    tt_bot_module.current_tt_instance = tt_instance_val
+    tt_bot_module.login_complete_time = None
 
     server_name = "Unknown Server"
     try:
