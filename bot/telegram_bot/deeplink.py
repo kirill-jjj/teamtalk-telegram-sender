@@ -30,6 +30,7 @@ async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     language: str,
+    payload: Any,
     user_specific_settings: UserSpecificSettings # To update cache if needed
 ) -> str:
     if await add_subscriber(session, telegram_id):
@@ -43,6 +44,7 @@ async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     language: str,
+    payload: Any,
     user_specific_settings: UserSpecificSettings # To update cache
 ) -> str:
     if await remove_subscriber(session, telegram_id):
