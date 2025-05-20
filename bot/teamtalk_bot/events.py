@@ -90,7 +90,7 @@ async def on_my_login(server: PytalkServer):
     except Exception as e_prop:
         logger.warning(f"Could not get server name on login: {e_prop}")
 
-    logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({ttstr(server.server_info.host)})")
+    logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({ttstr(server.info.host)})")
 
     try:
         channel_id_or_path_val = app_config["CHANNEL"]
@@ -132,7 +132,7 @@ async def on_my_login(server: PytalkServer):
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
     """Called when the connection to the TeamTalk server is lost."""
-    host = ttstr(server.server_info.host) if server and server.server_info else "Unknown Host"
+    host = ttstr(server.info.host) if server and server.server_info else "Unknown Host"
     logger.warning(f"Connection lost to TeamTalk server {host}. Attempting to reconnect...")
     if tt_bot_module.current_tt_instance and tt_bot_module.current_tt_instance.server_info.host == host:
         tt_bot_module.current_tt_instance = None
