@@ -156,18 +156,18 @@ async def show_user_buttons(
     tt_instance: TeamTalkInstance | None
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(get_text(TT_BOT_NOT_CONNECTED, language))
+        await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
         return
 
     try:
         users_list = tt_instance.server.get_users()
     except Exception as e:
         logger.error(f"Failed to get users from TT for {command_type} button list: {e}")
-        await message.reply(get_text(TT_ERROR_GETTING_USERS, language))
+        await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
         return
 
     if not users_list:
-        await message.reply(get_text(SHOW_USERS_NO_USERS_ONLINE, language))
+        await message.reply(get_text("SHOW_USERS_NO_USERS_ONLINE", language))
         return
 
     builder = InlineKeyboardBuilder()
@@ -178,7 +178,7 @@ async def show_user_buttons(
         if user_obj.id == my_user_id_val: # Don't show self
             continue
 
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text(WHO_USER_UNKNOWN, language)
+        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", language)
         # Ensure callback data is within Telegram limits (64 bytes for callback_data)
         # Format: command_type:user_id:nickname_prefix
         # Max nickname part length: 64 - len(command_type) - len(str(user_id)) - 2 (colons)
@@ -192,7 +192,7 @@ async def show_user_buttons(
         users_added_to_list +=1
 
     if users_added_to_list == 0: # No other users online
-         await message.reply(get_text(SHOW_USERS_NO_OTHER_USERS_ONLINE, language))
+         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
          return
 
     builder.adjust(2) # Adjust to 2 buttons per row
@@ -203,4 +203,4 @@ async def show_user_buttons(
         "ban": SHOW_USERS_SELECT_BAN
     }
     command_text_key = command_text_key_map.get(command_type, SHOW_USERS_SELECT_DEFAULT)
-    await message.reply(get_text(command_text_key, language), reply_markup=builder.as_markup())
+    await message.reply(get_text("command_text_key", language), reply_markup=builder.as_markup())
