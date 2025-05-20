@@ -179,17 +179,23 @@ LOCALIZED_STRINGS = {
 }
 
 def get_text(key: str, lang: str, **kwargs) -> str:
-    message_template = LOCALIZED_STRINGS.get(key, {}).get(lang)
+    lookup_key = key.lower()
+
+    message_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(lang)
     if message_template is None:
-        message_template = LOCALIZED_STRINGS.get(key, {}).get(DEFAULT_LANGUAGE, f"[{key}_{lang}]")
+        default_lang_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(DEFAULT_LANGUAGE)
+        if default_lang_template is not None:
+            message_template = default_lang_template
+        else:
+            logger.warning(f"Localization key '{key}' (tried as '{lookup_key}') not found for lang '{lang}' or default lang '{DEFAULT_LANGUAGE}'.")
+            message_template = f"[{key}_{lang}]"
 
     try:
         return message_template.format(**kwargs)
     except KeyError as e:
-        logger.warning(f"Missing placeholder {e} for key '{key}' in lang '{lang}' with kwargs {kwargs}")
-        # Fallback to template without formatting if a key is missing
-        # Or, if you prefer stricter error handling, you could raise an exception or return a more explicit error string.
+        logger.warning(f"Missing placeholder {e} for key '{lookup_key}' (original: '{key}') in lang '{lang}' with kwargs {kwargs}")
         return message_template
     except Exception as e_format:
-        logger.error(f"Error formatting string for key '{key}', lang '{lang}', kwargs {kwargs}: {e_format}")
-        return f"[FORMAT_ERROR:{key}_{lang}]"
+        logger.error(f"Error formatting string for key '{lookup_key}' (original: '{key}'), lang '{lang}', kwargs {kwargs}: {e_format}")
+        return f"[FORMAT_ERROR:{lookup_key}_{lang}]"
+        
