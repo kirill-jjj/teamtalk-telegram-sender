@@ -198,9 +198,10 @@ async def show_user_buttons(
     builder.adjust(2) # Adjust to 2 buttons per row
 
     command_text_key_map = {
-        "id": SHOW_USERS_SELECT_ID,
-        "kick": SHOW_USERS_SELECT_KICK,
-        "ban": SHOW_USERS_SELECT_BAN
+        "id": "SHOW_USERS_SELECT_ID",
+        "kick": "SHOW_USERS_SELECT_KICK",
+        "ban": "SHOW_USERS_SELECT_BAN"
     }
-    command_text_key = command_text_key_map.get(command_type, SHOW_USERS_SELECT_DEFAULT)
-    await message.reply(get_text("command_text_key", language), reply_markup=builder.as_markup())
+    command_text_key = command_text_key_map.get(command_type, "SHOW_USERS_SELECT_DEFAULT")
+    await message.reply(get_text(command_text_key, language), reply_markup=builder.as_markup())
+    
