@@ -126,7 +126,6 @@ async def send_join_leave_notification_logic(
         except Exception as e:
             logger.error(f"Could not get server name for notification: {e}")
             server_name_val = "Unknown Server"
-    logger.info(f"Determined server name: {server_name_val}")
 
     chat_ids_to_notify_list = []
     async with SessionFactory() as session:
@@ -157,8 +156,6 @@ async def send_join_leave_notification_logic(
                 logger.info(f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}.")
 
     if not chat_ids_to_notify_list:
-        logger.info(f"No subscribers to notify for {event_type} of user {user_username_val} ({user_id_val}).")
-        logger.info(f"--- send_join_leave_notification_logic finished: No subscribers to notify after filtering ---")
         return
 
     def text_generator_func(lang_code: str) -> str:
@@ -174,5 +171,3 @@ async def send_join_leave_notification_logic(
         tt_user_nickname_for_markup=user_nickname_val, 
         tt_instance_for_check=tt_instance 
     )
-    logger.info(f"Prepared {event_type} notification for {user_username_val} ({user_id_val}) to {len(chat_ids_to_notify_list)} subscribers.")
-    logger.info(f"--- send_join_leave_notification_logic finished: Notifications prepared ---")
