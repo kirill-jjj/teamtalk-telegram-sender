@@ -40,6 +40,60 @@ dependencies = [
     'uvloop; sys_platform != "win32"'
 ]
 
+[dependency-groups]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 79
+indent-width = 4
+preview = true
+respect-gitignore = true
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pdm-build",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "bot/implementation/",
+    "pytalk/implementation/",
+    "pytalk/tools/ttsdk_downloader.py",
+    "TeamTalk5.py",
+]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+allowed-confusables = ["а", "е", "о", "р"]
+select = ["ALL"]
+ignore = [
+    "D",
+    "CPY",
+]
+
 [project.urls]
 Homepage = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
