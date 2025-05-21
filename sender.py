@@ -4,6 +4,7 @@ import sys
 
 try:
     import uvloop
+
     uvloop.install()
     logging.info("uvloop installed and used.")
 except ImportError:
@@ -11,15 +12,17 @@ except ImportError:
     pass
 
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
+
 ttstr = sdk.ttstr
 
 from aiogram import Dispatcher
 
 # Setup logging first
 from bot.logging_setup import setup_logging
-logger = setup_logging() # Setup and get a logger for main
 
-from bot.config import app_config # Load config early for potential use
+logger = setup_logging()  # Setup and get a logger for main
+
+from bot.config import app_config  # Load config early for potential use
 from bot.database.engine import init_db, SessionFactory
 from bot.core.user_settings import load_user_settings_to_cache
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
@@ -27,19 +30,22 @@ from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
-    TeamTalkInstanceMiddleware
+    TeamTalkInstanceMiddleware,
 )
 from bot.telegram_bot.handlers import (
     user_commands_router,
     settings_router,
     admin_router,
     callback_router,
-    catch_all_router
+    catch_all_router,
 )
+
 # Import TeamTalk bot and its events so they are registered
 from bot.teamtalk_bot import bot_instance as tt_bot_module
+
 # Ensure TeamTalk events are loaded by importing the events module
-from bot.teamtalk_bot import events as tt_events # Loads event handlers
+from bot.teamtalk_bot import events as tt_events  # Loads event handlers
+
 
 async def main_async():
     logger.info("Application starting...")
@@ -65,7 +71,9 @@ async def main_async():
     # DbSessionMiddleware should be early to provide session to others.
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
     # TeamTalkInstanceMiddleware provides tt_instance globally.
-    dp.update.outer_middleware.register(TeamTalkInstanceMiddleware()) # No args needed
+    dp.update.outer_middleware.register(
+        TeamTalkInstanceMiddleware()
+    )  # No args needed
 
     # UserSettingsMiddleware depends on session, so it's an inner middleware for message/callback_query.
     # It will run after DbSessionMiddleware provides the session.
@@ -76,18 +84,20 @@ async def main_async():
     # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(settings_router)
-    dp.include_router(admin_router) # Admin router includes IsAdminFilter
+    dp.include_router(admin_router)  # Admin router includes IsAdminFilter
     dp.include_router(callback_router)
-    dp.include_router(catch_all_router) # Catch-all should be last for messages
+    dp.include_router(
+        catch_all_router
+    )  # Catch-all should be last for messages
     logger.info("Aiogram routers included.")
 
     logger.info("Starting Telegram bot polling and TeamTalk bot...")
 
     # Pytalk setup hook (if any internal async setup is needed by pytalk)
     # await tt_bot_module.tt_bot._async_setup_hook() # As per original code, if Pytalk requires it.
-                                                 # Check Pytalk documentation for current practice.
-                                                 # If not needed, this can be removed.
-                                                 # Assuming it's for internal Pytalk setup.
+    # Check Pytalk documentation for current practice.
+    # If not needed, this can be removed.
+    # Assuming it's for internal Pytalk setup.
 
     # Start Pytalk bot first (it might take time to connect)
     # The tt_bot.run() or similar method from Pytalk should be used.
@@ -98,7 +108,7 @@ async def main_async():
 
     telegram_polling_task = dp.start_polling(
         tg_bot_event,
-        allowed_updates=dp.resolve_used_update_types() # Optimize updates
+        allowed_updates=dp.resolve_used_update_types(),  # Optimize updates
     )
     # Pytalk's start method might be blocking or async.
     # If tt_bot.run() is blocking, it needs its own thread or process.
@@ -127,19 +137,18 @@ async def main_async():
     # `_async_setup_hook` is likely for one-time async initializations.
     # `_start` is likely the coroutine that runs Pytalk's event loop.
 
-    await tt_bot_module.tt_bot._async_setup_hook() # Call setup hook as in original
-    teamtalk_task = tt_bot_module.tt_bot._start()    # Start Pytalk's async loop
+    await (
+        tt_bot_module.tt_bot._async_setup_hook()
+    )  # Call setup hook as in original
+    teamtalk_task = tt_bot_module.tt_bot._start()  # Start Pytalk's async loop
 
     try:
-        await asyncio.gather(
-            telegram_polling_task,
-            teamtalk_task
-        )
+        await asyncio.gather(telegram_polling_task, teamtalk_task)
     finally:
         logger.info("Shutting down application...")
         # Gracefully stop polling and close sessions
-        await dp.storage.close() # If storage is used
-        await dp.fsm.storage.close() # If FSM storage is used
+        await dp.storage.close()  # If storage is used
+        await dp.fsm.storage.close()  # If FSM storage is used
 
         await tg_bot_event.session.close()
         if tg_bot_message:
@@ -149,25 +158,38 @@ async def main_async():
         # Disconnect TeamTalk instances
         # Pytalk's `teamtalks` attribute holds the list of TeamTalkInstance objects
         logger.info("Disconnecting TeamTalk instances...")
-        if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
+        if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, "teamtalks"):
             for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
                 try:
                     if tt_instance_item.logged_in:
                         tt_instance_item.logout()
-                        logger.info(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host)}")
+                        logger.info(
+                            f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host)}"
+                        )
                     if tt_instance_item.connected:
                         tt_instance_item.disconnect()
-                        logger.info(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host)}")
+                        logger.info(
+                            f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host)}"
+                        )
                     # Pytalk might have a method to fully close/cleanup an instance
-                    if hasattr(tt_instance_item, 'closeTeamTalk'): # From original code
+                    if hasattr(
+                        tt_instance_item, "closeTeamTalk"
+                    ):  # From original code
                         tt_instance_item.closeTeamTalk()
-                    logger.info(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}")
+                    logger.info(
+                        f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}"
+                    )
                 except Exception as e_tt_close:
-                    logger.error(f"Error closing TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}: {e_tt_close}")
+                    logger.error(
+                        f"Error closing TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}: {e_tt_close}"
+                    )
         else:
-            logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup.")
+            logger.warning(
+                "Pytalk bot or 'teamtalks' attribute not found for cleanup."
+            )
 
         logger.info("Application shutdown complete.")
+
 
 if __name__ == "__main__":
     try:
@@ -175,20 +197,31 @@ if __name__ == "__main__":
     except (ValueError, KeyError) as config_error:
         # Logger might not be fully set up if config fails very early.
         # Print to stderr as a fallback.
-        print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.", file=sys.stderr)
-        if logger: # If logger is available, use it.
-            logger.critical(f"Configuration Error: {config_error}. Please check your .env file or environment variables.")
+        print(
+            f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.",
+            file=sys.stderr,
+        )
+        if logger:  # If logger is available, use it.
+            logger.critical(
+                f"Configuration Error: {config_error}. Please check your .env file or environment variables."
+            )
     except KeyboardInterrupt:
         if logger:
-            logger.info("Application interrupted by user (KeyboardInterrupt). Shutting down...")
+            logger.info(
+                "Application interrupted by user (KeyboardInterrupt). Shutting down..."
+            )
         else:
             print("Application interrupted. Shutting down...", file=sys.stderr)
     except Exception as e_global:
         if logger:
-            logger.critical(f"An unexpected critical error occurred in main: {e_global}", exc_info=True)
+            logger.critical(
+                f"An unexpected critical error occurred in main: {e_global}",
+                exc_info=True,
+            )
         else:
             print(f"CRITICAL: Unexpected error: {e_global}", file=sys.stderr)
             import traceback
+
             traceback.print_exc()
     finally:
         if logger:

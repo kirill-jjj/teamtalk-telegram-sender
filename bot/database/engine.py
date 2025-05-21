@@ -16,8 +16,8 @@ SessionFactory = sessionmaker(
 )
 Base = declarative_base()
 
+
 async def init_db() -> None:
     async with async_engines[DB_MAIN_NAME].begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
-

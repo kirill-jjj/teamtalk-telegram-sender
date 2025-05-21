@@ -4,13 +4,20 @@ from sqlalchemy import Enum as SQLAEnum
 from bot.database.engine import Base
 from bot.constants import DEFAULT_LANGUAGE
 
+
 class SubscribedUser(Base):
     __tablename__ = "subscribed_users"
-    telegram_id = Column(Integer, primary_key=True, index=True, autoincrement=False) # Assuming telegram_id is unique and not auto-incrementing
+    telegram_id = Column(
+        Integer, primary_key=True, index=True, autoincrement=False
+    )  # Assuming telegram_id is unique and not auto-incrementing
+
 
 class Admin(Base):
     __tablename__ = "admins"
-    telegram_id = Column(Integer, primary_key=True, index=True, autoincrement=False) # Assuming telegram_id is unique
+    telegram_id = Column(
+        Integer, primary_key=True, index=True, autoincrement=False
+    )  # Assuming telegram_id is unique
+
 
 class Deeplink(Base):
     __tablename__ = "deeplinks"
@@ -20,18 +27,28 @@ class Deeplink(Base):
     expected_telegram_id = Column(Integer, nullable=True)
     expiry_time = Column(DateTime, nullable=False)
 
+
 class NotificationSetting(enum.Enum):
     ALL = "all"
     JOIN_OFF = "join_off"
     LEAVE_OFF = "leave_off"
     NONE = "none"
 
+
 class UserSettings(Base):
     __tablename__ = "user_settings"
-    telegram_id = Column(Integer, primary_key=True, index=True, autoincrement=False) # Assuming telegram_id is unique
+    telegram_id = Column(
+        Integer, primary_key=True, index=True, autoincrement=False
+    )  # Assuming telegram_id is unique
     language = Column(String, default=DEFAULT_LANGUAGE, nullable=False)
-    notification_settings = Column(SQLAEnum(NotificationSetting), default=NotificationSetting.ALL, nullable=False)
-    muted_users = Column(String, default="", nullable=False) # Comma-separated string
+    notification_settings = Column(
+        SQLAEnum(NotificationSetting),
+        default=NotificationSetting.ALL,
+        nullable=False,
+    )
+    muted_users = Column(
+        String, default="", nullable=False
+    )  # Comma-separated string
     mute_all = Column(Boolean, default=False, nullable=False)
     teamtalk_username = Column(String, nullable=True, index=True)
     not_on_online_enabled = Column(Boolean, default=False, nullable=False)

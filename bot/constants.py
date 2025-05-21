@@ -59,5 +59,9 @@ DEEPLINK_EXPIRY_MINUTES = 5
 
 # Who command
 WHO_CHANNEL_ID_ROOT = 1
-WHO_CHANNEL_ID_SERVER_ROOT_ALT = 0 # Sometimes used for users not in a specific channel
-WHO_CHANNEL_ID_SERVER_ROOT_ALT2 = -1 # Also seen for users not in a specific channel
+WHO_CHANNEL_ID_SERVER_ROOT_ALT = (
+    0  # Sometimes used for users not in a specific channel
+)
+WHO_CHANNEL_ID_SERVER_ROOT_ALT2 = (
+    -1
+)  # Also seen for users not in a specific channel
