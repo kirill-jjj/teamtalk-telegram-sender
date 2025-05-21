@@ -1,6 +1,8 @@
 import logging
+
 from aiogram import Router
 from aiogram.types import Message
+
 from bot.localization import get_text
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ async def handle_unknown_command_or_message(
 
     # Log that an unknown command/message was received
     logger.info(
-        f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'"
+        f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'",
     )
 
     # Reply with the unknown command message

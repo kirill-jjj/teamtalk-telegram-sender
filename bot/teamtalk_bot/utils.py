@@ -1,43 +1,35 @@
-import logging
 import asyncio
-from typing import Callable
-from aiogram import html
+import logging
+from collections.abc import Callable
 
 import pytalk
+from aiogram import html
+from pytalk.enums import UserStatusMode
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
-from pytalk.server import Server as PytalkServer
-from pytalk.channel import Channel as PytalkChannel
-from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
-from bot.localization import get_text
 from bot.constants import (
-    TT_HELP_MESSAGE_PART_DELAY,
-    TT_MAX_MESSAGE_BYTES,
+    DEFAULT_LANGUAGE,
+    RECONNECT_CHECK_INTERVAL_SECONDS,
     RECONNECT_DELAY_SECONDS,
     RECONNECT_RETRY_SECONDS,
-    RECONNECT_CHECK_INTERVAL_SECONDS,
     REJOIN_CHANNEL_DELAY_SECONDS,
-    REJOIN_CHANNEL_RETRY_SECONDS,
-    REJOIN_CHANNEL_MAX_ATTEMPTS,
     REJOIN_CHANNEL_FAIL_WAIT_SECONDS,
+    REJOIN_CHANNEL_MAX_ATTEMPTS,
+    REJOIN_CHANNEL_RETRY_SECONDS,
+    TT_HELP_MESSAGE_PART_DELAY,
+    TT_MAX_MESSAGE_BYTES,
 )
+from bot.core.user_settings import USER_SETTINGS_CACHE  # For admin language
+from bot.localization import get_text
 
 # Import teamtalk_bot.bot_instance carefully to avoid circular dependencies if it needs utils
 # For now, we pass tt_bot and current_tt_instance as arguments or access them via a getter if needed.
-from bot.teamtalk_bot.bot_instance import (
-    tt_bot,
-    current_tt_instance,
-    login_complete_time,
-)
+from bot.telegram_bot.bot_instances import tg_bot_message  # For forwarding
 from bot.telegram_bot.utils import (
     send_telegram_message_individual,
 )  # For forwarding
-from bot.telegram_bot.bot_instances import tg_bot_message  # For forwarding
-from bot.core.user_settings import USER_SETTINGS_CACHE  # For admin language
-from bot.constants import DEFAULT_LANGUAGE
-
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -86,7 +78,7 @@ async def send_long_tt_reply(
                 if last_safe_split_index_in_chunk != -1:
                     # We have a preferred split point (newline or space)
                     parts_to_send_list.append(
-                        current_chunk_str[:last_safe_split_index_in_chunk]
+                        current_chunk_str[:last_safe_split_index_in_chunk],
                     )
                     remaining_text_val = remaining_text_val[
                         last_safe_split_index_in_remaining:
@@ -119,7 +111,7 @@ async def send_long_tt_reply(
                 current_chunk_str and not remaining_text_val
             ):  # Should have been caught by outer if
                 parts_to_send_list.append(
-                    current_chunk_str
+                    current_chunk_str,
                 )  # Add any final part
             remaining_text_val = ""  # Ensure termination
 
@@ -128,13 +120,13 @@ async def send_long_tt_reply(
             try:
                 reply_method(part_to_send_str_val)
                 logger.debug(
-                    f"Sent part {part_idx_val + 1}/{len(parts_to_send_list)} of TT message, length {len(part_to_send_str_val.encode('utf-8', errors='ignore'))} bytes."
+                    f"Sent part {part_idx_val + 1}/{len(parts_to_send_list)} of TT message, length {len(part_to_send_str_val.encode('utf-8', errors='ignore'))} bytes.",
                 )
                 if part_idx_val < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
             except Exception as e:
                 logger.error(
-                    f"Error sending part {part_idx_val + 1} of TT message: {e}"
+                    f"Error sending part {part_idx_val + 1} of TT message: {e}",
                 )
                 # Decide if you want to stop or continue sending other parts
                 break
@@ -147,7 +139,7 @@ async def forward_tt_message_to_telegram_admin(
 ):
     if not app_config.get("TG_ADMIN_CHAT_ID") or not tg_bot_message:
         logger.debug(
-            "Telegram admin chat ID or message bot not configured. Skipping TT forward."
+            "Telegram admin chat ID or message bot not configured. Skipping TT forward.",
         )
         return
 
@@ -161,17 +153,17 @@ async def forward_tt_message_to_telegram_admin(
         message.teamtalk_instance
     )  # Instance from which message originated
     server_name_val = app_config.get(
-        "SERVER_NAME"
+        "SERVER_NAME",
     )  # Use configured name first
     if not server_name_val:
         if tt_instance_val and tt_instance_val.connected:
             try:
                 server_name_val = ttstr(
-                    tt_instance_val.server.get_properties().server_name
+                    tt_instance_val.server.get_properties().server_name,
                 )
             except Exception as e:
                 logger.error(
-                    f"Could not get server name from TT instance for forwarding: {e}"
+                    f"Could not get server name from TT instance for forwarding: {e}",
                 )
                 server_name_val = "Unknown Server"
         else:
@@ -204,7 +196,7 @@ async def forward_tt_message_to_telegram_admin(
             language=admin_language,
             reply_tt_method=message.reply,  # Pass the reply method for feedback
             tt_instance_for_check=tt_instance_for_check,  # For silent check
-        )
+        ),
     )
 
 
@@ -220,7 +212,7 @@ async def _tt_reconnect():
         tt_bot_module.current_tt_instance
     ):  # Check if already connected or reconnecting
         logger.info(
-            "Reconnect already in progress or instance exists, skipping new task."
+            "Reconnect already in progress or instance exists, skipping new task.",
         )
         return
 
@@ -235,7 +227,7 @@ async def _tt_reconnect():
             # on_ready is expected to set current_tt_instance and login_complete_time on success
             await tt_on_ready()  # Call the on_ready event handler
             await asyncio.sleep(
-                RECONNECT_CHECK_INTERVAL_SECONDS
+                RECONNECT_CHECK_INTERVAL_SECONDS,
             )  # Wait for connection to establish
 
             if (
@@ -245,17 +237,16 @@ async def _tt_reconnect():
             ):
                 logger.info("TeamTalk reconnected successfully.")
                 break  # Exit reconnect loop
-            else:
-                logger.warning(
-                    "TeamTalk reconnection attempt failed (instance not ready/connected/logged in). Retrying..."
-                )
-                tt_bot_module.current_tt_instance = (
-                    None  # Ensure it's reset for next attempt
-                )
-                tt_bot_module.login_complete_time = None
+            logger.warning(
+                "TeamTalk reconnection attempt failed (instance not ready/connected/logged in). Retrying...",
+            )
+            tt_bot_module.current_tt_instance = (
+                None  # Ensure it's reset for next attempt
+            )
+            tt_bot_module.login_complete_time = None
         except Exception as e:
             logger.error(
-                f"Error during TeamTalk reconnection attempt: {e}. Retrying..."
+                f"Error during TeamTalk reconnection attempt: {e}. Retrying...",
             )
             tt_bot_module.current_tt_instance = None
             tt_bot_module.login_complete_time = None
@@ -268,7 +259,7 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
 
     if tt_instance is not tt_bot_module.current_tt_instance:
         logger.warning(
-            "Rejoin channel called for an outdated/inactive TT instance. Aborting."
+            "Rejoin channel called for an outdated/inactive TT instance. Aborting.",
         )
         return
 
@@ -283,7 +274,7 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
             or not tt_bot_module.current_tt_instance.logged_in
         ):
             logger.warning(
-                "TT not connected/logged in during rejoin attempt. Aborting rejoin and triggering reconnect."
+                "TT not connected/logged in during rejoin attempt. Aborting rejoin and triggering reconnect.",
             )
             if (
                 not tt_bot_module.current_tt_instance
@@ -301,7 +292,7 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
             if channel_id_or_path_val.isdigit():
                 channel_id_val = int(channel_id_or_path_val)
                 channel_obj_val = tt_instance.get_channel(
-                    channel_id_val
+                    channel_id_val,
                 )  # PyTalk method
                 channel_name_val = (
                     ttstr(channel_obj_val.name)
@@ -310,56 +301,55 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
                 )
             else:  # Assume it's a path
                 channel_obj_val = tt_instance.get_channel_from_path(
-                    channel_id_or_path_val
+                    channel_id_or_path_val,
                 )  # PyTalk method
                 if channel_obj_val:
                     channel_id_val = channel_obj_val.id
                     channel_name_val = ttstr(channel_obj_val.name)
                 else:
                     logger.error(
-                        f"Channel path '{channel_id_or_path_val}' not found during rejoin (Attempt {attempts_val})."
+                        f"Channel path '{channel_id_or_path_val}' not found during rejoin (Attempt {attempts_val}).",
                     )
                     await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
                     continue  # Retry resolving path
 
             if channel_id_val == -1:
                 logger.error(
-                    f"Could not resolve channel '{channel_id_or_path_val}' to an ID during rejoin (Attempt {attempts_val})."
+                    f"Could not resolve channel '{channel_id_or_path_val}' to an ID during rejoin (Attempt {attempts_val}).",
                 )
                 await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
                 continue
 
             logger.info(
-                f"Attempting to rejoin channel: {channel_name_val} (ID: {channel_id_val}) (Attempt {attempts_val})"
+                f"Attempting to rejoin channel: {channel_name_val} (ID: {channel_id_val}) (Attempt {attempts_val})",
             )
             tt_instance.join_channel_by_id(
-                channel_id_val, password=app_config.get("CHANNEL_PASSWORD")
+                channel_id_val, password=app_config.get("CHANNEL_PASSWORD"),
             )
             await asyncio.sleep(1)  # Give time for action to complete
 
             current_channel_id_val = tt_instance.getMyChannelID()
             if current_channel_id_val == channel_id_val:
                 logger.info(
-                    f"Successfully rejoined channel {channel_name_val}."
+                    f"Successfully rejoined channel {channel_name_val}.",
                 )
                 # Update status text again in case it was lost
                 tt_instance.change_status(
-                    UserStatusMode.ONLINE, app_config["STATUS_TEXT"]
+                    UserStatusMode.ONLINE, app_config["STATUS_TEXT"],
                 )
                 break  # Exit rejoin loop
-            else:
-                logger.warning(
-                    f"Failed to rejoin channel {channel_name_val}. Current channel ID: {current_channel_id_val}. Retrying..."
-                )
+            logger.warning(
+                f"Failed to rejoin channel {channel_name_val}. Current channel ID: {current_channel_id_val}. Retrying...",
+            )
 
         except Exception as e:
             logger.error(
-                f"Error during channel rejoin loop (Attempt {attempts_val}): {e}. Retrying..."
+                f"Error during channel rejoin loop (Attempt {attempts_val}): {e}. Retrying...",
             )
 
         if attempts_val >= REJOIN_CHANNEL_MAX_ATTEMPTS:
             logger.warning(
-                f"Failed to rejoin channel after {REJOIN_CHANNEL_MAX_ATTEMPTS} attempts. Waiting {REJOIN_CHANNEL_FAIL_WAIT_SECONDS}s before trying again from scratch."
+                f"Failed to rejoin channel after {REJOIN_CHANNEL_MAX_ATTEMPTS} attempts. Waiting {REJOIN_CHANNEL_FAIL_WAIT_SECONDS}s before trying again from scratch.",
             )
             await asyncio.sleep(REJOIN_CHANNEL_FAIL_WAIT_SECONDS)
             attempts_val = 0  # Reset attempts for a fresh set

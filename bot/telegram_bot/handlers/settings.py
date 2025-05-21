@@ -1,24 +1,23 @@
 import logging
-from aiogram import Router, html, F
+
+from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.localization import get_text
-from bot.database.models import (
-    NotificationSetting,
-    UserSettings as UserSettingsDbModel,
-)
-from bot.core.user_settings import (
-    UserSpecificSettings,
-    update_user_settings_in_db,
-    USER_SETTINGS_CACHE,  # For direct update after DB
-)
 from bot.constants import (
     DEFAULT_LANGUAGE,
     MUTE_ACTION_MUTE,
     MUTE_ACTION_UNMUTE,
 )
+from bot.core.user_settings import (
+    UserSpecificSettings,
+    update_user_settings_in_db,
+)
+from bot.database.models import (
+    NotificationSetting,
+)
+from bot.localization import get_text
 
 logger = logging.getLogger(__name__)
 settings_router = Router(name="settings_router")
@@ -41,7 +40,7 @@ async def cl_command_handler(
         "ru",
     ]:  # Assuming 'en' and 'ru'
         await message.reply(
-            get_text("CL_PROMPT", language)
+            get_text("CL_PROMPT", language),
         )  # Reply in current language
         return
 
@@ -50,18 +49,18 @@ async def cl_command_handler(
 
     if user_specific_settings.language == new_lang_val:
         await message.reply(
-            get_text("CL_CHANGED", new_lang_val, new_lang=new_lang_val)
+            get_text("CL_CHANGED", new_lang_val, new_lang=new_lang_val),
         )  # Already set
         return
 
     user_specific_settings.language = new_lang_val
     await update_user_settings_in_db(
-        session, telegram_id_val, user_specific_settings
+        session, telegram_id_val, user_specific_settings,
     )
     # Cache is updated within update_user_settings_in_db
 
     await message.reply(
-        get_text("CL_CHANGED", new_lang_val, new_lang=new_lang_val)
+        get_text("CL_CHANGED", new_lang_val, new_lang=new_lang_val),
     )  # Reply in new language
 
 
@@ -84,7 +83,7 @@ async def _set_notification_preference(
 
     user_specific_settings.notification_settings = new_setting
     await update_user_settings_in_db(
-        session, telegram_id, user_specific_settings
+        session, telegram_id, user_specific_settings,
     )
 
     settings_messages_map = {
@@ -94,7 +93,7 @@ async def _set_notification_preference(
         NotificationSetting.NONE: "NOTIFY_NONE_SET",
     }
     reply_text_key = settings_messages_map.get(
-        new_setting, "error_occurred"
+        new_setting, "error_occurred",
     )  # Fallback
     await message.reply(get_text(reply_text_key, current_language))
 
@@ -106,7 +105,7 @@ async def notify_all_cmd(
     user_specific_settings: UserSpecificSettings,
 ):
     await _set_notification_preference(
-        message, NotificationSetting.ALL, session, user_specific_settings
+        message, NotificationSetting.ALL, session, user_specific_settings,
     )
 
 
@@ -117,7 +116,7 @@ async def notify_join_off_cmd(
     user_specific_settings: UserSpecificSettings,
 ):
     await _set_notification_preference(
-        message, NotificationSetting.JOIN_OFF, session, user_specific_settings
+        message, NotificationSetting.JOIN_OFF, session, user_specific_settings,
     )
 
 
@@ -128,7 +127,7 @@ async def notify_leave_off_cmd(
     user_specific_settings: UserSpecificSettings,
 ):
     await _set_notification_preference(
-        message, NotificationSetting.LEAVE_OFF, session, user_specific_settings
+        message, NotificationSetting.LEAVE_OFF, session, user_specific_settings,
     )
 
 
@@ -139,7 +138,7 @@ async def notify_none_cmd(
     user_specific_settings: UserSpecificSettings,
 ):
     await _set_notification_preference(
-        message, NotificationSetting.NONE, session, user_specific_settings
+        message, NotificationSetting.NONE, session, user_specific_settings,
     )
 
 
@@ -159,7 +158,7 @@ async def _update_mute_user_in_settings(
         return
 
     await update_user_settings_in_db(
-        session, telegram_id, user_specific_settings
+        session, telegram_id, user_specific_settings,
     )
 
 
@@ -176,7 +175,7 @@ async def _set_mute_all_in_settings(
         user_specific_settings.muted_users_set.clear()
     # If enabling mute_all, the existing muted_users_set becomes the exception list.
     await update_user_settings_in_db(
-        session, telegram_id, user_specific_settings
+        session, telegram_id, user_specific_settings,
     )
 
 
@@ -228,7 +227,7 @@ async def mute_command_handler(
                     "MUTE_NOW_MUTED",
                     language,
                     username=html.quote(username_to_mute_val),
-                )
+                ),
             )
         else:  # Was not an exception, already effectively muted
             await message.reply(
@@ -236,34 +235,33 @@ async def mute_command_handler(
                     "MUTE_ALREADY_MUTED",
                     language,
                     username=html.quote(username_to_mute_val),
-                )
+                ),
             )
-    else:  # Mute all is OFF (list is block list)
-        if (
-            username_to_mute_val in user_specific_settings.muted_users_set
-        ):  # Already in block list
-            await message.reply(
-                get_text(
-                    "MUTE_ALREADY_MUTED",
-                    language,
-                    username=html.quote(username_to_mute_val),
-                )
-            )
-        else:  # Not in block list, add to mute
-            await _update_mute_user_in_settings(
-                session,
-                telegram_id_val,
-                username_to_mute_val,
-                MUTE_ACTION_MUTE,
-                user_specific_settings,
-            )
-            await message.reply(
-                get_text(
-                    "MUTE_NOW_MUTED",
-                    language,
-                    username=html.quote(username_to_mute_val),
-                )
-            )
+    elif (
+        username_to_mute_val in user_specific_settings.muted_users_set
+    ):  # Already in block list
+        await message.reply(
+            get_text(
+                "MUTE_ALREADY_MUTED",
+                language,
+                username=html.quote(username_to_mute_val),
+            ),
+        )
+    else:  # Not in block list, add to mute
+        await _update_mute_user_in_settings(
+            session,
+            telegram_id_val,
+            username_to_mute_val,
+            MUTE_ACTION_MUTE,
+            user_specific_settings,
+        )
+        await message.reply(
+            get_text(
+                "MUTE_NOW_MUTED",
+                language,
+                username=html.quote(username_to_mute_val),
+            ),
+        )
 
 
 @settings_router.message(Command("unmute"))
@@ -285,7 +283,7 @@ async def unmute_command_handler(
     username_to_unmute_val = args_val[len("user ") :].strip()
     if not username_to_unmute_val:
         await message.reply(
-            get_text("MUTE_USERNAME_EMPTY", language)
+            get_text("MUTE_USERNAME_EMPTY", language),
         )  # Re-use username empty message
         return
 
@@ -314,7 +312,7 @@ async def unmute_command_handler(
                     "UNMUTE_NOW_UNMUTED",
                     language,
                     username=html.quote(username_to_unmute_val),
-                )
+                ),
             )
         else:  # Already an exception, effectively unmuted
             # To avoid confusion, we can just confirm it's unmuted.
@@ -323,34 +321,33 @@ async def unmute_command_handler(
                     "UNMUTE_NOW_UNMUTED",
                     language,
                     username=html.quote(username_to_unmute_val),
-                )
+                ),
             )  # Or a specific "already unmuted"
-    else:  # Mute all is OFF (list is block list)
-        if (
-            username_to_unmute_val in user_specific_settings.muted_users_set
-        ):  # In block list, remove
-            await _update_mute_user_in_settings(
-                session,
-                telegram_id_val,
-                username_to_unmute_val,
-                MUTE_ACTION_UNMUTE,
-                user_specific_settings,
-            )  # UNMUTE action removes from set
-            await message.reply(
-                get_text(
-                    "UNMUTE_NOW_UNMUTED",
-                    language,
-                    username=html.quote(username_to_unmute_val),
-                )
-            )
-        else:  # Not in block list, already effectively unmuted
-            await message.reply(
-                get_text(
-                    "UNMUTE_NOT_IN_LIST",
-                    language,
-                    username=html.quote(username_to_unmute_val),
-                )
-            )
+    elif (
+        username_to_unmute_val in user_specific_settings.muted_users_set
+    ):  # In block list, remove
+        await _update_mute_user_in_settings(
+            session,
+            telegram_id_val,
+            username_to_unmute_val,
+            MUTE_ACTION_UNMUTE,
+            user_specific_settings,
+        )  # UNMUTE action removes from set
+        await message.reply(
+            get_text(
+                "UNMUTE_NOW_UNMUTED",
+                language,
+                username=html.quote(username_to_unmute_val),
+            ),
+        )
+    else:  # Not in block list, already effectively unmuted
+        await message.reply(
+            get_text(
+                "UNMUTE_NOT_IN_LIST",
+                language,
+                username=html.quote(username_to_unmute_val),
+            ),
+        )
 
 
 @settings_router.message(Command("mute_all"))
@@ -363,7 +360,7 @@ async def mute_all_command_handler(
     if not message.from_user:
         return
     await _set_mute_all_in_settings(
-        session, message.from_user.id, True, user_specific_settings
+        session, message.from_user.id, True, user_specific_settings,
     )
     await message.reply(get_text("MUTE_ALL_ENABLED", language))
 
@@ -378,7 +375,7 @@ async def unmute_all_command_handler(
     if not message.from_user:
         return
     await _set_mute_all_in_settings(
-        session, message.from_user.id, False, user_specific_settings
+        session, message.from_user.id, False, user_specific_settings,
     )
     await message.reply(get_text("UNMUTE_ALL_DISABLED", language))
 
@@ -404,7 +401,7 @@ async def toggle_noon_command_handler(
     new_enabled_status = not user_specific_settings.not_on_online_enabled
     user_specific_settings.not_on_online_enabled = new_enabled_status
     await update_user_settings_in_db(
-        session, telegram_id, user_specific_settings
+        session, telegram_id, user_specific_settings,
     )
 
     reply_key_str = (
@@ -417,10 +414,10 @@ async def toggle_noon_command_handler(
         user_specific_settings.teamtalk_username or "your TeamTalk user"
     )
     reply_text = get_text(
-        reply_key_str, language, tt_username=html.quote(tt_username_for_reply)
+        reply_key_str, language, tt_username=html.quote(tt_username_for_reply),
     )
     logger.info(
-        f"User {telegram_id} toggled 'not on online' to {new_enabled_status} for TT user {user_specific_settings.teamtalk_username}"
+        f"User {telegram_id} toggled 'not on online' to {new_enabled_status} for TT user {user_specific_settings.teamtalk_username}",
     )
     await message.reply(reply_text)
 
@@ -462,13 +459,13 @@ async def my_noon_status_command_handler(
             language,  # User's current language for the main template
             status=current_lang_status_text,  # This will be used if {status} is in the NOON_STATUS_REPORT for the current language
             status_ru=get_text(
-                status_key_ru_str, "ru"
+                status_key_ru_str, "ru",
             ),  # Provide RU version for {status_ru} if template uses it
             status_en=get_text(
-                status_key_en_str, "en"
+                status_key_en_str, "en",
             ),  # Provide EN version for {status_en} if template uses it
             tt_username=html.quote(
-                user_specific_settings.teamtalk_username or "N/A"
+                user_specific_settings.teamtalk_username or "N/A",
             ),
         )
         # A better approach for NOON_STATUS_REPORT would be:
@@ -486,10 +483,10 @@ async def my_noon_status_command_handler(
             language,
             status=effective_status_text,  # This is if the template uses {status}
             status_ru=get_text(
-                status_key_ru_str, "ru"
+                status_key_ru_str, "ru",
             ),  # This is if the template uses {status_ru}
             tt_username=html.quote(
-                user_specific_settings.teamtalk_username or "N/A"
+                user_specific_settings.teamtalk_username or "N/A",
             ),
         )
 

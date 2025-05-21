@@ -1,7 +1,8 @@
 import logging
+
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats
 from aiogram.exceptions import TelegramAPIError
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats
 
 logger = logging.getLogger(__name__)
 
@@ -9,11 +10,11 @@ logger = logging.getLogger(__name__)
 async def set_telegram_commands(bot: Bot):
     commands = [
         BotCommand(
-            command="start", description="Start bot / Process deeplink"
+            command="start", description="Start bot / Process deeplink",
         ),
         BotCommand(command="who", description="Show online users in TeamTalk"),
         BotCommand(
-            command="id", description="Get TeamTalk User ID (via buttons)"
+            command="id", description="Get TeamTalk User ID (via buttons)",
         ),
         BotCommand(command="help", description="Show this help message"),
         BotCommand(command="cl", description="Change language (e.g., /cl en)"),
@@ -62,15 +63,15 @@ async def set_telegram_commands(bot: Bot):
         ),
         # Admin commands (will only work if user is admin)
         BotCommand(
-            command="kick", description="Kick TT user (admin, via buttons)"
+            command="kick", description="Kick TT user (admin, via buttons)",
         ),
         BotCommand(
-            command="ban", description="Ban TT user (admin, via buttons)"
+            command="ban", description="Ban TT user (admin, via buttons)",
         ),
     ]
     try:
         await bot.set_my_commands(
-            commands=commands, scope=BotCommandScopeAllPrivateChats()
+            commands=commands, scope=BotCommandScopeAllPrivateChats(),
         )
         logger.info("Telegram bot commands updated successfully.")
     except TelegramAPIError as e:

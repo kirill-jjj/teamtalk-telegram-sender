@@ -1,32 +1,29 @@
 import logging
-from aiogram import Router, F, html
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-)
-from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
+from aiogram import F, Router, html
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from pytalk.instance import TeamTalkInstance
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.localization import get_text
+from bot.constants import (
+    CALLBACK_ACTION_BAN,
+    CALLBACK_ACTION_ID,
+    CALLBACK_ACTION_KICK,
+)
 from bot.core.user_settings import (
     UserSpecificSettings,
     update_user_settings_in_db,
 )
+from bot.localization import get_text
 from bot.telegram_bot.filters import (
     IsAdminFilter,
 )  # For checking admin status on kick/ban
-from bot.constants import (
-    CALLBACK_ACTION_ID,
-    CALLBACK_ACTION_KICK,
-    CALLBACK_ACTION_BAN,
-    CALLBACK_NICKNAME_MAX_LENGTH,
-    MUTE_ACTION_MUTE,
-    MUTE_ACTION_UNMUTE,
-)
 
 logger = logging.getLogger(__name__)
 callback_router = Router(name="callback_router")
@@ -61,7 +58,7 @@ async def _process_kick_action_callback(
         if user_to_act_on:
             user_to_act_on.kick(from_server=True)  # PyTalk method
             logger.info(
-                f"Admin {admin_tg_id} kicked TT user {user_nickname_val} ({user_id_val})"
+                f"Admin {admin_tg_id} kicked TT user {user_nickname_val} ({user_id_val})",
             )
             return get_text(
                 "CALLBACK_USER_KICKED",
@@ -71,10 +68,10 @@ async def _process_kick_action_callback(
         return get_text(CALLBACK_USER_NOT_FOUND_ANYMORE, language)
     except Exception as e:
         logger.error(
-            f"Error kicking TT user {user_nickname_val} ({user_id_val}): {e}"
+            f"Error kicking TT user {user_nickname_val} ({user_id_val}): {e}",
         )
         action_ru = get_text(
-            "CALLBACK_ACTION_KICK_GERUND_RU", "ru"
+            "CALLBACK_ACTION_KICK_GERUND_RU", "ru",
         )  # Get Russian gerund for error message
         return get_text(
             CALLBACK_ERROR_ACTION_USER,
@@ -99,7 +96,7 @@ async def _process_ban_action_callback(
             user_to_act_on.ban(from_server=True)  # PyTalk method
             user_to_act_on.kick(from_server=True)  # Ban usually implies kick
             logger.info(
-                f"Admin {admin_tg_id} banned and kicked TT user {user_nickname_val} ({user_id_val})"
+                f"Admin {admin_tg_id} banned and kicked TT user {user_nickname_val} ({user_id_val})",
             )
             return get_text(
                 "CALLBACK_USER_BANNED_KICKED",
@@ -109,10 +106,10 @@ async def _process_ban_action_callback(
         return get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language)
     except Exception as e:
         logger.error(
-            f"Error banning TT user {user_nickname_val} ({user_id_val}): {e}"
+            f"Error banning TT user {user_nickname_val} ({user_id_val}): {e}",
         )
         action_ru = get_text(
-            "CALLBACK_ACTION_BAN_GERUND_RU", "ru"
+            "CALLBACK_ACTION_BAN_GERUND_RU", "ru",
         )  # Get Russian gerund
         return get_text(
             CALLBACK_ERROR_ACTION_USER,
@@ -134,7 +131,7 @@ USER_ACTION_CALLBACK_HANDLERS = {
 @callback_router.callback_query(
     F.data.startswith(f"{CALLBACK_ACTION_ID}:")
     | F.data.startswith(f"{CALLBACK_ACTION_KICK}:")
-    | F.data.startswith(f"{CALLBACK_ACTION_BAN}:")
+    | F.data.startswith(f"{CALLBACK_ACTION_BAN}:"),
 )
 async def process_user_action_selection(
     callback_query: CallbackQuery,
@@ -155,10 +152,10 @@ async def process_user_action_selection(
         # user_nickname_val is the potentially truncated nickname from the button
     except (ValueError, IndexError):
         logger.error(
-            f"Invalid callback data format for user action: {callback_query.data}"
+            f"Invalid callback data format for user action: {callback_query.data}",
         )
         await callback_query.message.edit_text(
-            get_text("CALLBACK_INVALID_DATA", language)
+            get_text("CALLBACK_INVALID_DATA", language),
         )
         return
 
@@ -168,7 +165,7 @@ async def process_user_action_selection(
         or not tt_instance.logged_in
     ):
         await callback_query.message.edit_text(
-            get_text("TT_BOT_NOT_CONNECTED", language)
+            get_text("TT_BOT_NOT_CONNECTED", language),
         )
         return
 
@@ -177,7 +174,7 @@ async def process_user_action_selection(
 
     if handler:
         is_admin_caller = await IsAdminFilter()(
-            callback_query, session
+            callback_query, session,
         )  # Check if caller is admin
 
         if action_val in [CALLBACK_ACTION_KICK, CALLBACK_ACTION_BAN]:
@@ -201,24 +198,24 @@ async def process_user_action_selection(
                 )
             except Exception as e:  # Catch errors from the handler itself
                 logger.error(
-                    f"Error in {action_val} handler for TT user {user_nickname_val}: {e}"
+                    f"Error in {action_val} handler for TT user {user_nickname_val}: {e}",
                 )
                 reply_text_val = get_text(
-                    "CALLBACK_ERROR_FIND_USER_TT", language
+                    "CALLBACK_ERROR_FIND_USER_TT", language,
                 )  # Generic error if user not found or other issue
         elif action_val == CALLBACK_ACTION_ID:
             # For ID, tt_instance is not strictly needed by the handler but passed for consistency if ever needed
             reply_text_val = await handler(
-                user_id_val, user_nickname_val, language
+                user_id_val, user_nickname_val, language,
             )
     else:
         logger.warning(
-            f"Unhandled user action '{action_val}' in callback query: {callback_query.data}"
+            f"Unhandled user action '{action_val}' in callback query: {callback_query.data}",
         )
 
     try:
         await callback_query.message.edit_text(
-            reply_text_val, reply_markup=None
+            reply_text_val, reply_markup=None,
         )  # Clear buttons after action
     except TelegramAPIError as e:
         logger.error(f"Error editing message after user action callback: {e}")
@@ -256,7 +253,7 @@ async def process_toggle_ignore_user(
         )  # This is the display nickname
     except ValueError:
         logger.error(
-            f"Invalid callback data for toggle_ignore_user: {callback_query.data} from user {telegram_id_val}"
+            f"Invalid callback data for toggle_ignore_user: {callback_query.data} from user {telegram_id_val}",
         )
         await callback_query.answer(
             get_text("TOGGLE_IGNORE_ERROR_PROCESSING", language),
@@ -266,7 +263,7 @@ async def process_toggle_ignore_user(
 
     if not tt_username_to_toggle_val:
         logger.error(
-            f"Empty username in toggle_ignore_user callback: {callback_query.data} from user {telegram_id_val}"
+            f"Empty username in toggle_ignore_user callback: {callback_query.data} from user {telegram_id_val}",
         )
         await callback_query.answer(
             get_text("TOGGLE_IGNORE_ERROR_EMPTY_USERNAME", language),
@@ -295,30 +292,29 @@ async def process_toggle_ignore_user(
             is_currently_in_set
         ):  # Was allowed, now toggle to ignore (remove from allow list)
             user_specific_settings.muted_users_set.discard(
-                tt_username_to_toggle_val
+                tt_username_to_toggle_val,
             )
             user_is_now_effectively_ignored_val = True
         else:  # Was not allowed (ignored), now toggle to allow (add to allow list)
             user_specific_settings.muted_users_set.add(
-                tt_username_to_toggle_val
+                tt_username_to_toggle_val,
             )
             user_is_now_effectively_ignored_val = False
-    else:  # Mute all is OFF (set is block list)
-        if (
-            is_currently_in_set
-        ):  # Was blocked, now toggle to unblock (remove from block list)
-            user_specific_settings.muted_users_set.discard(
-                tt_username_to_toggle_val
-            )
-            user_is_now_effectively_ignored_val = False
-        else:  # Was not blocked, now toggle to block (add to block list)
-            user_specific_settings.muted_users_set.add(
-                tt_username_to_toggle_val
-            )
-            user_is_now_effectively_ignored_val = True
+    elif (
+        is_currently_in_set
+    ):  # Was blocked, now toggle to unblock (remove from block list)
+        user_specific_settings.muted_users_set.discard(
+            tt_username_to_toggle_val,
+        )
+        user_is_now_effectively_ignored_val = False
+    else:  # Was not blocked, now toggle to block (add to block list)
+        user_specific_settings.muted_users_set.add(
+            tt_username_to_toggle_val,
+        )
+        user_is_now_effectively_ignored_val = True
 
     await update_user_settings_in_db(
-        session, telegram_id_val, user_specific_settings
+        session, telegram_id_val, user_specific_settings,
     )
 
     feedback_key_str = (
@@ -337,7 +333,7 @@ async def process_toggle_ignore_user(
     # Current button text is "Toggle ignore status: {nickname}", which doesn't change.
     # We just re-create the same button to ensure the callback data remains consistent if we were to change it.
     button_display_nickname_new_val = html.quote(
-        nickname_from_callback_val
+        nickname_from_callback_val,
     )  # Already truncated
     button_text_new_val = get_text(
         "TOGGLE_IGNORE_BUTTON_TEXT",
@@ -352,38 +348,38 @@ async def process_toggle_ignore_user(
                 InlineKeyboardButton(
                     text=button_text_new_val,
                     callback_data=callback_data_new_val,
-                )
-            ]
-        ]
+                ),
+            ],
+        ],
     )
 
     try:
         # Only edit reply markup if it's different, or if you want to confirm the action by re-sending.
         # Since button text is static, this might result in "message is not modified".
         await callback_query.message.edit_reply_markup(
-            reply_markup=new_keyboard_val
+            reply_markup=new_keyboard_val,
         )
     except TelegramBadRequest as e:
         if "message is not modified" in str(e).lower():
             logger.debug(
-                f"Button markup for {nickname_from_callback_val} was not modified by toggle_ignore."
+                f"Button markup for {nickname_from_callback_val} was not modified by toggle_ignore.",
             )
         else:
             logger.error(
-                f"TelegramBadRequest editing ignore button for {nickname_from_callback_val}: {e}"
+                f"TelegramBadRequest editing ignore button for {nickname_from_callback_val}: {e}",
             )
     except TelegramAPIError as e:  # Catch other potential API errors
         logger.error(
-            f"TelegramAPIError editing ignore button for {nickname_from_callback_val}: {e}"
+            f"TelegramAPIError editing ignore button for {nickname_from_callback_val}: {e}",
         )
 
     try:
         await callback_query.answer(
-            text=feedback_msg_for_answer_val, show_alert=False
+            text=feedback_msg_for_answer_val, show_alert=False,
         )  # Subtle feedback
     except (
         TelegramAPIError
     ) as e:  # If user has already dismissed the message or other issue
         logger.warning(
-            f"Could not send feedback answer for toggle_ignore_user for {nickname_from_callback_val}: {e}"
+            f"Could not send feedback answer for toggle_ignore_user for {nickname_from_callback_val}: {e}",
         )

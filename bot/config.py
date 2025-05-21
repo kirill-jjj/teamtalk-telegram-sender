@@ -1,12 +1,14 @@
 import os
 import sys
 from typing import Any
+
 from dotenv import load_dotenv
+
 from bot.constants import (
+    DEFAULT_DATABASE_FILE,
+    DEFAULT_TT_CLIENT_NAME,
     DEFAULT_TT_PORT,
     DEFAULT_TT_STATUS_TEXT,
-    DEFAULT_TT_CLIENT_NAME,
-    DEFAULT_DATABASE_FILE,
     MIN_ARGS_FOR_ENV_PATH,
 )
 
@@ -36,7 +38,7 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
     }
     if not config_data["TG_EVENT_TOKEN"] and not config_data["TG_BOT_TOKEN"]:
         raise ValueError(
-            "Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file."
+            "Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file.",
         )
     if (
         not config_data["HOSTNAME"]
@@ -46,12 +48,12 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
         or not config_data["NICKNAME"]
     ):
         raise ValueError(
-            "Missing other required TeamTalk environment variables (HOST_NAME, USER_NAME, PASSWORD, CHANNEL, NICK_NAME). Check .env file."
+            "Missing other required TeamTalk environment variables (HOST_NAME, USER_NAME, PASSWORD, CHANNEL, NICK_NAME). Check .env file.",
         )
     if config_data["TG_ADMIN_CHAT_ID"]:
         try:
             config_data["TG_ADMIN_CHAT_ID"] = int(
-                config_data["TG_ADMIN_CHAT_ID"]
+                config_data["TG_ADMIN_CHAT_ID"],
             )
         except ValueError:
             raise ValueError("TG_ADMIN_CHAT_ID must be a valid integer.")
@@ -59,5 +61,5 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
 
 
 app_config = load_app_config(
-    sys.argv[1] if len(sys.argv) >= MIN_ARGS_FOR_ENV_PATH else None
+    sys.argv[1] if len(sys.argv) >= MIN_ARGS_FOR_ENV_PATH else None,
 )

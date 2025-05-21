@@ -1,10 +1,12 @@
 import logging
 from dataclasses import dataclass, field
 from typing import Any
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
-from bot.database.models import UserSettings, NotificationSetting
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from bot.constants import DEFAULT_LANGUAGE
+from bot.database.models import NotificationSetting, UserSettings
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,7 @@ async def load_user_settings_to_cache(
 
 
 async def get_or_create_user_settings(
-    telegram_id: int, session: AsyncSession
+    telegram_id: int, session: AsyncSession,
 ) -> UserSpecificSettings:
     """
     Retrieves user settings from cache or DB. If not found, creates default settings in DB and cache.
@@ -83,39 +85,38 @@ async def get_or_create_user_settings(
         specific_settings = UserSpecificSettings.from_db_row(user_settings_row)
         USER_SETTINGS_CACHE[telegram_id] = specific_settings
         return specific_settings
-    else:
-        default_settings = UserSpecificSettings()
-        new_settings_row = UserSettings(
-            telegram_id=telegram_id,
-            language=default_settings.language,
-            notification_settings=default_settings.notification_settings,
-            muted_users=",".join(
-                sorted(list(default_settings.muted_users_set))
-            ),  # Ensure consistent string format
-            mute_all=default_settings.mute_all_flag,
-            teamtalk_username=default_settings.teamtalk_username,
-            not_on_online_enabled=default_settings.not_on_online_enabled,
-            not_on_online_confirmed=default_settings.not_on_online_confirmed,
+    default_settings = UserSpecificSettings()
+    new_settings_row = UserSettings(
+        telegram_id=telegram_id,
+        language=default_settings.language,
+        notification_settings=default_settings.notification_settings,
+        muted_users=",".join(
+            sorted(list(default_settings.muted_users_set)),
+        ),  # Ensure consistent string format
+        mute_all=default_settings.mute_all_flag,
+        teamtalk_username=default_settings.teamtalk_username,
+        not_on_online_enabled=default_settings.not_on_online_enabled,
+        not_on_online_confirmed=default_settings.not_on_online_confirmed,
+    )
+    session.add(new_settings_row)
+    try:
+        await session.commit()
+        USER_SETTINGS_CACHE[telegram_id] = default_settings
+        logger.info(
+            f"Created default settings for user {telegram_id} in DB and cache.",
         )
-        session.add(new_settings_row)
-        try:
-            await session.commit()
-            USER_SETTINGS_CACHE[telegram_id] = default_settings
-            logger.info(
-                f"Created default settings for user {telegram_id} in DB and cache."
-            )
-            return default_settings
-        except Exception as e:
-            await session.rollback()
-            logger.error(
-                f"Error creating default settings for user {telegram_id}: {e}"
-            )
-            # Return a default instance even if DB save fails, to avoid breaking logic relying on settings object
-            return UserSpecificSettings()
+        return default_settings
+    except Exception as e:
+        await session.rollback()
+        logger.error(
+            f"Error creating default settings for user {telegram_id}: {e}",
+        )
+        # Return a default instance even if DB save fails, to avoid breaking logic relying on settings object
+        return UserSpecificSettings()
 
 
 async def update_user_settings_in_db(
-    session: AsyncSession, telegram_id: int, settings: UserSpecificSettings
+    session: AsyncSession, telegram_id: int, settings: UserSpecificSettings,
 ):
     """Updates the UserSettings in the database and cache."""
     user_settings_row = await session.get(UserSettings, telegram_id)
@@ -126,7 +127,7 @@ async def update_user_settings_in_db(
     user_settings_row.language = settings.language
     user_settings_row.notification_settings = settings.notification_settings
     user_settings_row.muted_users = ",".join(
-        sorted(list(settings.muted_users_set))
+        sorted(list(settings.muted_users_set)),
     )
     user_settings_row.mute_all = settings.mute_all_flag
     user_settings_row.teamtalk_username = settings.teamtalk_username
@@ -139,10 +140,10 @@ async def update_user_settings_in_db(
         await session.commit()
         USER_SETTINGS_CACHE[telegram_id] = settings  # Update cache
         logger.debug(
-            f"Updated settings for user {telegram_id} in DB and cache."
+            f"Updated settings for user {telegram_id} in DB and cache.",
         )
     except Exception as e:
         await session.rollback()
         logger.error(
-            f"Error updating settings for user {telegram_id} in DB: {e}"
+            f"Error updating settings for user {telegram_id} in DB: {e}",
         )

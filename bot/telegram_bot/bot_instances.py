@@ -1,4 +1,5 @@
 from aiogram import Bot
+
 from bot.config import app_config
 
 # Bot for handling events like join/leave, deeplinks

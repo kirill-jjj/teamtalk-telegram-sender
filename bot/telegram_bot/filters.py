@@ -1,6 +1,7 @@
 from aiogram.filters import BaseFilter
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from bot.database.crud import (
     is_admin as db_is_admin,
 )  # Renamed to avoid conflict
@@ -8,7 +9,7 @@ from bot.database.crud import (
 
 class IsAdminFilter(BaseFilter):
     async def __call__(
-        self, event: Message | CallbackQuery, session: AsyncSession
+        self, event: Message | CallbackQuery, session: AsyncSession,
     ) -> bool:
         user_obj = event.from_user
         if not user_obj:

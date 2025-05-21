@@ -1,45 +1,45 @@
-import logging
 import asyncio
+import logging
 from datetime import datetime
 
 import pytalk
-from pytalk.instance import TeamTalkInstance
+from pytalk.channel import Channel as PytalkChannel
+from pytalk.enums import UserStatusMode
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
-from pytalk.channel import Channel as PytalkChannel
 from pytalk.user import User as TeamTalkUser
-from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
-from bot.database.engine import SessionFactory
+from bot.constants import (
+    DEFAULT_LANGUAGE,
+    NOTIFICATION_EVENT_JOIN,
+    NOTIFICATION_EVENT_LEAVE,
+    TEAMTALK_PRIVATE_MESSAGE_TYPE,
+)
 from bot.core.notifications import send_join_leave_notification_logic
 from bot.core.user_settings import (
     USER_SETTINGS_CACHE,
 )  # For admin lang in on_message
-from bot.constants import (
-    DEFAULT_LANGUAGE,
-    TEAMTALK_PRIVATE_MESSAGE_TYPE,
-    NOTIFICATION_EVENT_JOIN,
-    NOTIFICATION_EVENT_LEAVE,
-)
+from bot.database.engine import SessionFactory
 
 # Import bot_instance variables carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
+from bot.teamtalk_bot.commands import (
+    handle_tt_add_admin_command,
+    handle_tt_help_command,
+    handle_tt_not_on_online_command,
+    handle_tt_remove_admin_command,
+    handle_tt_subscribe_command,
+    handle_tt_unsubscribe_command,
+)
+from bot.teamtalk_bot.commands import (
+    handle_tt_unknown_command as handle_tt_unknown_command_specific,  # Renamed to avoid clash
+)
 from bot.teamtalk_bot.utils import (
     _tt_reconnect,
     _tt_rejoin_channel,
     forward_tt_message_to_telegram_admin,
 )
-from bot.teamtalk_bot.commands import (
-    handle_tt_subscribe_command,
-    handle_tt_unsubscribe_command,
-    handle_tt_add_admin_command,
-    handle_tt_remove_admin_command,
-    handle_tt_not_on_online_command,
-    handle_tt_help_command,
-    handle_tt_unknown_command as handle_tt_unknown_command_specific,  # Renamed to avoid clash
-)
-
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -69,7 +69,7 @@ async def on_ready():
         )
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(
-            f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}."
+            f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}.",
         )
     except Exception as e:
         logger.error(
@@ -94,7 +94,7 @@ async def on_my_login(server: PytalkServer):
         logger.warning(f"Could not get server name on login: {e_prop}")
 
     logger.info(
-        f"Successfully logged in to TeamTalk server: {server_name} ({ttstr(server.info.host)})"
+        f"Successfully logged in to TeamTalk server: {server_name} ({ttstr(server.info.host)})",
     )
 
     try:
@@ -110,39 +110,39 @@ async def on_my_login(server: PytalkServer):
                 target_channel_name_log = ttstr(chan_obj_log.name)
         else:  # Assume it's a path
             channel_obj_val = tt_instance_val.get_channel_from_path(
-                channel_id_or_path_val
+                channel_id_or_path_val,
             )
             if channel_obj_val:
                 channel_id_val = channel_obj_val.id
                 target_channel_name_log = ttstr(channel_obj_val.name)
             else:
                 logger.error(
-                    f"Channel path '{channel_id_or_path_val}' not found during login."
+                    f"Channel path '{channel_id_or_path_val}' not found during login.",
                 )
                 # Decide if bot should stay in root or attempt rejoin later. For now, stays in root.
 
         if channel_id_val != -1:
             logger.info(
-                f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id_val})"
+                f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id_val})",
             )
             tt_instance_val.join_channel_by_id(
-                channel_id_val, password=app_config.get("CHANNEL_PASSWORD")
+                channel_id_val, password=app_config.get("CHANNEL_PASSWORD"),
             )
             await asyncio.sleep(1)  # Allow time for join to process
         else:
             logger.warning(
-                f"Could not resolve channel '{app_config['CHANNEL']}' to an ID during login. Bot will remain in current channel (likely root)."
+                f"Could not resolve channel '{app_config['CHANNEL']}' to an ID during login. Bot will remain in current channel (likely root).",
             )
 
         tt_instance_val.change_status(
-            UserStatusMode.ONLINE, app_config["STATUS_TEXT"]
+            UserStatusMode.ONLINE, app_config["STATUS_TEXT"],
         )
         logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
         tt_bot_module.login_complete_time = (
             datetime.utcnow()
         )  # Mark login sequence as complete
         logger.info(
-            f"TeamTalk login sequence complete at {tt_bot_module.login_complete_time}."
+            f"TeamTalk login sequence complete at {tt_bot_module.login_complete_time}.",
         )
 
     except Exception as e:
@@ -165,7 +165,7 @@ async def on_my_connection_lost(server: PytalkServer):
         else "Unknown Host"
     )
     logger.warning(
-        f"Connection lost to TeamTalk server {host}. Attempting to reconnect..."
+        f"Connection lost to TeamTalk server {host}. Attempting to reconnect...",
     )
     if (
         tt_bot_module.current_tt_instance
@@ -184,7 +184,7 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
 
     if not tt_instance_val:
         logger.error(
-            "Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably."
+            "Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably.",
         )
         # Fallback to generic reconnect
         tt_bot_module.current_tt_instance = None
@@ -203,7 +203,7 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
             channel_id_val == 0
         ):  # ID 0 often means kicked from the server itself
             logger.warning(
-                f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect..."
+                f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...",
             )
             if tt_bot_module.current_tt_instance == tt_instance_val:
                 tt_bot_module.current_tt_instance = None
@@ -211,13 +211,13 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
             asyncio.create_task(_tt_reconnect())
         elif channel_id_val > 0:  # Kicked from a specific channel
             logger.warning(
-                f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel..."
+                f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel...",
             )
             # Rejoin the configured main channel, not necessarily the one kicked from
             asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
         else:  # Unexpected channel ID
             logger.error(
-                f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect."
+                f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.",
             )
             if tt_bot_module.current_tt_instance == tt_instance_val:
                 tt_bot_module.current_tt_instance = None
@@ -254,7 +254,7 @@ async def on_message(message: TeamTalkMessage):
     )  # Strip whitespace for command checking
 
     logger.info(
-        f"Received private TT message from {sender_username}: '{message_content[:100]}...'"
+        f"Received private TT message from {sender_username}: '{message_content[:100]}...'",
     )
 
     # Determine language for bot's replies in TT (e.g., admin's language or a default)
@@ -262,7 +262,7 @@ async def on_message(message: TeamTalkMessage):
     bot_reply_language = DEFAULT_LANGUAGE
     if app_config.get("TG_ADMIN_CHAT_ID"):
         admin_settings = USER_SETTINGS_CACHE.get(
-            app_config["TG_ADMIN_CHAT_ID"]
+            app_config["TG_ADMIN_CHAT_ID"],
         )
         if admin_settings:
             bot_reply_language = admin_settings.language
@@ -272,35 +272,35 @@ async def on_message(message: TeamTalkMessage):
     ):  # Create a new session for this event
         if message_content.lower().startswith("/sub"):
             await handle_tt_subscribe_command(
-                message, session, bot_reply_language
+                message, session, bot_reply_language,
             )
         elif message_content.lower().startswith("/unsub"):
             await handle_tt_unsubscribe_command(
-                message, session, bot_reply_language
+                message, session, bot_reply_language,
             )
         elif message_content.lower().startswith("/add_admin"):
             await handle_tt_add_admin_command(
-                message, session, bot_reply_language
+                message, session, bot_reply_language,
             )
         elif message_content.lower().startswith("/remove_admin"):
             await handle_tt_remove_admin_command(
-                message, session, bot_reply_language
+                message, session, bot_reply_language,
             )
         elif (
             message_content.lower() == "/not on online"
         ):  # Exact match for this command
             await handle_tt_not_on_online_command(
-                message, session, bot_reply_language
+                message, session, bot_reply_language,
             )
         elif message_content.lower().startswith("/help"):
             await handle_tt_help_command(message, bot_reply_language)
         elif message_content.startswith("/"):  # An unknown command
             await handle_tt_unknown_command_specific(
-                message, bot_reply_language
+                message, bot_reply_language,
             )
         else:  # Not a command, forward to Telegram admin if configured
             await forward_tt_message_to_telegram_admin(
-                message, tt_bot_module.current_tt_instance
+                message, tt_bot_module.current_tt_instance,
             )
 
 
@@ -312,11 +312,11 @@ async def on_user_login(user: TeamTalkUser):
     )  # Get instance from user object
     if tt_instance:
         await send_join_leave_notification_logic(
-            NOTIFICATION_EVENT_JOIN, user, tt_instance
+            NOTIFICATION_EVENT_JOIN, user, tt_instance,
         )
     else:
         logger.warning(
-            f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification."
+            f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.",
         )
 
 
@@ -326,11 +326,11 @@ async def on_user_logout(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance
     if tt_instance:
         await send_join_leave_notification_logic(
-            NOTIFICATION_EVENT_LEAVE, user, tt_instance
+            NOTIFICATION_EVENT_LEAVE, user, tt_instance,
         )
     else:
         logger.warning(
-            f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification."
+            f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.",
         )
 
 

@@ -1,34 +1,31 @@
 import logging
-import asyncio
 from datetime import datetime, timedelta
-from aiogram import html
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 import pytalk
+from aiogram import html
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import (
     User as TeamTalkUser,
 )  # Убедитесь, что это правильный User
 
 from bot.config import app_config
-from bot.localization import get_text
-from bot.database.crud import get_all_subscribers_ids
-from bot.database.engine import SessionFactory
-from bot.core.user_settings import (
-    USER_SETTINGS_CACHE,
-    get_or_create_user_settings,
-    UserSpecificSettings,
-)
-from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
-    NOTIFICATION_EVENT_JOIN,
-    NOTIFICATION_EVENT_LEAVE,
     CALLBACK_NICKNAME_MAX_LENGTH,
     INITIAL_LOGIN_IGNORE_DELAY_SECONDS,
+    NOTIFICATION_EVENT_JOIN,
+    NOTIFICATION_EVENT_LEAVE,
 )
+from bot.core.user_settings import (
+    get_or_create_user_settings,
+)
+from bot.database.crud import get_all_subscribers_ids
+from bot.database.engine import SessionFactory
+from bot.localization import get_text
 
 # Import teamtalk_bot.bot_instance carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
+from bot.telegram_bot.utils import send_telegram_messages_to_list
 
 logger = logging.getLogger(__name__)
 ttstr = (
@@ -37,10 +34,10 @@ ttstr = (
 
 
 async def should_notify_user(
-    telegram_id: int, tt_user_username: str, event_type: str, session
+    telegram_id: int, tt_user_username: str, event_type: str, session,
 ) -> bool:
     user_specific_settings = await get_or_create_user_settings(
-        telegram_id, session
+        telegram_id, session,
     )
 
     notification_pref = user_specific_settings.notification_settings
@@ -71,7 +68,7 @@ async def should_notify_user(
             return False
     except ImportError:
         logger.error(
-            "Could not import NotificationSetting enum for should_notify_user checks. String comparison fallback might be unreliable."
+            "Could not import NotificationSetting enum for should_notify_user checks. String comparison fallback might be unreliable.",
         )
         # Fallback, если enum не импортируется (менее надежно)
         if str(notification_pref.value) == "none":
@@ -89,8 +86,7 @@ async def should_notify_user(
 
     if mute_all_flag:
         return tt_user_username in muted_users
-    else:
-        return tt_user_username not in muted_users
+    return tt_user_username not in muted_users
 
 
 def _generate_join_leave_markup(
@@ -100,7 +96,7 @@ def _generate_join_leave_markup(
     recipient_tg_id: int,
 ) -> InlineKeyboardMarkup | None:
     button_display_nickname = html.quote(
-        tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH]
+        tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH],
     )
     callback_safe_nickname = tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH]
 
@@ -117,18 +113,18 @@ def _generate_join_leave_markup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=button_text, callback_data=callback_data
-                )
-            ]
-        ]
+                    text=button_text, callback_data=callback_data,
+                ),
+            ],
+        ],
     )
 
 
 async def send_join_leave_notification_logic(
-    event_type: str, tt_user: TeamTalkUser, tt_instance: TeamTalkInstance
+    event_type: str, tt_user: TeamTalkUser, tt_instance: TeamTalkInstance,
 ):
     logger.info(
-        f"--- send_join_leave_notification_logic started for event: {event_type}, user: {ttstr(tt_user.username)} ---"
+        f"--- send_join_leave_notification_logic started for event: {event_type}, user: {ttstr(tt_user.username)} ---",
     )
 
     # Получаем актуальное значение login_complete_time из модуля bot_instance
@@ -138,17 +134,17 @@ async def send_join_leave_notification_logic(
     if current_login_complete_time is None:
         reason_for_ignore = "bot still initializing/reconnecting"
     elif datetime.utcnow() < current_login_complete_time + timedelta(
-        seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS
+        seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS,
     ):
         reason_for_ignore = "bot login too recent"
 
     if reason_for_ignore:
         if event_type == NOTIFICATION_EVENT_JOIN:
             logger.debug(
-                f"Ignoring potential initial sync {event_type} for {ttstr(tt_user.username)} ({tt_user.id}). Reason: {reason_for_ignore}."
+                f"Ignoring potential initial sync {event_type} for {ttstr(tt_user.username)} ({tt_user.id}). Reason: {reason_for_ignore}.",
             )
         logger.info(
-            f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---"
+            f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---",
         )
         return
 
@@ -162,10 +158,10 @@ async def send_join_leave_notification_logic(
 
     if not user_username_val:
         logger.warning(
-            f"User {event_type} with empty username (Nickname: {user_nickname_val}, ID: {user_id_val}). Skipping notification."
+            f"User {event_type} with empty username (Nickname: {user_nickname_val}, ID: {user_id_val}). Skipping notification.",
         )
         logger.info(
-            f"--- send_join_leave_notification_logic finished: Empty username ---"
+            "--- send_join_leave_notification_logic finished: Empty username ---",
         )
         return
 
@@ -174,10 +170,10 @@ async def send_join_leave_notification_logic(
         and user_username_val == app_config["GLOBAL_IGNORE_USERNAME"]
     ):
         logger.info(
-            f"User {user_username_val} is globally ignored. Skipping {event_type} notification."
+            f"User {user_username_val} is globally ignored. Skipping {event_type} notification.",
         )
         logger.info(
-            f"--- send_join_leave_notification_logic finished: User globally ignored ---"
+            "--- send_join_leave_notification_logic finished: User globally ignored ---",
         )
         return
 
@@ -186,7 +182,7 @@ async def send_join_leave_notification_logic(
         try:
             if tt_instance and tt_instance.connected:
                 server_name_val = ttstr(
-                    tt_instance.server.get_properties().server_name
+                    tt_instance.server.get_properties().server_name,
                 )
             else:
                 server_name_val = "Unknown Server"
@@ -198,7 +194,7 @@ async def send_join_leave_notification_logic(
     async with SessionFactory() as session:
         all_subscriber_ids = await get_all_subscribers_ids(session)
         logger.info(
-            f"Subscribers to check for notification: {all_subscriber_ids}"
+            f"Subscribers to check for notification: {all_subscriber_ids}",
         )
 
         if not all_subscriber_ids:
@@ -206,12 +202,12 @@ async def send_join_leave_notification_logic(
 
         for chat_id_val in all_subscriber_ids:
             user_specific_settings_for_log = await get_or_create_user_settings(
-                chat_id_val, session
+                chat_id_val, session,
             )
             # Используем .value для enum, если он доступен, иначе пытаемся привести к строке
             notification_pref_value = "N/A"
             if hasattr(
-                user_specific_settings_for_log.notification_settings, "value"
+                user_specific_settings_for_log.notification_settings, "value",
             ):
                 notification_pref_value = (
                     user_specific_settings_for_log.notification_settings.value
@@ -221,28 +217,28 @@ async def send_join_leave_notification_logic(
                 is not None
             ):
                 notification_pref_value = str(
-                    user_specific_settings_for_log.notification_settings
+                    user_specific_settings_for_log.notification_settings,
                 )
 
             logger.info(
-                f"Checking notification for TG_ID {chat_id_val}. Settings: NotifyPref={notification_pref_value}, MuteAll={user_specific_settings_for_log.mute_all_flag}, MutedUsers={user_specific_settings_for_log.muted_users_set}. Event TT User: {user_username_val}"
+                f"Checking notification for TG_ID {chat_id_val}. Settings: NotifyPref={notification_pref_value}, MuteAll={user_specific_settings_for_log.mute_all_flag}, MutedUsers={user_specific_settings_for_log.muted_users_set}. Event TT User: {user_username_val}",
             )
 
             should_notify_result = await should_notify_user(
-                chat_id_val, user_username_val, event_type, session
+                chat_id_val, user_username_val, event_type, session,
             )
             logger.info(
-                f"Result of should_notify_user for TG_ID {chat_id_val}: {should_notify_result}"
+                f"Result of should_notify_user for TG_ID {chat_id_val}: {should_notify_result}",
             )
 
             if should_notify_result:
                 chat_ids_to_notify_list.append(chat_id_val)
                 logger.info(
-                    f"TG_ID {chat_id_val} WILL be notified for {user_username_val}."
+                    f"TG_ID {chat_id_val} WILL be notified for {user_username_val}.",
                 )
             else:
                 logger.info(
-                    f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}."
+                    f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}.",
                 )
 
     if not chat_ids_to_notify_list:

@@ -9,7 +9,6 @@ try:
     logging.info("uvloop installed and used.")
 except ImportError:
     logging.info("uvloop not found, using default asyncio event loop.")
-    pass
 
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
@@ -22,29 +21,27 @@ from bot.logging_setup import setup_logging
 
 logger = setup_logging()  # Setup and get a logger for main
 
-from bot.config import app_config  # Load config early for potential use
-from bot.database.engine import init_db, SessionFactory
 from bot.core.user_settings import load_user_settings_to_cache
-from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
-from bot.telegram_bot.commands import set_telegram_commands
-from bot.telegram_bot.middlewares import (
-    DbSessionMiddleware,
-    UserSettingsMiddleware,
-    TeamTalkInstanceMiddleware,
-)
-from bot.telegram_bot.handlers import (
-    user_commands_router,
-    settings_router,
-    admin_router,
-    callback_router,
-    catch_all_router,
-)
+from bot.database.engine import SessionFactory, init_db
 
 # Import TeamTalk bot and its events so they are registered
 from bot.teamtalk_bot import bot_instance as tt_bot_module
+from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
+from bot.telegram_bot.commands import set_telegram_commands
+from bot.telegram_bot.handlers import (
+    admin_router,
+    callback_router,
+    catch_all_router,
+    settings_router,
+    user_commands_router,
+)
+from bot.telegram_bot.middlewares import (
+    DbSessionMiddleware,
+    TeamTalkInstanceMiddleware,
+    UserSettingsMiddleware,
+)
 
 # Ensure TeamTalk events are loaded by importing the events module
-from bot.teamtalk_bot import events as tt_events  # Loads event handlers
 
 
 async def main_async():
@@ -72,7 +69,7 @@ async def main_async():
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
     # TeamTalkInstanceMiddleware provides tt_instance globally.
     dp.update.outer_middleware.register(
-        TeamTalkInstanceMiddleware()
+        TeamTalkInstanceMiddleware(),
     )  # No args needed
 
     # UserSettingsMiddleware depends on session, so it's an inner middleware for message/callback_query.
@@ -87,7 +84,7 @@ async def main_async():
     dp.include_router(admin_router)  # Admin router includes IsAdminFilter
     dp.include_router(callback_router)
     dp.include_router(
-        catch_all_router
+        catch_all_router,
     )  # Catch-all should be last for messages
     logger.info("Aiogram routers included.")
 
@@ -164,28 +161,28 @@ async def main_async():
                     if tt_instance_item.logged_in:
                         tt_instance_item.logout()
                         logger.info(
-                            f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host)}"
+                            f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host)}",
                         )
                     if tt_instance_item.connected:
                         tt_instance_item.disconnect()
                         logger.info(
-                            f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host)}"
+                            f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host)}",
                         )
                     # Pytalk might have a method to fully close/cleanup an instance
                     if hasattr(
-                        tt_instance_item, "closeTeamTalk"
+                        tt_instance_item, "closeTeamTalk",
                     ):  # From original code
                         tt_instance_item.closeTeamTalk()
                     logger.info(
-                        f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}"
+                        f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}",
                     )
                 except Exception as e_tt_close:
                     logger.error(
-                        f"Error closing TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}: {e_tt_close}"
+                        f"Error closing TeamTalk instance for {ttstr(tt_instance_item.server_info.host)}: {e_tt_close}",
                     )
         else:
             logger.warning(
-                "Pytalk bot or 'teamtalks' attribute not found for cleanup."
+                "Pytalk bot or 'teamtalks' attribute not found for cleanup.",
             )
 
         logger.info("Application shutdown complete.")
@@ -203,12 +200,12 @@ if __name__ == "__main__":
         )
         if logger:  # If logger is available, use it.
             logger.critical(
-                f"Configuration Error: {config_error}. Please check your .env file or environment variables."
+                f"Configuration Error: {config_error}. Please check your .env file or environment variables.",
             )
     except KeyboardInterrupt:
         if logger:
             logger.info(
-                "Application interrupted by user (KeyboardInterrupt). Shutting down..."
+                "Application interrupted by user (KeyboardInterrupt). Shutting down...",
             )
         else:
             print("Application interrupted. Shutting down...", file=sys.stderr)

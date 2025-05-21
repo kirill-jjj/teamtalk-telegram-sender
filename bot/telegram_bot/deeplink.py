@@ -1,28 +1,31 @@
 import logging
-from typing import Callable, Coroutine, Any
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from aiogram import html
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.database.crud import (
-    add_subscriber,
-    remove_subscriber,
-    get_deeplink as db_get_deeplink,
-    delete_deeplink_by_token,
+from bot.constants import (
+    ACTION_CONFIRM_NOON,
+    ACTION_SUBSCRIBE,
+    ACTION_UNSUBSCRIBE,
 )
-from bot.database.models import UserSettings  # For type hint
 from bot.core.user_settings import (
     USER_SETTINGS_CACHE,
     UserSpecificSettings,
     get_or_create_user_settings,
     update_user_settings_in_db,
 )
-from bot.localization import get_text
-from bot.constants import (
-    ACTION_SUBSCRIBE,
-    ACTION_UNSUBSCRIBE,
-    ACTION_CONFIRM_NOON,
+from bot.database.crud import (
+    add_subscriber,
+    delete_deeplink_by_token,
+    remove_subscriber,
 )
+from bot.database.crud import (
+    get_deeplink as db_get_deeplink,
+)
+from bot.localization import get_text
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +55,12 @@ async def _handle_unsubscribe_deeplink(
     if await remove_subscriber(session, telegram_id):
         logger.info(f"User {telegram_id} unsubscribed via deeplink.")
         USER_SETTINGS_CACHE.pop(
-            telegram_id, None
+            telegram_id, None,
         )  # Remove from cache on unsubscribe
         # Optionally, delete UserSettings row from DB or mark as inactive
         # For now, we just remove from cache; settings row remains for potential re-subscribe.
         logger.info(
-            f"Removed user {telegram_id} from settings cache after unsubscribe."
+            f"Removed user {telegram_id} from settings cache after unsubscribe.",
         )
         return get_text("DEEPLINK_UNSUBSCRIBED", language)
     return get_text("DEEPLINK_NOT_SUBSCRIBED", language)
@@ -84,11 +87,11 @@ async def _handle_confirm_noon_deeplink(
 
     # Persist changes to DB and update cache
     await update_user_settings_in_db(
-        session, telegram_id, user_specific_settings
+        session, telegram_id, user_specific_settings,
     )
 
     logger.info(
-        f"User {telegram_id} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink."
+        f"User {telegram_id} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink.",
     )
     return get_text(
         "DEEPLINK_NOON_CONFIRMED",
@@ -121,7 +124,7 @@ async def handle_deeplink_payload(
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
         await message.reply(
-            get_text("ERROR_OCCURRED", language)
+            get_text("ERROR_OCCURRED", language),
         )  # Generic error
         return
 
@@ -132,7 +135,7 @@ async def handle_deeplink_payload(
 
     telegram_id_val = message.from_user.id
     reply_text_val = get_text(
-        "ERROR_OCCURRED", language
+        "ERROR_OCCURRED", language,
     )  # Default error message
 
     if (
@@ -175,10 +178,10 @@ async def handle_deeplink_payload(
     else:
         reply_text_val = get_text("DEEPLINK_INVALID_ACTION", language)
         logger.warning(
-            f"Invalid deeplink action '{deeplink_obj.action}' for token {token}"
+            f"Invalid deeplink action '{deeplink_obj.action}' for token {token}",
         )
 
     await message.reply(reply_text_val)
     await delete_deeplink_by_token(
-        session, token
+        session, token,
     )  # Delete after processing or attempt

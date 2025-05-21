@@ -1,4 +1,5 @@
 import logging
+
 from bot.constants import DEFAULT_LANGUAGE
 
 logger = logging.getLogger(__name__)
@@ -440,13 +441,13 @@ def get_text(key: str, lang: str, **kwargs) -> str:
     message_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(lang)
     if message_template is None:
         default_lang_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(
-            DEFAULT_LANGUAGE
+            DEFAULT_LANGUAGE,
         )
         if default_lang_template is not None:
             message_template = default_lang_template
         else:
             logger.warning(
-                f"Localization key '{key}' (tried as '{lookup_key}') not found for lang '{lang}' or default lang '{DEFAULT_LANGUAGE}'."
+                f"Localization key '{key}' (tried as '{lookup_key}') not found for lang '{lang}' or default lang '{DEFAULT_LANGUAGE}'.",
             )
             message_template = f"[{key}_{lang}]"
 
@@ -454,11 +455,11 @@ def get_text(key: str, lang: str, **kwargs) -> str:
         return message_template.format(**kwargs)
     except KeyError as e:
         logger.warning(
-            f"Missing placeholder {e} for key '{lookup_key}' (original: '{key}') in lang '{lang}' with kwargs {kwargs}"
+            f"Missing placeholder {e} for key '{lookup_key}' (original: '{key}') in lang '{lang}' with kwargs {kwargs}",
         )
         return message_template
     except Exception as e_format:
         logger.error(
-            f"Error formatting string for key '{lookup_key}' (original: '{key}'), lang '{lang}', kwargs {kwargs}: {e_format}"
+            f"Error formatting string for key '{lookup_key}' (original: '{key}'), lang '{lang}', kwargs {kwargs}: {e_format}",
         )
         return f"[FORMAT_ERROR:{lookup_key}_{lang}]"

@@ -1,5 +1,7 @@
 from datetime import datetime
+
 import pytalk
+
 from bot.config import app_config
 
 tt_bot = pytalk.TeamTalkBot(client_name=app_config["CLIENT_NAME"])

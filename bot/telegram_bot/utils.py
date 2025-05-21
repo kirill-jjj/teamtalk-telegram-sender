@@ -1,30 +1,28 @@
-import logging
 import asyncio
-from typing import Callable
-from aiogram import Bot, html
-from aiogram.types import InlineKeyboardMarkup, Message
-from aiogram.exceptions import (
-    TelegramForbiddenError,
-    TelegramAPIError,
-    TelegramBadRequest,
-)
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+import logging
+from collections.abc import Callable
 
 import pytalk  # For TeamTalkUser, TeamTalkInstance type hints
+from aiogram import Bot, html
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramForbiddenError,
+)
+from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pytalk.instance import TeamTalkInstance
-from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
-from bot.localization import get_text
+from bot.constants import (
+    CALLBACK_NICKNAME_MAX_LENGTH,
+    DEFAULT_LANGUAGE,
+)
+from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.database.crud import remove_subscriber
 from bot.database.engine import (
     SessionFactory,
 )  # For direct session usage if needed
-from bot.core.user_settings import USER_SETTINGS_CACHE
-from bot.constants import (
-    DEFAULT_LANGUAGE,
-    CALLBACK_NICKNAME_MAX_LENGTH,
-)
+from bot.localization import get_text
 from bot.telegram_bot.bot_instances import (
     tg_bot_event,
     tg_bot_message,
@@ -68,17 +66,17 @@ async def send_telegram_message_individual(
                         break
             else:
                 logger.warning(
-                    f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id}."
+                    f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id}.",
                 )
 
             if is_tt_user_online:
                 send_silently = True
                 logger.info(
-                    f"Sending message to {chat_id} silently as their linked TT user '{tt_username_to_check}' is online."
+                    f"Sending message to {chat_id} silently as their linked TT user '{tt_username_to_check}' is online.",
                 )
         except Exception as e:
             logger.warning(
-                f"Could not check TeamTalk status for user '{tt_username_to_check}' (TG ID: {chat_id}): {e}"
+                f"Could not check TeamTalk status for user '{tt_username_to_check}' (TG ID: {chat_id}): {e}",
             )
 
     message_sent_successfully = False
@@ -98,52 +96,52 @@ async def send_telegram_message_individual(
             or "user is deactivated" in str(e).lower()
         ):
             logger.warning(
-                f"User {chat_id} blocked the bot or is deactivated. Unsubscribing..."
+                f"User {chat_id} blocked the bot or is deactivated. Unsubscribing...",
             )
             try:
                 async with (
                     SessionFactory() as unsubscribe_session
                 ):  # Use a new session for this isolated task
                     removed = await remove_subscriber(
-                        unsubscribe_session, chat_id
+                        unsubscribe_session, chat_id,
                     )
                 if removed:
                     logger.info(
-                        f"Successfully unsubscribed blocked/deactivated user {chat_id}."
+                        f"Successfully unsubscribed blocked/deactivated user {chat_id}.",
                     )
                 else:
                     logger.info(
-                        f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False)."
+                        f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).",
                     )
                 USER_SETTINGS_CACHE.pop(
-                    chat_id, None
+                    chat_id, None,
                 )  # Also remove from cache
                 logger.info(f"Removed user {chat_id} from settings cache.")
             except Exception as db_err:
                 logger.error(
-                    f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}"
+                    f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}",
                 )
         else:
             logger.error(
-                f"Telegram API Forbidden error sending to {chat_id}: {e}"
+                f"Telegram API Forbidden error sending to {chat_id}: {e}",
             )
             if reply_tt_method:
                 reply_tt_method(
-                    get_text("tt_reply_fail_api_error", language, error=str(e))
+                    get_text("tt_reply_fail_api_error", language, error=str(e)),
                 )
     except TelegramAPIError as e:
         logger.error(f"Telegram API error sending to {chat_id}: {e}")
         if reply_tt_method:
             reply_tt_method(
-                get_text("tt_reply_fail_api_error", language, error=str(e))
+                get_text("tt_reply_fail_api_error", language, error=str(e)),
             )
     except Exception as e:
         logger.error(
-            f"Generic error sending Telegram message to {chat_id}: {e}"
+            f"Generic error sending Telegram message to {chat_id}: {e}",
         )
         if reply_tt_method:
             reply_tt_method(
-                get_text("tt_reply_fail_generic_error", language, error=str(e))
+                get_text("tt_reply_fail_generic_error", language, error=str(e)),
             )
 
     if message_sent_successfully and reply_tt_method:
@@ -157,7 +155,7 @@ async def send_telegram_messages_to_list(
     text_generator: Callable[[str], str],  # Takes language code, returns text
     # session: AsyncSession, # No longer needed directly here, SessionFactory used if needed by sub-functions
     reply_markup_generator: Callable[
-        [str, str, str, int], InlineKeyboardMarkup | None
+        [str, str, str, int], InlineKeyboardMarkup | None,
     ]
     | None = None,  # tt_username, tt_nickname, lang, recipient_tg_id
     tt_user_username_for_markup: str | None = None,
@@ -176,7 +174,7 @@ async def send_telegram_messages_to_list(
     )
     if not bot_to_use:
         logger.error(
-            f"No Telegram bot instance available for token: {bot_token_to_use}"
+            f"No Telegram bot instance available for token: {bot_token_to_use}",
         )
         return
 
@@ -211,7 +209,7 @@ async def send_telegram_messages_to_list(
                 language=language_val,
                 reply_markup=current_reply_markup_val,
                 tt_instance_for_check=tt_instance_for_check,
-            )
+            ),
         )
     await asyncio.gather(*tasks_list)
 
@@ -234,7 +232,7 @@ async def show_user_buttons(
         users_list = tt_instance.server.get_users()
     except Exception as e:
         logger.error(
-            f"Failed to get users from TT for {command_type} button list: {e}"
+            f"Failed to get users from TT for {command_type} button list: {e}",
         )
         await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
         return
@@ -272,7 +270,7 @@ async def show_user_buttons(
 
     if users_added_to_list == 0:  # No other users online
         await message.reply(
-            get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language)
+            get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language),
         )
         return
 
@@ -284,8 +282,8 @@ async def show_user_buttons(
         "ban": "SHOW_USERS_SELECT_BAN",
     }
     command_text_key = command_text_key_map.get(
-        command_type, "SHOW_USERS_SELECT_DEFAULT"
+        command_type, "SHOW_USERS_SELECT_DEFAULT",
     )
     await message.reply(
-        get_text(command_text_key, language), reply_markup=builder.as_markup()
+        get_text(command_text_key, language), reply_markup=builder.as_markup(),
     )

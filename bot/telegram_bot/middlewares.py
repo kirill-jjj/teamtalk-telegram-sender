@@ -1,21 +1,19 @@
 import logging
-from typing import Callable, Coroutine, Any
-from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Callable, Coroutine
+from typing import Any
 
-import pytalk  # For TeamTalkInstance type hint
+from aiogram.dispatcher.middlewares.base import BaseMiddleware
+from aiogram.types import CallbackQuery, Message, TelegramObject
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
+
 from bot.core.user_settings import (
-    USER_SETTINGS_CACHE,
     UserSpecificSettings,
     get_or_create_user_settings,
 )
 from bot.teamtalk_bot import (
     bot_instance as tt_bot_module,
 )  # Импортируем сам модуль
-from bot.constants import DEFAULT_LANGUAGE
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +26,7 @@ class DbSessionMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[
-            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]
+            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any],
         ],
         event: TelegramObject,
         data: dict[str, Any],
@@ -42,7 +40,7 @@ class UserSettingsMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[
-            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]
+            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any],
         ],
         event: Message | CallbackQuery,  # Specific events that have a user
         data: dict[str, Any],
@@ -55,13 +53,13 @@ class UserSettingsMiddleware(BaseMiddleware):
             telegram_id_val = user_obj.id
             # Use get_or_create_user_settings to ensure settings are loaded/created
             user_specific_settings = await get_or_create_user_settings(
-                telegram_id_val, session_obj
+                telegram_id_val, session_obj,
             )
         else:
             # Fallback for events without user or session (should ideally not happen for user-facing handlers)
             user_specific_settings = UserSpecificSettings()
             logger.warning(
-                f"UserSettingsMiddleware: No user or session for event {type(event)}. Using default settings."
+                f"UserSettingsMiddleware: No user or session for event {type(event)}. Using default settings.",
             )
 
         data["user_specific_settings"] = user_specific_settings
@@ -78,22 +76,18 @@ class UserSettingsMiddleware(BaseMiddleware):
 
 
 import logging  # Убедитесь, что logging импортирован в этом файле
-from typing import Callable, Coroutine, Any
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
 from aiogram.types import TelegramObject
 
 # ... другие ваши импорты ...
-from bot.teamtalk_bot.bot_instance import (
-    current_tt_instance as global_current_tt_instance,
-)  # Импорт вашей глобальной переменной
 
 logger = logging.getLogger(
-    __name__
+    __name__,
 )  # Инициализация логгера для этого модуля, если еще не сделано
 
-from bot.teamtalk_bot import (
-    bot_instance as tt_bot_module,
-)  # Импортируем сам модуль
 
 # ...
 
@@ -102,7 +96,7 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[
-            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]
+            [TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any],
         ],
         event: TelegramObject,
         data: dict[str, Any],

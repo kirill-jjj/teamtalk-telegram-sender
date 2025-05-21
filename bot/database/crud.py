@@ -1,11 +1,13 @@
 import logging
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy import select, delete
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
-from bot.database.engine import Base  # For type hinting model
+
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
+from bot.database.engine import Base  # For type hinting model
+from bot.database.models import Admin, Deeplink, SubscribedUser, UserSettings
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +18,19 @@ async def db_add_generic(session: AsyncSession, model_instance: Base) -> bool:
         session.add(model_instance)
         await session.commit()
         logger.info(
-            f"Added record to {model_instance.__tablename__}: {model_instance}"
+            f"Added record to {model_instance.__tablename__}: {model_instance}",
         )
         return True
     except Exception as e:
         logger.error(
-            f"Error adding to DB ({model_instance.__tablename__}): {e}"
+            f"Error adding to DB ({model_instance.__tablename__}): {e}",
         )
         await session.rollback()
         return False
 
 
 async def db_remove_generic(
-    session: AsyncSession, record_to_remove: Base | None
+    session: AsyncSession, record_to_remove: Base | None,
 ) -> bool:
     """Generic remove from DB if record exists."""
     if record_to_remove:
@@ -42,12 +44,12 @@ async def db_remove_generic(
             await session.delete(record_to_remove)
             await session.commit()
             logger.info(
-                f"Removed record from {table_name} with PK {record_pk}"
+                f"Removed record from {table_name} with PK {record_pk}",
             )
             return True
         except Exception as e:
             logger.error(
-                f"Error removing from DB ({record_to_remove.__tablename__}): {e}"
+                f"Error removing from DB ({record_to_remove.__tablename__}): {e}",
             )
             await session.rollback()
             return False
@@ -67,7 +69,7 @@ async def remove_subscriber(session: AsyncSession, telegram_id: int) -> bool:
     subscriber = await session.get(SubscribedUser, telegram_id)
     if not subscriber:
         logger.warning(
-            f"Subscriber with ID {telegram_id} not found for removal."
+            f"Subscriber with ID {telegram_id} not found for removal.",
         )
         return False  # Indicate not found
     return await db_remove_generic(session, subscriber)
@@ -131,7 +133,7 @@ async def create_deeplink(
     )
     if await db_add_generic(session, deeplink_obj):
         logger.info(
-            f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}"
+            f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}",
         )
         return token_str
     raise Exception(f"Failed to save deeplink for action {action}")
@@ -139,14 +141,14 @@ async def create_deeplink(
 
 async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
     result = await session.execute(
-        select(Deeplink).where(Deeplink.token == token)
+        select(Deeplink).where(Deeplink.token == token),
     )
     deeplink_obj = result.scalar_one_or_none()
     if deeplink_obj:
         if deeplink_obj.expiry_time < datetime.utcnow():
             logger.warning(f"Deeplink {token} expired. Deleting.")
             await db_remove_generic(
-                session, deeplink_obj
+                session, deeplink_obj,
             )  # Use generic remove
             return None
     return deeplink_obj
@@ -164,7 +166,7 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
 # Note: UserSettings CRUD is mostly handled by core.user_settings for cache coherency.
 # If direct UserSettings CRUD is needed outside that scope, it can be added here.
 async def get_user_settings_row(
-    session: AsyncSession, telegram_id: int
+    session: AsyncSession, telegram_id: int,
 ) -> UserSettings | None:
     """Directly fetches UserSettings row from DB, bypassing cache."""
     return await session.get(UserSettings, telegram_id)

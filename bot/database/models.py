@@ -1,21 +1,23 @@
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy import Enum as SQLAEnum
-from bot.database.engine import Base
+
 from bot.constants import DEFAULT_LANGUAGE
+from bot.database.engine import Base
 
 
 class SubscribedUser(Base):
     __tablename__ = "subscribed_users"
     telegram_id = Column(
-        Integer, primary_key=True, index=True, autoincrement=False
+        Integer, primary_key=True, index=True, autoincrement=False,
     )  # Assuming telegram_id is unique and not auto-incrementing
 
 
 class Admin(Base):
     __tablename__ = "admins"
     telegram_id = Column(
-        Integer, primary_key=True, index=True, autoincrement=False
+        Integer, primary_key=True, index=True, autoincrement=False,
     )  # Assuming telegram_id is unique
 
 
@@ -38,7 +40,7 @@ class NotificationSetting(enum.Enum):
 class UserSettings(Base):
     __tablename__ = "user_settings"
     telegram_id = Column(
-        Integer, primary_key=True, index=True, autoincrement=False
+        Integer, primary_key=True, index=True, autoincrement=False,
     )  # Assuming telegram_id is unique
     language = Column(String, default=DEFAULT_LANGUAGE, nullable=False)
     notification_settings = Column(
@@ -47,7 +49,7 @@ class UserSettings(Base):
         nullable=False,
     )
     muted_users = Column(
-        String, default="", nullable=False
+        String, default="", nullable=False,
     )  # Comma-separated string
     mute_all = Column(Boolean, default=False, nullable=False)
     teamtalk_username = Column(String, nullable=True, index=True)
