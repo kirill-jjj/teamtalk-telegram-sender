@@ -266,39 +266,13 @@ async def my_noon_status_command_handler(
     if not user_specific_settings.teamtalk_username or not user_specific_settings.not_on_online_confirmed:
         reply_text = get_text("NOON_STATUS_NOT_CONFIGURED", language)
     else:
-        status_key_en = "NOON_STATUS_ENABLED_EN" if user_specific_settings.not_on_online_enabled else "NOON_STATUS_DISABLED_EN"
-        status_key_ru = "NOON_STATUS_ENABLED_RU" if user_specific_settings.not_on_online_enabled else "NOON_STATUS_DISABLED_RU"
-
-        # Get the status text in the user's selected language for the main message
-        # The placeholders {status} and {status_ru} are a bit confusing if the main text is already localized.
-        # Let's simplify: the main message will use the localized status.
-        current_lang_status_text = ""
-        if language == "ru":
-            current_lang_status_text = get_text(status_key_ru_str, "ru")
-        else: # en or default
-            current_lang_status_text = get_text(status_key_en_str, "en")
-
-
         reply_text = get_text(
             "NOON_STATUS_REPORT",
-            language, # User's current language for the main template
-            status=current_lang_status_text, # This will be used if {status} is in the NOON_STATUS_REPORT for the current language
-            status_ru=get_text(status_key_ru_str, "ru"), # Provide RU version for {status_ru} if template uses it
-            status_en=get_text(status_key_en_str    , "en"), # Provide EN version for {status_en} if template uses it
+            language,
+            status=get_text(
+                "noon_status_enabled" if user_specific_settings.not_on_online_enabled else "noon_status_disabled",
+                language,
+            ),
             tt_username=html.quote(user_specific_settings.teamtalk_username or "N/A")
         )
-        # A better approach for NOON_STATUS_REPORT would be:
-        # "noon_status_report_enabled": {"en": "'Not on online' notifications are ENABLED for TT user '{tt_username}'.", "ru": "Уведомления 'не в сети' ВКЛЮЧЕНЫ для пользователя TT '{tt_username}'."}
-        # "noon_status_report_disabled": {"en": "'Not on online' notifications are DISABLED for TT user '{tt_username}'.", "ru": "Уведомления 'не в сети' ВЫКЛЮЧЕНЫ для пользователя TT '{tt_username}'."}
-        # Then select the key based on enabled status.
-        # For now, sticking to the original structure:
-        effective_status_text = get_text(status_key_en_str, "en") if language == "en" else get_text(status_key_ru, "ru")
-        reply_text = get_text(
-            NOON_STATUS_REPORT, language,
-            status=effective_status_text, # This is if the template uses {status}
-            status_ru=get_text(status_key_ru_str, "ru"), # This is if the template uses {status_ru}
-            tt_username=html.quote(user_specific_settings.teamtalk_username or "N/A")
-        )
-
-
     await message.reply(reply_text)
