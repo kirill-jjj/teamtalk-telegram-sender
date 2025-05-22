@@ -48,7 +48,7 @@ LOCALIZED_STRINGS = {
     "noon_toggled_disabled": {"en": "'Not on online' notifications are now DISABLED for TeamTalk user '{tt_username}'. Notifications will be sent normally.", "ru": "Уведомления 'не в сети' теперь ВЫКЛЮЧЕНЫ для пользователя TeamTalk '{tt_username}'. Уведомления будут приходить как обычно."},
     "noon_error_updating": {"en": "Error updating settings. Please try again.", "ru": "Ошибка обновления настроек. Пожалуйста, попробуйте снова."},
     "noon_status_not_configured": {"en": "'Not on online' feature is not configured for your account. Use `/not on online` in TeamTalk to set it up.", "ru": "Функция 'не в сети' не настроена для вашего аккаунта. Используйте `/not on online` в TeamTalk для настройки."},
-    "noon_status_report": {"en": "'Not on online' notifications are {status} for TeamTalk user '{tt_username}'.", "ru": "Уведомления 'не в сети' {status_ru} для пользователя TeamTalk '{tt_username}'."},
+    "noon_status_report": {"en": "'Not on online' notifications are {status} for TeamTalk user '{tt_username}'.", "ru": "Уведомления 'не в сети' {status} для пользователя TeamTalk '{tt_username}'."},
     "noon_status_enabled": {"en": "ENABLED", "ru": "ВКЛЮЧЕНА"},
     "noon_status_disabled": {"en": "DISABLED", "ru": "ВЫКЛЮЧЕНА"},
     "callback_invalid_data": {"en": "Invalid data received.", "ru": "Получены неверные данные."},
