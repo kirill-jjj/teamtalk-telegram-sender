@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +43,11 @@ class UserSpecificSettings:
             "not_on_online_confirmed": self.not_on_online_confirmed,
         }
 
+def _prepare_muted_users_string(users_set: set[str]) -> str:
+    if not users_set: # Handle empty set directly to avoid unnecessary list conversion and sort
+        return ""
+    return ",".join(sorted(list(users_set)))
+
 USER_SETTINGS_CACHE: dict[int, UserSpecificSettings] = {}
 
 async def load_user_settings_to_cache(session_factory) -> None: # session_factory type: sessionmaker from sqlalchemy.orm
@@ -72,7 +78,7 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
             telegram_id=telegram_id,
             language=default_settings.language,
             notification_settings=default_settings.notification_settings,
-            muted_users=",".join(sorted(list(default_settings.muted_users_set))), # Ensure consistent string format
+            muted_users=await asyncio.to_thread(_prepare_muted_users_string, default_settings.muted_users_set), # Ensure consistent string format
             mute_all=default_settings.mute_all_flag,
             teamtalk_username=default_settings.teamtalk_username,
             not_on_online_enabled=default_settings.not_on_online_enabled,
@@ -100,7 +106,7 @@ async def update_user_settings_in_db(session: AsyncSession, telegram_id: int, se
 
     user_settings_row.language = settings.language
     user_settings_row.notification_settings = settings.notification_settings
-    user_settings_row.muted_users = ",".join(sorted(list(settings.muted_users_set)))
+    user_settings_row.muted_users = await asyncio.to_thread(_prepare_muted_users_string, settings.muted_users_set)
     user_settings_row.mute_all = settings.mute_all_flag
     user_settings_row.teamtalk_username = settings.teamtalk_username
     user_settings_row.not_on_online_enabled = settings.not_on_online_enabled

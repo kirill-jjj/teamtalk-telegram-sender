@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from aiogram import Router, html, F
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -78,6 +79,14 @@ def _get_user_display_channel_name(
     return user_display_channel_name_val
 
 
+def _sort_who_data(channels_data: dict[str, list[str]]) -> tuple[list[str], dict[str, list[str]]]:
+    """Sorts channel names and user lists within each channel."""
+    sorted_names = sorted(channels_data.keys())
+    sorted_user_lists_in_channels: dict[str, list[str]] = {}
+    for name in sorted_names:
+        sorted_user_lists_in_channels[name] = sorted(channels_data[name])
+    return sorted_names, sorted_user_lists_in_channels
+
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
@@ -121,13 +130,16 @@ async def who_command_handler(
 
 
     user_count_val = users_to_display_count_val
+
+    # Perform sorting in a separate thread to avoid blocking asyncio event loop
+    sorted_channel_names, sorted_users_in_channels = await asyncio.to_thread(
+        _sort_who_data, channels_display_data_val
+    )
+
     channel_info_parts_val = []
 
-    # Sort channels for consistent output, e.g., alphabetically by channel display name
-    sorted_channel_names = sorted(channels_display_data_val.keys())
-
     for display_channel_name_val in sorted_channel_names:
-        users_in_channel_list_val = sorted(channels_display_data_val[display_channel_name_val]) # Sort users in channel
+        users_in_channel_list_val = sorted_users_in_channels[display_channel_name_val]
 
         user_text_segment_val = ""
         if users_in_channel_list_val:

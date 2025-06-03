@@ -36,15 +36,7 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
-    """
-    Splits a long text message into parts suitable for TeamTalk and sends them.
-    Ensures that splitting doesn't break in the middle of a multi-byte character.
-    Prioritizes splitting at newlines, then spaces.
-    """
-    if not text:
-        return
-
+def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     parts_to_send_list = []
     remaining_text_val = text
 
@@ -91,9 +83,30 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
                 remaining_text_val = "" # Mark as fully processed
                 break # Break from inner loop
         else: # Inner loop didn't break, means remaining_text_val was consumed or became empty
+            # This case should ideally be covered by the logic within the loop
+            # (e.g., when i == len(remaining_text_val) - 1).
+            # If remaining_text_val is empty here, the outer while loop will terminate.
+            # If current_chunk_str has content and remaining_text_val became empty due to consumption,
+            # it should have been appended in the 'if i == len(remaining_text_val) - 1' block.
+            # Adding a safeguard, though it might indicate a logical flaw if hit.
             if current_chunk_str and not remaining_text_val: # Should have been caught by outer if
-                 parts_to_send_list.append(current_chunk_str) # Add any final part
+                 logger.debug("_split_text_for_tt: Appending final chunk in else block, this might be redundant.")
+                 parts_to_send_list.append(current_chunk_str)
             remaining_text_val = "" # Ensure termination
+    return parts_to_send_list
+
+
+async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
+    """
+    Splits a long text message into parts suitable for TeamTalk and sends them.
+    Ensures that splitting doesn't break in the middle of a multi-byte character.
+    Prioritizes splitting at newlines, then spaces.
+    Uses asyncio.to_thread for the splitting logic.
+    """
+    if not text:
+        return
+
+    parts_to_send_list = await asyncio.to_thread(_split_text_for_tt, text, max_len_bytes)
 
     for part_idx_val, part_to_send_str_val in enumerate(parts_to_send_list):
         if part_to_send_str_val.strip(): # Don't send empty parts
