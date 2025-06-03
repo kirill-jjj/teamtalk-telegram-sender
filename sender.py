@@ -2,22 +2,22 @@ import asyncio
 import logging
 import sys
 
+# Setup logging first
+from bot.logging_setup import setup_logging
+logger = setup_logging() # Setup and get a logger for main
+
 try:
     import uvloop
     uvloop.install()
-    logging.info("uvloop installed and used.")
+    logger.info("uvloop installed and used.")
 except ImportError:
-    logging.info("uvloop not found, using default asyncio event loop.")
+    logger.info("uvloop not found, using default asyncio event loop.")
     pass
 
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 ttstr = sdk.ttstr
 
 from aiogram import Dispatcher
-
-# Setup logging first
-from bot.logging_setup import setup_logging
-logger = setup_logging() # Setup and get a logger for main
 
 from bot.config import app_config # Load config early for potential use
 from bot.database.engine import init_db, SessionFactory
