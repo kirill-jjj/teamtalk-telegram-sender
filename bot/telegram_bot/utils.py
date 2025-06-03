@@ -12,7 +12,7 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 from bot.localization import get_text
-from bot.database.crud import remove_subscriber
+from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.constants import (
@@ -90,8 +90,33 @@ async def send_telegram_message_individual(
             logger.error(f"Telegram API Forbidden error sending to {chat_id}: {e}")
             if reply_tt_method:
                 reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
-    except TelegramAPIError as e:
-        logger.error(f"Telegram API error sending to {chat_id}: {e}")
+    except TelegramBadRequest as e:
+        if "chat not found" in str(e).lower():
+            logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {e}")
+            try:
+                async with SessionFactory() as session:
+                    delete_success = await delete_user_data_fully(session, chat_id)
+                if delete_success:
+                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
+                else:
+                    logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
+
+                # Remove from cache regardless of DB operation success to prevent further attempts
+                if USER_SETTINGS_CACHE.pop(chat_id, None):
+                    logger.info(f"Removed user {chat_id} from settings cache after chat not found.")
+                else:
+                    logger.info(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
+
+            except Exception as db_cleanup_err:
+                logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
+            # Do not attempt to send TT reply here as the user is gone.
+        else:
+            # Other TelegramBadRequest errors
+            logger.error(f"Telegram API BadRequest (non 'chat not found') sending to {chat_id}: {e}")
+            if reply_tt_method:
+                reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
+    except TelegramAPIError as e: # Catch other TelegramAPIError s that are not Forbidden or BadRequest
+        logger.error(f"Unhandled Telegram API error sending to {chat_id}: {e}")
         if reply_tt_method:
             reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
     except Exception as e:

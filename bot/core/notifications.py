@@ -130,11 +130,12 @@ async def send_join_leave_notification_logic(
     chat_ids_to_notify_list = []
     async with SessionFactory() as session:
         all_subscriber_ids = await get_all_subscribers_ids(session)
-        logger.info(f"Subscribers to check for notification: {all_subscriber_ids}")
+        logger.debug(f"Subscribers to check for notification: {all_subscriber_ids}")
 
         if not all_subscriber_ids:
             logger.info("No subscribers found in the database.")
         
+        logger.info(f"Processing {event_type} notifications for TeamTalk user {user_username_val}. Checking {len(all_subscriber_ids)} subscribed Telegram users.")
         for chat_id_val in all_subscriber_ids:
             user_specific_settings_for_log = await get_or_create_user_settings(chat_id_val, session)
             # Используем .value для enum, если он доступен, иначе пытаемся привести к строке
@@ -144,17 +145,19 @@ async def send_join_leave_notification_logic(
             elif user_specific_settings_for_log.notification_settings is not None:
                 notification_pref_value = str(user_specific_settings_for_log.notification_settings)
 
-            logger.info(f"Checking notification for TG_ID {chat_id_val}. Settings: NotifyPref={notification_pref_value}, MuteAll={user_specific_settings_for_log.mute_all_flag}, MutedUsers={user_specific_settings_for_log.muted_users_set}. Event TT User: {user_username_val}")
+            logger.debug(f"Checking notification for TG_ID {chat_id_val}. Settings: NotifyPref={notification_pref_value}, MuteAll={user_specific_settings_for_log.mute_all_flag}, MutedUsers={user_specific_settings_for_log.muted_users_set}. Event TT User: {user_username_val}")
 
             should_notify_result = await should_notify_user(chat_id_val, user_username_val, event_type, session)
-            logger.info(f"Result of should_notify_user for TG_ID {chat_id_val}: {should_notify_result}")
+            logger.debug(f"Result of should_notify_user for TG_ID {chat_id_val}: {should_notify_result}")
 
             if should_notify_result:
                 chat_ids_to_notify_list.append(chat_id_val)
-                logger.info(f"TG_ID {chat_id_val} WILL be notified for {user_username_val}.")
+                logger.debug(f"TG_ID {chat_id_val} WILL be notified for {user_username_val}.")
             else:
-                logger.info(f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}.")
+                logger.debug(f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}.")
 
+    if chat_ids_to_notify_list:
+        logger.info(f"Notifications for {event_type} of {user_username_val} will be sent to {len(chat_ids_to_notify_list)} Telegram users.")
     if not chat_ids_to_notify_list:
         return
 

@@ -132,3 +132,49 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
 async def get_user_settings_row(session: AsyncSession, telegram_id: int) -> UserSettings | None:
     """Directly fetches UserSettings row from DB, bypassing cache."""
     return await session.get(UserSettings, telegram_id)
+
+async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> bool:
+    """
+    Deletes all data associated with a given telegram_id.
+    This includes UserSettings and SubscribedUser records.
+    """
+    logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
+    settings_deleted_successfully = False
+    subscriber_removed_successfully = False
+
+    # 1. Delete UserSettings
+    user_settings_record = await session.get(UserSettings, telegram_id)
+    if user_settings_record:
+        logger.info(f"Found UserSettings for {telegram_id}. Proceeding with deletion.")
+        settings_deleted_successfully = await db_remove_generic(session, user_settings_record)
+        if settings_deleted_successfully:
+            logger.info(f"Successfully deleted UserSettings for {telegram_id}.")
+        else:
+            logger.error(f"Failed to delete UserSettings for {telegram_id}.")
+    else:
+        logger.info(f"No UserSettings found for {telegram_id}. Skipping UserSettings deletion.")
+        settings_deleted_successfully = True # Considered successful as there's nothing to delete
+
+    # 2. Remove Subscriber
+    # remove_subscriber already handles logging and non-existence appropriately.
+    # It returns True if removed, False if not found or error during delete.
+    # We need to distinguish "not found" from "error during delete" for overall success.
+
+    # Check if subscriber exists before attempting removal to refine success logic
+    subscriber_exists = await session.get(SubscribedUser, telegram_id)
+    if subscriber_exists:
+        subscriber_removed_successfully = await db_remove_generic(session, subscriber_exists)
+        if subscriber_removed_successfully:
+            logger.info(f"Successfully removed SubscribedUser for {telegram_id}.")
+        else:
+            logger.error(f"Error removing SubscribedUser for {telegram_id} during db_remove_generic call.")
+    else:
+        logger.info(f"No SubscribedUser record found for {telegram_id}. Skipping SubscribedUser deletion.")
+        subscriber_removed_successfully = True # Considered successful as there's nothing to delete
+
+    overall_success = settings_deleted_successfully and subscriber_removed_successfully
+    if overall_success:
+        logger.info(f"Successfully completed full data deletion process for Telegram ID: {telegram_id}.")
+    else:
+        logger.error(f"Full data deletion process for Telegram ID: {telegram_id} encountered issues. Settings deleted: {settings_deleted_successfully}, Subscriber part: {subscriber_removed_successfully}")
+    return overall_success
