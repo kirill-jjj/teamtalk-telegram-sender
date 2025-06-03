@@ -7,7 +7,8 @@ from bot.constants import (
     DEFAULT_TT_STATUS_TEXT,
     DEFAULT_TT_CLIENT_NAME,
     DEFAULT_DATABASE_FILE,
-    MIN_ARGS_FOR_ENV_PATH
+    MIN_ARGS_FOR_ENV_PATH,
+    DEFAULT_LANGUAGE as FALLBACK_DEFAULT_LANGUAGE
 )
 
 def load_app_config(env_path: str | None = None) -> dict[str, Any]:
@@ -29,9 +30,19 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
         "CLIENT_NAME": os.getenv("CLIENT_NAME") or DEFAULT_TT_CLIENT_NAME,
         "SERVER_NAME": os.getenv("SERVER_NAME"),
         "ADMIN_USERNAME": os.getenv("ADMIN"),
-        "GLOBAL_IGNORE_USERNAME": os.getenv("GLOBAL_IGNORE_USERNAME"),
+        "GLOBAL_IGNORE_USERNAMES": os.getenv("GLOBAL_IGNORE_USERNAMES"),
         "DATABASE_FILE": os.getenv("DATABASE_FILE", DEFAULT_DATABASE_FILE),
+        "DEFAULT_LANG": os.getenv("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE),
     }
+
+    # Validate and set effective default language
+    raw_default_lang = config_data.get("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE) # Use .get for safety, though it should be set by getenv
+    if isinstance(raw_default_lang, str) and raw_default_lang.lower() in ["en", "ru"]:
+        config_data["EFFECTIVE_DEFAULT_LANG"] = raw_default_lang.lower()
+    else:
+        print(f"WARNING: Invalid DEFAULT_LANG value '{raw_default_lang}'. Defaulting to '{FALLBACK_DEFAULT_LANGUAGE}'.", file=sys.stderr)
+        config_data["EFFECTIVE_DEFAULT_LANG"] = FALLBACK_DEFAULT_LANGUAGE
+
     if not config_data["TG_EVENT_TOKEN"] and not config_data["TG_BOT_TOKEN"]:
         raise ValueError("Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file.")
     if not config_data["HOSTNAME"] or not config_data["USERNAME"] or not config_data["PASSWORD"] or not config_data["CHANNEL"] or not config_data["NICKNAME"]:

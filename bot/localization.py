@@ -1,5 +1,6 @@
 import logging
-from bot.constants import DEFAULT_LANGUAGE
+# DEFAULT_LANGUAGE import removed
+from bot.config import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -183,11 +184,12 @@ def get_text(key: str, lang: str, **kwargs) -> str:
 
     message_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(lang)
     if message_template is None:
-        default_lang_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(DEFAULT_LANGUAGE)
+        effective_default_lang = app_config["EFFECTIVE_DEFAULT_LANG"] # Assumes EFFECTIVE_DEFAULT_LANG is always set
+        default_lang_template = LOCALIZED_STRINGS.get(lookup_key, {}).get(effective_default_lang)
         if default_lang_template is not None:
             message_template = default_lang_template
         else:
-            logger.warning(f"Localization key '{key}' (tried as '{lookup_key}') not found for lang '{lang}' or default lang '{DEFAULT_LANGUAGE}'.")
+            logger.warning(f"Localization key '{key}' (tried as '{lookup_key}') not found for lang '{lang}' or default lang '{effective_default_lang}'.")
             message_template = f"[{key}_{lang}]"
 
     try:

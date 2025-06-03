@@ -5,13 +5,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from bot.database.models import UserSettings, NotificationSetting
-from bot.constants import DEFAULT_LANGUAGE
+from bot.config import app_config
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class UserSpecificSettings:
-    language: str = DEFAULT_LANGUAGE
+    language: str = field(default_factory=lambda: app_config["EFFECTIVE_DEFAULT_LANG"])
     notification_settings: NotificationSetting = NotificationSetting.ALL
     muted_users_set: set[str] = field(default_factory=set)
     mute_all_flag: bool = False

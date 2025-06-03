@@ -104,15 +104,20 @@ async def send_join_leave_notification_logic(
 
     user_nickname_val = ttstr(tt_user.nickname) or ttstr(tt_user.username) or get_text("WHO_USER_UNKNOWN", "en")
     user_username_val = ttstr(tt_user.username)
-    user_id_val = tt_user.id 
+    user_id_val = tt_user.id
+
+    global_ignore_usernames_str = app_config.get("GLOBAL_IGNORE_USERNAMES", "")
+    globally_ignored_usernames_set = set()
+    if global_ignore_usernames_str:
+        globally_ignored_usernames_set = {name.strip() for name in global_ignore_usernames_str.split(',') if name.strip()}
 
     if not user_username_val:
         logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname_val}, ID: {user_id_val}). Skipping notification.")
         logger.info(f"--- send_join_leave_notification_logic finished: Empty username ---")
         return
 
-    if app_config.get("GLOBAL_IGNORE_USERNAME") and user_username_val == app_config["GLOBAL_IGNORE_USERNAME"]:
-        logger.info(f"User {user_username_val} is globally ignored. Skipping {event_type} notification.")
+    if user_username_val in globally_ignored_usernames_set:
+        logger.info(f"User {user_username_val} is in the global ignore list. Skipping {event_type} notification.")
         logger.info(f"--- send_join_leave_notification_logic finished: User globally ignored ---")
         return
 
