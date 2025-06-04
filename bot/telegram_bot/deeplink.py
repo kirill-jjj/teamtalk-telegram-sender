@@ -22,6 +22,7 @@ from bot.constants import (
     ACTION_SUBSCRIBE,
     ACTION_UNSUBSCRIBE,
     ACTION_CONFIRM_NOON,
+    ACTION_SUBSCRIBE_AND_LINK_NOON,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,9 +51,21 @@ async def _handle_unsubscribe_deeplink(
     if await remove_subscriber(session, telegram_id):
         logger.info(f"User {telegram_id} unsubscribed via deeplink.")
         USER_SETTINGS_CACHE.pop(telegram_id, None) # Remove from cache on unsubscribe
-        # Optionally, delete UserSettings row from DB or mark as inactive
-        # For now, we just remove from cache; settings row remains for potential re-subscribe.
         logger.info(f"Removed user {telegram_id} from settings cache after unsubscribe.")
+
+        # Clear NOON settings upon unsubscription
+        user_specific_settings.teamtalk_username = None
+        user_specific_settings.not_on_online_confirmed = False
+        user_specific_settings.not_on_online_enabled = False
+
+        try:
+            await update_user_settings_in_db(session, telegram_id, user_specific_settings)
+            logger.info(f"Cleared NOON settings for user {telegram_id} due to unsubscription.")
+        except Exception as e:
+            # Log the error, but don't let it hide the unsubscription success from the user.
+            # The main impact is that NOON settings might not be cleared in DB, but user is unsubscribed.
+            logger.error(f"Failed to clear NOON settings in DB for user {telegram_id} during unsubscription: {e}", exc_info=True)
+
         return get_text("DEEPLINK_UNSUBSCRIBED", language)
     return get_text("DEEPLINK_NOT_SUBSCRIBED", language)
 
@@ -80,6 +93,56 @@ async def _handle_confirm_noon_deeplink(
     return get_text("DEEPLINK_NOON_CONFIRMED", language, tt_username=html.quote(tt_username_from_payload))
 
 
+async def _handle_subscribe_and_link_noon_deeplink(
+    session: AsyncSession,
+    telegram_id: int,
+    language: str,
+    payload: str | None,
+    user_specific_settings: UserSpecificSettings
+) -> str:
+    # Subscription Logic
+    if await add_subscriber(session, telegram_id):
+        logger.info(f"User {telegram_id} subscribed via combined deeplink.")
+        # Ensure settings are loaded/created for the new subscriber, happens outside or implicitly by user_specific_settings presence
+    else:
+        logger.info(f"User {telegram_id} was already subscribed, proceeding to link NOON via combined deeplink.")
+
+    # Ensure settings are available (might be redundant if user_specific_settings is always fresh, but good for safety)
+    # This call also ensures the settings object is correctly tracked in cache if it was newly created by add_subscriber flow.
+    current_settings = await get_or_create_user_settings(telegram_id, session)
+
+    # Account Linking Logic
+    tt_username_from_payload = payload
+    if not tt_username_from_payload:
+        logger.error(f"Deeplink for '{ACTION_SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
+        return get_text("DEEPLINK_NOON_CONFIRM_MISSING_PAYLOAD", language) # Re-use existing error for missing payload
+
+    if current_settings.not_on_online_confirmed and \
+       current_settings.teamtalk_username == tt_username_from_payload:
+        # User is already confirmed with this same TeamTalk account.
+        # Preserve existing 'not_on_online_enabled' status.
+        # We still re-set username and confirmed status to ensure consistency,
+        # though username is unlikely to change if it matches.
+        current_settings.teamtalk_username = tt_username_from_payload
+        current_settings.not_on_online_confirmed = True
+        # NOT touching current_settings.not_on_online_enabled
+        logger.info(f"User {telegram_id} re-confirmed NOON for TT user {tt_username_from_payload}. 'not_on_online_enabled' status preserved as {current_settings.not_on_online_enabled}.")
+    else:
+        # New NOON linking, or linking a different TeamTalk account.
+        # Set 'not_on_online_enabled' to False by default.
+        current_settings.teamtalk_username = tt_username_from_payload
+        current_settings.not_on_online_confirmed = True
+        current_settings.not_on_online_enabled = False # Explicitly set to False for new/changed linking
+        logger.info(f"User {telegram_id} newly confirmed NOON for TT user {tt_username_from_payload}. 'not_on_online_enabled' set to False.")
+
+    await update_user_settings_in_db(session, telegram_id, current_settings)
+
+    # The success message implies NOON is disabled by default. This is true for new linkings.
+    # For re-confirmations preserving an enabled state, this message might be slightly off,
+    # but the user can check status via commands. Keeping it simple for now.
+    return get_text("DEEPLINK_SUBSCRIBED_AND_NOON_LINKED_DISABLED", language, tt_username=html.quote(tt_username_from_payload))
+
+
 # Define a type for the handler functions
 DeeplinkHandlerType = Callable[[AsyncSession, int, str, Any, UserSpecificSettings], Coroutine[Any, Any, str]]
 
@@ -88,6 +151,7 @@ DEEPLINK_ACTION_HANDLERS: dict[str, DeeplinkHandlerType] = {
     ACTION_SUBSCRIBE: _handle_subscribe_deeplink,
     ACTION_UNSUBSCRIBE: _handle_unsubscribe_deeplink,
     ACTION_CONFIRM_NOON: _handle_confirm_noon_deeplink,
+    ACTION_SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
 }
 
 
@@ -121,11 +185,10 @@ async def handle_deeplink_payload(
     if handler:
         try:
             # Pass necessary arguments to the handler
-            # For confirm_noon, payload is tt_username. For others, it might be None or different.
-            if deeplink_obj.action == ACTION_CONFIRM_NOON:
+            if deeplink_obj.action in [ACTION_CONFIRM_NOON, ACTION_SUBSCRIBE_AND_LINK_NOON]:
                 reply_text_val = await handler(session, telegram_id_val, language, deeplink_obj.payload, user_specific_settings)
             else:
-                # For subscribe/unsubscribe, payload is not directly used by handler logic but could be passed if needed
+                # For other actions like subscribe/unsubscribe, payload might not be directly used by handler logic
                 reply_text_val = await handler(session, telegram_id_val, language, None, user_specific_settings)
         except Exception as e:
             logger.error(f"Error executing deeplink handler for action '{deeplink_obj.action}', token {token}: {e}", exc_info=True)

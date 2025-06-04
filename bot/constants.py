@@ -2,6 +2,7 @@
 ACTION_SUBSCRIBE = "subscribe"
 ACTION_UNSUBSCRIBE = "unsubscribe"
 ACTION_CONFIRM_NOON = "confirm_not_on_online"
+ACTION_SUBSCRIBE_AND_LINK_NOON = "subscribe_link_noon"
 
 # User selection callback actions
 CALLBACK_ACTION_ID = "id"

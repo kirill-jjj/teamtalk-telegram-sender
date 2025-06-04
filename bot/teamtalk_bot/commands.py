@@ -11,7 +11,7 @@ from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
 from bot.constants import (
-    ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_CONFIRM_NOON,
+    ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_CONFIRM_NOON, ACTION_SUBSCRIBE_AND_LINK_NOON,
 )
 # Define TT_UNKNOWN_COMMAND_TT in constants.py if it's different from the Telegram one
 # For now, assuming it's the same or will be added to LOCALIZED_STRINGS
@@ -28,16 +28,21 @@ async def handle_tt_subscribe_command(
     bot_language: str # Language for bot's replies in TT
 ):
     try:
+        sender_tt_username = ttstr(tt_message.user.username)
         # Deeplink does not require expected_telegram_id for general subscription
-        token_val = await create_deeplink(session, ACTION_SUBSCRIBE)
+        token_val = await create_deeplink(
+            session,
+            action=ACTION_SUBSCRIBE_AND_LINK_NOON,
+            payload=sender_tt_username
+        )
         bot_info_val = await tg_bot_event.get_me() # Get bot's username for the link
         deeplink_url_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
 
         reply_text_val = get_text("TT_SUBSCRIBE_DEEPLINK_TEXT", bot_language, deeplink_url=deeplink_url_val)
         tt_message.reply(reply_text_val)
-        logger.info(f"Generated subscribe deeplink {token_val} for TT user {ttstr(tt_message.user.username)}")
+        logger.info(f"Generated subscribe and link NOON deeplink {token_val} for TT user {sender_tt_username}")
     except Exception as e:
-        logger.error(f"Error processing TT /sub command for {ttstr(tt_message.user.username)}: {e}", exc_info=True)
+        logger.error(f"Error processing TT /sub command for {sender_tt_username}: {e}", exc_info=True)
         tt_message.reply(get_text("TT_SUBSCRIBE_ERROR", bot_language))
 
 
