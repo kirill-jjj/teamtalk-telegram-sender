@@ -137,10 +137,20 @@ async def _handle_subscribe_and_link_noon_deeplink(
 
     await update_user_settings_in_db(session, telegram_id, current_settings)
 
-    # The success message implies NOON is disabled by default. This is true for new linkings.
-    # For re-confirmations preserving an enabled state, this message might be slightly off,
-    # but the user can check status via commands. Keeping it simple for now.
-    return get_text("DEEPLINK_SUBSCRIBED_AND_NOON_LINKED_DISABLED", language, tt_username=html.quote(tt_username_from_payload))
+    final_tt_username = current_settings.teamtalk_username
+    # Fallback for final_tt_username, though current_settings.teamtalk_username should be set by the logic above.
+    if not final_tt_username: # Should ideally not be hit if previous logic is correct
+        final_tt_username = tt_username_from_payload if tt_username_from_payload else "Unknown"
+
+    if current_settings.not_on_online_enabled:
+        message_key = "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_ENABLED"
+        logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username}. NOON is ENABLED.")
+    else:
+        message_key = "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_DISABLED"
+        logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username}. NOON is DISABLED.")
+
+    reply_text_val = get_text(message_key, language, tt_username=html.quote(final_tt_username))
+    return reply_text_val
 
 
 # Define a type for the handler functions
