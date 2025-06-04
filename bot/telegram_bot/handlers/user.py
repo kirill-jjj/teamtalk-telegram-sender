@@ -2,7 +2,7 @@ import logging
 import asyncio
 from aiogram import Router, html, F
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
@@ -10,10 +10,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.localization import get_text
+from bot.telegram_bot.callback_data import SettingsCallback # Import the new factory
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
-from bot.telegram_bot.utils import show_user_buttons
+# from bot.telegram_bot.utils import show_user_buttons # Removed as id_command_handler is removed
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -179,15 +180,53 @@ async def who_command_handler(
     await message.reply(text_reply, parse_mode="HTML")
 
 
-@user_commands_router.message(Command("id"))
-async def id_command_handler(
-    message: Message,
-    language: str, # From UserSettingsMiddleware
-    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
-):
-    await show_user_buttons(message, "id", language, tt_instance)
+# id_command_handler removed
 
 
 @user_commands_router.message(Command("help"))
 async def help_command_handler(message: Message, language: str): # From UserSettingsMiddleware
     await message.reply(get_text("HELP_TEXT", language), parse_mode="Markdown")
+
+
+@user_commands_router.message(Command("settings"))
+async def settings_command_handler(
+    message: Message,
+    language: str, # From UserSettingsMiddleware
+):
+    if not message.from_user: return # Should not happen with Command filter
+
+    # Delete user's command
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning(f"Could not delete user settings command: {e}")
+
+    # Create buttons
+    lang_button = InlineKeyboardButton(
+        text=get_text("SETTINGS_BTN_LANGUAGE", language),
+        callback_data=SettingsCallback(action="language").pack()
+    )
+    subscription_button = InlineKeyboardButton(
+        text=get_text("SETTINGS_BTN_SUBSCRIPTIONS", language),
+        callback_data=SettingsCallback(action="subscriptions").pack()
+    )
+    notifications_button = InlineKeyboardButton(
+        text=get_text("SETTINGS_BTN_NOTIFICATIONS", language),
+        callback_data=SettingsCallback(action="notifications").pack()
+    )
+
+    # Create keyboard
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [lang_button],
+        [subscription_button],
+        [notifications_button]
+    ])
+
+    # Send settings menu
+    try:
+        await message.answer(
+            text=get_text("SETTINGS_MENU_HEADER", language),
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        logger.error(f"Could not send settings menu: {e}")

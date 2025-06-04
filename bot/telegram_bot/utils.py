@@ -223,7 +223,7 @@ async def show_user_buttons(
     builder.adjust(2) # Adjust to 2 buttons per row
 
     command_text_key_map = {
-        "id": "SHOW_USERS_SELECT_ID",
+        # "id" action removed
         "kick": "SHOW_USERS_SELECT_KICK",
         "ban": "SHOW_USERS_SELECT_BAN"
     }

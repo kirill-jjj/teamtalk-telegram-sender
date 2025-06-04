@@ -69,15 +69,10 @@ def _generate_join_leave_markup(
     lang_code: str,
     recipient_tg_id: int 
 ) -> InlineKeyboardMarkup | None:
-    button_display_nickname = html.quote(tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH])
-    callback_safe_nickname = tt_user_nickname[:CALLBACK_NICKNAME_MAX_LENGTH] 
-
-    callback_data = f"toggle_ignore_user:{tt_user_username}:{callback_safe_nickname}"
-    button_text = get_text("TOGGLE_IGNORE_BUTTON_TEXT", lang_code, nickname=button_display_nickname)
-
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=button_text, callback_data=callback_data)]
-    ])
+    # The "Toggle ignore status" button is removed as per centralization of mute management.
+    # If other buttons were to be added to join/leave notifications in the future,
+    # they would be constructed here. For now, no buttons are shown.
+    return None
 
 
 async def send_join_leave_notification_logic(

@@ -1,5 +1,6 @@
 import logging
 from aiogram import html # For quoting in messages if needed, though not directly used here
+from aiogram.types import BotCommandScopeChat
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
@@ -9,6 +10,7 @@ from bot.config import app_config
 from bot.localization import get_text
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
+from bot.telegram_bot.commands import set_telegram_commands, ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
 from bot.constants import (
     ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_CONFIRM_NOON, ACTION_SUBSCRIBE_AND_LINK_NOON,
@@ -92,6 +94,11 @@ async def handle_tt_add_admin_command(
                 if await add_admin(session, telegram_id_val): # crud.add_admin
                     added_count_val += 1
                     logger.info(f"Admin TG ID {telegram_id_val} added by TT admin {sender_username_val}")
+                    try:
+                        await tg_bot_event.set_my_commands(commands=ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=telegram_id_val))
+                        logger.info(f"Successfully set ADMIN_COMMANDS for newly added admin TG ID {telegram_id_val}")
+                    except Exception as e_cmds:
+                        logger.error(f"Failed to set ADMIN_COMMANDS for newly added admin TG ID {telegram_id_val}: {e_cmds}")
                 else: # add_admin returned False (likely already exists or DB error)
                     errors_list.append(get_text("TT_ADD_ADMIN_ERROR_ALREADY_ADMIN", bot_language, telegram_id=telegram_id_val))
             else:
@@ -138,6 +145,11 @@ async def handle_tt_remove_admin_command(
                 if await remove_admin_db(session, telegram_id_val): # crud.remove_admin_db
                     removed_count_val += 1
                     logger.info(f"Admin TG ID {telegram_id_val} removed by TT admin {sender_username_val}")
+                    try:
+                        await tg_bot_event.set_my_commands(commands=USER_COMMANDS, scope=BotCommandScopeChat(chat_id=telegram_id_val))
+                        logger.info(f"Successfully set USER_COMMANDS for newly removed admin TG ID {telegram_id_val}")
+                    except Exception as e_cmds:
+                        logger.error(f"Failed to set USER_COMMANDS for newly removed admin TG ID {telegram_id_val}: {e_cmds}")
                 else: # remove_admin_db returned False (not found or DB error)
                     errors_list.append(get_text("TT_REMOVE_ADMIN_ERROR_NOT_FOUND", bot_language, telegram_id=telegram_id_val))
             else:

@@ -21,6 +21,7 @@ from aiogram import Dispatcher
 
 from bot.config import app_config # Load config early for potential use
 from bot.database.engine import init_db, SessionFactory
+from bot.database import crud # Import crud
 from bot.core.user_settings import load_user_settings_to_cache
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 from bot.telegram_bot.commands import set_telegram_commands
@@ -52,8 +53,34 @@ async def main_async():
     await load_user_settings_to_cache(SessionFactory)
     logger.info("User settings loaded into cache.")
 
-    # Set Telegram bot commands
-    await set_telegram_commands(tg_bot_event)
+    # Ensure TG_ADMIN_CHAT_ID is in the admin database
+    tg_admin_chat_id_str = app_config.get("TG_ADMIN_CHAT_ID")
+    if tg_admin_chat_id_str:
+        try:
+            tg_admin_chat_id = int(tg_admin_chat_id_str)
+            logger.info(f"Attempting to ensure TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is registered as an admin.")
+            async with SessionFactory() as session:
+                await crud.add_admin(session, tg_admin_chat_id)
+            # crud.add_admin handles its own logging for success/failure/already exists
+        except ValueError:
+            logger.error(f"TG_ADMIN_CHAT_ID '{tg_admin_chat_id_str}' is not a valid integer. Cannot add as admin.")
+    else:
+        logger.info("TG_ADMIN_CHAT_ID is not set in the configuration. Skipping auto-admin registration.")
+
+    # Fetch all admin IDs from the database to set their commands
+    logger.info("Fetching admin IDs from the database for command setup...")
+    db_admin_ids = []
+    try:
+        async with SessionFactory() as session:
+            db_admin_ids = await crud.get_all_admins_ids(session)
+        logger.info(f"Fetched {len(db_admin_ids)} admin IDs from the database: {db_admin_ids}")
+    except Exception as e:
+        logger.error(f"Failed to fetch admin IDs from database: {e}", exc_info=True)
+        # Continue with an empty list or handle as critical error depending on desired behavior
+        # For now, it will proceed with an empty list if fetching fails.
+
+    # Set Telegram bot commands using admin IDs from the database
+    await set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids)
     logger.info("Telegram commands set.")
 
     # Initialize Aiogram Dispatcher

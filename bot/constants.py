@@ -5,7 +5,7 @@ ACTION_CONFIRM_NOON = "confirm_not_on_online"
 ACTION_SUBSCRIBE_AND_LINK_NOON = "subscribe_link_noon"
 
 # User selection callback actions
-CALLBACK_ACTION_ID = "id"
+# CALLBACK_ACTION_ID = "id" # Removed
 CALLBACK_ACTION_KICK = "kick"
 CALLBACK_ACTION_BAN = "ban"
 
@@ -42,6 +42,7 @@ MIN_ARGS_FOR_ENV_PATH = 2
 
 # Callback data limits
 CALLBACK_NICKNAME_MAX_LENGTH = 30
+USERS_PER_PAGE = 10 # For pagination in settings menus
 
 # Logging
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"

@@ -20,16 +20,17 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
 
 *   **Login/Logout Notifications:** Sends messages to Telegram when a user connects to or disconnects from the TeamTalk server.
 *   **Private Message Forwarding:** Private messages sent to the bot in TeamTalk can be forwarded to a specified Telegram administrator.
-*   **Customizable Notifications:** Telegram users can configure which notifications they want to receive (all, join-only, leave-only, or none).
-*   **User Ignoring:** Ability to add specific TeamTalk users to an ignore list to avoid receiving notifications from them.
-*   **"Mute All" Mode:** Allows receiving notifications only from selected TeamTalk users (exception list).
-*   **"Not on Online" (NOON) Feature:** If your linked TeamTalk user is online, notifications to Telegram can be delivered silently. This link can be established via the `/sub` or `/not on online` commands in TeamTalk. When set up via `/sub`, it's initially disabled in Telegram. When set up via `/not on online`, it's initially enabled.
+*   **Customizable Notifications:** Telegram users can configure their notification subscription preferences (all, join-only, leave-only, or none) via the interactive `/settings` menu.
+*   **User Ignoring and "Mute All" Mode:** Ability to manage ignored/allowed user lists and "Mute All" mode through the `/settings` menu.
+*   **"Not on Online" (NOON) Feature:** If your linked TeamTalk user is online, notifications to Telegram can be delivered silently. This link can be established via the `/sub` or `/not on online` commands in TeamTalk. This feature is also configurable in the `/settings` menu.
 *   **Telegram Commands:**
     *   `/who`: Show the list of online users on the TeamTalk server.
     *   `/id`: Get the TeamTalk User ID of a user (via buttons).
     *   `/kick`, `/ban` (administrators only): Kick or ban a user from the TeamTalk server (via buttons).
     *   `/cl`: Change the bot's interface language (supports Russian and English).
-    *   Commands to manage notification settings and ignore lists.
+    *   `/settings`: Open the interactive menu to configure language, subscription preferences, "Not on Online" (NOON) feature, and manage muted/allowed user lists.
+    *   `/mute user <TeamTalk_username>`, `/unmute user <TeamTalk_username>`, `/mute_all`, `/unmute_all`: Quick commands for managing mute lists. Full management is available in the `/settings` menu.
+    *   `/toggle_noon`, `/my_noon_status`: Quick commands for the NOON feature. Full management is available in the `/settings` menu.
 *   **TeamTalk Commands (in private messages to the bot):**
     *   `/sub`: Get a link to subscribe to Telegram notifications.
     *   `/unsub`: Get a link to unsubscribe from notifications.
@@ -95,15 +96,12 @@ After starting the bot and completing initial setup (it's recommended to subscri
 *   `/id`: Get the TeamTalk User ID of a specified user (selection via buttons).
 *   `/help`: Display this help message.
 *   `/cl en` or `/cl ru`: Change the bot's language.
-*   `/notify_all`: Enable all join/leave notifications.
-*   `/notify_join_off`: Disable join notifications.
-*   `/notify_leave_off`: Disable leave notifications.
-*   `/notify_none`: Disable all notifications.
-*   `/mute user <TeamTalk_username>`: Add a TeamTalk user to the ignore list (do not receive notifications from them).
-*   `/unmute user <TeamTalk_username>`: Remove a user from the ignore list.
-*   `/mute_all`: Enable "Mute All" mode. Notifications will only come from users on the ignore list (which acts as an allow-list in this mode).
-*   `/unmute_all`: Disable "Mute All" mode. Notifications will come from everyone except those on the ignore list.
-*   `/toggle_noon`: Toggle the "Not on Online" feature.
+*   `/settings`: Open the interactive menu to configure language, subscription preferences (formerly `/notify_*` commands), "Not on Online" (NOON) feature, and manage muted/allowed user lists.
+*   `/mute user <TeamTalk_username>`: Quick command to add a TeamTalk user to the mute list. Full management of mute lists is available in the `/settings` menu.
+*   `/unmute user <TeamTalk_username>`: Quick command to remove a user from the mute list. Full management of mute lists is available in the `/settings` menu.
+*   `/mute_all`: Enable "Mute All" mode (receive notifications only from users on the allow list). Full management of mute lists is available in the `/settings` menu.
+*   `/unmute_all`: Disable "Mute All" mode (receive notifications for everyone not on the block list). The allow list will be cleared. Full management of mute lists is available in the `/settings` menu.
+*   `/toggle_noon`: Quick toggle for the "Not on Online" feature. This feature is also configurable in the `/settings` menu.
 *   `/my_noon_status`: Check your "Not on Online" feature status.
 *   `/kick` (Telegram administrators only): Kick a TeamTalk user (selection via buttons).
 *   `/ban` (Telegram administrators only): Ban a TeamTalk user (selection via buttons).
@@ -130,7 +128,7 @@ You can set up the link between your Telegram account and your TeamTalk username
 2.  The bot will reply in TeamTalk with a Telegram deeplink.
 3.  Open this link. It will lead to your Telegram bot.
 4.  Press "Start" in Telegram. The bot will confirm your subscription and that the NOON feature has been linked with your TeamTalk account.
-5.  By default, for this method, the NOON feature will be **disabled**. You can enable it using the `/toggle_noon` command in Telegram.
+5.  By default, for this method, the NOON feature will be **disabled**. You can enable it using the `/toggle_noon` command in Telegram or the corresponding option in the `/settings` menu.
 6.  If you were already subscribed and NOON-linked to this same TeamTalk account, clicking the `/sub` link again will not change your existing NOON enabled/disabled status.
 
 **Method 2: Using the `/not on online` command**
@@ -140,7 +138,7 @@ You can set up the link between your Telegram account and your TeamTalk username
 4.  Press "Start" in Telegram. The bot will confirm the setup.
 5.  By default, for this method, the NOON feature will be **enabled**.
 
-Once set up and enabled, if your linked TeamTalk account is online on the server, notifications from the bot to Telegram will be delivered silently. You can use the `/toggle_noon` command in Telegram to enable or disable the silent notification behavior, and `/my_noon_status` to check its current state.
+Once set up and enabled, if your linked TeamTalk account is online on the server, notifications from the bot to Telegram will be delivered silently. You can use the `/toggle_noon` command in Telegram or the option in the `/settings` menu to enable or disable the silent notification behavior, and `/my_noon_status` to check its current state.
 
 ## Contributing
 
