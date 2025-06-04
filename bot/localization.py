@@ -14,11 +14,11 @@ LOCALIZED_STRINGS = {
     "deeplink_not_subscribed": {"en": "You were not subscribed to notifications.", "ru": "Вы не были подписаны на уведомления."},
     "deeplink_noon_confirm_missing_payload": {"en": "Error: Missing TeamTalk username in confirmation link.", "ru": "Ошибка: В ссылке подтверждения отсутствует имя пользователя TeamTalk."},
     "deeplink_noon_confirmed": {"en": "'Not on online' notifications enabled for TeamTalk user '{tt_username}'. You will receive silent notifications when this user is online on TeamTalk.", "ru": "Уведомления 'не в сети' включены для пользователя TeamTalk '{tt_username}'. Вы будете получать тихие уведомления, когда этот пользователь в сети TeamTalk."},
-    "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_ENABLED": {
+    "deeplink_subscribed_noon_linked_now_enabled": {
         "en": "You are subscribed. 'Not on Online' feature is linked for TeamTalk user '{tt_username}' and is currently ENABLED.",
         "ru": "Вы подписаны. Функция 'не в сети' связана с пользователем TeamTalk '{tt_username}' и сейчас ВКЛЮЧЕНА."
     },
-    "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_DISABLED": {
+    "deeplink_subscribed_noon_linked_now_disabled": {
         "en": "You are subscribed. 'Not on Online' feature is linked for TeamTalk user '{tt_username}' and is currently DISABLED.",
         "ru": "Вы подписаны. Функция 'не в сети' связана с пользователем TeamTalk '{tt_username}' и сейчас ВЫКЛЮЧЕНА."
     },
