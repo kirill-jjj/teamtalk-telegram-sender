@@ -22,7 +22,7 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
 *   **Private Message Forwarding:** Private messages sent to the bot in TeamTalk can be forwarded to a specified Telegram administrator.
 *   **Customizable Notifications:** Telegram users can configure their notification subscription preferences (all, join-only, leave-only, or none) via the interactive `/settings` menu.
 *   **User Ignoring and "Mute All" Mode:** Ability to manage ignored/allowed user lists and "Mute All" mode through the `/settings` menu.
-*   **"Not on Online" (NOON) Feature:** If your linked TeamTalk user is online, notifications to Telegram can be delivered silently. This link can be established via the `/sub` or `/not on online` commands in TeamTalk. This feature is also configurable in the `/settings` menu.
+*   **"Not on Online" (NOON) Feature:** If your linked TeamTalk user is online, notifications to Telegram can be delivered silently. This link is established via the `/sub` command in TeamTalk. This feature is also configurable in the `/settings` menu.
 *   **Telegram Commands:**
     *   `/who`: Show the list of online users on the TeamTalk server.
     *   `/id`: Get the TeamTalk User ID of a user (via buttons).
@@ -35,7 +35,6 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
     *   `/sub`: Get a link to subscribe to Telegram notifications.
     *   `/unsub`: Get a link to unsubscribe from notifications.
     *   `/add_admin`, `/remove_admin` (TeamTalk super-administrator only): Manage the bot's Telegram administrators.
-    *   `/not on online`: Configure the "Not on Online" feature.
 *   **Multilingual:** Support for Russian and English languages.
 
 ## Technology Stack
@@ -112,7 +111,6 @@ After starting the bot and completing initial setup (it's recommended to subscri
 *   `/unsub`: Get a link to unsubscribe from notifications. This will remove your subscription and all associated data and feature configurations (including any "Not on Online" settings) from the bot.
 *   `/add_admin <Telegram_ID_1> <Telegram_ID_2> ...`: (Only for `ADMIN_USERNAME` from `.env`) Add Telegram bot administrators.
 *   `/remove_admin <Telegram_ID_1> <Telegram_ID_2> ...`: (Only for `ADMIN_USERNAME` from `.env`) Remove Telegram bot administrators.
-*   `/not on online`: Set up or re-confirm the "Not on Online" (NOON) feature. This method will enable NOON by default upon successful linking via Telegram.
 *   `/help`: Show help for TeamTalk commands.
 
 Any other text message sent to the bot in a TeamTalk PM will be forwarded to `TG_ADMIN_CHAT_ID` if specified.
@@ -121,22 +119,15 @@ Any other text message sent to the bot in a TeamTalk PM will be forwarded to `TG
 
 The "Not on Online" (NOON) feature allows Telegram notifications from this bot to be delivered silently if your linked TeamTalk user is currently online. This helps reduce noise if you are actively using TeamTalk.
 
-You can set up the link between your Telegram account and your TeamTalk username in two ways:
+To use the NOON feature, you first need to link your Telegram account with your TeamTalk username. This is done using the `/sub` command in TeamTalk:
 
-**Method 1: Using the `/sub` command (Recommended for new users)**
+**Setting up the NOON feature**
 1.  Send the `/sub` command to the bot in a private message in TeamTalk.
 2.  The bot will reply in TeamTalk with a Telegram deeplink.
 3.  Open this link. It will lead to your Telegram bot.
 4.  Press "Start" in Telegram. The bot will confirm your subscription and that the NOON feature has been linked with your TeamTalk account.
 5.  By default, for this method, the NOON feature will be **disabled**. You can enable it using the `/toggle_noon` command in Telegram or the corresponding option in the `/settings` menu.
 6.  If you were already subscribed and NOON-linked to this same TeamTalk account, clicking the `/sub` link again will not change your existing NOON enabled/disabled status.
-
-**Method 2: Using the `/not on online` command**
-1.  Send the `/not on online` command to the bot in a private message in TeamTalk.
-2.  The bot will reply in TeamTalk with a Telegram deeplink.
-3.  Open this link. It should lead to your Telegram bot.
-4.  Press "Start" in Telegram. The bot will confirm the setup.
-5.  By default, for this method, the NOON feature will be **enabled**.
 
 Once set up and enabled, if your linked TeamTalk account is online on the server, notifications from the bot to Telegram will be delivered silently. You can use the `/toggle_noon` command in Telegram or the option in the `/settings` menu to enable or disable the silent notification behavior, and `/my_noon_status` to check its current state.
 
