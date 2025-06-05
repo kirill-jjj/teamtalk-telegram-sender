@@ -13,15 +13,6 @@ LOCALIZED_STRINGS = {
     "deeplink_unsubscribed": {"en": "You have successfully unsubscribed from notifications.", "ru": "Вы успешно отписались от уведомления."},
     "deeplink_not_subscribed": {"en": "You were not subscribed to notifications.", "ru": "Вы не были подписаны на уведомления."},
     "deeplink_noon_confirm_missing_payload": {"en": "Error: Missing TeamTalk username in confirmation link.", "ru": "Ошибка: В ссылке подтверждения отсутствует имя пользователя TeamTalk."},
-    "deeplink_noon_confirmed": {"en": "'Not on online' notifications enabled for TeamTalk user '{tt_username}'. You will receive silent notifications when this user is online on TeamTalk.", "ru": "Функция 'не в сети' включена для пользователя TeamTalk '{tt_username}'. Вы будете получать тихие уведомления, когда этот пользователь будет в сети TeamTalk."},
-    "deeplink_subscribed_noon_linked_now_enabled": {
-        "en": "You are subscribed. 'Not on Online' feature is linked for TeamTalk user '{tt_username}' and is currently ENABLED.",
-        "ru": "Вы подписаны. Функция 'не в сети' связана с пользователем TeamTalk '{tt_username}' и сейчас ВКЛЮЧЕНА."
-    },
-    "deeplink_subscribed_noon_linked_now_disabled": {
-        "en": "You are subscribed. 'Not on Online' feature is linked for TeamTalk user '{tt_username}' and is currently DISABLED.",
-        "ru": "Вы подписаны. Функция 'не в сети' связана с пользователем TeamTalk '{tt_username}' и сейчас ВЫКЛЮЧЕНА."
-    },
     "deeplink_invalid_action": {"en": "Invalid deeplink action.", "ru": "Неверное действие deeplink."},
     "error_occurred": {"en": "An error occurred.", "ru": "Произошла ошибка."},
     "tt_bot_not_connected": {"en": "TeamTalk bot is not connected.", "ru": "Бот TeamTalk не подключен."},
@@ -97,10 +88,8 @@ LOCALIZED_STRINGS = {
     "tt_remove_admin_prompt_ids": {"en": "Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432", "ru": "Пожалуйста, укажите Telegram ID после команды. Пример: /remove_admin 12345678 98765432"},
     "tt_remove_admin_success": {"en": "Successfully removed {count} admin(s).", "ru": "Успешно удалено администраторов: {count}."},
     "tt_remove_admin_error_not_found": {"en": "Admin with ID {telegram_id} not found.", "ru": "Администратор с ID {telegram_id} не найден."},
-    "tt_noon_usage": {"en": "Usage: /not on online", "ru": "Использование: /not on online"},
-    "tt_noon_confirm_deeplink_text": {"en": "To enable 'not on online' notifications for your TeamTalk user '{tt_username}', please open this link in Telegram and confirm (link valid for 5 minutes):\n{deeplink_url}", "ru": "Чтобы включить уведомления 'не в сети' для вашего пользователя TeamTalk '{tt_username}', пожалуйста, откройте эту ссылку в Telegram и подтвердите (ссылка действительна 5 минут):\n{deeplink_url}"},
     "tt_noon_error_processing": {"en": "An error occurred while processing the request.", "ru": "Произошла ошибка при обработке запроса."},
-    "tt_unknown_command": {"en": "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help.", "ru": "Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help."},
+    "tt_unknown_command": {"en": "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.", "ru": "Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, /remove_admin, /help."},
     "tt_forward_message_text": {"en": "Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}", "ru": "Сообщение с сервера {server_name}\nОт {sender_display}:\n\n{message_text}"},
     "join_notification": {"en": "User {user_nickname} joined server {server_name}", "ru": "{user_nickname} присоединился к серверу {server_name}"},
     "leave_notification": {"en": "User {user_nickname} left server {server_name}", "ru": "{user_nickname} покинул сервер {server_name}"},
@@ -118,15 +107,14 @@ LOCALIZED_STRINGS = {
                 "**Note on Mutes:**\n"
                 "- Mute functionality (block list / allow list) is managed via the `/settings` menu.\n\n"
                 "**Note on 'Not on Online' (NOON) feature (via /settings):**\n"
-                "- First, set it up via TeamTalk: `/not on online` in a private message to the TeamTalk bot.\n"
-                "- After confirming via the link in Telegram, this feature will be active and can be managed in `/settings`.\n"
+                "- This feature is activated by using the `/sub` command in a private message to the TeamTalk bot. This links your TeamTalk account.\n"
+                "- Once linked, the NOON feature can be managed in Telegram under `/settings`.\n"
                 "- If your linked TeamTalk user is online, Telegram notifications will be silent if NOON is enabled.\n\n"
                 "**TeamTalk Commands (in private message to the bot):**\n"
-                "/sub - Get a link to subscribe to notifications.\n"
+                "/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
                 "/unsub - Get a link to unsubscribe from notifications.\n"
                 "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (MAIN_ADMIN from config only).\n"
                 "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (MAIN_ADMIN from config only).\n"
-                "/not on online - Set up silent notifications for when you are online in TeamTalk.\n"
                 "/help - Show help."
         ),
         "ru": (
@@ -142,15 +130,14 @@ LOCALIZED_STRINGS = {
                 "**Примечание по мьютам:**\n"
                 "- Управление мьютами (черный/белый список) осуществляется через меню `/settings`.\n\n"
                 "**Примечание по функции 'не в сети' (NOON) (через /settings):**\n"
-                "- Сначала настройте через TeamTalk: `/not on online` в личные сообщения боту TeamTalk.\n"
-                "- После подтверждения по ссылке в Telegram, эта функция будет активна и ей можно будет управлять в `/settings`.\n"
+                "- Эта функция активируется использованием команды `/sub` в личных сообщениях боту TeamTalk. Это связывает ваш аккаунт TeamTalk.\n"
+                "- После связывания, функцией NOON можно управлять в Telegram через `/settings`.\n"
                 "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука, если функция NOON включена.\n\n"
                 "**Команды TeamTalk (в личные сообщения боту):**\n"
-                "/sub - Получить ссылку для подписки на уведомления.\n"
+                "/sub - Получить ссылку для подписки на уведомления и связать ваш аккаунт TeamTalk для NOON.\n"
                 "/unsub - Получить ссылку для отписки от уведомлений.\n"
                 "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ГЛАВНОГО АДМИНА из конфигурации).\n"
                 "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ГЛАВНОГО АДМИНА из конфигурации).\n"
-                "/not on online - Настроить тихие уведомления, когда вы онлайн в TeamTalk.\n"
                 "/help - Показать справку."
         ),
     },
@@ -173,7 +160,7 @@ LOCALIZED_STRINGS = {
     "notif_settings_menu_header": {"en": "Notification Settings", "ru": "Настройки уведомлений"},
     "notif_setting_noon_btn_toggle": {"en": "NOON (Not on Online): {status}", "ru": "NOON (Не в сети): {status}"},
     "notif_setting_noon_btn_setup_required": {"en": "NOON (Setup Required via TeamTalk)", "ru": "NOON (Требуется настройка через TeamTalk)"},
-    "notif_setting_noon_setup_required_alert": {"en": "NOON feature needs to be set up or confirmed first using /sub or /not on online command in TeamTalk private messages with the bot.", "ru": "Функцию NOON необходимо сначала настроить или подтвердить командами /sub или /not on online в личных сообщениях боту в TeamTalk."},
+    "notif_setting_noon_setup_required_alert": {"en": "NOON feature requires your TeamTalk account to be linked. Use the `/sub` command in a private message to the TeamTalk bot to subscribe and link your account.", "ru": "Функция NOON требует связывания вашего аккаунта TeamTalk. Используйте команду `/sub` в личных сообщениях боту TeamTalk, чтобы подписаться и связать ваш аккаунт."},
     "notif_setting_manage_muted_btn": {"en": "Manage Muted/Allowed Users", "ru": "Управление блокировками"},
     "notif_setting_noon_updated_to": {"en": "NOON (Not on Online) is now {status}.", "ru": "NOON (Не в сети) теперь {status}."},
     "enabled_status": {"en": "Enabled", "ru": "Включено"},

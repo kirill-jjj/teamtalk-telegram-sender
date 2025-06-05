@@ -21,7 +21,6 @@ from bot.localization import get_text
 from bot.constants import (
     ACTION_SUBSCRIBE,
     ACTION_UNSUBSCRIBE,
-    ACTION_CONFIRM_NOON,
     ACTION_SUBSCRIBE_AND_LINK_NOON,
 )
 
@@ -68,29 +67,6 @@ async def _handle_unsubscribe_deeplink(
 
         return get_text("DEEPLINK_UNSUBSCRIBED", language)
     return get_text("DEEPLINK_NOT_SUBSCRIBED", language)
-
-async def _handle_confirm_noon_deeplink(
-    session: AsyncSession,
-    telegram_id: int,
-    language: str,
-    payload: str | None,
-    user_specific_settings: UserSpecificSettings # To update
-) -> str:
-    tt_username_from_payload = payload
-    if not tt_username_from_payload:
-        logger.error("Deeplink for 'confirm_not_on_online' missing payload.")
-        return get_text("DEEPLINK_NOON_CONFIRM_MISSING_PAYLOAD", language)
-
-    # Update UserSpecificSettings object directly
-    user_specific_settings.teamtalk_username = tt_username_from_payload
-    user_specific_settings.not_on_online_enabled = True # Enable by default on confirmation
-    user_specific_settings.not_on_online_confirmed = True
-
-    # Persist changes to DB and update cache
-    await update_user_settings_in_db(session, telegram_id, user_specific_settings)
-
-    logger.info(f"User {telegram_id} confirmed 'not on online' for TT user {tt_username_from_payload} via deeplink.")
-    return get_text("DEEPLINK_NOON_CONFIRMED", language, tt_username=html.quote(tt_username_from_payload))
 
 
 async def _handle_subscribe_and_link_noon_deeplink(
@@ -142,12 +118,9 @@ async def _handle_subscribe_and_link_noon_deeplink(
     if not final_tt_username: # Should ideally not be hit if previous logic is correct
         final_tt_username = tt_username_from_payload if tt_username_from_payload else "Unknown"
 
-    if current_settings.not_on_online_enabled:
-        message_key = "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_ENABLED"
-        logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username}. NOON is ENABLED.")
-    else:
-        message_key = "DEEPLINK_SUBSCRIBED_NOON_LINKED_NOW_DISABLED"
-        logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username}. NOON is DISABLED.")
+    # Always use DEEPLINK_SUBSCRIBED key
+    message_key = "DEEPLINK_SUBSCRIBED"
+    logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username} via combined deeplink. Sending DEEPLINK_SUBSCRIBED message.")
 
     reply_text_val = get_text(message_key, language, tt_username=html.quote(final_tt_username))
     return reply_text_val
@@ -160,7 +133,6 @@ DeeplinkHandlerType = Callable[[AsyncSession, int, str, Any, UserSpecificSetting
 DEEPLINK_ACTION_HANDLERS: dict[str, DeeplinkHandlerType] = {
     ACTION_SUBSCRIBE: _handle_subscribe_deeplink,
     ACTION_UNSUBSCRIBE: _handle_unsubscribe_deeplink,
-    ACTION_CONFIRM_NOON: _handle_confirm_noon_deeplink,
     ACTION_SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
 }
 
@@ -195,7 +167,7 @@ async def handle_deeplink_payload(
     if handler:
         try:
             # Pass necessary arguments to the handler
-            if deeplink_obj.action in [ACTION_CONFIRM_NOON, ACTION_SUBSCRIBE_AND_LINK_NOON]:
+            if deeplink_obj.action == ACTION_SUBSCRIBE_AND_LINK_NOON:
                 reply_text_val = await handler(session, telegram_id_val, language, deeplink_obj.payload, user_specific_settings)
             else:
                 # For other actions like subscribe/unsubscribe, payload might not be directly used by handler logic

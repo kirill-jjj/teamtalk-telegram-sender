@@ -31,7 +31,6 @@ from bot.teamtalk_bot.commands import (
     handle_tt_unsubscribe_command,
     handle_tt_add_admin_command,
     handle_tt_remove_admin_command,
-    handle_tt_not_on_online_command,
     handle_tt_help_command,
     handle_tt_unknown_command as handle_tt_unknown_command_specific, # Renamed to avoid clash
 )
@@ -207,8 +206,6 @@ async def on_message(message: TeamTalkMessage):
             await handle_tt_add_admin_command(message, session, bot_reply_language)
         elif message_content.lower().startswith("/remove_admin"):
             await handle_tt_remove_admin_command(message, session, bot_reply_language)
-        elif message_content.lower() == "/not on online": # Exact match for this command
-            await handle_tt_not_on_online_command(message, session, bot_reply_language)
         elif message_content.lower().startswith("/help"):
             await handle_tt_help_command(message, bot_reply_language)
         elif message_content.startswith("/"): # An unknown command

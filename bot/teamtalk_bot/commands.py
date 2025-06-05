@@ -13,7 +13,7 @@ from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import set_telegram_commands, ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
 from bot.constants import (
-    ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_CONFIRM_NOON, ACTION_SUBSCRIBE_AND_LINK_NOON,
+    ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_SUBSCRIBE_AND_LINK_NOON,
 )
 # Define TT_UNKNOWN_COMMAND_TT in constants.py if it's different from the Telegram one
 # For now, assuming it's the same or will be added to LOCALIZED_STRINGS
@@ -168,41 +168,6 @@ async def handle_tt_remove_admin_command(
     except Exception as e:
         logger.error(f"Error processing TT /remove_admin command from {sender_username_val}: {e}", exc_info=True)
         tt_message.reply(get_text("TT_ADMIN_ERROR_PROCESSING", bot_language))
-
-
-async def handle_tt_not_on_online_command(
-    tt_message: TeamTalkMessage,
-    session: AsyncSession,
-    bot_language: str
-):
-    sender_tt_username = ttstr(tt_message.user.username)
-
-    # Command should be exactly "/not on online" (case-insensitive check in on_message)
-    # Here we assume it matched. If arguments were possible, they'd be checked.
-    # if tt_message.content.strip().lower() != "/not on online": # This check is usually done before calling handler
-    #     tt_message.reply(get_text("TT_NOON_USAGE", bot_language))
-    #     return
-
-    try:
-        # Create a deeplink for confirming "not on online" feature.
-        # The payload is the TeamTalk username of the sender.
-        # expected_telegram_id is None, as any Telegram user can click this link first
-        # to associate their Telegram account with this TeamTalk username for NOON.
-        token = await create_deeplink(
-            session,
-            action=ACTION_CONFIRM_NOON,
-            payload=sender_tt_username,
-            expected_telegram_id=None # User will self-identify by clicking
-        )
-        bot_info = await tg_bot_event.get_me()
-        deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
-
-        reply_text = get_text("TT_NOON_CONFIRM_DEEPLINK_TEXT", bot_language, tt_username=sender_tt_username, deeplink_url=deeplink_url)
-        tt_message.reply(reply_text)
-        logger.info(f"Generated 'not on online' confirmation deeplink {token} for TT user {sender_tt_username}")
-    except Exception as e:
-        logger.error(f"Error processing TT /not on online command for {sender_tt_username}: {e}", exc_info=True)
-        tt_message.reply(get_text("TT_NOON_ERROR_PROCESSING", bot_language))
 
 
 async def handle_tt_help_command(
