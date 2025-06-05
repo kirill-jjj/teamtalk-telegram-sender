@@ -14,6 +14,10 @@ LOCALIZED_STRINGS = {
     "deeplink_not_subscribed": {"en": "You were not subscribed to notifications.", "ru": "Вы не были подписаны на уведомления."},
     "deeplink_noon_confirm_missing_payload": {"en": "Error: Missing TeamTalk username in confirmation link.", "ru": "Ошибка: В ссылке подтверждения отсутствует имя пользователя TeamTalk."},
     "deeplink_invalid_action": {"en": "Invalid deeplink action.", "ru": "Неверное действие deeplink."},
+    "please_subscribe_first": {
+        "en": "You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe.",
+        "ru": "Вы не подписаны. Пожалуйста, зайдите на сервер TeamTalk, отправьте боту команду /sub в личные сообщения и нажмите на полученную ссылку для подписки."
+    },
     "error_occurred": {"en": "An error occurred.", "ru": "Произошла ошибка."},
     "tt_bot_not_connected": {"en": "TeamTalk bot is not connected.", "ru": "Бот TeamTalk не подключен."},
     "tt_error_getting_users": {"en": "Error getting users from TeamTalk.", "ru": "Ошибка получения пользователей из TeamTalk."},
@@ -159,8 +163,6 @@ LOCALIZED_STRINGS = {
     "back_to_settings_btn": {"en": "⬅️ Back to Settings", "ru": "⬅️ Назад к настройкам"},
     "notif_settings_menu_header": {"en": "Notification Settings", "ru": "Настройки уведомлений"},
     "notif_setting_noon_btn_toggle": {"en": "NOON (Not on Online): {status}", "ru": "NOON (Не в сети): {status}"},
-    "notif_setting_noon_btn_setup_required": {"en": "NOON (Setup Required via TeamTalk)", "ru": "NOON (Требуется настройка через TeamTalk)"},
-    "notif_setting_noon_setup_required_alert": {"en": "NOON feature requires your TeamTalk account to be linked. Use the `/sub` command in a private message to the TeamTalk bot to subscribe and link your account.", "ru": "Функция NOON требует связывания вашего аккаунта TeamTalk. Используйте команду `/sub` в личных сообщениях боту TeamTalk, чтобы подписаться и связать ваш аккаунт."},
     "notif_setting_manage_muted_btn": {"en": "Manage Muted/Allowed Users", "ru": "Управление блокировками"},
     "notif_setting_noon_updated_to": {"en": "NOON (Not on Online) is now {status}.", "ru": "NOON (Не в сети) теперь {status}."},
     "enabled_status": {"en": "Enabled", "ru": "Включено"},

@@ -439,13 +439,9 @@ def _create_notification_settings_keyboard( # Renamed for clarity if needed, but
     user_specific_settings: UserSpecificSettings
 ) -> InlineKeyboardMarkup:
     is_noon_enabled = user_specific_settings.not_on_online_enabled
-    is_noon_confirmed = user_specific_settings.not_on_online_confirmed
-
-    if not is_noon_confirmed:
-        noon_button_text = get_text("NOTIF_SETTING_NOON_BTN_SETUP_REQUIRED", language)
-    else:
-        status_text = get_text("ENABLED_STATUS" if is_noon_enabled else "DISABLED_STATUS", language)
-        noon_button_text = get_text("NOTIF_SETTING_NOON_BTN_TOGGLE", language, status=status_text)
+    # is_noon_confirmed is assumed true due to SubscriptionCheckMiddleware
+    status_text = get_text("ENABLED_STATUS" if is_noon_enabled else "DISABLED_STATUS", language)
+    noon_button_text = get_text("NOTIF_SETTING_NOON_BTN_TOGGLE", language, status=status_text)
 
     noon_button = InlineKeyboardButton(
         text=noon_button_text,
@@ -499,18 +495,10 @@ async def cq_toggle_noon_setting_action( # Renamed for clarity
         return
 
     # await callback_query.answer() # Acknowledge: moved down after check for confirmed
-    if not user_specific_settings.not_on_online_confirmed:
-        await callback_query.answer() # Ack here before alert
-        try:
-            await callback_query.answer(
-                get_text("NOTIF_SETTING_NOON_SETUP_REQUIRED_ALERT", language),
-                show_alert=True
-            )
-        except TelegramAPIError as e:
-            logger.warning(f"Could not send NOON setup required alert: {e}")
-        return
+    # The check for user_specific_settings.not_on_online_confirmed is removed.
+    # Assumed true due to SubscriptionCheckMiddleware.
 
-    await callback_query.answer() # Acknowledge now that it's confirmed
+    await callback_query.answer() # Acknowledge action
     user_specific_settings.not_on_online_enabled = not user_specific_settings.not_on_online_enabled
 
     try:

@@ -30,6 +30,7 @@ from bot.telegram_bot.middlewares import (
     UserSettingsMiddleware,
     TeamTalkInstanceMiddleware
 )
+from bot.telegram_bot.middlewares.subscription_check import SubscriptionCheckMiddleware
 from bot.telegram_bot.handlers import (
     user_commands_router,
     settings_router,
@@ -113,6 +114,11 @@ async def main_async():
     # It will run after DbSessionMiddleware provides the session.
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
+
+    # SubscriptionCheckMiddleware should run after UserSettingsMiddleware (for language) and DbSessionMiddleware (for session).
+    dp.message.middleware(SubscriptionCheckMiddleware())
+    dp.callback_query.middleware(SubscriptionCheckMiddleware())
+    logger.info("SubscriptionCheckMiddleware registered for messages and callback queries.")
     logger.info("Aiogram middlewares registered.")
 
     # Include routers
