@@ -1,7 +1,7 @@
 import logging
-from typing import Callable, Coroutine, Any
-from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery
+from typing import Callable, Coroutine, Any, Dict # Added Dict
+from aiogram import BaseMiddleware # Changed import
+from aiogram.types import TelegramObject, Message, CallbackQuery, User # Added User
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,27 +63,74 @@ class UserSettingsMiddleware(BaseMiddleware):
         }
         return await handler(event, data)
 
-
-import logging # Убедитесь, что logging импортирован в этом файле
-from typing import Callable, Coroutine, Any
-from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from aiogram.types import TelegramObject
-# ... другие ваши импорты ...
-from bot.teamtalk_bot.bot_instance import current_tt_instance as global_current_tt_instance # Импорт вашей глобальной переменной
-
-logger = logging.getLogger(__name__) # Инициализация логгера для этого модуля, если еще не сделано
-
-from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
-
-# ...
+# Removed redundant imports and logger re-initialization that were here.
+# The logger is initialized once at the top of the file.
+# tt_bot_module is also imported at the top.
 
 class TeamTalkInstanceMiddleware(BaseMiddleware):
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]], # Changed dict to Dict
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
         actual_tt_instance = tt_bot_module.current_tt_instance
         data["tt_instance"] = actual_tt_instance
+        return await handler(event, data)
+
+# --- Imports for SubscriptionCheckMiddleware (from subscription_check.py) ---
+# logging, Callable, Dict, Any, Awaitable (Coroutine), BaseMiddleware, Message, CallbackQuery, User, AsyncSession
+# are already imported or covered above.
+from typing import Awaitable # Ensure Awaitable is explicitly imported if not covered by Coroutine
+from bot.database.models import SubscribedUser
+from bot.localization import get_text
+
+# --- SubscriptionCheckMiddleware Class Definition ---
+class SubscriptionCheckMiddleware(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[[Message | CallbackQuery, Dict[str, Any]], Awaitable[Any]],
+        event: Message | CallbackQuery,
+        data: Dict[str, Any],
+    ) -> Any:
+        # Try to get user object from event
+        user: User | None = data.get("event_from_user") # Aiogram 3.x puts it here
+
+        if not user: # Should not happen if events are from users
+            logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
+            return await handler(event, data)
+
+        telegram_id = user.id
+        session: AsyncSession | None = data.get("session") # From DbSessionMiddleware
+        language: str = data.get("language", "en") # From UserSettingsMiddleware (or default)
+
+        if not session:
+            logger.error("SubscriptionCheckMiddleware: No database session found in event data. Ensure DbSessionMiddleware runs before.")
+            # Potentially send an error message or just let it pass to hit an error later
+            return await handler(event, data)
+
+        # Allow /start command with a token (deeplink) to pass without subscription check
+        if isinstance(event, Message) and event.text:
+            command_parts = event.text.split()
+            if command_parts[0].lower() == "/start" and len(command_parts) > 1:
+                logger.debug(f"SubscriptionCheckMiddleware: Allowing /start command with token for user {telegram_id}.")
+                return await handler(event, data)
+
+        # Check subscription status
+        subscriber = await session.get(SubscribedUser, telegram_id)
+
+        if not subscriber:
+            logger.info(f"SubscriptionCheckMiddleware: User {telegram_id} is not subscribed. Blocking further processing.")
+            message_text = get_text("PLEASE_SUBSCRIBE_FIRST", language)
+            try:
+                if isinstance(event, Message):
+                    await event.reply(message_text)
+                elif isinstance(event, CallbackQuery):
+                    await event.message.answer(message_text) # Send as new message in chat
+                    await event.answer() # Close the callback query notification
+            except Exception as e:
+                logger.error(f"SubscriptionCheckMiddleware: Error sending 'please subscribe' message to {telegram_id}: {e}")
+            return # Stop processing this event further
+
+        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
         return await handler(event, data)

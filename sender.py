@@ -28,9 +28,9 @@ from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
-    TeamTalkInstanceMiddleware
+    TeamTalkInstanceMiddleware,
+    SubscriptionCheckMiddleware
 )
-from bot.telegram_bot.middlewares.subscription_check import SubscriptionCheckMiddleware
 from bot.telegram_bot.handlers import (
     user_commands_router,
     settings_router,
