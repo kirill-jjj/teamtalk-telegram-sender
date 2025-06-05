@@ -121,11 +121,24 @@ async def on_my_login(server: PytalkServer):
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
     """Called when the connection to the TeamTalk server is lost."""
-    host = ttstr(server.info.host) if server and server.info else "Unknown Host"
-    logger.warning(f"Connection lost to TeamTalk server {host}. Attempting to reconnect...")
-    if tt_bot_module.current_tt_instance and tt_bot_module.current_tt_instance.server_info.host == host:
+    
+    event_host_str = "Unknown Host"
+    if server and hasattr(server, 'info') and server.info and hasattr(server.info, 'host'):
+        processed_event_host = ttstr(server.info.host) 
+        if isinstance(processed_event_host, bytes):
+            event_host_str = processed_event_host.decode('utf-8', 'replace')
+        else:
+            event_host_str = str(processed_event_host)
+
+    logger.warning(f"Connection lost to TeamTalk server '{event_host_str}'. Attempting to reconnect...")
+
+    if tt_bot_module.current_tt_instance is not None:
+        logger.info(f"Resetting current_tt_instance for host '{event_host_str}' due to connection loss.")
         tt_bot_module.current_tt_instance = None
         tt_bot_module.login_complete_time = None
+    else:
+        logger.info("current_tt_instance was already None when on_my_connection_lost was called.")
+
     asyncio.create_task(_tt_reconnect())
 
 
