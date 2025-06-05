@@ -182,6 +182,10 @@ async def main_async():
             telegram_polling_task,
             teamtalk_task
         )
+    except asyncio.CancelledError:
+        logger.info("Main asyncio.gather was cancelled (expected during shutdown). Proceeding to finally block for cleanup.")
+    except KeyboardInterrupt: # Also catching KeyboardInterrupt here as in user's example for robustness
+        logger.info("KeyboardInterrupt caught in main_async. Proceeding to finally block for cleanup.")
     finally:
         logger.info("Shutting down application...")
         # Gracefully stop polling and close sessions
