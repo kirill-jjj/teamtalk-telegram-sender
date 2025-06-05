@@ -121,7 +121,7 @@ async def on_my_login(server: PytalkServer):
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
     """Called when the connection to the TeamTalk server is lost."""
-    host = ttstr(server.info.host) if server and server.server_info else "Unknown Host"
+    host = ttstr(server.info.host) if server and server.info else "Unknown Host"
     logger.warning(f"Connection lost to TeamTalk server {host}. Attempting to reconnect...")
     if tt_bot_module.current_tt_instance and tt_bot_module.current_tt_instance.server_info.host == host:
         tt_bot_module.current_tt_instance = None
