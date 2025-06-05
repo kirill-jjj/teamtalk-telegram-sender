@@ -42,6 +42,21 @@ from bot.teamtalk_bot import bot_instance as tt_bot_module
 # Ensure TeamTalk events are loaded by importing the events module
 from bot.teamtalk_bot import events as tt_events # Loads event handlers
 
+_telegram_polling_task_ref_for_shutdown = None
+_teamtalk_task_ref_for_shutdown = None
+
+async def on_aiogram_shutdown(*args, **kwargs):
+    logger.info("on_aiogram_shutdown called. Attempting to cancel tasks.")
+    global _teamtalk_task_ref_for_shutdown
+    if _teamtalk_task_ref_for_shutdown and not _teamtalk_task_ref_for_shutdown.done():
+        logger.info("Cancelling TeamTalk task...")
+        _teamtalk_task_ref_for_shutdown.cancel()
+
+    global _telegram_polling_task_ref_for_shutdown
+    if _telegram_polling_task_ref_for_shutdown and not _telegram_polling_task_ref_for_shutdown.done():
+        logger.info("Cancelling Telegram polling task (aiogram should handle this)...")
+        _telegram_polling_task_ref_for_shutdown.cancel()
+
 async def main_async():
     logger.info("Application starting...")
 
@@ -123,10 +138,13 @@ async def main_async():
     # Let's assume Pytalk's start is asyncio compatible.
     # The on_ready event in tt_events will handle the actual server connection.
 
+    dp.shutdown.register(on_aiogram_shutdown)
     telegram_polling_task = dp.start_polling(
         tg_bot_event,
         allowed_updates=dp.resolve_used_update_types() # Optimize updates
     )
+    global _telegram_polling_task_ref_for_shutdown
+    _telegram_polling_task_ref_for_shutdown = telegram_polling_task
     # Pytalk's start method might be blocking or async.
     # If tt_bot.run() is blocking, it needs its own thread or process.
     # If tt_bot._start() is a coroutine as in original, it can be gathered.
@@ -156,6 +174,8 @@ async def main_async():
 
     await tt_bot_module.tt_bot._async_setup_hook() # Call setup hook as in original
     teamtalk_task = tt_bot_module.tt_bot._start()    # Start Pytalk's async loop
+    global _teamtalk_task_ref_for_shutdown
+    _teamtalk_task_ref_for_shutdown = teamtalk_task
 
     try:
         await asyncio.gather(
