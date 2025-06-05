@@ -173,7 +173,7 @@ async def main_async():
     # `_start` is likely the coroutine that runs Pytalk's event loop.
 
     await tt_bot_module.tt_bot._async_setup_hook() # Call setup hook as in original
-    teamtalk_task = tt_bot_module.tt_bot._start()    # Start Pytalk's async loop
+    teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")    # Start Pytalk's async loop
     global _teamtalk_task_ref_for_shutdown
     _teamtalk_task_ref_for_shutdown = teamtalk_task
 
