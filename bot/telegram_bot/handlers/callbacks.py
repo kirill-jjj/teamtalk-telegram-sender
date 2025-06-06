@@ -1,16 +1,25 @@
 import logging
+import math # For pagination
 from aiogram import Router, F, html
-from aiogram.types import CallbackQuery # InlineKeyboardMarkup, InlineKeyboardButton removed
+from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
-import math # For pagination
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
 
 from bot.localization import get_text
 from bot.core.user_settings import UserSpecificSettings, update_user_settings_in_db
-from bot.telegram_bot.filters import IsAdminFilter # For checking admin status on kick/ban
+from bot.telegram_bot.filters import IsAdminFilter
+from bot.telegram_bot.keyboards import (
+    create_main_settings_keyboard,
+    create_language_selection_keyboard,
+    create_subscription_settings_keyboard,
+    create_notification_settings_keyboard,
+    create_manage_muted_users_keyboard,
+    create_paginated_user_list_keyboard,
+    create_account_list_keyboard
+)
 from bot.constants import (
     CALLBACK_ACTION_KICK, CALLBACK_ACTION_BAN,
     CALLBACK_NICKNAME_MAX_LENGTH, MUTE_ACTION_MUTE, MUTE_ACTION_UNMUTE,
@@ -125,7 +134,7 @@ async def process_user_action_selection(
 
 # --- Settings Callbacks ---
 
-from bot.telegram_bot.callback_data import ( # Import all new factories
+from bot.telegram_bot.callback_data import (
     SettingsCallback,
     LanguageCallback,
     SubscriptionCallback,
@@ -135,7 +144,7 @@ from bot.telegram_bot.callback_data import ( # Import all new factories
     PaginateUsersCallback,
     ToggleMuteSpecificCallback
 )
-
+# Removed the keyboard imports from here as they were moved to the top
 @callback_router.callback_query(SettingsCallback.filter(F.action == "language"))
 async def cq_show_language_menu( # Renamed for clarity
     callback_query: CallbackQuery,
