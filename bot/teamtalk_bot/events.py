@@ -266,17 +266,7 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
             logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
         except Exception as e:
             logger.error(f"Error setting status or login_complete_time for bot in on_user_join: {e}", exc_info=True)
-    else:
-        # This is the event for another user joining; send notification.
-        # Ensure this part matches the existing logic/signature for send_join_leave_notification_logic
-        # It's assumed NOTIFICATION_EVENT_JOIN, user, tt_instance are the primary arguments.
-        # Add channel_name or other details if the function requires them.
-        channel_name_display = "Unknown Channel"
-        if hasattr(channel, 'name'):
-            channel_name_display = ttstr(channel.name) if isinstance(channel.name, bytes) else channel.name
-
-        logger.debug(f"User {user.username} (ID: {user.id}) joined channel {channel_name_display}. Preparing notification.")
-        await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance)
+    # Removed the else block; function now only handles bot's own join events for status/login time.
 
 
 @tt_bot_module.tt_bot.event
