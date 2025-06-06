@@ -133,7 +133,7 @@ async def on_my_login(server: PytalkServer):
     except Exception as e_prop:
         logger.warning(f"Could not get server name on login: {e_prop}")
 
-    logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({ttstr(server.info.host)})")
+    logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({server.info.host})")
 
     try:
         channel_id_or_path_val = app_config["CHANNEL"]
