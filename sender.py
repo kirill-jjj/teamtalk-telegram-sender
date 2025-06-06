@@ -31,7 +31,6 @@ from bot.telegram_bot.middlewares import (
 )
 from bot.telegram_bot.handlers import (
     user_commands_router,
-    settings_router,
     admin_router,
     callback_router,
     catch_all_router
@@ -119,7 +118,6 @@ async def main_async():
 
     # Include routers
     dp.include_router(user_commands_router)
-    dp.include_router(settings_router)
     dp.include_router(admin_router) # Admin router includes IsAdminFilter
     dp.include_router(callback_router)
     dp.include_router(catch_all_router) # Catch-all should be last for messages

@@ -1,7 +1,7 @@
 import logging
 from typing import List # For Python < 3.9, otherwise list is fine
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat # Added BotCommandScopeChat
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from aiogram.exceptions import TelegramAPIError
 
 logger = logging.getLogger(__name__)

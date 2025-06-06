@@ -1,10 +1,11 @@
 import logging
 import asyncio
-from typing import Callable
+from typing import Callable, Optional
 from aiogram import html
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
+from pytalk.user import User as TeamTalkUser
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.enums import UserStatusMode
 
@@ -26,12 +27,16 @@ from bot.constants import (
 from bot.telegram_bot.utils import send_telegram_message_individual # For forwarding
 from bot.telegram_bot.bot_instances import tg_bot_message # For forwarding
 from bot.core.user_settings import USER_SETTINGS_CACHE # For admin language
+from bot.localization import get_text # Ensured single import
 from bot.constants import DEFAULT_LANGUAGE
+from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
+
+# --- Existing Utility Functions ---
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     parts_to_send_list = []
@@ -125,25 +130,13 @@ async def forward_tt_message_to_telegram_admin(
     admin_language = admin_settings.language if admin_settings else DEFAULT_LANGUAGE
 
     tt_instance_val = message.teamtalk_instance # Instance from which message originated
-    server_name_val = app_config.get("SERVER_NAME") # Use configured name first
-    if not server_name_val:
-        if tt_instance_val and tt_instance_val.connected:
-            try:
-                server_name_val = ttstr(tt_instance_val.server.get_properties().server_name)
-            except Exception as e:
-                logger.error(f"Could not get server name from TT instance for forwarding: {e}")
-                server_name_val = "Unknown Server"
-        else:
-            server_name_val = "Unknown Server"
 
-    sender_nickname = ttstr(message.user.nickname)
-    sender_username = ttstr(message.user.username)
+    server_name_val = get_effective_server_name(tt_instance_val)
+    sender_display_val = get_tt_user_display_name(message.user, admin_language)
     message_content = message.content
 
-    sender_display_val = sender_nickname or sender_username or get_text("WHO_USER_UNKNOWN", admin_language)
-
     text_to_send = get_text(
-        "TT_FORWARD_MESSAGE_TEXT",
+        "TT_FORWARD_MESSAGE_TEXT", # This still uses get_text directly
         admin_language,
         server_name=html.quote(server_name_val),
         sender_display=html.quote(sender_display_val),

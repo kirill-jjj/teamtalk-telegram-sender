@@ -1,7 +1,7 @@
 import logging
-from typing import Callable, Coroutine, Any, Dict # Added Dict
-from aiogram import BaseMiddleware # Changed import
-from aiogram.types import TelegramObject, Message, CallbackQuery, User # Added User
+from typing import Callable, Coroutine, Any, Dict
+from aiogram import BaseMiddleware
+from aiogram.types import TelegramObject, Message, CallbackQuery, User
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,14 +61,10 @@ class UserSettingsMiddleware(BaseMiddleware):
         }
         return await handler(event, data)
 
-# Removed redundant imports and logger re-initialization that were here.
-# The logger is initialized once at the top of the file.
-# tt_bot_module is also imported at the top.
-
 class TeamTalkInstanceMiddleware(BaseMiddleware):
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]], # Changed dict to Dict
+        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:

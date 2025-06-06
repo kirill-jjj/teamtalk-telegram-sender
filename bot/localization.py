@@ -1,5 +1,4 @@
 import logging
-# DEFAULT_LANGUAGE import removed
 from bot.config import app_config
 
 logger = logging.getLogger(__name__)
@@ -186,8 +185,8 @@ LOCALIZED_STRINGS = {
     "back_to_manage_muted_btn": {"en": "⬅️ Back to Mute Management", "ru": "⬅️ Назад к управлению блокировками"},
     "user_unmuted_toast": {"en": "{username} has been unmuted.", "ru": "{username} был разблокирован."},
     "user_muted_toast": {"en": "{username} has been muted.", "ru": "{username} был заблокирован."},
-    "all_accounts_list_header": {"en": "Mute/Unmute - All Server Accounts:", "ru": "Блокировка/Разблокировка - Все аккаунты сервера:"}, # Renamed from SERVER_USER_LIST_HEADER
-    "no_server_accounts_found": {"en": "No user accounts found on the server.", "ru": "Учетные записи на сервере не найдены."}, # Renamed from NO_SERVER_USERS_FOUND
+    "all_accounts_list_header": {"en": "Mute/Unmute - All Server Accounts:", "ru": "Блокировка/Разблокировка - Все аккаунты сервера:"},
+    "no_server_accounts_found": {"en": "No user accounts found on the server.", "ru": "Учетные записи на сервере не найдены."},
     "toggle_mute_status_btn": {"en": "{username} (Status: {current_status})", "ru": "{username} (Статус: {current_status})"}, # This can remain if {username} is general enough
     "muted_status": {"en": "Muted", "ru": "Заблокирован"},
     "not_muted_status": {"en": "Not Muted", "ru": "Не заблокирован"},

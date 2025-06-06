@@ -19,6 +19,7 @@ from bot.constants import (
     CALLBACK_NICKNAME_MAX_LENGTH,
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
+from bot.core.utils import get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -132,7 +133,6 @@ async def send_telegram_messages_to_list(
     bot_token_to_use: str, # TG_EVENT_TOKEN or TG_BOT_MESSAGE_TOKEN
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
-    # session: AsyncSession, # No longer needed directly here, SessionFactory used if needed by sub-functions
     reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None, # tt_username, tt_nickname, lang, recipient_tg_id
     tt_user_username_for_markup: str | None = None,
     tt_user_nickname_for_markup: str | None = None,
@@ -202,11 +202,13 @@ async def show_user_buttons(
         if user_obj.id == my_user_id_val: # Don't show self
             continue
 
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", language)
+        # Use new helper for user display name for button text
+        user_nickname_val = get_tt_user_display_name(user_obj, language)
+        # Keep original logic for callback_nickname_val to ensure it's short and not localized
         callback_nickname_val = (ttstr(user_obj.nickname) or ttstr(user_obj.username) or "unknown")[:CALLBACK_NICKNAME_MAX_LENGTH]
 
         builder.button(
-            text=html.quote(user_nickname_val), # Display full nickname
+            text=html.quote(user_nickname_val), # Display full nickname (now from helper)
             callback_data=f"{command_type}:{user_obj.id}:{callback_nickname_val}" # Use truncated for callback
         )
         users_added_to_list +=1

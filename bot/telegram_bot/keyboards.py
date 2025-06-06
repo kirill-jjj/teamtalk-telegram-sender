@@ -7,6 +7,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 """
 
 import pytalk # For UserAccount type hint
+from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton # Only if builder.button is insufficient
 
@@ -156,13 +157,40 @@ def create_manage_muted_users_keyboard(
 
 # --- Paginated List Keyboards ---
 
+def _add_pagination_controls(
+    builder: InlineKeyboardBuilder,
+    language: str,
+    current_page: int,
+    total_pages: int,
+    list_type: str,
+    callback_factory: Callable
+) -> None:
+    """Adds pagination controls (Previous/Next) to the keyboard builder."""
+    pagination_buttons = []
+    if current_page > 0:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=get_text("PAGINATION_PREV_BTN", language),
+                callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack()
+            )
+        )
+    if current_page < total_pages - 1:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=get_text("PAGINATION_NEXT_BTN", language),
+                callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack()
+            )
+        )
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
+
+
 def create_paginated_user_list_keyboard(
     language: str,
     page_users: list[str], # Usernames
     current_page: int,
     total_pages: int,
     list_type: str, # "muted" or "allowed"
-    # user_specific_settings: UserSpecificSettings # Not needed if actions are self-contained by list_type
 ) -> InlineKeyboardBuilder:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
@@ -182,23 +210,7 @@ def create_paginated_user_list_keyboard(
     if page_users:
         builder.adjust(1)
 
-    pagination_buttons = []
-    if current_page > 0:
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=get_text("PAGINATION_PREV_BTN", language),
-                callback_data=PaginateUsersCallback(list_type=list_type, page=current_page - 1).pack()
-            )
-        )
-    if current_page < total_pages - 1:
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=get_text("PAGINATION_NEXT_BTN", language),
-                callback_data=PaginateUsersCallback(list_type=list_type, page=current_page + 1).pack()
-            )
-        )
-    if pagination_buttons:
-        builder.row(*pagination_buttons)
+    _add_pagination_controls(builder, language, current_page, total_pages, list_type, PaginateUsersCallback)
 
     builder.row(InlineKeyboardButton( # Use .row() to ensure it's on its own line
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
@@ -239,23 +251,7 @@ def create_account_list_keyboard(
     if page_accounts:
         builder.adjust(1) # User buttons one per row
 
-    pagination_buttons = []
-    if current_page > 0:
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=get_text("PAGINATION_PREV_BTN", language),
-                callback_data=PaginateUsersCallback(list_type="all_accounts", page=current_page - 1).pack()
-            )
-        )
-    if current_page < total_pages - 1:
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=get_text("PAGINATION_NEXT_BTN", language),
-                callback_data=PaginateUsersCallback(list_type="all_accounts", page=current_page + 1).pack()
-            )
-        )
-    if pagination_buttons:
-        builder.row(*pagination_buttons) # Add pagination buttons in a single row
+    _add_pagination_controls(builder, language, current_page, total_pages, "all_accounts", PaginateUsersCallback)
 
     builder.row(InlineKeyboardButton( # Back button on its own row
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),

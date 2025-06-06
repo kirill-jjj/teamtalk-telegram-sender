@@ -10,12 +10,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.localization import get_text
-# from bot.telegram_bot.callback_data import SettingsCallback # Removed this line as it's unused
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
-# from bot.telegram_bot.utils import show_user_buttons # Removed as id_command_handler is removed
+from bot.core.utils import get_tt_user_display_name
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -100,7 +99,7 @@ def _group_users_for_who_command(
         if user_display_channel_name not in channels_display_data:
             channels_display_data[user_display_channel_name] = []
 
-        user_nickname = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", lang)
+        user_nickname = get_tt_user_display_name(user_obj, lang)
         channels_display_data[user_display_channel_name].append(html.quote(user_nickname)) # html.quote here
         users_added_to_groups_count += 1
 
@@ -205,9 +204,6 @@ async def who_command_handler(
     )
 
     await message.reply(formatted_message, parse_mode="HTML")
-
-
-# id_command_handler removed
 
 
 @user_commands_router.message(Command("help"))

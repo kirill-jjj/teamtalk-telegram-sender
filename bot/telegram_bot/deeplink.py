@@ -10,7 +10,7 @@ from bot.database.crud import (
     get_deeplink as db_get_deeplink,
     delete_deeplink_by_token
 )
-from bot.database.models import UserSettings # For type hint
+# from bot.database.models import UserSettings # Removed as UserSpecificSettings is used for type hints
 from bot.core.user_settings import (
     USER_SETTINGS_CACHE,
     UserSpecificSettings,

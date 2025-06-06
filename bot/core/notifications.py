@@ -20,6 +20,7 @@ from bot.constants import (
 )
 # Import teamtalk_bot.bot_instance carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
+from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr # Убедитесь, что sdk здесь доступен или импортируйте правильно
@@ -90,8 +91,8 @@ async def send_join_leave_notification_logic(
         logger.info(f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---")
         return
 
-    user_nickname_val = ttstr(tt_user.nickname) or ttstr(tt_user.username) or get_text("WHO_USER_UNKNOWN", "en")
-    user_username_val = ttstr(tt_user.username)
+    user_nickname_val = get_tt_user_display_name(tt_user, "en") # Using "en" as per original logic for this specific var
+    user_username_val = ttstr(tt_user.username) # Still needed for specific checks like global ignore
     user_id_val = tt_user.id
 
     global_ignore_usernames_str = app_config.get("GLOBAL_IGNORE_USERNAMES", "")
@@ -109,16 +110,7 @@ async def send_join_leave_notification_logic(
         logger.info(f"--- send_join_leave_notification_logic finished: User globally ignored ---")
         return
 
-    server_name_val = app_config.get("SERVER_NAME")
-    if not server_name_val:
-        try:
-            if tt_instance and tt_instance.connected:
-                server_name_val = ttstr(tt_instance.server.get_properties().server_name)
-            else:
-                server_name_val = "Unknown Server"
-        except Exception as e:
-            logger.error(f"Could not get server name for notification: {e}")
-            server_name_val = "Unknown Server"
+    server_name_val = get_effective_server_name(tt_instance)
 
     chat_ids_to_notify_list = []
     async with SessionFactory() as session:

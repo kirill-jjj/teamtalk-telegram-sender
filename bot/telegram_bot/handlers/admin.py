@@ -3,7 +3,6 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from bot.localization import get_text # Not used directly here, but good for consistency
 from bot.telegram_bot.filters import IsAdminFilter
 from bot.telegram_bot.utils import show_user_buttons
 from pytalk.instance import TeamTalkInstance # For type hint
