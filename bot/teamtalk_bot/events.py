@@ -150,8 +150,6 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
     # tt_bot_module.current_tt_instance should ideally be this instance.
 
     if not tt_instance_val:
-        # logger.error("Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably.")
-        # The above log is incorporated into the reason string for _initiate_reconnect
         await _initiate_reconnect("Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably. Initiating full reconnect.")
         return
 
@@ -161,16 +159,12 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
         server_host = ttstr(tt_instance_val.server_info.host)
 
         if channel_id_val == 0: # ID 0 often means kicked from the server itself
-            # logger.warning(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
-            # The above log is incorporated into the reason string for _initiate_reconnect
             await _initiate_reconnect(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
         elif channel_id_val > 0: # Kicked from a specific channel
             logger.warning(f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel...")
             # Rejoin the configured main channel, not necessarily the one kicked from
             asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
         else: # Unexpected channel ID
-            # logger.error(f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.")
-            # The above log is incorporated into the reason string for _initiate_reconnect
             await _initiate_reconnect(f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.")
 
     except Exception as e:
@@ -206,9 +200,9 @@ async def on_message(message: TeamTalkMessage):
         elif message_content.lower().startswith("/unsub"):
             await handle_tt_unsubscribe_command(message, session, bot_reply_language)
         elif message_content.lower().startswith("/add_admin"):
-            await handle_tt_add_admin_command(message, session, bot_reply_language)
+            await handle_tt_add_admin_command(message, session=session, bot_language=bot_reply_language)
         elif message_content.lower().startswith("/remove_admin"):
-            await handle_tt_remove_admin_command(message, session, bot_reply_language)
+            await handle_tt_remove_admin_command(message, session=session, bot_language=bot_reply_language)
         elif message_content.lower().startswith("/help"):
             await handle_tt_help_command(message, bot_reply_language)
         elif message_content.startswith("/"): # An unknown command
