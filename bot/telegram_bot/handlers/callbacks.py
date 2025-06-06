@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
+from pytalk.exceptions import PermissionError as PytalkPermissionError # Alias to avoid potential name clashes
 
 from bot.localization import get_text
 from bot.core.user_settings import UserSpecificSettings, update_user_settings_in_db
@@ -76,20 +77,45 @@ async def _execute_tt_user_action(
             # Pass user_nickname_val to the message as it's the context the admin had
             return get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname=html.quote(user_nickname_val))
 
+    except PytalkPermissionError as e:
+        quoted_nickname_for_error = html.quote(user_nickname_val)
+        logger.error(
+            f"PermissionError during '{action_val}' on TT user '{user_nickname_val}' (ID: {user_id_val}) by admin {admin_tg_id}: {e}",
+            exc_info=True
+        )
+        # Assuming CALLBACK_ERROR_PERMISSION is a key like:
+        # "You do not have permission to {action} user {user_nickname}. Error: {error}"
+        # or more simply: "Insufficient permissions to perform {action} on {user_nickname}."
+        # For now, let's make it simpler and not pass the raw error 'e' to the user message for permission errors.
+        return get_text("CALLBACK_ERROR_PERMISSION", language,
+                        action=action_val,
+                        user_nickname=quoted_nickname_for_error)
+
+    except ValueError as e:
+        # This can occur if user_id_val is somehow not a valid format for get_user,
+        # or other ValueErrors within the try block.
+        quoted_nickname_for_error = html.quote(user_nickname_val)
+        logger.warning(
+            f"ValueError during '{action_val}' on TT user '{user_nickname_val}' (ID: {user_id_val}) by admin {admin_tg_id}: {e}. This might indicate user not found or invalid ID.",
+            exc_info=True # Log with traceback for diagnosis
+        )
+        # Reusing the existing text for "user not found" seems appropriate here.
+        return get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname=quoted_nickname_for_error)
+
     except Exception as e:
         # Ensure user_nickname_val is quoted for the error message too.
         quoted_nickname_for_error = html.quote(user_nickname_val)
-        # Construct the key for the gerund text dynamically
+        # Construct the key for the gerund text dynamically (specific to Russian for CALLBACK_ERROR_ACTION_USER)
         gerund_key = f"CALLBACK_ACTION_{action_val.upper()}_GERUND_RU"
-        action_ru = get_text(gerund_key, "ru")
+        action_ru = get_text(gerund_key, "ru") # This is for a specific language, check if CALLBACK_ERROR_ACTION_USER needs it
 
-        logger.error(
-            f"Error during '{action_val}' action on TT user '{user_nickname_val}' (ID: {user_id_val}) by admin {admin_tg_id}: {e}",
-            exc_info=True # Include stack trace in logs
+        logger.error( # Use logger.error for unexpected exceptions
+            f"Unexpected error during '{action_val}' action on TT user '{user_nickname_val}' (ID: {user_id_val}) by admin {admin_tg_id}: {e}",
+            exc_info=True # Crucial for debugging unexpected errors
         )
         return get_text("CALLBACK_ERROR_ACTION_USER", language,
                         action=action_val,
-                        action_ru=action_ru,
+                        action_ru=action_ru, # Kept for compatibility with existing localization
                         user_nickname=quoted_nickname_for_error,
                         error=str(e))
 
