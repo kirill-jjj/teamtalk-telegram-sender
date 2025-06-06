@@ -26,6 +26,8 @@ from bot.constants import (
     USERS_PER_PAGE
 )
 
+from bot.state import USER_ACCOUNTS_CACHE
+
 logger = logging.getLogger(__name__)
 callback_router = Router(name="callback_router")
 ttstr = pytalk.instance.sdk.ttstr
@@ -680,18 +682,18 @@ async def _display_account_list(
     if not callback_query.message: return
     # await callback_query.answer() # Answered by callers or specific toggle handler
 
-    try:
-        # Fetch all user accounts
-        all_accounts_tt = await tt_instance.list_user_accounts()
-    except Exception as e:
-        logger.error(f"Failed to get user accounts from TT: {e}")
-        await callback_query.message.edit_text(get_text("tt_error_getting_users", language)) # Can reuse or make specific
+    if not USER_ACCOUNTS_CACHE:
+        # If the cache is empty (e.g., not yet populated or server has no accounts)
+        await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
         return
 
+    all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
+
     # Sort accounts by username (case-insensitive)
+    # Assuming acc.username is the correct attribute for pytalk.UserAccount based on cache population logic
     sorted_accounts_tt = sorted(
         all_accounts_tt,
-        key=lambda acc: ttstr(acc._account.szUsername).lower() # Access underlying SDK struct
+        key=lambda acc: ttstr(acc.username).lower()
     )
 
     # Use the new helper function for pagination logic

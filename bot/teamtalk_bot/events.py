@@ -18,7 +18,7 @@ from bot.constants import (
     NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 )
 
-from bot.state import ONLINE_USERS_CACHE
+from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 
 # Import bot_instance variables carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
@@ -52,6 +52,27 @@ def get_configured_status():
         return Status.online.neutral
 
 
+async def populate_user_accounts_cache(tt_instance):
+    logger.info("Performing initial population of the user accounts cache...")
+    try:
+        # Ensure tt_instance.list_user_accounts() is an awaitable coroutine
+        all_accounts = await tt_instance.list_user_accounts()
+        USER_ACCOUNTS_CACHE.clear()
+        for acc in all_accounts:
+            # Assuming acc.username can be bytes, handle with ttstr
+            username_val = acc.username # In Pytalk, UserAccount objects have .username
+            if isinstance(username_val, bytes):
+                username_str = ttstr(username_val)
+            else:
+                username_str = str(username_val) # Ensure string
+
+            if username_str: # Ensure username is not empty
+                USER_ACCOUNTS_CACHE[username_str] = acc
+        logger.info(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.")
+    except Exception as e:
+        logger.error(f"Failed to populate user accounts cache: {e}", exc_info=True)
+
+
 async def _initiate_reconnect(reason: str):
     """
     Helper function to initiate the TeamTalk reconnection process.
@@ -60,7 +81,8 @@ async def _initiate_reconnect(reason: str):
     logger.warning(reason) # Log the reason for reconnection first
 
     ONLINE_USERS_CACHE.clear()
-    logger.info("Online users cache has been cleared due to reconnection.")
+    USER_ACCOUNTS_CACHE.clear() # <-- ADDED THIS LINE
+    logger.info("Online users and user accounts caches have been cleared due to reconnection.") # <-- MODIFIED LOG
 
     if tt_bot_module.current_tt_instance is not None:
         logger.info(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
@@ -305,6 +327,9 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
         except Exception as e:
             logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
+        # Start populating the user accounts cache in the background
+        asyncio.create_task(populate_user_accounts_cache(tt_instance))
+
         # Set status and login completion time.
         try:
             configured_status = get_configured_status()
@@ -337,3 +362,30 @@ async def on_user_logout(user: TeamTalkUser):
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
+
+@tt_bot_module.tt_bot.event
+async def on_user_account_new(account: 'pytalk.UserAccount'): # Use quoted type hint
+    # Assuming account.username can be bytes
+    username_val = account.username
+    if isinstance(username_val, bytes):
+        username_str = ttstr(username_val)
+    else:
+        username_str = str(username_val)
+
+    if username_str:
+        USER_ACCOUNTS_CACHE[username_str] = account
+        logger.info(f"New user account '{username_str}' added to cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")
+
+
+@tt_bot_module.tt_bot.event
+async def on_user_account_remove(account: 'pytalk.UserAccount'): # Use quoted type hint
+    # Assuming account.username can be bytes
+    username_val = account.username
+    if isinstance(username_val, bytes):
+        username_str = ttstr(username_val)
+    else:
+        username_str = str(username_val)
+
+    if username_str and username_str in USER_ACCOUNTS_CACHE:
+        del USER_ACCOUNTS_CACHE[username_str]
+        logger.info(f"User account '{username_str}' removed from cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")
