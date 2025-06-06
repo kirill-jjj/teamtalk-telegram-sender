@@ -10,10 +10,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.localization import get_text
-from bot.telegram_bot.callback_data import SettingsCallback # Import the new factory
+# from bot.telegram_bot.callback_data import SettingsCallback # Removed this line as it's unused
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
+from bot.telegram_bot.keyboards import create_main_settings_keyboard
 # from bot.telegram_bot.utils import show_user_buttons # Removed as id_command_handler is removed
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
