@@ -193,8 +193,13 @@ async def who_command_handler(
         return
 
     # Grouping is synchronous and CPU-bound for the loop part
-    grouped_data, total_users_to_display = _group_users_for_who_command(
-        all_users_list, bot_user_id, is_caller_admin_val, language
+    # Running _group_users_for_who_command in a separate thread
+    grouped_data, total_users_to_display = await asyncio.to_thread(
+        _group_users_for_who_command,
+        all_users_list,
+        bot_user_id,
+        is_caller_admin_val,
+        language
     )
 
     # Formatting can also be CPU-bound, especially string operations and sorting
