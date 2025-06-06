@@ -2,7 +2,7 @@ import logging
 import asyncio
 from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message # InlineKeyboardMarkup, InlineKeyboardButton removed for now, add back if needed for type hints elsewhere
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
@@ -201,32 +201,14 @@ async def settings_command_handler(
     except Exception as e:
         logger.warning(f"Could not delete user settings command: {e}")
 
-    # Create buttons
-    lang_button = InlineKeyboardButton(
-        text=get_text("SETTINGS_BTN_LANGUAGE", language),
-        callback_data=SettingsCallback(action="language").pack()
-    )
-    subscription_button = InlineKeyboardButton(
-        text=get_text("SETTINGS_BTN_SUBSCRIPTIONS", language),
-        callback_data=SettingsCallback(action="subscriptions").pack()
-    )
-    notifications_button = InlineKeyboardButton(
-        text=get_text("SETTINGS_BTN_NOTIFICATIONS", language),
-        callback_data=SettingsCallback(action="notifications").pack()
-    )
-
-    # Create keyboard
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [lang_button],
-        [subscription_button],
-        [notifications_button]
-    ])
+    # Create buttons using factory
+    settings_builder = create_main_settings_keyboard(language)
 
     # Send settings menu
     try:
         await message.answer(
             text=get_text("SETTINGS_MENU_HEADER", language),
-            reply_markup=keyboard
+            reply_markup=settings_builder.as_markup()
         )
     except Exception as e:
         logger.error(f"Could not send settings menu: {e}")

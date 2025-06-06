@@ -1,6 +1,6 @@
 import logging
 from aiogram import Router, F, html
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery # InlineKeyboardMarkup, InlineKeyboardButton removed
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 import math # For pagination
@@ -149,31 +149,13 @@ async def cq_show_language_menu( # Renamed for clarity
         return
     await callback_query.answer() # Acknowledge
 
-    # Create language selection buttons
-    eng_button = InlineKeyboardButton(
-        text="English (US)",
-        callback_data=LanguageCallback(action="set_lang", lang_code="en").pack()
-    )
-    rus_button = InlineKeyboardButton(
-        text="Русский (RU)",
-        callback_data=LanguageCallback(action="set_lang", lang_code="ru").pack()
-    )
-    # Back button to main settings
-    back_button = InlineKeyboardButton(
-        text=get_text("BACK_TO_SETTINGS_BTN", language), # Assuming this key exists or create one like "Back to Main Menu"
-        callback_data=SettingsCallback(action="back_to_main").pack()
-    )
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [eng_button],
-        [rus_button],
-        [back_button]
-    ])
+    # Create language selection buttons using factory
+    language_menu_builder = create_language_selection_keyboard(language)
 
     try:
         await callback_query.message.edit_text(
             text=get_text("CHOOSE_LANGUAGE_PROMPT", language),
-            reply_markup=keyboard
+            reply_markup=language_menu_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -207,27 +189,13 @@ async def cq_set_language(
 
     # After setting language, go back to the main settings menu, now in the new language
     # This requires re-creating the main settings menu
-    main_settings_buttons = [
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_LANGUAGE", new_lang_code),
-            callback_data=SettingsCallback(action="language").pack()
-        )],
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_SUBSCRIPTIONS", new_lang_code),
-            callback_data=SettingsCallback(action="subscriptions").pack()
-        )],
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_NOTIFICATIONS", new_lang_code),
-            callback_data=SettingsCallback(action="notifications").pack()
-        )]
-    ]
-    main_settings_keyboard = InlineKeyboardMarkup(inline_keyboard=main_settings_buttons)
+    main_settings_builder = create_main_settings_keyboard(new_lang_code)
     main_settings_text = get_text("SETTINGS_MENU_HEADER", new_lang_code)
 
     try:
         await callback_query.message.edit_text(
             text=main_settings_text,
-            reply_markup=main_settings_keyboard
+            reply_markup=main_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -249,40 +217,7 @@ async def cq_set_language(
 
 from bot.database.models import NotificationSetting # Added import
 
-# Helper to create subscription settings keyboard (Refactored)
-def _create_subscription_settings_keyboard(
-    language: str,
-    current_setting: NotificationSetting # Enum member
-) -> InlineKeyboardMarkup:
-    active_marker = get_text("ACTIVE_CHOICE_MARKER", language)
-
-    # Map NotificationSetting enum to (text_key, callback_value)
-    settings_map = {
-        NotificationSetting.ALL: ("SUBS_SETTING_ALL_BTN", "all"),
-        NotificationSetting.LEAVE_OFF: ("SUBS_SETTING_JOIN_ONLY_BTN", "leave_off"), # Join only = Leave events OFF
-        NotificationSetting.JOIN_OFF: ("SUBS_SETTING_LEAVE_ONLY_BTN", "join_off"),   # Leave only = Join events OFF
-        NotificationSetting.NONE: ("SUBS_SETTING_NONE_BTN", "none"),
-    }
-
-    keyboard_buttons = []
-    for setting_enum, (text_key, val_str) in settings_map.items():
-        prefix = active_marker if current_setting == setting_enum else ""
-        button_text = f"{prefix}{get_text(text_key, language)}"
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                text=button_text,
-                callback_data=SubscriptionCallback(action="set_sub", setting_value=val_str).pack()
-            )
-        ])
-
-    keyboard_buttons.append([
-        InlineKeyboardButton(
-            text=get_text("BACK_TO_SETTINGS_BTN", language),
-            callback_data=SettingsCallback(action="back_to_main").pack()
-        )
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
-
+# _create_subscription_settings_keyboard has been moved to keyboards.py
 # Renamed: cq_settings_subscriptions now cq_show_subscriptions_menu
 @callback_router.callback_query(SettingsCallback.filter(F.action == "subscriptions"))
 async def cq_show_subscriptions_menu( # Renamed for clarity
@@ -297,12 +232,13 @@ async def cq_show_subscriptions_menu( # Renamed for clarity
     await callback_query.answer()
 
     current_notification_setting = user_specific_settings.notification_settings
-    keyboard = _create_subscription_settings_keyboard(language, current_notification_setting)
+    # Use factory from keyboards.py
+    subscription_settings_builder = create_subscription_settings_keyboard(language, current_notification_setting)
 
     try:
         await callback_query.message.edit_text(
             text=get_text("SUBS_SETTINGS_MENU_HEADER", language),
-            reply_markup=keyboard
+            reply_markup=subscription_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -358,11 +294,12 @@ async def cq_set_subscription_setting(
         await callback_query.answer(get_text("error_occurred", language), show_alert=True)
         return
 
-    updated_keyboard = _create_subscription_settings_keyboard(language, new_setting_enum)
+    # Use factory from keyboards.py
+    updated_builder = create_subscription_settings_keyboard(language, new_setting_enum)
     try:
         await callback_query.message.edit_text(
             text=get_text("SUBS_SETTINGS_MENU_HEADER", language), # Header remains the same
-            reply_markup=updated_keyboard
+            reply_markup=updated_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -391,27 +328,13 @@ async def cq_back_to_main_settings_menu( # Renamed for clarity
         return
     await callback_query.answer() # Acknowledge
 
-    # Re-create main settings menu using SettingsCallback for buttons
-    main_settings_buttons = [
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_LANGUAGE", language),
-            callback_data=SettingsCallback(action="language").pack() # Leads to cq_show_language_menu
-        )],
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_SUBSCRIPTIONS", language),
-            callback_data=SettingsCallback(action="subscriptions").pack() # Leads to cq_show_subscriptions_menu
-        )],
-        [InlineKeyboardButton(
-            text=get_text("SETTINGS_BTN_NOTIFICATIONS", language),
-            callback_data=SettingsCallback(action="notifications").pack() # Leads to cq_show_notifications_menu (defined below)
-        )]
-    ]
-    keyboard = InlineKeyboardMarkup(inline_keyboard=main_settings_buttons)
+    # Re-create main settings menu using factory
+    main_settings_builder = create_main_settings_keyboard(language)
 
     try:
         await callback_query.message.edit_text(
             text=get_text("SETTINGS_MENU_HEADER", language),
-            reply_markup=keyboard
+            reply_markup=main_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -422,30 +345,7 @@ async def cq_back_to_main_settings_menu( # Renamed for clarity
 
 # --- Notification Settings Callbacks ---
 
-# Refactored _create_notification_settings_keyboard
-def _create_notification_settings_keyboard( # Renamed for clarity if needed, but name is ok
-    language: str,
-    user_specific_settings: UserSpecificSettings
-) -> InlineKeyboardMarkup:
-    is_noon_enabled = user_specific_settings.not_on_online_enabled
-    # is_noon_confirmed is assumed true due to SubscriptionCheckMiddleware
-    status_text = get_text("ENABLED_STATUS" if is_noon_enabled else "DISABLED_STATUS", language)
-    noon_button_text = get_text("NOTIF_SETTING_NOON_BTN_TOGGLE", language, status=status_text)
-
-    noon_button = InlineKeyboardButton(
-        text=noon_button_text,
-        callback_data=NotificationActionCallback(action="toggle_noon").pack()
-    )
-    manage_muted_button = InlineKeyboardButton(
-        text=get_text("NOTIF_SETTING_MANAGE_MUTED_BTN", language),
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
-    )
-    back_button = InlineKeyboardButton(
-        text=get_text("BACK_TO_SETTINGS_BTN", language),
-        callback_data=SettingsCallback(action="back_to_main").pack()
-    )
-    return InlineKeyboardMarkup(inline_keyboard=[[noon_button], [manage_muted_button], [back_button]])
-
+# _create_notification_settings_keyboard has been moved to keyboards.py
 # Renamed: cq_settings_notifications now cq_show_notifications_menu
 @callback_router.callback_query(SettingsCallback.filter(F.action == "notifications"))
 async def cq_show_notifications_menu( # Renamed for clarity
@@ -458,11 +358,12 @@ async def cq_show_notifications_menu( # Renamed for clarity
         await callback_query.answer("Error: No message.")
         return
     await callback_query.answer()
-    keyboard = _create_notification_settings_keyboard(language, user_specific_settings)
+    # Use factory from keyboards.py
+    notification_settings_builder = create_notification_settings_keyboard(language, user_specific_settings)
     try:
         await callback_query.message.edit_text(
             text=get_text("NOTIF_SETTINGS_MENU_HEADER", language),
-            reply_markup=keyboard
+            reply_markup=notification_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -508,11 +409,12 @@ async def cq_toggle_noon_setting_action( # Renamed for clarity
     except TelegramAPIError as e:
         logger.warning(f"Could not send NOON update confirmation toast: {e}")
 
-    updated_keyboard = _create_notification_settings_keyboard(language, user_specific_settings)
+    # Use factory from keyboards.py
+    updated_builder = create_notification_settings_keyboard(language, user_specific_settings)
     try:
         await callback_query.message.edit_text(
             text=get_text("NOTIF_SETTINGS_MENU_HEADER", language),
-            reply_markup=updated_keyboard
+            reply_markup=updated_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -523,39 +425,7 @@ async def cq_toggle_noon_setting_action( # Renamed for clarity
 
 # --- Manage Muted Users Callbacks ---
 
-# Refactored _create_manage_muted_users_keyboard
-def _create_manage_muted_users_keyboard(
-    language: str,
-    user_specific_settings: UserSpecificSettings
-) -> InlineKeyboardMarkup:
-    is_mute_all_enabled = user_specific_settings.mute_all_flag
-    mute_all_status_text = get_text("ENABLED_STATUS" if is_mute_all_enabled else "DISABLED_STATUS", language)
-    mute_all_button_text = get_text("MUTE_ALL_BTN_TOGGLE", language, status=mute_all_status_text)
-    mute_all_button = InlineKeyboardButton(
-        text=mute_all_button_text,
-        callback_data=MuteAllCallback(action="toggle_mute_all").pack()
-    )
-
-    if is_mute_all_enabled:
-        list_users_button_text = get_text("LIST_ALLOWED_USERS_BTN", language)
-        list_users_cb_data = UserListCallback(action="list_allowed").pack()
-    else:
-        list_users_button_text = get_text("LIST_MUTED_USERS_BTN", language)
-        list_users_cb_data = UserListCallback(action="list_muted").pack()
-    list_users_button = InlineKeyboardButton(text=list_users_button_text, callback_data=list_users_cb_data)
-
-    mute_from_server_list_button = InlineKeyboardButton(
-        text=get_text("MUTE_FROM_SERVER_LIST_BTN", language),
-        callback_data=UserListCallback(action="list_all_accounts").pack() # Changed action
-    )
-    back_to_notif_settings_button = InlineKeyboardButton(
-        text=get_text("BACK_TO_NOTIF_SETTINGS_BTN", language),
-        callback_data=SettingsCallback(action="notifications").pack()
-    )
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [mute_all_button], [list_users_button], [mute_from_server_list_button], [back_to_notif_settings_button]
-    ])
-
+# _create_manage_muted_users_keyboard has been moved to keyboards.py
 # Renamed: cq_manage_muted_users now cq_show_manage_muted_menu
 @callback_router.callback_query(NotificationActionCallback.filter(F.action == "manage_muted"))
 async def cq_show_manage_muted_menu( # Renamed for clarity
@@ -568,11 +438,12 @@ async def cq_show_manage_muted_menu( # Renamed for clarity
         await callback_query.answer("Error: No message.")
         return
     await callback_query.answer()
-    keyboard = _create_manage_muted_users_keyboard(language, user_specific_settings)
+    # Use factory from keyboards.py
+    manage_muted_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
     try:
         await callback_query.message.edit_text(
             text=get_text("MANAGE_MUTED_MENU_HEADER", language),
-            reply_markup=keyboard
+            reply_markup=manage_muted_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -619,11 +490,12 @@ async def cq_toggle_mute_all_action( # Renamed for clarity
         logger.warning(f"Could not send mute_all_flag update confirmation toast: {e}")
 
     # Re-display the menu with updated button text
-    updated_keyboard = _create_manage_muted_users_keyboard(language, user_specific_settings)
+    # Use factory from keyboards.py
+    updated_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
     try:
         await callback_query.message.edit_text(
             text=get_text("MANAGE_MUTED_MENU_HEADER", language),
-            reply_markup=updated_keyboard
+            reply_markup=updated_builder.as_markup()
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
@@ -635,52 +507,6 @@ async def cq_toggle_mute_all_action( # Renamed for clarity
 
 # USERS_PER_PAGE is now imported from bot.constants
 
-# _create_paginated_user_list_keyboard (Refactored)
-def _create_paginated_user_list_keyboard(
-    language: str,
-    page_users: list[str],
-    current_page: int,
-    total_pages: int,
-    list_type: str,
-    user_specific_settings: UserSpecificSettings
-) -> InlineKeyboardMarkup:
-    keyboard_rows = []
-    for idx, username in enumerate(page_users):
-        button_text_key = "UNMUTE_USER_BTN" if list_type == "muted" else "MUTE_USER_BTN"
-        button_text = get_text(button_text_key, language, username=username)
-        # Nickname is not available here directly, pass username as nickname for ToggleMuteSpecificCallback if it's optional
-        # Or, if nickname is essential for toast, it implies ToggleMuteSpecificCallback for these lists might not need it,
-        # or these lists should perhaps also deal with User objects if available.
-        # For now, assuming nickname in ToggleMuteSpecificCallback is optional or can be username.
-        callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user", # Kept action for clarity, can be removed if prefix is unique enough
-            user_idx=idx,
-            current_page=current_page,
-            list_type=list_type
-        ).pack()
-        keyboard_rows.append([InlineKeyboardButton(text=button_text, callback_data=callback_d)])
-
-    pagination_row = []
-    if current_page > 0:
-        pagination_row.append(InlineKeyboardButton(
-            text=get_text("PAGINATION_PREV_BTN", language),
-            callback_data=PaginateUsersCallback(list_type=list_type, page=current_page - 1).pack()
-        ))
-    if current_page < total_pages - 1:
-        pagination_row.append(InlineKeyboardButton(
-            text=get_text("PAGINATION_NEXT_BTN", language),
-            callback_data=PaginateUsersCallback(list_type=list_type, page=current_page + 1).pack()
-        ))
-    if pagination_row:
-        keyboard_rows.append(pagination_row)
-
-    keyboard_rows.append([InlineKeyboardButton(
-        text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
-    )])
-    return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
-
-# _display_paginated_user_list (Minor changes for clarity, logic mostly same)
 async def _display_paginated_user_list(
     callback_query: CallbackQuery,
     language: str,
@@ -725,11 +551,14 @@ async def _display_paginated_user_list(
     message_parts.append(f"\n{page_indicator_text}")
     final_message_text = "\n".join(message_parts)
 
-    keyboard = _create_paginated_user_list_keyboard(
-        language, page_users_slice, page, total_pages, list_type, user_specific_settings
+    # Use factory from keyboards.py
+    # Note: user_specific_settings is not directly passed to create_paginated_user_list_keyboard as it's not in its signature.
+    # The factory derives behavior from list_type.
+    paginated_list_builder = create_paginated_user_list_keyboard(
+        language, page_users_slice, page, total_pages, list_type
     )
     try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=keyboard, parse_mode="HTML")
+        await callback_query.message.edit_text(text=final_message_text, reply_markup=paginated_list_builder.as_markup(), parse_mode="HTML")
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
             logger.error(f"TelegramBadRequest editing message for paginated user list ({list_type}, page {page}): {e}")
@@ -774,56 +603,7 @@ async def cq_paginate_internal_user_list( # Renamed for clarity
 
 # --- Mute/Unmute from Server Account List Callbacks (Refactored from server user list) ---
 
-# Renamed from _create_server_user_list_keyboard
-def _create_account_list_keyboard(
-    language: str,
-    page_accounts: list[pytalk.UserAccount], # Now takes list of UserAccount objects
-    current_page: int,
-    total_pages: int,
-    user_specific_settings: UserSpecificSettings
-) -> InlineKeyboardMarkup:
-    keyboard_rows = []
-    # Enumerate to get index for user_idx
-    for idx, account_obj in enumerate(page_accounts):
-        username_str = ttstr(account_obj._account.szUsername)
-        display_name = username_str
-
-        is_in_set = username_str in user_specific_settings.muted_users_set
-        is_effectively_muted = (user_specific_settings.mute_all_flag and not is_in_set) or \
-                               (not user_specific_settings.mute_all_flag and is_in_set)
-
-        current_status_text = get_text("MUTED_STATUS" if is_effectively_muted else "NOT_MUTED_STATUS", language)
-        # Button text still uses username for display
-        button_text = get_text("TOGGLE_MUTE_STATUS_BTN", language, username=display_name, current_status=current_status_text)
-
-        callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user",
-            user_idx=idx,  # Use index instead of username/nickname
-            current_page=current_page,
-            list_type="all_accounts"
-        ).pack()
-        keyboard_rows.append([InlineKeyboardButton(text=button_text, callback_data=callback_d)])
-
-    pagination_row = []
-    if current_page > 0:
-        pagination_row.append(InlineKeyboardButton(
-            text=get_text("PAGINATION_PREV_BTN", language),
-            callback_data=PaginateUsersCallback(list_type="all_accounts", page=current_page - 1).pack()
-        ))
-    if current_page < total_pages - 1:
-        pagination_row.append(InlineKeyboardButton(
-            text=get_text("PAGINATION_NEXT_BTN", language),
-            callback_data=PaginateUsersCallback(list_type="all_accounts", page=current_page + 1).pack()
-        ))
-    if pagination_row:
-        keyboard_rows.append(pagination_row)
-
-    keyboard_rows.append([InlineKeyboardButton(
-        text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
-    )])
-    return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
-
+# _create_account_list_keyboard has been moved to keyboards.py
 # Renamed from _display_server_user_list
 async def _display_account_list(
     callback_query: CallbackQuery,
@@ -865,11 +645,12 @@ async def _display_account_list(
     message_parts.append(f"\n{page_indicator_text}")
     final_message_text = "\n".join(message_parts)
 
-    keyboard = _create_account_list_keyboard( # Call renamed keyboard func
+    # Use factory from keyboards.py
+    account_list_builder = create_account_list_keyboard(
         language, page_accounts_slice, page, total_pages, user_specific_settings
     )
     try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=keyboard, parse_mode="HTML")
+        await callback_query.message.edit_text(text=final_message_text, reply_markup=account_list_builder.as_markup(), parse_mode="HTML")
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
             logger.error(f"Error editing message for account list (page {page}): {e}")
