@@ -179,7 +179,7 @@ async def who_command_handler(
         # Reconstruct pytalk.User objects from usernames in the cache
         # tt_instance.get_user(username) is expected to be a fast in-memory lookup
         # if the user object itself is cached by pytalk or if it reconstructs it quickly.
-        all_users_list = [tt_instance.get_user(ttstr(username)) for username in ONLINE_USERS_CACHE if username]
+        all_users_list = [tt_instance.get_user(username) for username in ONLINE_USERS_CACHE if username]
         # Filter out None results if get_user might return None for a cached username
         # that somehow doesn't resolve to a full user object anymore (should be rare if cache is consistent)
         all_users_list = [user for user in all_users_list if user is not None]
