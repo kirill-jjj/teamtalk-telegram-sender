@@ -12,14 +12,19 @@ try:
 except ImportError:
     logger.info("uvloop not found, using default asyncio event loop.")
 
-# Minimal global imports
-from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk # For ttstr global alias
-ttstr = sdk.ttstr # Keep ttstr global as it's a utility
+# Minimal global imports allowed (asyncio, sys, setup_logging, uvloop)
+# ttstr will be defined inside main_async
 
 _telegram_polling_task_ref_for_shutdown = None
 _teamtalk_task_ref_for_shutdown = None
 
 async def on_aiogram_shutdown(*args, **kwargs): # Keep this handler defined, will be registered in main_async
+    # ttstr is not available here if defined only in main_async. This function logs hostnames.
+    # For now, this function's logging of hostnames might become less informative or require ttstr to be passed if needed.
+    # However, ttstr is primarily for user-facing strings from the SDK, hostnames are usually plain strings.
+    # The existing ttstr usage in this function was for logging server_info.host, which is likely already a string.
+    # Let's assume server_info.host is a string and ttstr is not strictly needed here for now.
+    # If issues arise, ttstr could be made global again or passed to this handler.
     logger.info("on_aiogram_shutdown called. Attempting to cancel tasks.")
     global _teamtalk_task_ref_for_shutdown
     if _teamtalk_task_ref_for_shutdown and not _teamtalk_task_ref_for_shutdown.done():
@@ -51,16 +56,39 @@ async def on_aiogram_shutdown(*args, **kwargs): # Keep this handler defined, wil
 async def main_async():
     logger.info("Application starting...")
 
-    # Этап 1: Немедленный запуск TeamTalk
-    logger.info("Initializing TeamTalk components (Stage 1)...")
+    # --- Единый блок ленивых импортов ---
+    from aiogram import Dispatcher
+    from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk # Moved from global
 
-    # Local Imports for TeamTalk Stage
-    from bot.config import app_config # Moved here
+    from bot.config import app_config
     from bot.teamtalk_bot import bot_instance as tt_bot_module
-    from bot.teamtalk_bot import events as tt_events # Ensuring events are registered
+    from bot.teamtalk_bot import events as tt_events # Still include if used by tt_bot_module or explicitly
     from bot.database.engine import init_db, SessionFactory
     from bot.core.user_settings import load_user_settings_to_cache
+    from bot.database import crud
+    from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Ensure both are needed
+    from bot.telegram_bot.commands import set_telegram_commands
+    from bot.telegram_bot.middlewares import (
+        DbSessionMiddleware,
+        UserSettingsMiddleware,
+        TeamTalkInstanceMiddleware,
+        SubscriptionCheckMiddleware
+    )
+    from bot.telegram_bot.handlers import (
+        user_commands_router,
+        admin_router,
+        callback_router,
+        catch_all_router
+    )
+    # Any other bot-specific or utility imports that were previously phased or global
 
+    # Define ttstr if it was globally aliased from sdk and is used within main_async or passed down
+    ttstr = sdk.ttstr
+
+    logger.info("Core modules imported. Initializing...")
+
+    # --- ЭТАП 1: Действия для PYTALK ---
+    logger.info("Initializing TeamTalk components (Stage 1)...")
     await init_db()
     logger.info("Database initialization complete.")
 
@@ -76,28 +104,9 @@ async def main_async():
     _teamtalk_task_ref_for_shutdown = teamtalk_task
     logger.info("TeamTalk task started.")
 
-    # Этап 2: Инициализация Telegram-бота
+    # --- ЭТАП 2: Действия для AIOGRAM ---
     logger.info("Initializing Telegram components (Stage 2)...")
-
-    # Local Imports for Aiogram Stage
-    from aiogram import Dispatcher
-    from bot.database import crud # Moved here
-    from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # tg_bot_message for cleanup
-    from bot.telegram_bot.commands import set_telegram_commands
-    from bot.telegram_bot.middlewares import (
-        DbSessionMiddleware,
-        UserSettingsMiddleware,
-        TeamTalkInstanceMiddleware,
-        SubscriptionCheckMiddleware
-    )
-    from bot.telegram_bot.handlers import (
-        user_commands_router,
-        admin_router,
-        callback_router,
-        catch_all_router
-    )
-
-    # Ensure TG_ADMIN_CHAT_ID is in the admin database
+    # Admin user setup, set_telegram_commands, Dispatcher setup, middlewares, routers
     tg_admin_chat_id_str = app_config.get("TG_ADMIN_CHAT_ID")
     if tg_admin_chat_id_str:
         try:
