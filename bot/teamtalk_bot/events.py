@@ -7,7 +7,7 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.user import User as TeamTalkUser
-from pytalk.enums import UserStatusMode
+from pytalk.enums import Status # Replaced UserStatusMode
 
 from bot.config import app_config
 from bot.database.engine import SessionFactory
@@ -37,6 +37,17 @@ from bot.teamtalk_bot.commands import (
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
+
+
+def get_configured_status():
+    """Helper function to get the combined status object based on GENDER config."""
+    gender = app_config.get("GENDER", "neutral") # Defaulting here too for safety, though config.py should handle it
+    if gender == "male":
+        return Status.online.male
+    elif gender == "female":
+        return Status.online.female
+    else:  # Covers "neutral" and any invalid value that might somehow bypass config.py validation
+        return Status.online.neutral
 
 
 async def _initiate_reconnect(reason: str):
@@ -124,7 +135,8 @@ async def on_my_login(server: PytalkServer):
             # If channel_id_val is -1 (or no specific channel is to be joined)
             logger.warning(f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel. Finalizing login sequence now.")
             try:
-                tt_instance_val.change_status(UserStatusMode.ONLINE, app_config["STATUS_TEXT"])
+                configured_status = get_configured_status()
+                tt_instance_val.change_status(configured_status, app_config["STATUS_TEXT"])
                 tt_bot_module.login_complete_time = datetime.utcnow()
                 logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
                 logger.info(f"TeamTalk login sequence complete (in current/root channel) at {tt_bot_module.login_complete_time}.")
@@ -260,7 +272,8 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
 
         # Set status and login completion time.
         try:
-            tt_instance.change_status(UserStatusMode.ONLINE, app_config["STATUS_TEXT"])
+            configured_status = get_configured_status()
+            tt_instance.change_status(configured_status, app_config["STATUS_TEXT"])
             tt_bot_module.login_complete_time = datetime.utcnow()
             logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
             logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")

@@ -33,6 +33,7 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
         "GLOBAL_IGNORE_USERNAMES": os.getenv("GLOBAL_IGNORE_USERNAMES"),
         "DATABASE_FILE": os.getenv("DATABASE_FILE", DEFAULT_DATABASE_FILE),
         "DEFAULT_LANG": os.getenv("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE),
+        "GENDER": os.getenv("GENDER", "neutral").lower(),
     }
 
     # Validate and set effective default language
@@ -42,6 +43,12 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
     else:
         print(f"WARNING: Invalid DEFAULT_LANG value '{raw_default_lang}'. Defaulting to '{FALLBACK_DEFAULT_LANGUAGE}'.", file=sys.stderr)
         config_data["EFFECTIVE_DEFAULT_LANG"] = FALLBACK_DEFAULT_LANGUAGE
+
+    # Validate GENDER
+    allowed_genders = ["male", "female", "neutral"]
+    if config_data["GENDER"] not in allowed_genders:
+        print(f"WARNING: Invalid GENDER value '{config_data['GENDER']}'. Must be one of {allowed_genders}. Defaulting to 'neutral'.", file=sys.stderr)
+        config_data["GENDER"] = "neutral"
 
     if not config_data["TG_EVENT_TOKEN"] and not config_data["TG_BOT_TOKEN"]:
         raise ValueError("Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file.")
