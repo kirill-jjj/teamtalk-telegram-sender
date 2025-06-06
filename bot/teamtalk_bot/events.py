@@ -119,14 +119,17 @@ async def on_my_login(server: PytalkServer):
         if channel_id_val != -1:
             logger.info(f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id_val})")
             tt_instance_val.join_channel_by_id(channel_id_val, password=app_config.get("CHANNEL_PASSWORD"))
-            await asyncio.sleep(1) # Allow time for join to process
+            # Removed await asyncio.sleep(1)
         else:
-            logger.warning(f"Could not resolve channel '{app_config['CHANNEL']}' to an ID during login. Bot will remain in current channel (likely root).")
+            # This block executes if channel_id_val remains -1 (e.g., channel path not found, or CHANNEL config empty/invalid)
+            logger.warning(f"Could not resolve or join target channel '{app_config.get('CHANNEL', 'N/A')}'. Bot will remain in current channel (likely root).")
+            tt_instance_val.change_status(UserStatusMode.ONLINE, app_config["STATUS_TEXT"])
+            logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
+            tt_bot_module.login_complete_time = datetime.utcnow()
+            logger.info(f"Bot remains in current channel. Status set and login time recorded. Login sequence complete at {tt_bot_module.login_complete_time}.")
 
-        tt_instance_val.change_status(UserStatusMode.ONLINE, app_config["STATUS_TEXT"])
-        logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
-        tt_bot_module.login_complete_time = datetime.utcnow() # Mark login sequence as complete
-        logger.info(f"TeamTalk login sequence complete at {tt_bot_module.login_complete_time}.")
+        # change_status and login_complete_time are intentionally only set in the 'else' block above as per specific instructions.
+        # If channel_id_val != -1, these are not set here.
 
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)
@@ -230,3 +233,66 @@ async def on_user_logout(user: TeamTalkUser):
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
+
+@tt_bot_module.tt_bot.event
+async def on_user_join_channel(user: TeamTalkUser, channel: PytalkChannel):
+    """Called when a user joins a channel."""
+    try:
+        # Step 1: Get TeamTalk Instance and My User ID
+        if not user or not hasattr(user, 'server') or not hasattr(user.server, 'teamtalk_instance'):
+            logger.error("on_user_join_channel: Could not get TeamTalkInstance from user object (user or server attribute missing).")
+            return
+
+        tt_instance = user.server.teamtalk_instance
+        if not tt_instance:
+            logger.error("on_user_join_channel: TeamTalkInstance is None. Cannot proceed.")
+            return
+
+        my_user_id = tt_instance.getMyUserID()
+        if my_user_id is None:
+            logger.error("on_user_join_channel: Could not get bot's own user ID. Cannot proceed.")
+            return
+
+        # Step 2: Check if the Joined User is the Bot
+        # Ensure user.id is available and valid
+        if not hasattr(user, 'id') or user.id is None:
+            logger.error(f"on_user_join_channel: Joined user has no valid ID. Username: {ttstr(user.username) if hasattr(user, 'username') else 'N/A'}")
+            return
+
+        # Prepare channel name for logging (handle potential byte string)
+        channel_name_str = "Unknown Channel"
+        # Prepare channel name for logging
+        channel_name_display = "Unknown Channel"
+        if channel and hasattr(channel, 'name') and channel.name is not None:
+            if isinstance(channel.name, bytes):
+                channel_name_display = ttstr(channel.name) # Use ttstr as requested
+            else:
+                channel_name_display = str(channel.name)
+        elif channel and hasattr(channel, 'id'):
+            channel_name_display = f"Channel ID {channel.id}"
+        # If channel object itself is None or has no name/ID, it remains "Unknown Channel"
+
+        if user.id == my_user_id:
+            # Step 3: Bot-Specific Logic
+            # Log that the bot has successfully joined the channel (using specific format from prompt)
+            log_channel_name = ttstr(channel.name) if isinstance(channel.name, bytes) else channel.name
+            logger.info(f"Bot successfully joined channel: {log_channel_name}")
+
+            # Set the bot's status
+            tt_instance.change_status(UserStatusMode.ONLINE, app_config.get("STATUS_TEXT", "Online")) # Using .get for safety
+            logger.info(f"TeamTalk status set to: '{app_config.get('STATUS_TEXT', 'Online')}'")
+
+            # Set the login completion time
+            tt_bot_module.login_complete_time = datetime.utcnow()
+            logger.info(f"TeamTalk login sequence complete at {tt_bot_module.login_complete_time}.") # Simpler log as per prompt
+        else:
+            # Step 4: Other User Logic (preserving existing call structure)
+            # Use the more generally prepared channel_name_display for notifications
+            logger.info(f"User '{ttstr(user.username)}' (ID: {user.id}) joined channel '{channel_name_display}'. Forwarding to notification logic.")
+            # For now, using NOTIFICATION_EVENT_JOIN; a new event type might be better.
+            await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance, channel_name=channel_name_display)
+
+    except Exception as e:
+        user_id_log = getattr(user, 'id', 'Unknown User ID')
+        channel_id_log = getattr(channel, 'id', 'Unknown Channel ID')
+        logger.error(f"Error in on_user_join_channel (User ID: {user_id_log}, Channel ID: {channel_id_log}): {e}", exc_info=True)
