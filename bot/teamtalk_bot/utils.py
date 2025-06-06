@@ -27,8 +27,10 @@ from bot.constants import (
 from bot.telegram_bot.utils import send_telegram_message_individual # For forwarding
 from bot.telegram_bot.bot_instances import tg_bot_message # For forwarding
 from bot.core.user_settings import USER_SETTINGS_CACHE # For admin language
-from bot.localization import get_text # Ensured single import
-from bot.constants import DEFAULT_LANGUAGE
+# from bot.localization import get_text # Ensured single import - get_text is already imported above
+# from bot.constants import DEFAULT_LANGUAGE # DEFAULT_LANGUAGE is imported from the group import of bot.constants
+# from bot.localization import get_text # This line was a comment in the search, ensuring it's handled.
+# DEFAULT_LANGUAGE is imported from the group import of bot.constants
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 
@@ -144,14 +146,23 @@ async def forward_tt_message_to_telegram_admin(
     )
 
     # Use the individual message sending utility
-    asyncio.create_task(send_telegram_message_individual(
+    was_sent: bool = await send_telegram_message_individual(
         bot_instance=tg_bot_message, # Use the dedicated message bot
         chat_id=admin_chat_id,
         text=text_to_send,
         language=admin_language,
-        reply_tt_method=message.reply, # Pass the reply method for feedback
+        # reply_tt_method is no longer passed as send_telegram_message_individual doesn't use it for error/success reporting to TT.
+        # Feedback to TT is now handled directly in this function.
         tt_instance_for_check=tt_instance_for_check # For silent check
-    ))
+    )
+
+    if was_sent:
+        message.reply(get_text("tt_reply_success", admin_language))
+    else:
+        # Specific error details are logged within _handle_telegram_api_error (called by send_telegram_message_individual)
+        # or _should_send_silently logs if it's due to NOON.
+        # Here, we provide a generic failure message back to the TeamTalk user.
+        message.reply(get_text("tt_reply_fail_generic_error", admin_language, error="Failed to deliver message to Telegram"))
 
 
 async def _tt_reconnect():

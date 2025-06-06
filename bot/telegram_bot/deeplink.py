@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.crud import (
     add_subscriber,
-    remove_subscriber,
+    delete_user_data_fully, # Added for new _handle_unsubscribe_deeplink
     get_deeplink as db_get_deeplink,
     delete_deeplink_by_token
 )
 # from bot.database.models import UserSettings # Removed as UserSpecificSettings is used for type hints
 from bot.core.user_settings import (
-    USER_SETTINGS_CACHE,
+    # USER_SETTINGS_CACHE, # No longer directly used in this file
     UserSpecificSettings,
     get_or_create_user_settings,
     update_user_settings_in_db
@@ -22,6 +22,7 @@ from bot.constants import (
     ACTION_SUBSCRIBE,
     ACTION_UNSUBSCRIBE,
     ACTION_SUBSCRIBE_AND_LINK_NOON,
+    DEFAULT_LANGUAGE, # Added for new _handle_unsubscribe_deeplink
 )
 
 logger = logging.getLogger(__name__)
@@ -40,33 +41,19 @@ async def _handle_subscribe_deeplink(
         return get_text("DEEPLINK_SUBSCRIBED", language)
     return get_text("DEEPLINK_ALREADY_SUBSCRIBED", language)
 
-async def _handle_unsubscribe_deeplink(
-    session: AsyncSession,
-    telegram_id: int,
-    language: str,
-    payload: Any,
-    user_specific_settings: UserSpecificSettings # To update cache
-) -> str:
-    if await remove_subscriber(session, telegram_id):
-        logger.info(f"User {telegram_id} unsubscribed via deeplink.")
-        USER_SETTINGS_CACHE.pop(telegram_id, None) # Remove from cache on unsubscribe
-        logger.info(f"Removed user {telegram_id} from settings cache after unsubscribe.")
+async def _handle_unsubscribe_deeplink(session: AsyncSession, telegram_id: int) -> str:
+    # The new body uses delete_user_data_fully which also handles cache.
+    # Language, payload, and user_specific_settings are no longer needed by this specific handler.
+    # Logger is available at module level.
+    # get_text and DEFAULT_LANGUAGE are imported.
 
-        # Clear NOON settings upon unsubscription
-        user_specific_settings.teamtalk_username = None
-        user_specific_settings.not_on_online_confirmed = False
-        user_specific_settings.not_on_online_enabled = False
-
-        try:
-            await update_user_settings_in_db(session, telegram_id, user_specific_settings)
-            logger.info(f"Cleared NOON settings for user {telegram_id} due to unsubscription.")
-        except Exception as e:
-            # Log the error, but don't let it hide the unsubscription success from the user.
-            # The main impact is that NOON settings might not be cleared in DB, but user is unsubscribed.
-            logger.error(f"Failed to clear NOON settings in DB for user {telegram_id} during unsubscription: {e}", exc_info=True)
-
-        return get_text("DEEPLINK_UNSUBSCRIBED", language)
-    return get_text("DEEPLINK_NOT_SUBSCRIBED", language)
+    if await delete_user_data_fully(session, telegram_id): # delete_user_data_fully now also clears USER_SETTINGS_CACHE
+        logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink.")
+        return get_text("DEEPLINK_UNSUBSCRIBED", DEFAULT_LANGUAGE)
+    else:
+        # This case implies user was not found initially by delete_user_data_fully or deletion failed.
+        logger.warning(f"Attempted to unsubscribe user {telegram_id} via deeplink, but user was not found or data deletion otherwise failed.")
+        return get_text("DEEPLINK_NOT_SUBSCRIBED", DEFAULT_LANGUAGE)
 
 
 async def _handle_subscribe_and_link_noon_deeplink(
@@ -164,16 +151,26 @@ async def handle_deeplink_payload(
     handler = DEEPLINK_ACTION_HANDLERS.get(deeplink_obj.action)
     if handler:
         try:
-            # Pass necessary arguments to the handler
-            if deeplink_obj.action == ACTION_SUBSCRIBE_AND_LINK_NOON:
+            if deeplink_obj.action == ACTION_UNSUBSCRIBE:
+                # Call with the new signature for _handle_unsubscribe_deeplink
+                # The handler variable here is _handle_unsubscribe_deeplink
+                reply_text_val = await handler(session, telegram_id_val) # type: ignore
+            elif deeplink_obj.action == ACTION_SUBSCRIBE_AND_LINK_NOON:
+                # Call with the original signature for _handle_subscribe_and_link_noon_deeplink
                 reply_text_val = await handler(session, telegram_id_val, language, deeplink_obj.payload, user_specific_settings)
-            else:
-                # For other actions like subscribe/unsubscribe, payload might not be directly used by handler logic
+            elif deeplink_obj.action == ACTION_SUBSCRIBE:
+                # Call with the original signature for _handle_subscribe_deeplink
                 reply_text_val = await handler(session, telegram_id_val, language, None, user_specific_settings)
+            else:
+                # Fallback for any other actions that might somehow get here if DEEPLINK_ACTION_HANDLERS has unexpected entries
+                logger.warning(f"Deeplink action '{deeplink_obj.action}' has a handler but no specific call structure in handle_deeplink_payload.")
+                reply_text_val = get_text("ERROR_OCCURRED", language) # Or DEEPLINK_INVALID_ACTION
+
         except Exception as e:
             logger.error(f"Error executing deeplink handler for action '{deeplink_obj.action}', token {token}: {e}", exc_info=True)
             reply_text_val = get_text("ERROR_OCCURRED", language)
     else:
+        # This part (handler not found) remains the same
         reply_text_val = get_text("DEEPLINK_INVALID_ACTION", language)
         logger.warning(f"Invalid deeplink action '{deeplink_obj.action}' for token {token}")
 

@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 from aiogram import html
-from aiogram.types import InlineKeyboardMarkup
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -55,18 +54,6 @@ async def should_notify_user(
         return tt_user_username in muted_users
     else:
         return tt_user_username not in muted_users
-
-
-def _generate_join_leave_markup(
-    tt_user_username: str,
-    tt_user_nickname: str, 
-    lang_code: str,
-    recipient_tg_id: int 
-) -> InlineKeyboardMarkup | None:
-    # The "Toggle ignore status" button is removed as per centralization of mute management.
-    # If other buttons were to be added to join/leave notifications in the future,
-    # they would be constructed here. For now, no buttons are shown.
-    return None
 
 
 async def send_join_leave_notification_logic(
@@ -154,7 +141,6 @@ async def send_join_leave_notification_logic(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"], 
         chat_ids=chat_ids_to_notify_list,
         text_generator=text_generator_func,
-        reply_markup_generator=_generate_join_leave_markup,
         tt_user_username_for_markup=user_username_val,
         tt_user_nickname_for_markup=user_nickname_val, 
         tt_instance_for_check=tt_instance 

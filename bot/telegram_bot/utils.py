@@ -25,16 +25,63 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-async def send_telegram_message_individual(
-    bot_instance: Bot,
-    chat_id: int,
-    text: str,
-    language: str = DEFAULT_LANGUAGE,
-    reply_markup: InlineKeyboardMarkup | None = None,
-    tt_instance_for_check: TeamTalkInstance | None = None,
-    reply_tt_method: Callable | None = None, # For sending feedback to TeamTalk user
-) -> bool:
-    send_silently = False
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, language: str): # language may be unused
+    """
+    Handles specific Telegram API errors, performing actions like unsubscribing users
+    or logging detailed error information.
+    """
+    if isinstance(error, TelegramForbiddenError):
+        if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
+            logger.warning(f"User {chat_id} blocked the bot or is deactivated. Unsubscribing...")
+            try:
+                async with SessionFactory() as unsubscribe_session:
+                    removed = await remove_subscriber(unsubscribe_session, chat_id)
+                if removed:
+                    logger.info(f"Successfully unsubscribed blocked/deactivated user {chat_id}.")
+                else:
+                    logger.info(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
+                USER_SETTINGS_CACHE.pop(chat_id, None)
+                logger.info(f"Removed user {chat_id} from settings cache.")
+            except Exception as db_err:
+                logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
+        else:
+            # For other Forbidden errors, just log. reply_tt_method was removed.
+            logger.error(f"Telegram API Forbidden error for chat_id {chat_id}: {error}")
+
+    elif isinstance(error, TelegramBadRequest):
+        if "chat not found" in str(error).lower():
+            logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {error}")
+            try:
+                async with SessionFactory() as session:
+                    delete_success = await delete_user_data_fully(session, chat_id)
+                if delete_success:
+                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
+                else:
+                    logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
+
+                if USER_SETTINGS_CACHE.pop(chat_id, None): # Remove from cache regardless
+                    logger.info(f"Removed user {chat_id} from settings cache after chat not found.")
+                else:
+                    logger.info(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
+            except Exception as db_cleanup_err:
+                logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
+        else:
+            # For other BadRequest errors, just log. reply_tt_method was removed.
+            logger.error(f"Telegram API BadRequest (non 'chat not found') for chat_id {chat_id}: {error}")
+
+    elif isinstance(error, TelegramAPIError): # Catch-all for other TelegramAPIError types
+        logger.error(f"Unhandled Telegram API error for chat_id {chat_id}: {error}")
+
+    # Non-TelegramAPIError exceptions are not handled by this function.
+    # The calling function would need a separate except block for those if desired.
+
+
+async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkInstance | None) -> bool:
+    """
+    Checks if a message to a given chat_id should be sent silently based on
+    NOON (Notification On Online) settings and the online status of their linked TeamTalk user.
+    """
+    should_be_silent = False
     recipient_settings = USER_SETTINGS_CACHE.get(chat_id)
 
     if recipient_settings and \
@@ -53,15 +100,30 @@ async def send_telegram_message_individual(
                         is_tt_user_online = True
                         break
             else:
-                logger.warning(f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id}.")
+                logger.warning(f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id} (in _should_send_silently).")
 
             if is_tt_user_online:
-                send_silently = True
-                logger.info(f"Sending message to {chat_id} silently as their linked TT user '{tt_username_to_check}' is online.")
+                should_be_silent = True
+                logger.info(f"Message to {chat_id} should be silent as their linked TT user '{tt_username_to_check}' is online.")
         except Exception as e:
-            logger.warning(f"Could not check TeamTalk status for user '{tt_username_to_check}' (TG ID: {chat_id}): {e}")
+            logger.warning(f"Could not check TeamTalk status for user '{tt_username_to_check}' (TG ID: {chat_id}) in _should_send_silently: {e}")
+            # Keep should_be_silent as False in case of error
 
-    message_sent_successfully = False
+    return should_be_silent
+
+
+async def send_telegram_message_individual(
+    bot_instance: Bot,
+    chat_id: int,
+    text: str,
+    language: str = DEFAULT_LANGUAGE,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    tt_instance_for_check: TeamTalkInstance | None = None
+    # reply_tt_method: Callable | None = None, # Parameter removed
+) -> bool: # Return type bool is already present, ensuring it stays.
+    # Determine if the message should be sent silently using the helper function
+    send_silently = await _should_send_silently(chat_id, tt_instance_for_check)
+
     try:
         await bot_instance.send_message(
             chat_id=chat_id,
@@ -69,64 +131,17 @@ async def send_telegram_message_individual(
             reply_markup=reply_markup,
             disable_notification=send_silently
         )
-        message_sent_successfully = True
         logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}")
+        return True # Message sent successfully
 
-    except TelegramForbiddenError as e:
-        if "bot was blocked by the user" in str(e).lower() or "user is deactivated" in str(e).lower():
-            logger.warning(f"User {chat_id} blocked the bot or is deactivated. Unsubscribing...")
-            try:
-                async with SessionFactory() as unsubscribe_session: # Use a new session for this isolated task
-                    removed = await remove_subscriber(unsubscribe_session, chat_id)
-                if removed:
-                    logger.info(f"Successfully unsubscribed blocked/deactivated user {chat_id}.")
-                else:
-                    logger.info(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
-                USER_SETTINGS_CACHE.pop(chat_id, None) # Also remove from cache
-                logger.info(f"Removed user {chat_id} from settings cache.")
-            except Exception as db_err:
-                logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
-        else:
-            logger.error(f"Telegram API Forbidden error sending to {chat_id}: {e}")
-            if reply_tt_method:
-                reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
-    except TelegramBadRequest as e:
-        if "chat not found" in str(e).lower():
-            logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {e}")
-            try:
-                async with SessionFactory() as session:
-                    delete_success = await delete_user_data_fully(session, chat_id)
-                if delete_success:
-                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
-                else:
-                    logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
+    except TelegramAPIError as e:
+        # Delegate Telegram API error handling to the new helper function
+        await _handle_telegram_api_error(e, chat_id, language)
+        return False # Message sending failed
 
-                # Remove from cache regardless of DB operation success to prevent further attempts
-                if USER_SETTINGS_CACHE.pop(chat_id, None):
-                    logger.info(f"Removed user {chat_id} from settings cache after chat not found.")
-                else:
-                    logger.info(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
-
-            except Exception as db_cleanup_err:
-                logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
-            # Do not attempt to send TT reply here as the user is gone.
-        else:
-            # Other TelegramBadRequest errors
-            logger.error(f"Telegram API BadRequest (non 'chat not found') sending to {chat_id}: {e}")
-            if reply_tt_method:
-                reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
-    except TelegramAPIError as e: # Catch other TelegramAPIError s that are not Forbidden or BadRequest
-        logger.error(f"Unhandled Telegram API error sending to {chat_id}: {e}")
-        if reply_tt_method:
-            reply_tt_method(get_text("tt_reply_fail_api_error", language, error=str(e)))
-    except Exception as e:
-        logger.error(f"Generic error sending Telegram message to {chat_id}: {e}")
-        if reply_tt_method:
-            reply_tt_method(get_text("tt_reply_fail_generic_error", language, error=str(e)))
-
-    if message_sent_successfully and reply_tt_method:
-        reply_tt_method(get_text("tt_reply_success", language))
-    return message_sent_successfully
+    # Non-TelegramAPIError exceptions will propagate if not caught by the caller.
+    # If they were to be caught here and also result in 'False', an outer try-except would be needed.
+    # Based on current structure, only TelegramAPIError results in False from this function.
 
 
 async def send_telegram_messages_to_list(

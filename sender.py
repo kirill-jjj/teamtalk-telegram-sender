@@ -63,7 +63,7 @@ async def main_async():
     logger.info("Database initialization complete.")
 
     # Load user settings into cache
-    await load_user_settings_to_cache(SessionFactory)
+    asyncio.create_task(load_user_settings_to_cache(SessionFactory))
     logger.info("User settings loaded into cache.")
 
     # Ensure TG_ADMIN_CHAT_ID is in the admin database
@@ -93,7 +93,7 @@ async def main_async():
         # For now, it will proceed with an empty list if fetching fails.
 
     # Set Telegram bot commands using admin IDs from the database
-    await set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids)
+    asyncio.create_task(set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids))
     logger.info("Telegram commands set.")
 
     dp = Dispatcher()

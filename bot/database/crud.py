@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from bot.core.user_settings import USER_SETTINGS_CACHE # Added import
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base # For type hinting model
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
@@ -146,14 +147,18 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
     user_settings_record = await session.get(UserSettings, telegram_id)
     if user_settings_record:
         logger.info(f"Found UserSettings for {telegram_id}. Proceeding with deletion.")
-        settings_deleted_successfully = await db_remove_generic(session, user_settings_record)
-        if settings_deleted_successfully:
-            logger.info(f"Successfully deleted UserSettings for {telegram_id}.")
+        if await db_remove_generic(session, user_settings_record):
+            logger.info(f"Successfully deleted UserSettings for {telegram_id} from DB.")
+            USER_SETTINGS_CACHE.pop(telegram_id, None)
+            logger.info(f"Removed UserSettings for {telegram_id} from cache (if existed).")
+            settings_deleted_successfully = True
         else:
-            logger.error(f"Failed to delete UserSettings for {telegram_id}.")
+            logger.error(f"Failed to delete UserSettings for {telegram_id} from DB.")
+            settings_deleted_successfully = False # Explicitly false on DB error
     else:
-        logger.info(f"No UserSettings found for {telegram_id}. Skipping UserSettings deletion.")
-        settings_deleted_successfully = True # Considered successful as there's nothing to delete
+        logger.info(f"No UserSettings found in DB for {telegram_id}. Clearing from cache if present.")
+        USER_SETTINGS_CACHE.pop(telegram_id, None) # Clear from cache even if not in DB
+        settings_deleted_successfully = True # Considered successful as there's nothing to delete from DB
 
     # 2. Remove Subscriber
     # remove_subscriber already handles logging and non-existence appropriately.

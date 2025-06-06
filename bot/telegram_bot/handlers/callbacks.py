@@ -29,52 +29,72 @@ logger = logging.getLogger(__name__)
 callback_router = Router(name="callback_router")
 ttstr = pytalk.instance.sdk.ttstr
 
-# --- User Action Callbacks (ID, Kick, Ban) ---
 
-async def _process_kick_action_callback(
+async def _execute_tt_user_action(
+    action_val: str,
     user_id_val: int,
-    user_nickname_val: str,
+    user_nickname_val: str, # This is the potentially truncated nickname from callback data
     language: str,
-    tt_instance: TeamTalkInstance, # Must be connected
-    admin_tg_id: int # For logging
+    tt_instance: TeamTalkInstance,
+    admin_tg_id: int
 ) -> str:
     try:
-        user_to_act_on = tt_instance.server.get_user(user_id_val)
+        user_to_act_on = tt_instance.server.get_user(user_id_val) # Fetches the TeamTalkUser object
+
         if user_to_act_on:
-            user_to_act_on.kick(from_server=True) # PyTalk method
-            logger.info(f"Admin {admin_tg_id} kicked TT user {user_nickname_val} ({user_id_val})")
-            return get_text("CALLBACK_USER_KICKED", language, user_nickname=html.quote(user_nickname_val))
-        return get_text(CALLBACK_USER_NOT_FOUND_ANYMORE, language)
+            # It's good to use the full nickname from the user object for messages if available,
+            # but user_nickname_val (from callback) is what we have confirmed.
+            # For logging and messages, let's try to get the most current display name.
+            # This requires access to ttstr or a similar utility. Assuming ttstr is module level.
+            # If user_to_act_on.nickname is empty, ttstr(user_to_act_on.username) would be used.
+            # We'll use html.quote on the display name for safety in messages.
+
+            # For consistency with previous logs and messages, we'll use the user_nickname_val
+            # passed from the callback for user-facing messages, as that's what they saw on the button.
+            # For logging, we can use more detailed info from user_to_act_on if needed.
+
+            quoted_nickname = html.quote(user_nickname_val) # Use the nickname from callback for messages
+
+            if action_val == "kick":
+                user_to_act_on.kick(from_server=True)
+                logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname_val}' (ID: {user_id_val}, Full Nick: {ttstr(user_to_act_on.nickname)}, User: {ttstr(user_to_act_on.username)})")
+                return get_text("CALLBACK_USER_KICKED", language, user_nickname=quoted_nickname)
+
+            elif action_val == "ban":
+                user_to_act_on.ban(from_server=True)
+                user_to_act_on.kick(from_server=True) # Ensure kick after ban
+                logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname_val}' (ID: {user_id_val}, Full Nick: {ttstr(user_to_act_on.nickname)}, User: {ttstr(user_to_act_on.username)})")
+                return get_text("CALLBACK_USER_BANNED_KICKED", language, user_nickname=quoted_nickname)
+
+            # Should not happen if action_val is validated by the caller, but as a fallback:
+            else:
+                logger.warning(f"Unknown action '{action_val}' attempted in _execute_tt_user_action for user ID {user_id_val}")
+                return get_text("CALLBACK_UNKNOWN_ACTION", language) # Or a more specific error
+
+        else: # user_to_act_on is None
+            logger.warning(f"Admin {admin_tg_id} tried to {action_val} TT user ID {user_id_val} (Nickname on button: '{user_nickname_val}'), but user was not found.")
+            # Pass user_nickname_val to the message as it's the context the admin had
+            return get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname=html.quote(user_nickname_val))
+
     except Exception as e:
-        logger.error(f"Error kicking TT user {user_nickname_val} ({user_id_val}): {e}")
-        action_ru = get_text("CALLBACK_ACTION_KICK_GERUND_RU", "ru") # Get Russian gerund for error message
-        return get_text(CALLBACK_ERROR_ACTION_USER, language, action="kick", action_ru=action_ru, user_nickname=html.quote(user_nickname_val), error=str(e))
+        # Ensure user_nickname_val is quoted for the error message too.
+        quoted_nickname_for_error = html.quote(user_nickname_val)
+        # Construct the key for the gerund text dynamically
+        gerund_key = f"CALLBACK_ACTION_{action_val.upper()}_GERUND_RU"
+        action_ru = get_text(gerund_key, "ru")
 
-async def _process_ban_action_callback(
-    user_id_val: int,
-    user_nickname_val: str,
-    language: str,
-    tt_instance: TeamTalkInstance, # Must be connected
-    admin_tg_id: int # For logging
-) -> str:
-    try:
-        user_to_act_on = tt_instance.server.get_user(user_id_val)
-        if user_to_act_on:
-            user_to_act_on.ban(from_server=True) # PyTalk method
-            user_to_act_on.kick(from_server=True) # Ban usually implies kick
-            logger.info(f"Admin {admin_tg_id} banned and kicked TT user {user_nickname_val} ({user_id_val})")
-            return get_text("CALLBACK_USER_BANNED_KICKED", language, user_nickname=html.quote(user_nickname_val))
-        return get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language)
-    except Exception as e:
-        logger.error(f"Error banning TT user {user_nickname_val} ({user_id_val}): {e}")
-        action_ru = get_text("CALLBACK_ACTION_BAN_GERUND_RU", "ru") # Get Russian gerund
-        return get_text(CALLBACK_ERROR_ACTION_USER, language, action="ban", action_ru=action_ru, user_nickname=html.quote(user_nickname_val), error=str(e))
+        logger.error(
+            f"Error during '{action_val}' action on TT user '{user_nickname_val}' (ID: {user_id_val}) by admin {admin_tg_id}: {e}",
+            exc_info=True # Include stack trace in logs
+        )
+        return get_text("CALLBACK_ERROR_ACTION_USER", language,
+                        action=action_val,
+                        action_ru=action_ru,
+                        user_nickname=quoted_nickname_for_error,
+                        error=str(e))
 
-
-USER_ACTION_CALLBACK_HANDLERS = {
-    CALLBACK_ACTION_KICK: _process_kick_action_callback,
-    CALLBACK_ACTION_BAN: _process_ban_action_callback,
-}
+# The callback query handler process_user_action_selection might need adjustment
+# if it was the sole user of USER_ACTION_CALLBACK_HANDLERS.
 
 @callback_router.callback_query(F.data.startswith(f"{CALLBACK_ACTION_KICK}:") | F.data.startswith(f"{CALLBACK_ACTION_BAN}:"))
 async def process_user_action_selection(
@@ -100,25 +120,35 @@ async def process_user_action_selection(
          await callback_query.message.edit_text(get_text("TT_BOT_NOT_CONNECTED", language))
          return
 
-    reply_text_val = get_text("CALLBACK_UNKNOWN_ACTION", language) # Default
-    handler = USER_ACTION_CALLBACK_HANDLERS.get(action_val)
+    # The USER_ACTION_CALLBACK_HANDLERS dictionary and individual handlers were removed.
+    # Direct call to _execute_tt_user_action after admin check.
 
-    if handler:
-        is_admin_caller = await IsAdminFilter()(callback_query, session) # Check if caller is admin
+    reply_text_val: str # Declare type for clarity, will be assigned below.
 
-        if action_val in [CALLBACK_ACTION_KICK, CALLBACK_ACTION_BAN]:
-            if not is_admin_caller:
-                # Send an answer to the callback, not a new message, for permission errors
-                await callback_query.answer(get_text("CALLBACK_NO_PERMISSION", language), show_alert=True)
-                return
-            try:
-                # For kick/ban, pass tt_instance and admin_tg_id
-                reply_text_val = await handler(user_id_val, user_nickname_val, language, tt_instance, callback_query.from_user.id)
-            except Exception as e: # Catch errors from the handler itself
-                logger.error(f"Error in {action_val} handler for TT user {user_nickname_val}: {e}")
-                reply_text_val = get_text("CALLBACK_ERROR_FIND_USER_TT", language) # Generic error if user not found or other issue
+    # Admin check for kick/ban actions
+    # The callback_router filter F.data.startswith(f"{CALLBACK_ACTION_KICK}:") | F.data.startswith(f"{CALLBACK_ACTION_BAN}:")
+    # ensures action_val will be one of these.
+    if action_val in [CALLBACK_ACTION_KICK, CALLBACK_ACTION_BAN]:
+        is_admin_caller = await IsAdminFilter()(callback_query, session)
+        if not is_admin_caller:
+            await callback_query.answer(get_text("CALLBACK_NO_PERMISSION", language), show_alert=True)
+            return
+
+        # If admin check passes, call the unified handler
+        # tt_instance is confirmed not None from the check above.
+        reply_text_val = await _execute_tt_user_action(
+            action_val=action_val,
+            user_id_val=user_id_val,
+            user_nickname_val=user_nickname_val, # This is the (potentially truncated) nickname from callback
+            language=language,
+            tt_instance=tt_instance,
+            admin_tg_id=callback_query.from_user.id
+        )
     else:
-         logger.warning(f"Unhandled user action '{action_val}' in callback query: {callback_query.data}")
+        # This case should ideally not be reached due to the F.data.startswith filter on the handler.
+        # However, as a defensive measure:
+        logger.warning(f"Unexpected action '{action_val}' reached main logic in process_user_action_selection despite filters.")
+        reply_text_val = get_text("CALLBACK_UNKNOWN_ACTION", language)
 
     try:
         await callback_query.message.edit_text(reply_text_val, reply_markup=None) # Clear buttons after action
@@ -502,6 +532,26 @@ async def cq_toggle_mute_all_action(
 
 # --- Paginated User List for Muted/Allowed Users (Refactored) ---
 
+def _paginate_list(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
+    total_items = len(full_list)
+
+    # Calculate total_pages, ensuring it's at least 1, and an integer.
+    # This handles the case where full_list is empty (total_items = 0), resulting in total_pages = 1.
+    total_pages = int(math.ceil(total_items / page_size)) if total_items > 0 else 1
+
+    # Correct page to be 0-indexed and within bounds [0, total_pages - 1].
+    # If total_pages is 1 (e.g., list is empty or fits one page), max valid page index is 0.
+    # max(0, min(page, 0)) correctly yields 0 if page was <0 or >0.
+    page = max(0, min(page, total_pages - 1))
+
+    start_index = page * page_size
+    end_index = start_index + page_size # Slicing handles end_index > total_items gracefully.
+
+    page_slice = full_list[start_index:end_index]
+
+    return page_slice, total_pages, page
+
+
 async def _display_paginated_user_list(
     callback_query: CallbackQuery,
     language: str,
@@ -526,19 +576,16 @@ async def _display_paginated_user_list(
         return
 
     sorted_users = sorted(list(users_to_list_set))
-    total_users = len(sorted_users)
-    total_pages = math.ceil(total_users / USERS_PER_PAGE) if total_users > 0 else 1 # USERS_PER_PAGE used
-    page = max(0, min(page, total_pages - 1))
-
-    start_index = page * USERS_PER_PAGE # USERS_PER_PAGE used
-    end_index = start_index + USERS_PER_PAGE # USERS_PER_PAGE used
-    page_users_slice = sorted_users[start_index:end_index]
+    # Use the new helper function for pagination logic
+    page_users_slice, total_pages, page = _paginate_list(sorted_users, page, USERS_PER_PAGE)
 
     message_parts = [header_text]
-    if not sorted_users:
+    if not sorted_users: # Check original sorted_users list for emptiness
         message_parts.append(empty_list_message)
     else:
-        for i, username in enumerate(page_users_slice, start=start_index + 1):
+        # Calculate start_index for display numbering based on the corrected page and USERS_PER_PAGE
+        current_page_start_index = page * USERS_PER_PAGE
+        for i, username in enumerate(page_users_slice, start=current_page_start_index + 1):
             message_parts.append(f"{i}. {html.quote(username)}")
 
     page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)
@@ -621,16 +668,11 @@ async def _display_account_list(
         key=lambda acc: ttstr(acc._account.szUsername).lower() # Access underlying SDK struct
     )
 
-    total_accounts = len(sorted_accounts_tt)
-    total_pages = math.ceil(total_accounts / USERS_PER_PAGE) if total_accounts > 0 else 1 # USERS_PER_PAGE used
-    page = max(0, min(page, total_pages - 1)) # Ensure page is valid
-
-    start_index = page * USERS_PER_PAGE # USERS_PER_PAGE used
-    end_index = start_index + USERS_PER_PAGE # USERS_PER_PAGE used
-    page_accounts_slice = sorted_accounts_tt[start_index:end_index]
+    # Use the new helper function for pagination logic
+    page_accounts_slice, total_pages, page = _paginate_list(sorted_accounts_tt, page, USERS_PER_PAGE)
 
     message_parts = [get_text("ALL_ACCOUNTS_LIST_HEADER", language)] # New header key
-    if not sorted_accounts_tt:
+    if not sorted_accounts_tt: # Check original sorted_accounts_tt list for emptiness
         message_parts.append(get_text("NO_SERVER_ACCOUNTS_FOUND", language)) # New empty list key
 
     page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)

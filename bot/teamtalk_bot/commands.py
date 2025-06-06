@@ -1,4 +1,6 @@
 import logging
+import functools # For functools.wraps
+import inspect # For inspecting function signature
 from typing import Optional, Callable, List
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +19,100 @@ from bot.constants import (
 )
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
+ttstr = pytalk.instance.sdk.ttstr # Convenience variable
+
+
+# Decorator for TeamTalk admin commands
+def is_tt_admin(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        # Extract tt_message and bot_language from args or kwargs
+        # This requires knowing the parameter names or their positions
+        sig = inspect.signature(func)
+        bound_args = sig.bind_partial(*args, **kwargs)
+        bound_args.apply_defaults()
+
+        tt_message: Optional[TeamTalkMessage] = None
+        bot_language: Optional[str] = None
+
+        # Try to get by name first from kwargs
+        if 'tt_message' in bound_args.arguments and isinstance(bound_args.arguments['tt_message'], TeamTalkMessage):
+            tt_message = bound_args.arguments['tt_message']
+        if 'bot_language' in bound_args.arguments and isinstance(bound_args.arguments['bot_language'], str):
+            bot_language = bound_args.arguments['bot_language']
+
+        # If not found by name (e.g. passed as positional), try to find by type or position
+        if tt_message is None:
+            for arg in bound_args.args:
+                if isinstance(arg, TeamTalkMessage):
+                    tt_message = arg
+                    break
+
+        if bot_language is None:
+            # Attempt to find bot_language by type if not found by name or specific position
+            # This is less reliable if there are multiple string arguments
+            # For robustness, it's better if bot_language is consistently named or positioned.
+            # Assuming it's often the last or second to last positional if not named.
+             for i, param_name in enumerate(sig.parameters):
+                if param_name == "bot_language" and i < len(bound_args.args):
+                     if isinstance(bound_args.args[i], str):
+                        bot_language = bound_args.args[i]
+                        break
+             # Fallback if not found by specific name "bot_language" in positional args
+             if bot_language is None:
+                for arg_val in bound_args.args:
+                    # A bit risky if other strings are present.
+                    # Consider a more specific check if needed, e.g. based on expected values like "en", "ru"
+                    if isinstance(arg_val, str) and arg_val in ["en", "ru"]: # Example check
+                        bot_language = arg_val
+                        # If found, we assume this is it. If multiple strings, this might pick the wrong one.
+                        # For this decorator, we'll assume it's present and identifiable.
+                        break
+
+
+        if not tt_message or not bot_language:
+            # This case should ideally not happen if functions are decorated correctly
+            # and tt_message/bot_language are always passed.
+            logger.error(
+                f"Could not extract tt_message or bot_language in is_tt_admin for function {func.__name__}. "
+                f"tt_message found: {isinstance(tt_message, TeamTalkMessage)}, "
+                f"bot_language found: {isinstance(bot_language, str)}"
+            )
+            # Decide on a default behavior: either raise an error or attempt to proceed if possible
+            # For now, let's prevent execution if essential components are missing.
+            # Or, if a default language can be assumed:
+            # bot_language = bot_language or app_config.get("DEFAULT_LANGUAGE", "en")
+            # However, tt_message is crucial.
+            if tt_message: # If only language is missing, use a default or log and deny
+                bot_language = app_config.get("DEFAULT_LANGUAGE", "en") # Fallback language
+                logger.warning(f"bot_language not found for {func.__name__}, using default '{bot_language}'.")
+            else:
+                 logger.error(f"tt_message is missing, cannot proceed with admin check for {func.__name__}.")
+                 # Depending on the desired behavior, you might return or raise an exception.
+                 # For a security decorator, denying access is safer.
+                 # tt_message.reply might fail if tt_message is None.
+                 return None # Or raise an error
+
+
+        username = ttstr(tt_message.user.username)
+        admin_username = app_config.get("ADMIN_USERNAME")
+
+        if not admin_username or username != admin_username:
+            logger.warning(
+                f"Unauthorized admin command attempt by TT user {username} in function {func.__name__}."
+            )
+            # Ensure bot_language is valid before using it
+            if not isinstance(bot_language, str) or bot_language not in get_text("SUPPORTED_LANGUAGES"):
+                 # Fallback to a default language if bot_language is invalid or missing
+                 bot_language = app_config.get("DEFAULT_LANGUAGE", "en")
+                 logger.warning(f"Invalid or missing bot_language for unauthorized access reply in {func.__name__}. Used default.")
+
+            tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", bot_language))
+            return None
+
+        return await func(*args, **kwargs)
+
+    return wrapper
 
 
 async def _process_admin_ids(
@@ -167,17 +262,12 @@ async def handle_tt_unsubscribe_command(
     )
 
 
+@is_tt_admin
 async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     bot_language: str
 ):
-    sender_username_val = ttstr(tt_message.user.username)
-    if not app_config.get("ADMIN_USERNAME") or sender_username_val != app_config["ADMIN_USERNAME"]:
-        logger.warning(f"Unauthorized /add_admin attempt by TT user {sender_username_val}.")
-        tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", bot_language))
-        return
-
     parts_list = tt_message.content.split()
     await _process_admin_ids(
         tt_message=tt_message,
@@ -195,17 +285,12 @@ async def handle_tt_add_admin_command(
     )
 
 
+@is_tt_admin
 async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     bot_language: str
 ):
-    sender_username_val = ttstr(tt_message.user.username)
-    if not app_config.get("ADMIN_USERNAME") or sender_username_val != app_config["ADMIN_USERNAME"]:
-        logger.warning(f"Unauthorized /remove_admin attempt by TT user {sender_username_val}.")
-        tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", bot_language))
-        return
-
     parts_list = tt_message.content.split()
     await _process_admin_ids(
         tt_message=tt_message,

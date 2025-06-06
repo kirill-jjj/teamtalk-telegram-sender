@@ -38,6 +38,25 @@ from bot.teamtalk_bot.commands import (
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
+
+async def _initiate_reconnect(reason: str):
+    """
+    Helper function to initiate the TeamTalk reconnection process.
+    Logs the reason, resets current instance if necessary, and schedules reconnection.
+    """
+    logger.warning(reason) # Log the reason for reconnection first
+
+    if tt_bot_module.current_tt_instance is not None:
+        logger.info(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
+        tt_bot_module.current_tt_instance = None
+        tt_bot_module.login_complete_time = None
+    else:
+        logger.info(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}")
+
+    # Schedule the reconnection task
+    asyncio.create_task(_tt_reconnect())
+
+
 @tt_bot_module.tt_bot.event # Decorate with the bot instance from its module
 async def on_ready():
     """
@@ -118,25 +137,10 @@ async def on_my_login(server: PytalkServer):
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
     """Called when the connection to the TeamTalk server is lost."""
-    
-    event_host_str = "Unknown Host"
-    if server and hasattr(server, 'info') and server.info and hasattr(server.info, 'host'):
-        processed_event_host = ttstr(server.info.host) 
-        if isinstance(processed_event_host, bytes):
-            event_host_str = processed_event_host.decode('utf-8', 'replace')
-        else:
-            event_host_str = str(processed_event_host)
-
-    logger.warning(f"Connection lost to TeamTalk server '{event_host_str}'. Attempting to reconnect...")
-
-    if tt_bot_module.current_tt_instance is not None:
-        logger.info(f"Resetting current_tt_instance for host '{event_host_str}' due to connection loss.")
-        tt_bot_module.current_tt_instance = None
-        tt_bot_module.login_complete_time = None
-    else:
-        logger.info("current_tt_instance was already None when on_my_connection_lost was called.")
-
-    asyncio.create_task(_tt_reconnect())
+    # The 'server' parameter is part of the event contract, even if not explicitly used here.
+    # The specific host details are now part of the generic message,
+    # as _initiate_reconnect handles the core logic.
+    await _initiate_reconnect("Connection lost to TeamTalk server. Attempting to reconnect...")
 
 
 @tt_bot_module.tt_bot.event
@@ -146,11 +150,9 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
     # tt_bot_module.current_tt_instance should ideally be this instance.
 
     if not tt_instance_val:
-        logger.error("Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably.")
-        # Fallback to generic reconnect
-        tt_bot_module.current_tt_instance = None
-        tt_bot_module.login_complete_time = None
-        asyncio.create_task(_tt_reconnect())
+        # logger.error("Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably.")
+        # The above log is incorporated into the reason string for _initiate_reconnect
+        await _initiate_reconnect("Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably. Initiating full reconnect.")
         return
 
     try:
@@ -159,30 +161,23 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
         server_host = ttstr(tt_instance_val.server_info.host)
 
         if channel_id_val == 0: # ID 0 often means kicked from the server itself
-            logger.warning(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
-            if tt_bot_module.current_tt_instance == tt_instance_val:
-                tt_bot_module.current_tt_instance = None
-                tt_bot_module.login_complete_time = None
-            asyncio.create_task(_tt_reconnect())
+            # logger.warning(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
+            # The above log is incorporated into the reason string for _initiate_reconnect
+            await _initiate_reconnect(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
         elif channel_id_val > 0: # Kicked from a specific channel
             logger.warning(f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel...")
             # Rejoin the configured main channel, not necessarily the one kicked from
             asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
         else: # Unexpected channel ID
-            logger.error(f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.")
-            if tt_bot_module.current_tt_instance == tt_instance_val:
-                tt_bot_module.current_tt_instance = None
-                tt_bot_module.login_complete_time = None
-            asyncio.create_task(_tt_reconnect())
+            # logger.error(f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.")
+            # The above log is incorporated into the reason string for _initiate_reconnect
+            await _initiate_reconnect(f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect.")
 
     except Exception as e:
         channel_id_for_log = getattr(channel_obj, 'id', 'unknown_id')
+        # Preserve this detailed error log before calling the generic reconnect helper
         logger.error(f"Error handling on_my_kicked_from_channel (channel ID: {channel_id_for_log}): {e}", exc_info=True)
-        # Generic fallback if anything above fails
-        if tt_bot_module.current_tt_instance == tt_instance_val:
-            tt_bot_module.current_tt_instance = None
-            tt_bot_module.login_complete_time = None
-        asyncio.create_task(_tt_reconnect())
+        await _initiate_reconnect(f"Error handling kick event for channel ID {channel_id_for_log}. Attempting full reconnect.")
 
 
 @tt_bot_module.tt_bot.event
