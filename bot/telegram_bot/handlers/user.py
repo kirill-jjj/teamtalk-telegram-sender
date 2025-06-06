@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from aiogram import Router, html, F
+from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.ext.asyncio import AsyncSession

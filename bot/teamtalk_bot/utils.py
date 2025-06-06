@@ -6,8 +6,6 @@ from aiogram import html
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
-from pytalk.server import Server as PytalkServer
-from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
@@ -25,7 +23,6 @@ from bot.constants import (
 )
 # Import teamtalk_bot.bot_instance carefully to avoid circular dependencies if it needs utils
 # For now, we pass tt_bot and current_tt_instance as arguments or access them via a getter if needed.
-from bot.teamtalk_bot.bot_instance import tt_bot, current_tt_instance, login_complete_time
 from bot.telegram_bot.utils import send_telegram_message_individual # For forwarding
 from bot.telegram_bot.bot_instances import tg_bot_message # For forwarding
 from bot.core.user_settings import USER_SETTINGS_CACHE # For admin language
@@ -83,12 +80,6 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
                 remaining_text_val = "" # Mark as fully processed
                 break # Break from inner loop
         else: # Inner loop didn't break, means remaining_text_val was consumed or became empty
-            # This case should ideally be covered by the logic within the loop
-            # (e.g., when i == len(remaining_text_val) - 1).
-            # If remaining_text_val is empty here, the outer while loop will terminate.
-            # If current_chunk_str has content and remaining_text_val became empty due to consumption,
-            # it should have been appended in the 'if i == len(remaining_text_val) - 1' block.
-            # Adding a safeguard, though it might indicate a logical flaw if hit.
             if current_chunk_str and not remaining_text_val: # Should have been caught by outer if
                  logger.debug("_split_text_for_tt: Appending final chunk in else block, this might be redundant.")
                  parts_to_send_list.append(current_chunk_str)

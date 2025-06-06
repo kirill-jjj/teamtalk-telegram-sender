@@ -105,8 +105,6 @@ async def process_user_action_selection(
             if not is_admin_caller:
                 # Send an answer to the callback, not a new message, for permission errors
                 await callback_query.answer(get_text("CALLBACK_NO_PERMISSION", language), show_alert=True)
-                # Do not edit the original message if permission denied, or edit to "Permission Denied."
-                # await callback_query.message.edit_text(get_text("CALLBACK_NO_PERMISSION", language))
                 return
             try:
                 # For kick/ban, pass tt_instance and admin_tg_id
@@ -114,9 +112,6 @@ async def process_user_action_selection(
             except Exception as e: # Catch errors from the handler itself
                 logger.error(f"Error in {action_val} handler for TT user {user_nickname_val}: {e}")
                 reply_text_val = get_text("CALLBACK_ERROR_FIND_USER_TT", language) # Generic error if user not found or other issue
-        # elif action_val == CALLBACK_ACTION_ID: # Block removed
-            # For ID, tt_instance is not strictly needed by the handler but passed for consistency if ever needed
-            # reply_text_val = await handler(user_id_val, user_nickname_val, language)
     else:
          logger.warning(f"Unhandled user action '{action_val}' in callback query: {callback_query.data}")
 
@@ -126,10 +121,6 @@ async def process_user_action_selection(
         logger.error(f"Error editing message after user action callback: {e}")
 
 
-# --- Toggle Ignore User Callback --- (REMOVED)
-# The `process_toggle_ignore_user` handler that was here is now removed as the
-# "Toggle ignore status" button on join/leave notifications is obsolete.
-# Mute management is centralized in the /settings menu.
 
 
 # --- Settings Callbacks ---
@@ -145,8 +136,6 @@ from bot.telegram_bot.callback_data import ( # Import all new factories
     ToggleMuteSpecificCallback
 )
 
-# Refactored: cq_settings_language now cq_show_language_menu
-# Triggered by SettingsCallback(action="language") from main settings menu in user.py
 @callback_router.callback_query(SettingsCallback.filter(F.action == "language"))
 async def cq_show_language_menu( # Renamed for clarity
     callback_query: CallbackQuery,
@@ -494,9 +483,6 @@ async def cq_toggle_noon_setting_action( # Renamed for clarity
         await callback_query.answer("Error: Missing data.")
         return
 
-    # await callback_query.answer() # Acknowledge: moved down after check for confirmed
-    # The check for user_specific_settings.not_on_online_confirmed is removed.
-    # Assumed true due to SubscriptionCheckMiddleware.
 
     await callback_query.answer() # Acknowledge action
     user_specific_settings.not_on_online_enabled = not user_specific_settings.not_on_online_enabled
@@ -564,8 +550,6 @@ def _create_manage_muted_users_keyboard(
     )
     back_to_notif_settings_button = InlineKeyboardButton(
         text=get_text("BACK_TO_NOTIF_SETTINGS_BTN", language),
-        # This should go back to the notification settings menu,
-        # which is triggered by SettingsCallback(action="notifications")
         callback_data=SettingsCallback(action="notifications").pack()
     )
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -692,8 +676,6 @@ def _create_paginated_user_list_keyboard(
 
     keyboard_rows.append([InlineKeyboardButton(
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
-        # This should go back to the manage_muted_users menu,
-        # which is triggered by NotificationActionCallback(action="manage_muted")
         callback_data=NotificationActionCallback(action="manage_muted").pack()
     )])
     return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
@@ -777,9 +759,6 @@ async def cq_list_internal_users( # Renamed for clarity
     await _display_paginated_user_list(callback_query, language, user_specific_settings, list_type, 0)
 
 
-# Consolidated pagination handler for internal lists (muted/allowed)
-# Server user list pagination will be handled by its own PaginateUsersCallback if list_type differs, or this one if list_type is used.
-# The PaginateUsersCallback has list_type, so it can be generic.
 @callback_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_(["muted", "allowed"])))
 async def cq_paginate_internal_user_list( # Renamed for clarity
     callback_query: CallbackQuery,
@@ -806,8 +785,6 @@ def _create_account_list_keyboard(
     keyboard_rows = []
     # Enumerate to get index for user_idx
     for idx, account_obj in enumerate(page_accounts):
-        # Assuming 'account_obj' is pytalk.UserAccount, and it wraps the SDK struct in '_account'
-        # Username is still needed for display and for logic in the handler (to fetch from the list)
         username_str = ttstr(account_obj._account.szUsername)
         display_name = username_str
 
@@ -899,10 +876,6 @@ async def _display_account_list(
     except TelegramAPIError as e:
         logger.error(f"TelegramAPIError editing message for account list (page {page}): {e}")
 
-# Handler for "Mute/Unmute from Server List" button, now lists all accounts
-# Previous filter: UserListCallback.filter(F.action == "list_server_users")
-# New filter: UserListCallback.filter(F.action == "list_all_accounts")
-# Note: Need to ensure _create_manage_muted_users_keyboard uses UserListCallback(action="list_all_accounts")
 @callback_router.callback_query(UserListCallback.filter(F.action == "list_all_accounts"))
 async def cq_show_all_accounts_list( # Renamed
     callback_query: CallbackQuery,
@@ -917,9 +890,6 @@ async def cq_show_all_accounts_list( # Renamed
         return
     await _display_account_list(callback_query, language, user_specific_settings, tt_instance, 0)
 
-# Pagination handler for "all_accounts" list type
-# Previous filter: PaginateUsersCallback.filter(F.list_type == "server_users")
-# New filter: PaginateUsersCallback.filter(F.list_type == "all_accounts")
 @callback_router.callback_query(PaginateUsersCallback.filter(F.list_type == "all_accounts"))
 async def cq_paginate_all_accounts_list_action( # Renamed
     callback_query: CallbackQuery,
@@ -998,8 +968,6 @@ async def cq_toggle_specific_user_mute_action( # Renamed
     if not username_to_toggle or not display_nickname_for_toast:
         logger.error(f"Could not determine username for toggle. user_idx: {user_idx}, list_type: {list_type}, page: {current_page}")
         await callback_query.answer(get_text("error_occurred", language), show_alert=True)
-        # Attempt to refresh the list to a known state (e.g., page 0) or current page if possible
-        # This helps if the list changed due to external factors.
         if list_type == "all_accounts" and tt_instance and tt_instance.connected:
              await _display_account_list(callback_query, language, user_specific_settings, tt_instance, 0) # Refresh to page 0
         elif list_type in ["muted", "allowed"]:
@@ -1054,12 +1022,6 @@ async def cq_toggle_specific_user_mute_action( # Renamed
         logger.error(f"Unknown list_type '{list_type}' for refresh in cq_toggle_specific_user_mute_action")
         await callback_query.answer("Error: Could not refresh list due to unknown list type.", show_alert=True)
 
-# Also, update the _create_manage_muted_users_keyboard to use the new action for UserListCallback
-# This part is tricky as it's modifying an existing function that's not fully included in the SEARCH block.
-# The change is:
-# callback_data=UserListCallback(action="list_server_users").pack()
-# needs to become:
-# callback_data=UserListCallback(action="list_all_accounts").pack()
 
 # The SEARCH block for _create_manage_muted_users_keyboard needs to be provided to make this change.
 # For now, this diff only reflects changes within the "Mute/Unmute from Server User List Callbacks" section

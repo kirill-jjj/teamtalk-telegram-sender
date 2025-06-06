@@ -1,4 +1,3 @@
-from aiogram import Router
 
 # Import routers from individual handler files
 from .user import user_commands_router

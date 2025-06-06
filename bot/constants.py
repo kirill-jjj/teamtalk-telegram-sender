@@ -3,8 +3,6 @@ ACTION_SUBSCRIBE = "subscribe"
 ACTION_UNSUBSCRIBE = "unsubscribe"
 ACTION_SUBSCRIBE_AND_LINK_NOON = "subscribe_link_noon"
 
-# User selection callback actions
-# CALLBACK_ACTION_ID = "id" # Removed
 CALLBACK_ACTION_KICK = "kick"
 CALLBACK_ACTION_BAN = "ban"
 

@@ -13,8 +13,6 @@ from bot.database.models import NotificationSetting, UserSettings as UserSetting
 logger = logging.getLogger(__name__)
 settings_router = Router(name="settings_router")
 
-# Unused command handlers (cl, mute, unmute, mute_all, unmute_all, toggle_noon, my_noon_status)
-# and their helper functions have been removed from this file.
 
 # Existing comment:
 # _set_notification_preference and /notify_* commands removed as per subtask.

@@ -18,12 +18,6 @@ ADMIN_COMMANDS: List[BotCommand] = USER_COMMANDS + [
     BotCommand(command="ban", description="Ban TT user (admin, via buttons)"),
 ]
 
-# Commands that are good for all users, including in groups if the bot is added there.
-# For now, identical to USER_COMMANDS but could diverge.
-# ALL_CHATS_USER_COMMANDS: List[BotCommand] = [
-#     BotCommand(command="help", description="Show this help message"),
-#     BotCommand(command="who", description="Show online users in TeamTalk (if bot has server access)"),
-# ]
 
 async def set_telegram_commands(bot: Bot, admin_ids: List[int] = None):
     """

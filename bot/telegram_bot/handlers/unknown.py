@@ -17,14 +17,7 @@ async def handle_unknown_command_or_message(
     # Log that an unknown command/message was received
     logger.info(f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'")
 
-    # Reply with the unknown command message
-    # Check if it looks like a command (starts with /) to give a more specific "unknown command"
-    # Otherwise, you might choose not to reply or have a generic "I don't understand"
     if message.text.startswith("/"):
         await message.reply(get_text("UNKNOWN_COMMAND", language))
     else:
-        # For non-command text, decide on behavior.
-        # For now, let's also reply with UNKNOWN_COMMAND, or you can have a different string.
-        # await message.reply(get_text(""unknown_message_text", language))
-        # Or simply do nothing:
         pass

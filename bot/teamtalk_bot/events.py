@@ -3,7 +3,6 @@ import asyncio
 from datetime import datetime
 
 import pytalk
-from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.channel import Channel as PytalkChannel
@@ -54,8 +53,6 @@ async def on_ready():
         password=app_config["PASSWORD"],
         encrypted=app_config["ENCRYPTED"],
         nickname=app_config["NICKNAME"]
-        # join_channel_id=app_config.get("CHANNEL_ID_INT", -1), # Пример, если есть такой конфиг
-        # join_channel_password=app_config.get("CHANNEL_PASSWORD")
     )
     try:
         tt_bot_module.login_complete_time = None # Reset before connection attempt
@@ -202,8 +199,6 @@ async def on_message(message: TeamTalkMessage):
 
     logger.info(f"Received private TT message from {sender_username}: '{message_content[:100]}...'")
 
-    # Determine language for bot's replies in TT (e.g., admin's language or a default)
-    # This could be configurable or based on the TT user if linked. For now, use admin's or default.
     bot_reply_language = DEFAULT_LANGUAGE
     if app_config.get("TG_ADMIN_CHAT_ID"):
         admin_settings = USER_SETTINGS_CACHE.get(app_config["TG_ADMIN_CHAT_ID"])
@@ -246,10 +241,3 @@ async def on_user_logout(user: TeamTalkUser):
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
-# Add other TeamTalk events here if needed, e.g.:
-# @tt_bot_module.tt_bot.event
-# async def on_channel_new(channel: PytalkChannel): ...
-# @tt_bot_module.tt_bot.event
-# async def on_user_channel_join(user: PytalkUser, channel: PytalkChannel): ...
-# @tt_bot_module.tt_bot.event
-# async def on_user_channel_leave(user: PytalkUser, channel: PytalkChannel): ...

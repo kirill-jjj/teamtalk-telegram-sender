@@ -10,15 +10,11 @@ from bot.config import app_config
 from bot.localization import get_text
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
-from bot.telegram_bot.commands import set_telegram_commands, ADMIN_COMMANDS, USER_COMMANDS
+from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
 from bot.constants import (
-    ACTION_SUBSCRIBE, ACTION_UNSUBSCRIBE, ACTION_SUBSCRIBE_AND_LINK_NOON,
+    ACTION_UNSUBSCRIBE, ACTION_SUBSCRIBE_AND_LINK_NOON,
 )
-# Define TT_UNKNOWN_COMMAND_TT in constants.py if it's different from the Telegram one
-# For now, assuming it's the same or will be added to LOCALIZED_STRINGS
-# If not, add: "tt_unknown_command_tt": {"en": "Unknown command. Available: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help.", "ru": "Неизвестная команда. Доступны: /sub, /unsub, /add_admin, /remove_admin, /not on online, /help."}
-# and use TT_UNKNOWN_COMMAND_TT key. For now, using the generic one.
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr

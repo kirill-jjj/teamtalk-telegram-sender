@@ -8,7 +8,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import pytalk # For TeamTalkUser, TeamTalkInstance type hints
 from pytalk.instance import TeamTalkInstance
-from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 from bot.localization import get_text
@@ -204,10 +203,6 @@ async def show_user_buttons(
             continue
 
         user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", language)
-        # Ensure callback data is within Telegram limits (64 bytes for callback_data)
-        # Format: command_type:user_id:nickname_prefix
-        # Max nickname part length: 64 - len(command_type) - len(str(user_id)) - 2 (colons)
-        # We use a predefined max length for nickname part for simplicity.
         callback_nickname_val = (ttstr(user_obj.nickname) or ttstr(user_obj.username) or "unknown")[:CALLBACK_NICKNAME_MAX_LENGTH]
 
         builder.button(

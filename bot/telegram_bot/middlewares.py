@@ -7,12 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk # For TeamTalkInstance type hint
 from bot.core.user_settings import (
-    USER_SETTINGS_CACHE,
     UserSpecificSettings,
     get_or_create_user_settings
 )
 from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
-from bot.constants import DEFAULT_LANGUAGE
 
 
 logger = logging.getLogger(__name__)
@@ -78,9 +76,6 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
         data["tt_instance"] = actual_tt_instance
         return await handler(event, data)
 
-# --- Imports for SubscriptionCheckMiddleware (from subscription_check.py) ---
-# logging, Callable, Dict, Any, Awaitable (Coroutine), BaseMiddleware, Message, CallbackQuery, User, AsyncSession
-# are already imported or covered above.
 from typing import Awaitable # Ensure Awaitable is explicitly imported if not covered by Coroutine
 from bot.database.models import SubscribedUser
 from bot.localization import get_text

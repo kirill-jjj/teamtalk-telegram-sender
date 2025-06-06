@@ -1,8 +1,7 @@
 import logging
-import asyncio
 from datetime import datetime, timedelta
 from aiogram import html
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -12,12 +11,11 @@ from bot.config import app_config
 from bot.localization import get_text
 from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
-from bot.core.user_settings import USER_SETTINGS_CACHE, get_or_create_user_settings, UserSpecificSettings
+from bot.core.user_settings import get_or_create_user_settings
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
-    CALLBACK_NICKNAME_MAX_LENGTH,
     INITIAL_LOGIN_IGNORE_DELAY_SECONDS
 )
 # Import teamtalk_bot.bot_instance carefully
@@ -39,11 +37,6 @@ async def should_notify_user(
     mute_all_flag = user_specific_settings.mute_all_flag
     muted_users = user_specific_settings.muted_users_set
 
-    # Предполагаем, что pytalk.database.models.NotificationSetting это правильный enum
-    # Если это не так, замените на bot.database.models.NotificationSetting
-    # или откуда он импортируется в user_settings.py
-    # Для примера я использую просто строки, если enum не доступен напрямую здесь
-    # (но лучше импортировать enum NotificationSetting из bot.database.models)
     try:
         from bot.database.models import NotificationSetting as NotificationSettingEnum
         if notification_pref == NotificationSettingEnum.NONE: return False

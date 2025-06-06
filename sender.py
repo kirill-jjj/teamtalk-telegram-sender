@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import sys
 
 # Setup logging first
@@ -12,7 +11,6 @@ try:
     logger.info("uvloop installed and used.")
 except ImportError:
     logger.info("uvloop not found, using default asyncio event loop.")
-    pass
 
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 ttstr = sdk.ttstr
@@ -99,8 +97,6 @@ async def main_async():
     await set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids)
     logger.info("Telegram commands set.")
 
-    # Initialize Aiogram Dispatcher
-    # Note: storage can be added here if FSM is used later, e.g., MemoryStorage() or RedisStorage2()
     dp = Dispatcher()
 
     # Register middlewares
@@ -131,18 +127,7 @@ async def main_async():
 
     logger.info("Starting Telegram bot polling and TeamTalk bot...")
 
-    # Pytalk setup hook (if any internal async setup is needed by pytalk)
-    # await tt_bot_module.tt_bot._async_setup_hook() # As per original code, if Pytalk requires it.
-                                                 # Check Pytalk documentation for current practice.
-                                                 # If not needed, this can be removed.
-                                                 # Assuming it's for internal Pytalk setup.
 
-    # Start Pytalk bot first (it might take time to connect)
-    # The tt_bot.run() or similar method from Pytalk should be used.
-    # Original code used tt_bot._start() which implies it's a coroutine.
-    # and tt_bot._async_setup_hook()
-    # Let's assume Pytalk's start is asyncio compatible.
-    # The on_ready event in tt_events will handle the actual server connection.
 
     dp.shutdown.register(on_aiogram_shutdown)
     telegram_polling_task = dp.start_polling(
@@ -151,21 +136,7 @@ async def main_async():
     )
     global _telegram_polling_task_ref_for_shutdown
     _telegram_polling_task_ref_for_shutdown = telegram_polling_task
-    # Pytalk's start method might be blocking or async.
-    # If tt_bot.run() is blocking, it needs its own thread or process.
-    # If tt_bot._start() is a coroutine as in original, it can be gathered.
-    # The original code had tt_bot._async_setup_hook() then tt_bot._start()
-    # This implies _start() is the main loop for pytalk.
 
-    # Pytalk's `add_server` is called in `on_ready`. `tt_bot.connect()` or `tt_bot.run()`
-    # is usually the way to start the Pytalk client loop.
-    # The original code had `tt_bot._async_setup_hook()` and `tt_bot._start()`.
-    # Let's assume `tt_bot_module.tt_bot.run_async()` is the correct modern way if available,
-    # or `tt_bot_module.tt_bot.start()` if it's an async method.
-    # If Pytalk's main loop is started by `tt_bot.add_server` implicitly or via `on_ready`,
-    # then we just need to ensure `on_ready` is triggered.
-    # Pytalk's `TeamTalkBot` usually has a `run()` or `start()` method.
-    # The original code structure suggests `tt_bot._start()` was the entry point for its event loop.
 
     # Trigger Pytalk's on_ready to start connection process
     # This will call tt_bot.add_server which then connects.
@@ -174,9 +145,6 @@ async def main_async():
     # If Pytalk uses its own thread, this is fine. If it relies on the current asyncio loop,
     # `asyncio.gather` is appropriate.
 
-    # The original `tt_bot._async_setup_hook()` and `tt_bot._start()` suggests Pytalk integrates with asyncio.
-    # `_async_setup_hook` is likely for one-time async initializations.
-    # `_start` is likely the coroutine that runs Pytalk's event loop.
 
     await tt_bot_module.tt_bot._async_setup_hook() # Call setup hook as in original
     teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")    # Start Pytalk's async loop

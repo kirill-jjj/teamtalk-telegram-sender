@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy import Enum as SQLAEnum
 from bot.database.engine import Base
 from bot.constants import DEFAULT_LANGUAGE
@@ -37,5 +37,3 @@ class UserSettings(Base):
     not_on_online_enabled = Column(Boolean, default=False, nullable=False)
     not_on_online_confirmed = Column(Boolean, default=False, nullable=False)
 
-    # Explicit index for telegram_id, though primary_key=True often implies an index.
-    # __table_args__ = (Index("ix_user_settings_telegram_id", "telegram_id"),) # Already indexed by primary_key

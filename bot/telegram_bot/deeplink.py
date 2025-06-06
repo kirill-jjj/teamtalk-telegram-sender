@@ -83,8 +83,6 @@ async def _handle_subscribe_and_link_noon_deeplink(
     else:
         logger.info(f"User {telegram_id} was already subscribed, proceeding to link NOON via combined deeplink.")
 
-    # Ensure settings are available (might be redundant if user_specific_settings is always fresh, but good for safety)
-    # This call also ensures the settings object is correctly tracked in cache if it was newly created by add_subscriber flow.
     current_settings = await get_or_create_user_settings(telegram_id, session)
 
     # Account Linking Logic
