@@ -136,50 +136,38 @@ async def get_user_settings_row(session: AsyncSession, telegram_id: int) -> User
 
 async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> bool:
     """
-    Deletes all data associated with a given telegram_id.
-    This includes UserSettings and SubscribedUser records.
+    Deletes all data associated with a given telegram_id in a single transaction.
+    Also removes the user from the in-memory cache upon successful deletion.
     """
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
-    settings_deleted_successfully = False
-    subscriber_removed_successfully = False
+    try:
+        # Fetch both records first to see what needs to be deleted.
+        user_settings_record = await session.get(UserSettings, telegram_id)
+        subscribed_user_record = await session.get(SubscribedUser, telegram_id)
 
-    # 1. Delete UserSettings
-    user_settings_record = await session.get(UserSettings, telegram_id)
-    if user_settings_record:
-        logger.info(f"Found UserSettings for {telegram_id}. Proceeding with deletion.")
-        if await db_remove_generic(session, user_settings_record):
-            logger.info(f"Successfully deleted UserSettings for {telegram_id} from DB.")
+        if not user_settings_record and not subscribed_user_record:
+            logger.info(f"No data found for Telegram ID {telegram_id}. Nothing to delete.")
+            # Also ensure cache is clear for this ID, just in case.
             USER_SETTINGS_CACHE.pop(telegram_id, None)
-            logger.info(f"Removed UserSettings for {telegram_id} from cache (if existed).")
-            settings_deleted_successfully = True
-        else:
-            logger.error(f"Failed to delete UserSettings for {telegram_id} from DB.")
-            settings_deleted_successfully = False # Explicitly false on DB error
-    else:
-        logger.info(f"No UserSettings found in DB for {telegram_id}. Clearing from cache if present.")
-        USER_SETTINGS_CACHE.pop(telegram_id, None) # Clear from cache even if not in DB
-        settings_deleted_successfully = True # Considered successful as there's nothing to delete from DB
+            return True
 
-    # 2. Remove Subscriber
-    # remove_subscriber already handles logging and non-existence appropriately.
-    # It returns True if removed, False if not found or error during delete.
-    # We need to distinguish "not found" from "error during delete" for overall success.
+        if user_settings_record:
+            await session.delete(user_settings_record)
+            logger.info(f"Marked UserSettings for deletion for user {telegram_id}.")
 
-    # Check if subscriber exists before attempting removal to refine success logic
-    subscriber_exists = await session.get(SubscribedUser, telegram_id)
-    if subscriber_exists:
-        subscriber_removed_successfully = await db_remove_generic(session, subscriber_exists)
-        if subscriber_removed_successfully:
-            logger.info(f"Successfully removed SubscribedUser for {telegram_id}.")
-        else:
-            logger.error(f"Error removing SubscribedUser for {telegram_id} during db_remove_generic call.")
-    else:
-        logger.info(f"No SubscribedUser record found for {telegram_id}. Skipping SubscribedUser deletion.")
-        subscriber_removed_successfully = True # Considered successful as there's nothing to delete
+        if subscribed_user_record:
+            await session.delete(subscribed_user_record)
+            logger.info(f"Marked SubscribedUser for deletion for user {telegram_id}.")
 
-    overall_success = settings_deleted_successfully and subscriber_removed_successfully
-    if overall_success:
-        logger.info(f"Successfully completed full data deletion process for Telegram ID: {telegram_id}.")
-    else:
-        logger.error(f"Full data deletion process for Telegram ID: {telegram_id} encountered issues. Settings deleted: {settings_deleted_successfully}, Subscriber part: {subscriber_removed_successfully}")
-    return overall_success
+        # Commit both deletions (or one of them) in a single transaction.
+        await session.commit()
+
+        # Clear from cache only after the transaction is successfully committed.
+        USER_SETTINGS_CACHE.pop(telegram_id, None)
+        logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from cache.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error during full data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
+        await session.rollback()
+        return False
