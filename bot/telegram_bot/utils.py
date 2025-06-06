@@ -215,7 +215,7 @@ async def show_user_buttons(
     # users_added_to_list variable is implicitly handled by checking len(other_online_usernames) or if loop runs
 
     for username in sorted(list(other_online_usernames), key=str.lower):
-        user_obj = tt_instance.get_user(username) # Reconstruct pytalk.User object
+        user_obj = tt_instance.get_user(ttstr(username)) # Reconstruct pytalk.User object, apply ttstr
         if not user_obj: # Should be rare if cache is consistent
             logger.warning(f"Could not retrieve user object for cached username: {username} in show_user_buttons. Skipping.")
             continue
