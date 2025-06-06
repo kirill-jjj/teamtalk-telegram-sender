@@ -48,7 +48,7 @@ async def start_command_handler(
 def _get_user_display_channel_name(
     user_obj: TeamTalkUser,
     is_caller_admin: bool,
-    language: str
+    language: str # Renamed from lang to language for consistency
 ) -> str:
     channel_obj = user_obj.channel
     user_display_channel_name_val = ""
@@ -81,13 +81,85 @@ def _get_user_display_channel_name(
     return user_display_channel_name_val
 
 
-def _sort_who_data(channels_data: dict[str, list[str]]) -> tuple[list[str], dict[str, list[str]]]:
-    """Sorts channel names and user lists within each channel."""
-    sorted_names = sorted(channels_data.keys())
-    sorted_user_lists_in_channels: dict[str, list[str]] = {}
-    for name in sorted_names:
-        sorted_user_lists_in_channels[name] = sorted(channels_data[name])
-    return sorted_names, sorted_user_lists_in_channels
+def _group_users_for_who_command(
+    users: list[TeamTalkUser],
+    bot_user_id: int,
+    is_caller_admin: bool,
+    lang: str
+) -> tuple[dict[str, list[str]], int]:
+    """Groups users by channel display name for the /who command."""
+    channels_display_data: dict[str, list[str]] = {}
+    users_added_to_groups_count = 0
+
+    for user_obj in users:
+        if user_obj.id == bot_user_id and not is_caller_admin:
+            continue
+
+        user_display_channel_name = _get_user_display_channel_name(user_obj, is_caller_admin, lang)
+
+        if user_display_channel_name not in channels_display_data:
+            channels_display_data[user_display_channel_name] = []
+
+        user_nickname = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", lang)
+        channels_display_data[user_display_channel_name].append(html.quote(user_nickname)) # html.quote here
+        users_added_to_groups_count += 1
+
+    return channels_display_data, users_added_to_groups_count
+
+
+def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, lang: str) -> str:
+    """Formats the /who command's reply message."""
+    if total_users == 0:
+        return get_text("WHO_NO_USERS_ONLINE", lang)
+
+    # Sort data (incorporates _sort_who_data logic)
+    sorted_channel_names = sorted(grouped_data.keys())
+    # Nicknames in grouped_data are already html.quoted and will be sorted as such.
+    # Sorting user lists within channels:
+    sorted_users_in_channels: dict[str, list[str]] = {}
+    for name in sorted_channel_names:
+        # Users are already quoted, sorting will be based on quoted strings
+        sorted_users_in_channels[name] = sorted(grouped_data[name])
+
+
+    # Determine pluralization for "user"
+    users_word_total = ""
+    if lang == "ru":
+        last_digit = total_users % 10
+        last_two_digits = total_users % 100
+        if 11 <= last_two_digits <= 19:
+            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
+        elif last_digit == 1:
+            users_word_total = get_text("WHO_USERS_COUNT_SINGULAR", "ru")
+        elif 2 <= last_digit <= 4:
+            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_2_4", "ru")
+        else:
+            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
+    else:  # en and default
+        users_word_total = get_text("WHO_USERS_COUNT_SINGULAR", lang) if total_users == 1 else get_text("WHO_USERS_COUNT_PLURAL_5_MORE", lang)
+
+    text_reply = get_text("WHO_HEADER", lang, user_count=total_users, users_word=users_word_total)
+
+    channel_info_parts: list[str] = []
+    for display_channel_name in sorted_channel_names:
+        users_in_channel_list = sorted_users_in_channels[display_channel_name] # These are already html.quoted
+        user_text_segment = ""
+        if users_in_channel_list:
+            if len(users_in_channel_list) > 1:
+                user_separator = get_text("WHO_AND_SEPARATOR", lang)
+                # Users are already quoted, so direct join is fine
+                user_list_except_last_segment = ", ".join(users_in_channel_list[:-1])
+                user_text_segment = f"<b>{user_list_except_last_segment}{user_separator}{users_in_channel_list[-1]}</b>"
+            else:  # Single user
+                user_text_segment = f"<b>{users_in_channel_list[0]}</b>"
+            channel_info_parts.append(f"{user_text_segment} {display_channel_name}")
+
+    if channel_info_parts:
+        text_reply += "\n" + "\n".join(channel_info_parts)
+    # If no channel_info_parts but total_users > 0, header is sufficient.
+
+    return text_reply
+
 
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
@@ -96,7 +168,8 @@ async def who_command_handler(
     tt_instance: TeamTalkInstance | None, # From TeamTalkInstanceMiddleware
     session: AsyncSession # From DbSessionMiddleware
 ):
-    if not message.from_user: return
+    if not message.from_user:
+        return
 
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
@@ -109,76 +182,29 @@ async def who_command_handler(
         await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
         return
 
-    # Check if the calling user is an admin for potentially different views
-    is_caller_admin_val = await IsAdminFilter()(message, session) # Call the filter directly
+    is_caller_admin_val = await IsAdminFilter()(message, session)
 
-    users_to_display_count_val = 0
-    # Store as: {channel_display_name: [user_nick1, user_nick2]}
-    channels_display_data_val: dict[str, list[str]] = {}
+    # Use the first helper to group users
+    # tt_instance.getMyUserID() can be None if not logged in, but previous checks should prevent this.
+    # Adding a type ignore or check if myUserID could be None here.
+    bot_user_id = tt_instance.getMyUserID()
+    if bot_user_id is None: # Should ideally not happen due to earlier checks
+        logger.error("Could not get bot's own user ID from TeamTalk instance.")
+        await message.reply(get_text("error_occurred", language)) # Generic error
+        return
 
-    for user_obj in all_users_list:
-        # Skip the bot itself from the list, unless an admin is asking (they might want to see it)
-        if user_obj.id == tt_instance.getMyUserID() and not is_caller_admin_val:
-            continue
-
-        user_display_channel_name_val = _get_user_display_channel_name(user_obj, is_caller_admin_val, language)
-
-        if user_display_channel_name_val not in channels_display_data_val:
-            channels_display_data_val[user_display_channel_name_val] = []
-
-        user_nickname_val = ttstr(user_obj.nickname) or ttstr(user_obj.username) or get_text("WHO_USER_UNKNOWN", language)
-        channels_display_data_val[user_display_channel_name_val].append(html.quote(user_nickname_val))
-        users_to_display_count_val += 1
-
-
-    user_count_val = users_to_display_count_val
-
-    # Perform sorting in a separate thread to avoid blocking asyncio event loop
-    sorted_channel_names, sorted_users_in_channels = await asyncio.to_thread(
-        _sort_who_data, channels_display_data_val
+    # Grouping is synchronous and CPU-bound for the loop part
+    grouped_data, total_users_to_display = _group_users_for_who_command(
+        all_users_list, bot_user_id, is_caller_admin_val, language
     )
 
-    channel_info_parts_val = []
+    # Formatting can also be CPU-bound, especially string operations and sorting
+    # Running _format_who_message in a separate thread
+    formatted_message = await asyncio.to_thread(
+        _format_who_message, grouped_data, total_users_to_display, language
+    )
 
-    for display_channel_name_val in sorted_channel_names:
-        users_in_channel_list_val = sorted_users_in_channels[display_channel_name_val]
-
-        user_text_segment_val = ""
-        if users_in_channel_list_val:
-            if len(users_in_channel_list_val) > 1:
-                user_separator_val = get_text("WHO_AND_SEPARATOR", language)
-                # Join all but the last with comma, then add separator and the last one
-                user_list_except_last_segment_val = ", ".join(users_in_channel_list_val[:-1])
-                user_text_segment_val = f"{user_list_except_last_segment_val}{user_separator_val}{users_in_channel_list_val[-1]}"
-            else: # Single user in this category
-                user_text_segment_val = users_in_channel_list_val[0]
-            channel_info_parts_val.append(f"<b>{user_text_segment_val}</b> {display_channel_name_val}") # Usernames bold
-
-    # Determine the correct plural form for "user"
-    users_word_total_val = ""
-    if language == "ru":
-        last_digit = user_count_val % 10
-        last_two_digits = user_count_val % 100
-        if 11 <= last_two_digits <= 19:
-            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
-        elif last_digit == 1:
-            users_word_total_val = get_text("WHO_USERS_COUNT_SINGULAR", "ru")
-        elif 2 <= last_digit <= 4:
-            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_2_4", "ru")
-        else:
-            users_word_total_val = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
-    else: # en and default
-        users_word_total_val = get_text("WHO_USERS_COUNT_SINGULAR", "en") if user_count_val == 1 else get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "en")
-
-    text_reply = get_text("WHO_HEADER", language, user_count=user_count_val, users_word=users_word_total_val)
-
-    if channel_info_parts_val:
-        text_reply += "\n".join(channel_info_parts_val)
-    elif user_count_val == 0 : # No users at all (after filtering bot itself)
-         text_reply = get_text("WHO_NO_USERS_ONLINE", language) # Override header if truly no one
-    # If user_count_val > 0 but channel_info_parts_val is empty, it means users are in uncategorized state (should be rare)
-
-    await message.reply(text_reply, parse_mode="HTML")
+    await message.reply(formatted_message, parse_mode="HTML")
 
 
 # id_command_handler removed
