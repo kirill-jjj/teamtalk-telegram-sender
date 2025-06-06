@@ -18,6 +18,8 @@ from bot.constants import (
     NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 )
 
+from bot.state import ONLINE_USERS_CACHE
+
 # Import bot_instance variables carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
@@ -56,6 +58,9 @@ async def _initiate_reconnect(reason: str):
     Logs the reason, resets current instance if necessary, and schedules reconnection.
     """
     logger.warning(reason) # Log the reason for reconnection first
+
+    ONLINE_USERS_CACHE.clear()
+    logger.info("Online users cache has been cleared due to reconnection.")
 
     if tt_bot_module.current_tt_instance is not None:
         logger.info(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
@@ -236,6 +241,17 @@ async def on_user_login(user: TeamTalkUser):
     """Called when a user logs into the server."""
     tt_instance = user.server.teamtalk_instance # Get instance from user object
     if tt_instance:
+        # Cache management: Add user to cache
+        username_val = user.username
+        if isinstance(username_val, bytes):
+            username_str = ttstr(username_val)
+        else:
+            username_str = str(username_val)
+
+        if username_str:
+            ONLINE_USERS_CACHE.add(username_str)
+            logger.debug(f"User {username_str} added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance)
     else:
         logger.warning(f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
@@ -270,6 +286,25 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
 
         logger.info(f"Bot successfully joined channel: {channel_name_display}")
 
+        logger.info("Performing initial population of the online users cache...")
+        try:
+            # Ensure tt_instance.server.get_users() returns a list of objects with a 'username' attribute
+            initial_online_users = tt_instance.server.get_users()
+            ONLINE_USERS_CACHE.clear()
+            for u in initial_online_users:
+                # Adapt ttstr usage based on how it's available and if u.username is bytes
+                username_val = u.username # Direct access, assuming it's already a string or ttstr handles None
+                if isinstance(username_val, bytes):
+                    username_str = ttstr(username_val)
+                else:
+                    username_str = str(username_val) # Ensure string type
+
+                if username_str: # Ensure username is not empty after conversion
+                    ONLINE_USERS_CACHE.add(username_str)
+            logger.info(f"Cache populated with {len(ONLINE_USERS_CACHE)} users.")
+        except Exception as e:
+            logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
+
         # Set status and login completion time.
         try:
             configured_status = get_configured_status()
@@ -287,6 +322,17 @@ async def on_user_logout(user: TeamTalkUser):
     """Called when a user logs out from the server."""
     tt_instance = user.server.teamtalk_instance
     if tt_instance:
+        # Cache management: Remove user from cache
+        username_val = user.username
+        if isinstance(username_val, bytes):
+            username_str = ttstr(username_val)
+        else:
+            username_str = str(username_val)
+
+        if username_str:
+            ONLINE_USERS_CACHE.discard(username_str)
+            logger.debug(f"User {username_str} removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance)
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")

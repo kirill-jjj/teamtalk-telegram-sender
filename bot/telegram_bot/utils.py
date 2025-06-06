@@ -14,6 +14,7 @@ from bot.localization import get_text
 from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE
+from bot.state import ONLINE_USERS_CACHE
 from bot.constants import (
     DEFAULT_LANGUAGE,
     CALLBACK_NICKNAME_MAX_LENGTH,
@@ -81,35 +82,22 @@ async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkIns
     Checks if a message to a given chat_id should be sent silently based on
     NOON (Notification On Online) settings and the online status of their linked TeamTalk user.
     """
-    should_be_silent = False
+    # Ensure USER_SETTINGS_CACHE and logger are available in this scope.
+    # These are likely already imported or defined globally in the file.
     recipient_settings = USER_SETTINGS_CACHE.get(chat_id)
 
-    if recipient_settings and \
-       recipient_settings.not_on_online_enabled and \
-       recipient_settings.not_on_online_confirmed and \
-       recipient_settings.teamtalk_username and \
-       tt_instance_for_check:
-
+    if (
+        recipient_settings and
+        recipient_settings.not_on_online_enabled and
+        recipient_settings.not_on_online_confirmed and
+        recipient_settings.teamtalk_username
+    ):
         tt_username_to_check = recipient_settings.teamtalk_username
-        try:
-            is_tt_user_online = False
-            if tt_instance_for_check.connected and tt_instance_for_check.logged_in:
-                all_online_users = tt_instance_for_check.server.get_users()
-                for online_user in all_online_users:
-                    if ttstr(online_user.username) == tt_username_to_check:
-                        is_tt_user_online = True
-                        break
-            else:
-                logger.warning(f"Cannot check TT status for {tt_username_to_check}, TT instance not ready for chat_id {chat_id} (in _should_send_silently).")
+        if tt_username_to_check in ONLINE_USERS_CACHE:
+            logger.info(f"Message to {chat_id} will be silent: linked user '{tt_username_to_check}' is in the online cache.")
+            return True
 
-            if is_tt_user_online:
-                should_be_silent = True
-                logger.info(f"Message to {chat_id} should be silent as their linked TT user '{tt_username_to_check}' is online.")
-        except Exception as e:
-            logger.warning(f"Could not check TeamTalk status for user '{tt_username_to_check}' (TG ID: {chat_id}) in _should_send_silently: {e}")
-            # Keep should_be_silent as False in case of error
-
-    return should_be_silent
+    return False
 
 
 async def send_telegram_message_individual(
