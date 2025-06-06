@@ -15,6 +15,7 @@ from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
+from bot.state import ONLINE_USERS_CACHE
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -175,9 +176,15 @@ async def who_command_handler(
         return
 
     try:
-        all_users_list = tt_instance.server.get_users()
+        # Reconstruct pytalk.User objects from usernames in the cache
+        # tt_instance.get_user(username) is expected to be a fast in-memory lookup
+        # if the user object itself is cached by pytalk or if it reconstructs it quickly.
+        all_users_list = [tt_instance.get_user(username) for username in ONLINE_USERS_CACHE if username]
+        # Filter out None results if get_user might return None for a cached username
+        # that somehow doesn't resolve to a full user object anymore (should be rare if cache is consistent)
+        all_users_list = [user for user in all_users_list if user is not None]
     except Exception as e:
-        logger.error(f"Failed to get users from TT for /who: {e}")
+        logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
         await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
         return
 

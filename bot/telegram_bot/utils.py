@@ -186,39 +186,57 @@ async def show_user_buttons(
         await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
         return
 
-    try:
-        users_list = tt_instance.server.get_users()
-    except Exception as e:
-        logger.error(f"Failed to get users from TT for {command_type} button list: {e}")
-        await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
+    my_user_id_val = tt_instance.getMyUserID()
+    if my_user_id_val is None:
+        logger.error("Could not get own user ID in show_user_buttons.")
+        await message.reply(get_text("GENERAL_ERROR", language)) # Or a more specific error
         return
 
-    if not users_list:
-        await message.reply(get_text("SHOW_USERS_NO_USERS_ONLINE", language))
+    my_user_account = tt_instance.get_user(my_user_id_val) # This should be a pytalk.User object
+    if not my_user_account:
+        logger.error(f"Could not get own user account object for ID {my_user_id_val} in show_user_buttons.")
+        await message.reply(get_text("GENERAL_ERROR", language)) # Or a more specific error
+        return
+
+    my_username_val = my_user_account.username
+    if isinstance(my_username_val, bytes):
+        my_username_str = ttstr(my_username_val)
+    else:
+        my_username_str = str(my_username_val)
+
+    # Filter ONLINE_USERS_CACHE to exclude self
+    other_online_usernames = {u_name for u_name in ONLINE_USERS_CACHE if u_name != my_username_str}
+
+    if not other_online_usernames:
+        await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
         return
 
     builder = InlineKeyboardBuilder()
-    my_user_id_val = tt_instance.getMyUserID()
-    users_added_to_list = 0
+    # users_added_to_list variable is implicitly handled by checking len(other_online_usernames) or if loop runs
 
-    for user_obj in users_list:
-        if user_obj.id == my_user_id_val: # Don't show self
+    for username in sorted(list(other_online_usernames), key=str.lower):
+        user_obj = tt_instance.get_user(username) # Reconstruct pytalk.User object
+        if not user_obj: # Should be rare if cache is consistent
+            logger.warning(f"Could not retrieve user object for cached username: {username} in show_user_buttons. Skipping.")
             continue
 
         # Use new helper for user display name for button text
         user_nickname_val = get_tt_user_display_name(user_obj, language)
         # Keep original logic for callback_nickname_val to ensure it's short and not localized
-        callback_nickname_val = (ttstr(user_obj.nickname) or ttstr(user_obj.username) or "unknown")[:CALLBACK_NICKNAME_MAX_LENGTH]
+        # Ensure user_obj.nickname and user_obj.username are handled correctly if they can be None
+        raw_nickname = ttstr(user_obj.nickname) if user_obj.nickname is not None else ""
+        raw_username = ttstr(user_obj.username) if user_obj.username is not None else ""
+        callback_nickname_val = (raw_nickname or raw_username or "unknown")[:CALLBACK_NICKNAME_MAX_LENGTH]
 
         builder.button(
             text=html.quote(user_nickname_val), # Display full nickname (now from helper)
             callback_data=f"{command_type}:{user_obj.id}:{callback_nickname_val}" # Use truncated for callback
         )
-        users_added_to_list +=1
 
-    if users_added_to_list == 0: # No other users online
-         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
-         return
+    # Check if any buttons were actually added.
+    # The InlineKeyboardBuilder doesn't have a simple "isEmpty" or length check for buttons.
+    # We rely on the `other_online_usernames` check at the beginning.
+    # If that check passed, we assume at least one button should be added unless all `get_user` calls fail.
 
     builder.adjust(2) # Adjust to 2 buttons per row
 
