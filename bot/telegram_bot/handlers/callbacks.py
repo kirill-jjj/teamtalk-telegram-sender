@@ -129,7 +129,8 @@ async def process_user_action_selection(
     callback_query: CallbackQuery,
     session: AsyncSession, # From DbSessionMiddleware
     language: str, # From UserSettingsMiddleware
-    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
+    tt_instance: TeamTalkInstance | None, # From TeamTalkInstanceMiddleware
+    state_manager: StateManager # Added
 ):
     await callback_query.answer() # Acknowledge the callback quickly
     if not callback_query.message or not callback_query.from_user: return
@@ -157,7 +158,7 @@ async def process_user_action_selection(
     # The callback_router filter F.data.startswith(f"{CALLBACK_ACTION_KICK}:") | F.data.startswith(f"{CALLBACK_ACTION_BAN}:")
     # ensures action_val will be one of these.
     if action_val in [CALLBACK_ACTION_KICK, CALLBACK_ACTION_BAN]:
-        is_admin_caller = await IsAdminFilter()(callback_query, session)
+        is_admin_caller = await IsAdminFilter()(event=callback_query, session=session, state_manager=state_manager) # MODIFIED
         if not is_admin_caller:
             await callback_query.answer(get_text("CALLBACK_NO_PERMISSION", language), show_alert=True)
             return
