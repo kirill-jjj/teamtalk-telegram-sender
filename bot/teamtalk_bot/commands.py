@@ -58,7 +58,7 @@ async def _process_admin_ids(
     error_header_key: str,
     commands_to_set_on_success: List[BotCommand],
     log_action_description: str,
-    tt_instance: pytalk.TeamTalk # Added
+    tt_instance: pytalk.TeamTalkInstance # Changed type hint
 ):
     """
     Helper function to process adding or removing admin IDs.
