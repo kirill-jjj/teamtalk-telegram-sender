@@ -1,7 +1,8 @@
 import logging
 import math # For pagination
+from typing import Callable
 from aiogram import Router, F, html
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +32,58 @@ from bot.state import USER_ACCOUNTS_CACHE
 logger = logging.getLogger(__name__)
 callback_router = Router(name="callback_router")
 ttstr = pytalk.instance.sdk.ttstr
+
+
+async def _process_setting_update(
+    callback_query: CallbackQuery,
+    session: AsyncSession,
+    user_settings: UserSpecificSettings,
+    language: str, # For error messages
+    update_action: Callable[[], None],
+    revert_action: Callable[[], None],
+    success_toast_text: str,
+    ui_refresh_callable: Callable[[], tuple[str, InlineKeyboardMarkup]]
+) -> None:
+    if not callback_query.message or not callback_query.from_user:
+        # This check might be redundant if callers ensure message/from_user exist,
+        # but good for a generic helper.
+        logger.warning("_process_setting_update called with no message or from_user in callback_query.")
+        await callback_query.answer("Error: Callback query is missing essential data.", show_alert=True)
+        return
+
+    update_action() # Apply change in memory
+
+    try:
+        await update_user_settings_in_db(session, callback_query.from_user.id, user_settings)
+        # Send success toast only after successful DB update
+        await callback_query.answer(success_toast_text, show_alert=False)
+    except Exception as e:
+        logger.error(
+            f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e}",
+            exc_info=True
+        )
+        revert_action() # Revert change in memory
+        try:
+            # Try to inform user of failure
+            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
+        except TelegramAPIError as ans_err:
+            logger.warning(f"Could not send error alert for DB update failure: {ans_err}")
+        return # Stop further processing like UI refresh if DB save failed
+
+    # If DB update was successful, proceed to refresh UI
+    try:
+        new_text, new_markup = ui_refresh_callable()
+        await callback_query.message.edit_text(text=new_text, reply_markup=new_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            logger.error(f"TelegramBadRequest editing message after setting update for user {callback_query.from_user.id}: {e}")
+        # If message is not modified, it's not a critical error, toast was already sent.
+    except TelegramAPIError as e:
+        logger.error(f"TelegramAPIError editing message after setting update for user {callback_query.from_user.id}: {e}")
+    except Exception as e_refresh: # Catch any other errors during UI refresh
+        logger.error(f"Unexpected error during UI refresh for user {callback_query.from_user.id}: {e_refresh}", exc_info=True)
+        # UI refresh failed, but setting was saved. Maybe send a simple text message if edit failed?
+        # For now, just log, as the primary action (setting update) was successful.
 
 
 async def _execute_tt_user_action(
@@ -230,45 +283,45 @@ async def cq_set_language(
     callback_data: LanguageCallback # Consumes LanguageCallback
 ):
     if not callback_query.message or not callback_query.from_user or not callback_data.lang_code:
-        await callback_query.answer("Error: Missing data for language update.")
+        # This initial check can remain, or be moved into the helper if preferred,
+        # but for now, keeping it here is fine as it's a precondition.
+        await callback_query.answer("Error: Missing data for language update.", show_alert=True)
         return
 
     new_lang_code = callback_data.lang_code
     original_lang_code = user_specific_settings.language
-    user_specific_settings.language = new_lang_code
 
-    try:
-        await update_user_settings_in_db(session, callback_query.from_user.id, user_specific_settings)
-    except Exception as e:
-        logger.error(f"Failed to update language in DB for user {callback_query.from_user.id} to {new_lang_code}: {e}")
-        user_specific_settings.language = original_lang_code
-        await callback_query.answer(get_text("error_occurred", new_lang_code), show_alert=True)
+    # Ensure this check is done before update_action
+    if new_lang_code == original_lang_code:
+        await callback_query.answer() # Answer to remove loading state from button
         return
 
-    # After setting language, go back to the main settings menu, now in the new language
-    # This requires re-creating the main settings menu
-    main_settings_builder = create_main_settings_keyboard(new_lang_code)
-    main_settings_text = get_text("SETTINGS_MENU_HEADER", new_lang_code)
 
-    try:
-        await callback_query.message.edit_text(
-            text=main_settings_text,
-            reply_markup=main_settings_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message to show updated settings menu in {new_lang_code}: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message to show updated settings menu in {new_lang_code}: {e}")
+    def update_logic():
+        user_specific_settings.language = new_lang_code
+
+    def revert_logic():
+        user_specific_settings.language = original_lang_code
 
     lang_name_display = get_text(f"LANGUAGE_BTN_{new_lang_code.upper()}", new_lang_code)
-    try:
-        await callback_query.answer(
-            get_text("LANGUAGE_UPDATED_TO", new_lang_code, lang_name=lang_name_display),
-            show_alert=False
-        )
-    except TelegramAPIError as e:
-         logger.warning(f"Could not send language update confirmation for {new_lang_code}: {e}")
+    toast_text = get_text("LANGUAGE_UPDATED_TO", new_lang_code, lang_name=lang_name_display)
+
+    def refresh_ui() -> tuple[str, InlineKeyboardMarkup]:
+        # After setting language, go back to the main settings menu, now in the new language
+        main_settings_builder = create_main_settings_keyboard(new_lang_code)
+        main_settings_text = get_text("SETTINGS_MENU_HEADER", new_lang_code)
+        return main_settings_text, main_settings_builder.as_markup()
+
+    await _process_setting_update(
+        callback_query=callback_query,
+        session=session,
+        user_settings=user_specific_settings,
+        language=new_lang_code, # Pass the new language for potential error messages in that lang
+        update_action=update_logic,
+        revert_action=revert_logic,
+        success_toast_text=toast_text,
+        ui_refresh_callable=refresh_ui
+    )
 
 
 # --- Subscription Settings Callbacks ---
@@ -307,24 +360,39 @@ async def cq_show_subscriptions_menu(
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    language: str, # Current language, not new one yet
+    language: str, # Current language from UserSettingsMiddleware
     user_specific_settings: UserSpecificSettings,
     callback_data: SubscriptionCallback
 ):
     if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer("Error: Missing data.")
+        await callback_query.answer("Error: Missing data.", show_alert=True)
         return
 
-    # Map callback_data.setting_value (string) back to NotificationSetting enum
     value_to_enum_map = {
         "all": NotificationSetting.ALL,
-        "leave_off": NotificationSetting.LEAVE_OFF, # Join Only
-        "join_off": NotificationSetting.JOIN_OFF,   # Leave Only
+        "leave_off": NotificationSetting.LEAVE_OFF,
+        "join_off": NotificationSetting.JOIN_OFF,
         "none": NotificationSetting.NONE,
     }
     new_setting_enum = value_to_enum_map.get(callback_data.setting_value)
 
-    # Find text key for confirmation (this is a bit clunky, direct mapping might be better)
+    if new_setting_enum is None:
+        logger.error(f"Invalid subscription setting value: {callback_data.setting_value} for user {callback_query.from_user.id}")
+        await callback_query.answer("Error: Invalid setting value.", show_alert=True)
+        return
+
+    original_setting = user_specific_settings.notification_settings
+
+    if new_setting_enum == original_setting:
+        await callback_query.answer() # Answer to remove loading state
+        return
+
+    def update_logic():
+        user_specific_settings.notification_settings = new_setting_enum
+
+    def revert_logic():
+        user_specific_settings.notification_settings = original_setting
+
     setting_to_text_key = {
         NotificationSetting.ALL: "SUBS_SETTING_ALL_BTN",
         NotificationSetting.LEAVE_OFF: "SUBS_SETTING_JOIN_ONLY_BTN",
@@ -332,45 +400,24 @@ async def cq_set_subscription_setting(
         NotificationSetting.NONE: "SUBS_SETTING_NONE_BTN",
     }
     setting_text_key = setting_to_text_key.get(new_setting_enum, "unknown_setting")
-
-
-    if new_setting_enum is None:
-        logger.error(f"Invalid subscription setting value: {callback_data.setting_value}")
-        await callback_query.answer("Error: Invalid setting value.", show_alert=True)
-        return
-
-    original_setting = user_specific_settings.notification_settings
-    user_specific_settings.notification_settings = new_setting_enum
-
-    try:
-        await update_user_settings_in_db(session, callback_query.from_user.id, user_specific_settings)
-    except Exception as e:
-        logger.error(f"Failed to update subscription setting in DB for user {callback_query.from_user.id} to {new_setting_enum.name}: {e}")
-        user_specific_settings.notification_settings = original_setting # Revert
-        await callback_query.answer(get_text("error_occurred", language), show_alert=True)
-        return
-
-    # Use factory from keyboards.py
-    updated_builder = create_subscription_settings_keyboard(language, new_setting_enum)
-    try:
-        await callback_query.message.edit_text(
-            text=get_text("SUBS_SETTINGS_MENU_HEADER", language), # Header remains the same
-            reply_markup=updated_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest re-editing message for subscription settings menu: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError re-editing message for subscription settings menu: {e}")
-
     setting_display_name = get_text(setting_text_key, language)
-    try:
-        await callback_query.answer(
-            get_text("SUBS_SETTING_UPDATED_TO", language, setting_name=setting_display_name),
-            show_alert=False
-        )
-    except TelegramAPIError as e:
-        logger.warning(f"Could not send subscription update confirmation for {new_setting_enum.name}: {e}")
+    toast_text = get_text("SUBS_SETTING_UPDATED_TO", language, setting_name=setting_display_name)
+
+    def refresh_ui() -> tuple[str, InlineKeyboardMarkup]:
+        updated_builder = create_subscription_settings_keyboard(language, new_setting_enum) # Pass new_setting_enum
+        menu_text = get_text("SUBS_SETTINGS_MENU_HEADER", language)
+        return menu_text, updated_builder.as_markup()
+
+    await _process_setting_update(
+        callback_query=callback_query,
+        session=session,
+        user_settings=user_specific_settings,
+        language=language, # Current language is fine for error messages here
+        update_action=update_logic,
+        revert_action=revert_logic,
+        success_toast_text=toast_text,
+        ui_refresh_callable=refresh_ui
+    )
 
 # This handler now manages returns to the main settings menu
 @callback_router.callback_query(SettingsCallback.filter(F.action == "back_to_main"))
@@ -430,51 +477,48 @@ async def cq_show_notifications_menu(
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    language: str,
+    language: str, # Current language from UserSettingsMiddleware
     user_specific_settings: UserSpecificSettings,
     callback_data: NotificationActionCallback # Consumes NotificationActionCallback
 ):
     if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer("Error: Missing data.")
+        await callback_query.answer("Error: Missing data.", show_alert=True)
         return
 
+    # The user_specific_settings.not_on_online_enabled is toggled directly in update_logic.
+    # We need its original state for revert_logic and to determine the new status for the toast.
+    original_noon_status = user_specific_settings.not_on_online_enabled
 
-    await callback_query.answer() # Acknowledge action
-    user_specific_settings.not_on_online_enabled = not user_specific_settings.not_on_online_enabled
+    def update_logic():
+        user_specific_settings.not_on_online_enabled = not original_noon_status
 
-    try:
-        await update_user_settings_in_db(session, callback_query.from_user.id, user_specific_settings)
-    except Exception as e:
-        logger.error(f"Failed to update NOON setting in DB for user {callback_query.from_user.id}: {e}")
-        user_specific_settings.not_on_online_enabled = not user_specific_settings.not_on_online_enabled
-        try:
-            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
-        except TelegramAPIError as e_ans:
-             logger.warning(f"Could not send error alert for NOON toggle DB fail: {e_ans}")
-        return
+    def revert_logic():
+        user_specific_settings.not_on_online_enabled = original_noon_status
 
-    new_status_text = get_text("ENABLED_STATUS" if user_specific_settings.not_on_online_enabled else "DISABLED_STATUS", language)
-    try:
-        # Send toast first, then update keyboard
-        await callback_query.answer(
-            get_text("NOTIF_SETTING_NOON_UPDATED_TO", language, status=new_status_text),
-            show_alert=False
-        )
-    except TelegramAPIError as e:
-        logger.warning(f"Could not send NOON update confirmation toast: {e}")
+    # Determine the status text based on the state *after* the toggle
+    new_status_text_key = "ENABLED_STATUS" if not original_noon_status else "DISABLED_STATUS"
+    new_status_display_text = get_text(new_status_text_key, language)
+    toast_text = get_text("NOTIF_SETTING_NOON_UPDATED_TO", language, status=new_status_display_text)
 
-    # Use factory from keyboards.py
-    updated_builder = create_notification_settings_keyboard(language, user_specific_settings)
-    try:
-        await callback_query.message.edit_text(
-            text=get_text("NOTIF_SETTINGS_MENU_HEADER", language),
-            reply_markup=updated_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest re-editing message for NOON toggle: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError re-editing message for NOON toggle: {e}")
+    def refresh_ui() -> tuple[str, InlineKeyboardMarkup]:
+        # user_specific_settings will have the updated not_on_online_enabled value here
+        updated_builder = create_notification_settings_keyboard(language, user_specific_settings)
+        menu_text = get_text("NOTIF_SETTINGS_MENU_HEADER", language)
+        return menu_text, updated_builder.as_markup()
+
+    # The initial callback_query.answer() acknowledging the action is removed
+    # as _process_setting_update handles answers (toast or error alert).
+
+    await _process_setting_update(
+        callback_query=callback_query,
+        session=session,
+        user_settings=user_specific_settings,
+        language=language, # User's current language
+        update_action=update_logic,
+        revert_action=revert_logic,
+        success_toast_text=toast_text,
+        ui_refresh_callable=refresh_ui
+    )
 
 
 # --- Manage Muted Users Callbacks ---
@@ -508,52 +552,44 @@ async def cq_show_manage_muted_menu(
 async def cq_toggle_mute_all_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    language: str,
+    language: str, # Current language from UserSettingsMiddleware
     user_specific_settings: UserSpecificSettings,
     callback_data: MuteAllCallback # Consumes
 ):
     if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer("Error: Missing data.")
+        await callback_query.answer("Error: Missing data.", show_alert=True)
         return
 
-    await callback_query.answer() # Acknowledge first
+    original_flag = user_specific_settings.mute_all_flag
 
-    user_specific_settings.mute_all_flag = not user_specific_settings.mute_all_flag
+    def update_logic():
+        user_specific_settings.mute_all_flag = not original_flag
 
-    try:
-        await update_user_settings_in_db(session, callback_query.from_user.id, user_specific_settings)
-    except Exception as e:
-        logger.error(f"Failed to update mute_all_flag in DB for user {callback_query.from_user.id}: {e}")
-        user_specific_settings.mute_all_flag = not user_specific_settings.mute_all_flag # Revert
-        try:
-            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
-        except TelegramAPIError as e_ans:
-            logger.warning(f"Could not send error alert for mute_all_flag DB fail: {e_ans}")
-        return
+    def revert_logic():
+        user_specific_settings.mute_all_flag = original_flag
 
-    # Send confirmation toast
-    new_status_text = get_text("ENABLED_STATUS" if user_specific_settings.mute_all_flag else "DISABLED_STATUS", language)
-    try:
-        await callback_query.answer(
-            get_text("MUTE_ALL_UPDATED_TO", language, status=new_status_text),
-            show_alert=False
-        )
-    except TelegramAPIError as e:
-        logger.warning(f"Could not send mute_all_flag update confirmation toast: {e}")
+    # Determine the status text based on the state *after* the toggle
+    new_status_text_key = "ENABLED_STATUS" if not original_flag else "DISABLED_STATUS"
+    new_status_display_text = get_text(new_status_text_key, language)
+    toast_text = get_text("MUTE_ALL_UPDATED_TO", language, status=new_status_display_text)
 
-    # Re-display the menu with updated button text
-    # Use factory from keyboards.py
-    updated_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
-    try:
-        await callback_query.message.edit_text(
-            text=get_text("MANAGE_MUTED_MENU_HEADER", language),
-            reply_markup=updated_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest re-editing message for toggle_mute_all_action: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError re-editing message for toggle_mute_all_action: {e}")
+    def refresh_ui() -> tuple[str, InlineKeyboardMarkup]:
+        # user_specific_settings will have the updated mute_all_flag value here
+        updated_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
+        menu_text = get_text("MANAGE_MUTED_MENU_HEADER", language)
+        return menu_text, updated_builder.as_markup()
+
+    # The initial callback_query.answer() is removed as _process_setting_update handles it.
+    await _process_setting_update(
+        callback_query=callback_query,
+        session=session,
+        user_settings=user_specific_settings,
+        language=language, # User's current language
+        update_action=update_logic,
+        revert_action=revert_logic,
+        success_toast_text=toast_text,
+        ui_refresh_callable=refresh_ui
+    )
 
 # --- Paginated User List for Muted/Allowed Users (Refactored) ---
 
