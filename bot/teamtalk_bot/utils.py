@@ -119,8 +119,7 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 
 async def forward_tt_message_to_telegram_admin(
-    message: TeamTalkMessage, # The TT message object
-    tt_instance_for_check: TeamTalkInstance | None = None # For silent notification check
+    message: TeamTalkMessage # The TT message object
 ):
     if not app_config.get("TG_ADMIN_CHAT_ID") or not tg_bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
@@ -149,10 +148,10 @@ async def forward_tt_message_to_telegram_admin(
         bot_instance=tg_bot_message, # Use the dedicated message bot
         chat_id=admin_chat_id,
         text=text_to_send,
-        language=admin_language,
+        language=admin_language
         # reply_tt_method is no longer passed as send_telegram_message_individual doesn't use it for error/success reporting to TT.
         # Feedback to TT is now handled directly in this function.
-        tt_instance_for_check=tt_instance_for_check # For silent check
+        # tt_instance_for_check was removed here
     )
 
     if was_sent:
