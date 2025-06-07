@@ -52,7 +52,7 @@
     *   **Для Linux и macOS:**
         ```bash
         curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
+        source $HOME/.local/bin/env
         ```
     *   **Для Windows:** Самый простой способ, если у вас установлен Python и pip – это выполнить `pip install uv`. Другие способы установки (например, через установщик) можно найти на [официальном сайте Astral](https://astral.sh/uv#installation).
 
