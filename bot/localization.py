@@ -96,53 +96,67 @@ LOCALIZED_STRINGS = {
     "tt_forward_message_text": {"en": "Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}", "ru": "Сообщение с сервера {server_name}\nОт {sender_display}:\n\n{message_text}"},
     "join_notification": {"en": "User {user_nickname} joined server {server_name}", "ru": "{user_nickname} присоединился к серверу {server_name}"},
     "leave_notification": {"en": "User {user_nickname} left server {server_name}", "ru": "{user_nickname} покинул сервер {server_name}"},
-    "help_text": {
+    "help_telegram_user_header": {
+        "en": "**Available Commands:**",
+        "ru": "**Доступные команды:**"
+    },
+    "help_telegram_user_commands": {
         "en": (
-                "This bot forwards messages from a TeamTalk server to Telegram and sends join/leave notifications.\n\n"
-                "**Available Commands:**\n"
-                "/who - Show online users.\n"
-                "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
-                "/help - Show this help message.\n"
-                "(Note: `/start` is used to initiate the bot and process deeplinks.)\n\n"
-                "**Admin Commands:**\n"
-                "/kick - Kick a user from the server (via buttons).\n"
-                "/ban - Ban a user from the server (via buttons).\n\n"
-                "**Note on Mutes:**\n"
-                "- Mute functionality (block list / allow list) is managed via the `/settings` menu.\n\n"
-                "**Note on 'Not on Online' (NOON) feature (via /settings):**\n"
-                "- This feature is activated by using the `/sub` command in a private message to the TeamTalk bot. This links your TeamTalk account.\n"
-                "- Once linked, the NOON feature can be managed in Telegram under `/settings`.\n"
-                "- If your linked TeamTalk user is online, Telegram notifications will be silent if NOON is enabled.\n\n"
-                "**TeamTalk Commands (in private message to the bot):**\n"
-                "/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
-                "/unsub - Get a link to unsubscribe from notifications.\n"
-                "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Add bot admin (MAIN_ADMIN from config only).\n"
-                "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Remove bot admin (MAIN_ADMIN from config only).\n"
-                "/help - Show help."
+            "/who - Show online users.\n"
+            "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
+            "/help - Show this help message.\n"
+            "(Note: `/start` is used to initiate the bot and process deeplinks.)"
         ),
         "ru": (
-                "Этот бот пересылает сообщения с TeamTalk сервера в Telegram и уведомляет о входе/выходе пользователей.\n\n"
-                "**Доступные команды:**\n"
-                "/who - Показать онлайн пользователей.\n"
-                "/settings - Доступ к интерактивному меню настроек (язык, уведомления, списки мьютов, функция NOON).\n"
-                "/help - Показать это сообщение.\n"
-                "(Примечание: `/start` используется для запуска бота и обработки deeplink-ссылок.)\n\n"
-                "**Команды для администраторов:**\n"
-                "/kick - Кикнуть пользователя с сервера (через кнопки).\n"
-                "/ban - Забанить пользователя на сервере (через кнопки).\n\n"
-                "**Примечание по мьютам:**\n"
-                "- Управление мьютами (черный/белый список) осуществляется через меню `/settings`.\n\n"
-                "**Примечание по функции 'не в сети' (NOON) (через /settings):**\n"
-                "- Эта функция активируется использованием команды `/sub` в личных сообщениях боту TeamTalk. Это связывает ваш аккаунт TeamTalk.\n"
-                "- После связывания, функцией NOON можно управлять в Telegram через `/settings`.\n"
-                "- Если связанный пользователь TeamTalk онлайн, уведомления в Telegram будут приходить без звука, если функция NOON включена.\n\n"
-                "**Команды TeamTalk (в личные сообщения боту):**\n"
-                "/sub - Получить ссылку для подписки на уведомления и связать ваш аккаунт TeamTalk для NOON.\n"
-                "/unsub - Получить ссылку для отписки от уведомлений.\n"
-                "/add_admin `<Telegram ID>` [`<Telegram ID>`...] - Добавить админа бота (только для ГЛАВНОГО АДМИНА из конфигурации).\n"
-                "/remove_admin `<Telegram ID>` [`<Telegram ID>`...] - Удалить админа бота (только для ГЛАВНОГО АДМИНА из конфигурации).\n"
-                "/help - Показать справку."
+            "/who - Показать онлайн пользователей.\n"
+            "/settings - Доступ к интерактивному меню настроек (язык, уведомления, списки мьютов, функция NOON).\n"
+            "/help - Показать это сообщение.\n"
+            "(Примечание: `/start` используется для запуска бота и обработки deeplink-ссылок.)"
+        )
+    },
+    "help_telegram_admin_header": {
+        "en": "\n**Admin Commands:**",
+        "ru": "\n**Команды для администраторов:**"
+    },
+    "help_telegram_admin_commands": {
+        "en": (
+            "/kick - Kick a user from the server (via buttons).\n"
+            "/ban - Ban a user from the server (via buttons)."
         ),
+        "ru": (
+            "/kick - Кикнуть пользователя с сервера (через кнопки).\n"
+            "/ban - Забанить пользователя на сервере (через кнопки)."
+        )
+    },
+    "help_teamtalk_user_header": {
+        "en": "Available commands:",
+        "ru": "Доступные команды:"
+    },
+    "help_teamtalk_user_commands": {
+        "en": (
+            "/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
+            "/unsub - Get a link to unsubscribe from notifications.\n"
+            "/help - Show help."
+        ),
+        "ru": (
+            "/sub - Получить ссылку для подписки на уведомления и связать ваш аккаунт TeamTalk для NOON.\n"
+            "/unsub - Получить ссылку для отписки от уведомлений.\n"
+            "/help - Показать справку."
+        )
+    },
+    "help_teamtalk_admin_header": {
+        "en": "\nAdmin commands (MAIN_ADMIN from config only):",
+        "ru": "\nКоманды администратора (только для ГЛАВНОГО АДМИНА из конфигурации):"
+    },
+    "help_teamtalk_admin_commands": {
+        "en": (
+            "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
+            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."
+        ),
+        "ru": (
+            "/add_admin <Telegram ID> [<Telegram ID>...] - Добавить админа бота.\n"
+            "/remove_admin <Telegram ID> [<Telegram ID>...] - Удалить админа бота."
+        )
     },
     "settings_menu_header": {"en": "⚙️ Settings", "ru": "⚙️ Настройки"},
     "settings_btn_language": {"en": "Language", "ru": "Язык"},
