@@ -17,21 +17,19 @@ from bot.constants import (
     NOTIFICATION_EVENT_LEAVE,
     INITIAL_LOGIN_IGNORE_DELAY_SECONDS
 )
-from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def _should_ignore_initial_event(event_type: str, username: str, user_id: int) -> bool:
+def _should_ignore_initial_event(event_type: str, username: str, user_id: int, login_complete_time: datetime | None) -> bool:
     """Checks if the event should be ignored due to recent bot login."""
-    current_login_complete_time = tt_bot_module.login_complete_time
     reason_for_ignore = ""
 
-    if current_login_complete_time is None:
+    if login_complete_time is None: # Use parameter directly
         reason_for_ignore = "bot still initializing/reconnecting"
-    elif datetime.utcnow() < current_login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
+    elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS): # Use parameter directly
         reason_for_ignore = "bot login too recent"
     else:
         return False # Not ignoring
@@ -90,10 +88,11 @@ async def should_notify_user(
 async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance # Make sure TeamTalkInstance is the correct type from tt_instance_manager or pytalk
+    tt_instance: TeamTalkInstance, # Make sure TeamTalkInstance is the correct type
+    login_complete_time: datetime | None # Added parameter
 ):
     user_nickname = get_tt_user_display_name(tt_user, "en") # For logging and display
-    user_username = ttstr(tt_user.username) # Assuming ttstr is available (e.g. pytalk.instance.sdk.ttstr)
+    user_username = ttstr(tt_user.username) # Assuming ttstr is available
     user_id = tt_user.id
 
     if not user_username: # Check if username is empty or None
@@ -101,7 +100,7 @@ async def send_join_leave_notification_logic(
         return
 
     # Call the new helper functions
-    if _should_ignore_initial_event(event_type, user_username, user_id):
+    if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time): # Pass login_complete_time
         return
 
     if _is_user_globally_ignored(user_username):

@@ -284,7 +284,7 @@ async def on_user_login(user: TeamTalkUser):
             ONLINE_USERS_CACHE[username_str] = ONLINE_USERS_CACHE.get(username_str, 0) + 1
             logger.debug(f"User {username_str} session count incremented. New count: {ONLINE_USERS_CACHE[username_str]}. Cache size: {len(ONLINE_USERS_CACHE)}")
 
-        await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance)
+        await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance, tt_bot_module.login_complete_time)
     else:
         logger.warning(f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
@@ -365,7 +365,7 @@ async def on_user_logout(user: TeamTalkUser):
         elif username_str: # Log if user was not in cache
             logger.warning(f"User {username_str} attempted logout but was not found in ONLINE_USERS_CACHE.")
 
-        await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance)
+        await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time)
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
