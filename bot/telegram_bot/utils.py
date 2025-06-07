@@ -14,7 +14,7 @@ from bot.localization import get_text
 from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE
-from bot.state import ONLINE_USERS_CACHE
+from bot.state_manager import StateManager # Added
 from bot.constants import (
     DEFAULT_LANGUAGE,
     CALLBACK_NICKNAME_MAX_LENGTH,
@@ -77,7 +77,7 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, lang
     # The calling function would need a separate except block for those if desired.
 
 
-async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkInstance | None) -> bool:
+async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkInstance | None, state_manager: StateManager) -> bool:
     """
     Checks if a message to a given chat_id should be sent silently based on
     NOON (Notification On Online) settings and the online status of their linked TeamTalk user.
@@ -93,7 +93,7 @@ async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkIns
         recipient_settings.teamtalk_username
     ):
         tt_username_to_check = recipient_settings.teamtalk_username
-        if tt_username_to_check in ONLINE_USERS_CACHE:
+        if tt_username_to_check in state_manager.online_users: # MODIFIED
             logger.debug(f"Message to {chat_id} will be silent: linked user '{tt_username_to_check}' is in the online cache.") # Changed to debug
             return True
 
@@ -104,13 +104,14 @@ async def send_telegram_message_individual(
     bot_instance: Bot,
     chat_id: int,
     text: str,
+    state_manager: StateManager, # ADDED
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_instance_for_check: TeamTalkInstance | None = None
     # reply_tt_method: Callable | None = None, # Parameter removed
 ) -> bool: # Return type bool is already present, ensuring it stays.
     # Determine if the message should be sent silently using the helper function
-    send_silently = await _should_send_silently(chat_id, tt_instance_for_check)
+    send_silently = await _should_send_silently(chat_id, tt_instance_for_check, state_manager) # MODIFIED
 
     try:
         await bot_instance.send_message(
@@ -136,6 +137,7 @@ async def send_telegram_messages_to_list(
     bot_token_to_use: str, # TG_EVENT_TOKEN or TG_BOT_MESSAGE_TOKEN
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
+    state_manager: StateManager, # ADDED
     reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None, # tt_username, tt_nickname, lang, recipient_tg_id
     tt_user_username_for_markup: str | None = None,
     tt_user_nickname_for_markup: str | None = None,
@@ -169,6 +171,7 @@ async def send_telegram_messages_to_list(
             bot_instance=bot_to_use,
             chat_id=chat_id_val,
             text=text_val,
+            state_manager=state_manager, # ADDED
             language=language_val,
             reply_markup=current_reply_markup_val,
             tt_instance_for_check=tt_instance_for_check
@@ -180,7 +183,8 @@ async def show_user_buttons(
     message: Message,
     command_type: str, # e.g., "id", "kick", "ban"
     language: str,
-    tt_instance: TeamTalkInstance | None
+    tt_instance: TeamTalkInstance | None,
+    state_manager: StateManager # ADDED
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
@@ -204,8 +208,8 @@ async def show_user_buttons(
     else:
         my_username_str = str(my_username_val)
 
-    # Filter ONLINE_USERS_CACHE to exclude self
-    other_online_usernames = {u_name for u_name in ONLINE_USERS_CACHE if u_name != my_username_str}
+    # Filter state_manager.online_users to exclude self
+    other_online_usernames = {u_name for u_name in state_manager.online_users if u_name != my_username_str} # MODIFIED
 
     if not other_online_usernames:
         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))

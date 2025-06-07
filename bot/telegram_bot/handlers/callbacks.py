@@ -26,7 +26,7 @@ from bot.constants import (
     USERS_PER_PAGE
 )
 
-from bot.state import USER_ACCOUNTS_CACHE
+from bot.state_manager import StateManager # Added
 
 logger = logging.getLogger(__name__)
 callback_router = Router(name="callback_router")
@@ -677,17 +677,18 @@ async def _display_account_list(
     language: str,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance,
+    state_manager: StateManager, # ADDED
     page: int = 0
 ):
     if not callback_query.message: return
     # await callback_query.answer() # Answered by callers or specific toggle handler
 
-    if not USER_ACCOUNTS_CACHE:
+    if not state_manager.user_accounts: # MODIFIED
         # If the cache is empty (e.g., not yet populated or server has no accounts)
         await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
         return
 
-    all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
+    all_accounts_tt = list(state_manager.user_accounts.values()) # MODIFIED
 
     # Sort accounts by username (case-insensitive)
     # Assuming acc.username is the correct attribute for pytalk.UserAccount based on cache population logic
@@ -725,13 +726,14 @@ async def cq_show_all_accounts_list( # Renamed
     language: str,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance | None,
+    state_manager: StateManager, # ADDED
     callback_data: UserListCallback
 ):
     await callback_query.answer()
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in: # Ensure tt_instance is valid
         await callback_query.answer(get_text("TT_BOT_NOT_CONNECTED_FOR_LIST", language), show_alert=True)
         return
-    await _display_account_list(callback_query, language, user_specific_settings, tt_instance, 0)
+    await _display_account_list(callback_query, language, user_specific_settings, tt_instance, state_manager, 0) # MODIFIED
 
 @callback_router.callback_query(PaginateUsersCallback.filter(F.list_type == "all_accounts"))
 async def cq_paginate_all_accounts_list_action(
@@ -739,13 +741,14 @@ async def cq_paginate_all_accounts_list_action(
     language: str,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance | None,
+    state_manager: StateManager, # ADDED
     callback_data: PaginateUsersCallback
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in: # Ensure tt_instance is valid
         await callback_query.answer(get_text("TT_BOT_NOT_CONNECTED_FOR_LIST", language), show_alert=True)
         return
     await _display_account_list( # Call renamed display func
-        callback_query, language, user_specific_settings, tt_instance, callback_data.page
+        callback_query, language, user_specific_settings, tt_instance, state_manager, callback_data.page # MODIFIED
     )
 
 # Consolidated handler for toggling mute status (from any list type)

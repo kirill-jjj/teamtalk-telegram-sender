@@ -18,7 +18,6 @@ from bot.constants import (
     NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 )
 
-from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 
 # Import bot_instance variables carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
@@ -57,7 +56,7 @@ async def populate_user_accounts_cache(tt_instance):
     try:
         # Ensure tt_instance.list_user_accounts() is an awaitable coroutine
         all_accounts = await tt_instance.list_user_accounts()
-        USER_ACCOUNTS_CACHE.clear()
+        tt_instance.bot.state_manager.user_accounts.clear() # MODIFIED
         for acc in all_accounts:
             # Assuming acc.username can be bytes, handle with ttstr
             username_val = acc.username # In Pytalk, UserAccount objects have .username
@@ -67,8 +66,8 @@ async def populate_user_accounts_cache(tt_instance):
                 username_str = str(username_val) # Ensure string
 
             if username_str: # Ensure username is not empty
-                USER_ACCOUNTS_CACHE[username_str] = acc
-        logger.debug(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.") # Changed to debug
+                tt_instance.bot.state_manager.user_accounts[username_str] = acc # MODIFIED
+        logger.debug(f"User accounts cache populated with {len(tt_instance.bot.state_manager.user_accounts)} accounts.") # MODIFIED
     except Exception as e:
         logger.error(f"Failed to populate user accounts cache: {e}", exc_info=True)
 
@@ -80,9 +79,13 @@ async def _initiate_reconnect(reason: str):
     """
     logger.warning(reason) # Log the reason for reconnection first
 
-    ONLINE_USERS_CACHE.clear()
-    USER_ACCOUNTS_CACHE.clear() # <-- ADDED THIS LINE
-    logger.info("Online users and user accounts caches have been cleared due to reconnection.")
+    if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'state_manager'): # Check if state_manager exists
+        tt_bot_module.tt_bot.state_manager.online_users.clear() # MODIFIED
+        tt_bot_module.tt_bot.state_manager.user_accounts.clear() # MODIFIED
+        logger.info("Online users and user accounts caches have been cleared due to reconnection.")
+    else:
+        logger.warning("Could not clear caches during _initiate_reconnect: tt_bot or state_manager not found.")
+
 
     if tt_bot_module.current_tt_instance is not None:
         logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}") # Changed to debug
@@ -267,8 +270,8 @@ async def on_user_login(user: TeamTalkUser):
         username_str = ttstr(user.username)
 
         if username_str:
-            ONLINE_USERS_CACHE.add(username_str)
-            logger.debug(f"User {username_str} added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+            tt_instance.bot.state_manager.online_users.add(username_str) # MODIFIED
+            logger.debug(f"User {username_str} added to online cache. Cache size: {len(tt_instance.bot.state_manager.online_users)}") # MODIFIED
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance)
     else:
@@ -308,14 +311,14 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
         try:
             # Ensure tt_instance.server.get_users() returns a list of objects with a 'username' attribute
             initial_online_users = tt_instance.server.get_users()
-            ONLINE_USERS_CACHE.clear()
+            tt_instance.bot.state_manager.online_users.clear() # MODIFIED
             for u in initial_online_users:
                 # Adapt ttstr usage based on how it's available and if u.username is bytes
                 username_str = ttstr(u.username) # Direct access, assuming it's already a string or ttstr handles None
 
                 if username_str: # Ensure username is not empty after conversion
-                    ONLINE_USERS_CACHE.add(username_str)
-            logger.debug(f"Cache populated with {len(ONLINE_USERS_CACHE)} users.") # Changed to debug
+                    tt_instance.bot.state_manager.online_users.add(username_str) # MODIFIED
+            logger.debug(f"Cache populated with {len(tt_instance.bot.state_manager.online_users)} users.") # MODIFIED
         except Exception as e:
             logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
@@ -343,8 +346,8 @@ async def on_user_logout(user: TeamTalkUser):
         username_str = ttstr(user.username)
 
         if username_str:
-            ONLINE_USERS_CACHE.discard(username_str)
-            logger.debug(f"User {username_str} removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+            tt_instance.bot.state_manager.online_users.discard(username_str) # MODIFIED
+            logger.debug(f"User {username_str} removed from online cache. Cache size: {len(tt_instance.bot.state_manager.online_users)}") # MODIFIED
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance)
     else:
@@ -360,9 +363,11 @@ async def on_user_account_new(account: 'pytalk.UserAccount'): # Use quoted type 
     else:
         username_str = str(username_val)
 
-    if username_str:
-        USER_ACCOUNTS_CACHE[username_str] = account
-        logger.debug(f"New user account '{username_str}' added to cache. Cache size: {len(USER_ACCOUNTS_CACHE)}") # Changed to debug
+    if username_str and hasattr(tt_bot_module.tt_bot, 'state_manager'):
+        tt_bot_module.tt_bot.state_manager.user_accounts[username_str] = account # MODIFIED
+        logger.debug(f"New user account '{username_str}' added to cache. Cache size: {len(tt_bot_module.tt_bot.state_manager.user_accounts)}") # MODIFIED
+    elif not hasattr(tt_bot_module.tt_bot, 'state_manager'):
+        logger.warning("Could not add user account to cache: state_manager not found on tt_bot.")
 
 
 @tt_bot_module.tt_bot.event
@@ -374,6 +379,8 @@ async def on_user_account_remove(account: 'pytalk.UserAccount'): # Use quoted ty
     else:
         username_str = str(username_val)
 
-    if username_str and username_str in USER_ACCOUNTS_CACHE:
-        del USER_ACCOUNTS_CACHE[username_str]
-        logger.debug(f"User account '{username_str}' removed from cache. Cache size: {len(USER_ACCOUNTS_CACHE)}") # Changed to debug
+    if username_str and hasattr(tt_bot_module.tt_bot, 'state_manager') and username_str in tt_bot_module.tt_bot.state_manager.user_accounts:
+        del tt_bot_module.tt_bot.state_manager.user_accounts[username_str] # MODIFIED
+        logger.debug(f"User account '{username_str}' removed from cache. Cache size: {len(tt_bot_module.tt_bot.state_manager.user_accounts)}") # MODIFIED
+    elif not hasattr(tt_bot_module.tt_bot, 'state_manager'):
+        logger.warning("Could not remove user account from cache: state_manager not found on tt_bot.")
