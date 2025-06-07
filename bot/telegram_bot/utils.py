@@ -1,10 +1,10 @@
 import logging
 import asyncio
 from typing import Callable
-from aiogram import Bot, html
+from aiogram import Bot # html removed
 from aiogram.types import InlineKeyboardMarkup, Message
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+# InlineKeyboardBuilder removed
 
 import pytalk # For TeamTalkUser, TeamTalkInstance type hints
 from pytalk.instance import TeamTalkInstance
@@ -20,7 +20,8 @@ from bot.constants import (
     CALLBACK_NICKNAME_MAX_LENGTH,
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
-from bot.core.utils import get_tt_user_display_name
+from bot.core.utils import get_tt_user_display_name, get_username_as_str
+from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -177,73 +178,56 @@ async def send_telegram_messages_to_list(
 
 async def show_user_buttons(
     message: Message,
-    command_type: str, # e.g., "id", "kick", "ban"
+    command_type: str,
     language: str,
-    tt_instance: TeamTalkInstance | None
+    tt_instance: TeamTalkInstance | None # Assuming TeamTalkInstance can be None
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
         return
 
     my_user_id_val = tt_instance.getMyUserID()
-    if my_user_id_val is None:
+    if my_user_id_val is None: # Check if getMyUserID() returned None
         logger.error("Could not get own user ID in show_user_buttons.")
-        await message.reply(get_text("GENERAL_ERROR", language)) # Or a more specific error
+        await message.reply(get_text("error_occurred", language))
         return
 
-    my_user_account = tt_instance.get_user(my_user_id_val) # This should be a pytalk.User object
+    my_user_account = tt_instance.get_user(my_user_id_val)
     if not my_user_account:
-        logger.error(f"Could not get own user account object for ID {my_user_id_val} in show_user_buttons.")
-        await message.reply(get_text("GENERAL_ERROR", language)) # Or a more specific error
+        logger.error(f"Could not get own user account object for ID {my_user_id_val}.")
+        await message.reply(get_text("error_occurred", language))
         return
 
-    my_username_val = my_user_account.username
-    if isinstance(my_username_val, bytes):
-        my_username_str = ttstr(my_username_val)
-    else:
-        my_username_str = str(my_username_val)
+    # Ensure get_username_as_str is imported and used
+    my_username_str = get_username_as_str(my_user_account)
 
-    # Filter ONLINE_USERS_CACHE to exclude self
-    other_online_usernames = {u_name for u_name in ONLINE_USERS_CACHE.keys() if u_name != my_username_str}
+    # Logic for getting and filtering the list of users
+    # Uses ONLINE_USERS_CACHE.keys() as per previous refactoring
+    online_users_temp = [
+        tt_instance.get_user(username)
+        for username in ONLINE_USERS_CACHE.keys()
+        if username and username != my_username_str
+    ]
+    # Filter out any None objects that might result from tt_instance.get_user()
+    # if a user from cache is no longer findable on the server by username
+    online_users = [user for user in online_users_temp if user]
 
-    if not other_online_usernames:
+    if not online_users:
         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
         return
 
-    builder = InlineKeyboardBuilder()
-    # users_added_to_list variable is implicitly handled by checking len(other_online_usernames) or if loop runs
+    # Ensure get_tt_user_display_name is imported for sorting key
+    sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, language).lower())
 
-    for username in sorted(list(other_online_usernames), key=str.lower):
-        user_obj = tt_instance.get_user(username) # Username from cache is already a string
-        if not user_obj: # Should be rare if cache is consistent
-            logger.warning(f"Could not retrieve user object for cached username: {username} in show_user_buttons. Skipping.")
-            continue
+    # Call the new keyboard factory
+    builder = create_user_selection_keyboard(language, sorted_users, command_type)
 
-        # Use new helper for user display name for button text
-        user_nickname_val = get_tt_user_display_name(user_obj, language)
-        # Keep original logic for callback_nickname_val to ensure it's short and not localized
-        # Ensure user_obj.nickname and user_obj.username are handled correctly if they can be None
-        raw_nickname = ttstr(user_obj.nickname) if user_obj.nickname is not None else ""
-        raw_username = ttstr(user_obj.username) if user_obj.username is not None else ""
-        callback_nickname_val = (raw_nickname or raw_username or "unknown")[:CALLBACK_NICKNAME_MAX_LENGTH]
-
-        builder.button(
-            text=html.quote(user_nickname_val), # Display full nickname (now from helper)
-            callback_data=f"{command_type}:{user_obj.id}:{callback_nickname_val}" # Use truncated for callback
-        )
-
-    # Check if any buttons were actually added.
-    # The InlineKeyboardBuilder doesn't have a simple "isEmpty" or length check for buttons.
-    # We rely on the `other_online_usernames` check at the beginning.
-    # If that check passed, we assume at least one button should be added unless all `get_user` calls fail.
-
-    builder.adjust(2) # Adjust to 2 buttons per row
-
+    # Determine text key based on command_type
     command_text_key_map = {
-        # "id" action removed
         "kick": "SHOW_USERS_SELECT_KICK",
         "ban": "SHOW_USERS_SELECT_BAN"
+        # Add other command types and their text keys if needed
     }
-    command_text_key = command_text_key_map.get(command_type, "SHOW_USERS_SELECT_DEFAULT")
+    command_text_key = command_text_key_map.get(command_type, "SHOW_USERS_SELECT_DEFAULT") # Default key
+
     await message.reply(get_text(command_text_key, language), reply_markup=builder.as_markup())
-    

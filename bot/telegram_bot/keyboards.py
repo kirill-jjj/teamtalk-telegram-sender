@@ -1,4 +1,3 @@
-
 """
 Keyboard utilities for the Telegram bot.
 
@@ -6,6 +5,7 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
+import html
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -24,6 +24,8 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.database.models import NotificationSetting # For subscription settings
 from bot.core.user_settings import UserSpecificSettings # For notification and mute settings
+from bot.core.utils import get_tt_user_display_name
+from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
 ttstr = pytalk.instance.sdk.ttstr # For convenience if dealing with pytalk strings
 
@@ -294,3 +296,44 @@ def create_account_list_keyboard(
 # If a generic "select user from list" keyboard factory is needed, it would be a new addition.
 
 # End of bot/telegram_bot/keyboards.py
+
+def create_user_selection_keyboard(
+    language: str,
+    users_to_display: list[pytalk.user.User], # Use specific type if available, e.g., TeamTalkUser
+    command_type: str
+) -> InlineKeyboardBuilder:
+    """
+    Creates a keyboard with buttons for each user in the provided list.
+    """
+    builder = InlineKeyboardBuilder()
+
+    for user_obj in users_to_display:
+        # Ensure user_obj is not None if the list can contain None values, though filtering should happen before.
+        if not user_obj:
+            continue
+
+        user_nickname_val = get_tt_user_display_name(user_obj, language)
+
+        # Safely access nickname and username, providing defaults
+        raw_nickname = ttstr(user_obj.nickname) if hasattr(user_obj, 'nickname') and user_obj.nickname is not None else ""
+        raw_username = ttstr(user_obj.username) if hasattr(user_obj, 'username') and user_obj.username is not None else ""
+
+        # Determine callback_nickname_val ensuring it's not empty and respects max length
+        # Use username if nickname is empty. If both are empty, use "unknown".
+        effective_name_for_callback = raw_nickname or raw_username or "unknown"
+        callback_nickname_val = effective_name_for_callback[:CALLBACK_NICKNAME_MAX_LENGTH]
+
+        # Ensure user_obj.id is accessible
+        user_id = user_obj.id if hasattr(user_obj, 'id') else "unknown_id"
+        if user_id == "unknown_id":
+            # Potentially log a warning here if user_id is critical and missing
+            # logger.warning(f"User object missing 'id' attribute: {user_obj}")
+            continue # Skip user if ID is missing, as callback would be invalid
+
+        builder.button(
+            text=html.quote(user_nickname_val), # Display name, quoted
+            callback_data=f"{command_type}:{user_id}:{callback_nickname_val}"
+        )
+
+    builder.adjust(2) # Adjust to 2 buttons per row
+    return builder
