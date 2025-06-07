@@ -6,25 +6,18 @@ from aiogram.types import InlineKeyboardMarkup, Message
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 # InlineKeyboardBuilder removed
 
-import pytalk # For TeamTalkUser, TeamTalkInstance type hints
-from pytalk.instance import TeamTalkInstance
 
 from bot.config import app_config
 from bot.localization import get_text
 from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE
-from bot.state import ONLINE_USERS_CACHE
 from bot.constants import (
     DEFAULT_LANGUAGE,
-    CALLBACK_NICKNAME_MAX_LENGTH,
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
-from bot.core.utils import get_tt_user_display_name, get_username_as_str
-from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # language may be unused
@@ -78,25 +71,21 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # l
     # The calling function would need a separate except block for those if desired.
 
 
-async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkInstance | None) -> bool:
+def _should_send_silently(chat_id: int, tt_user_is_online: bool) -> bool:
     """
     Checks if a message to a given chat_id should be sent silently based on
-    NOON (Notification On Online) settings and the online status of their linked TeamTalk user.
+    NOON settings and the provided online status of their linked TeamTalk user.
     """
-    # Ensure USER_SETTINGS_CACHE and logger are available in this scope.
-    # These are likely already imported or defined globally in the file.
     recipient_settings = USER_SETTINGS_CACHE.get(chat_id)
 
     if (
         recipient_settings and
         recipient_settings.not_on_online_enabled and
         recipient_settings.not_on_online_confirmed and
-        recipient_settings.teamtalk_username
+        tt_user_is_online # Directly use the passed boolean
     ):
-        tt_username_to_check = recipient_settings.teamtalk_username
-        if tt_username_to_check in ONLINE_USERS_CACHE:
-            logger.debug(f"Message to {chat_id} will be silent: linked user '{tt_username_to_check}' is in the online cache.") # Changed to debug
-            return True
+        logger.debug(f"Message to {chat_id} will be silent: linked user is online and NOON is enabled.")
+        return True
 
     return False
 
@@ -107,10 +96,10 @@ async def send_telegram_message_individual(
     text: str,
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
-    tt_instance_for_check: TeamTalkInstance | None = None
+    tt_user_is_online: bool = False
 ) -> bool: # Return type bool is already present, ensuring it stays.
     # Determine if the message should be sent silently using the helper function
-    send_silently = await _should_send_silently(chat_id, tt_instance_for_check)
+    send_silently = _should_send_silently(chat_id, tt_user_is_online)
 
     try:
         await bot_instance.send_message(
@@ -139,7 +128,7 @@ async def send_telegram_messages_to_list(
     reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None, # tt_username, tt_nickname, lang, recipient_tg_id
     tt_user_username_for_markup: str | None = None,
     tt_user_nickname_for_markup: str | None = None,
-    tt_instance_for_check: TeamTalkInstance | None = None # For silent notification check
+    tt_user_is_online_for_check: bool = False # For silent notification check
 ):
     """
     Sends messages to a list of chat_ids.
@@ -171,63 +160,6 @@ async def send_telegram_messages_to_list(
             text=text_val,
             language=language_val,
             reply_markup=current_reply_markup_val,
-            tt_instance_for_check=tt_instance_for_check
+            tt_user_is_online=tt_user_is_online_for_check
         ))
     await asyncio.gather(*tasks_list)
-
-
-async def show_user_buttons(
-    message: Message,
-    command_type: str,
-    language: str,
-    tt_instance: TeamTalkInstance | None # Assuming TeamTalkInstance can be None
-):
-    if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(get_text("TT_BOT_NOT_CONNECTED", language))
-        return
-
-    my_user_id_val = tt_instance.getMyUserID()
-    if my_user_id_val is None: # Check if getMyUserID() returned None
-        logger.error("Could not get own user ID in show_user_buttons.")
-        await message.reply(get_text("error_occurred", language))
-        return
-
-    my_user_account = tt_instance.get_user(my_user_id_val)
-    if not my_user_account:
-        logger.error(f"Could not get own user account object for ID {my_user_id_val}.")
-        await message.reply(get_text("error_occurred", language))
-        return
-
-    # Ensure get_username_as_str is imported and used
-    my_username_str = get_username_as_str(my_user_account)
-
-    # Logic for getting and filtering the list of users
-    # Uses ONLINE_USERS_CACHE.keys() as per previous refactoring
-    online_users_temp = [
-        tt_instance.get_user(username)
-        for username in ONLINE_USERS_CACHE.keys()
-        if username and username != my_username_str
-    ]
-    # Filter out any None objects that might result from tt_instance.get_user()
-    # if a user from cache is no longer findable on the server by username
-    online_users = [user for user in online_users_temp if user]
-
-    if not online_users:
-        await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
-        return
-
-    # Ensure get_tt_user_display_name is imported for sorting key
-    sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, language).lower())
-
-    # Call the new keyboard factory
-    builder = create_user_selection_keyboard(language, sorted_users, command_type)
-
-    # Determine text key based on command_type
-    command_text_key_map = {
-        "kick": "SHOW_USERS_SELECT_KICK",
-        "ban": "SHOW_USERS_SELECT_BAN"
-        # Add other command types and their text keys if needed
-    }
-    command_text_key = command_text_key_map.get(command_type, "SHOW_USERS_SELECT_DEFAULT") # Default key
-
-    await message.reply(get_text(command_text_key, language), reply_markup=builder.as_markup())

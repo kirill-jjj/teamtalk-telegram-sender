@@ -127,6 +127,6 @@ async def send_join_leave_notification_logic(
         chat_ids=recipients,
         text_generator=text_generator,
         tt_user_username_for_markup=user_username, # For potential markup buttons related to the user
-        tt_user_nickname_for_markup=user_nickname, # For potential markup buttons
-        tt_instance_for_check=tt_instance # For context in markup or other checks
+        tt_user_nickname_for_markup=user_nickname # For potential markup buttons
+        # tt_instance_for_check argument removed, tt_user_is_online_for_check will default to False
     )
