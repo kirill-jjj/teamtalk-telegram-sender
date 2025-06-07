@@ -12,6 +12,7 @@ from bot.localization import get_text
 from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE
+from bot.state import ONLINE_USERS_CACHE
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
@@ -127,8 +128,7 @@ async def send_telegram_messages_to_list(
     text_generator: Callable[[str], str], # Takes language code, returns text
     reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None, # tt_username, tt_nickname, lang, recipient_tg_id
     tt_user_username_for_markup: str | None = None,
-    tt_user_nickname_for_markup: str | None = None,
-    tt_user_is_online_for_check: bool = False # For silent notification check
+    tt_user_nickname_for_markup: str | None = None
 ):
     """
     Sends messages to a list of chat_ids.
@@ -139,6 +139,7 @@ async def send_telegram_messages_to_list(
         logger.error(f"No Telegram bot instance available for token: {bot_token_to_use}")
         return
 
+    online_tt_usernames = {user.username for user in ONLINE_USERS_CACHE.values() if hasattr(user, 'username')}
     tasks_list = []
     for chat_id_val in chat_ids:
         user_settings_val = USER_SETTINGS_CACHE.get(chat_id_val)
@@ -154,12 +155,17 @@ async def send_telegram_messages_to_list(
                 chat_id_val
             )
 
+        individual_tt_user_is_online = False
+        if user_settings_val and user_settings_val.teamtalk_username:
+            if user_settings_val.teamtalk_username in online_tt_usernames:
+                individual_tt_user_is_online = True
+
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_to_use,
             chat_id=chat_id_val,
             text=text_val,
             language=language_val,
             reply_markup=current_reply_markup_val,
-            tt_user_is_online=tt_user_is_online_for_check
+            tt_user_is_online=individual_tt_user_is_online
         ))
     await asyncio.gather(*tasks_list)
