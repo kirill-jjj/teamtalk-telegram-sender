@@ -806,7 +806,7 @@ async def cq_toggle_specific_user_mute_action(
             await callback_query.answer(get_text("TT_BOT_NOT_CONNECTED_FOR_LIST", language), show_alert=True)
             return
         try:
-            all_accounts_tt = await tt_instance.list_user_accounts()
+            all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
             # Ensure sorting is identical to how it was displayed
             sorted_accounts = sorted(all_accounts_tt, key=lambda acc: ttstr(acc._account.szUsername).lower())
 
