@@ -19,6 +19,7 @@ from bot.constants import (
 )
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
+from aiogram.filters import CommandObject
 
 # Import bot_instance variables carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
@@ -81,7 +82,7 @@ async def _initiate_reconnect(reason: str):
     logger.warning(reason) # Log the reason for reconnection first
 
     ONLINE_USERS_CACHE.clear()
-    USER_ACCOUNTS_CACHE.clear() # <-- ADDED THIS LINE
+    USER_ACCOUNTS_CACHE.clear()
     logger.info("Online users and user accounts caches have been cleared due to reconnection.")
 
     if tt_bot_module.current_tt_instance is not None:
@@ -244,9 +245,25 @@ async def on_message(message: TeamTalkMessage):
         elif message_content.lower().startswith("/unsub"):
             await handle_tt_unsubscribe_command(message, session, bot_reply_language)
         elif message_content.lower().startswith("/add_admin"):
-            await handle_tt_add_admin_command(message, session=session, bot_language=bot_reply_language)
+            parts = message.content.split(maxsplit=1)
+            args_str = parts[1] if len(parts) > 1 else None
+            command_obj = CommandObject(args=args_str)
+            await handle_tt_add_admin_command(
+                tt_message=message,
+                command=command_obj,
+                session=session,
+                bot_language=bot_reply_language
+            )
         elif message_content.lower().startswith("/remove_admin"):
-            await handle_tt_remove_admin_command(message, session=session, bot_language=bot_reply_language)
+            parts = message.content.split(maxsplit=1)
+            args_str = parts[1] if len(parts) > 1 else None
+            command_obj = CommandObject(args=args_str)
+            await handle_tt_remove_admin_command(
+                tt_message=message,
+                command=command_obj,
+                session=session,
+                bot_language=bot_reply_language
+            )
         elif message_content.lower().startswith("/help"):
             await handle_tt_help_command(message, bot_reply_language)
         elif message_content.startswith("/"): # An unknown command
