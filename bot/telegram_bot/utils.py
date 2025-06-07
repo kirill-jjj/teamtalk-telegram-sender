@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import pytalk
 from typing import Callable
 from aiogram import Bot # html removed
 from aiogram.types import InlineKeyboardMarkup, Message
@@ -18,6 +19,7 @@ from bot.constants import (
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
 
+ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
@@ -139,7 +141,7 @@ async def send_telegram_messages_to_list(
         logger.error(f"No Telegram bot instance available for token: {bot_token_to_use}")
         return
 
-    online_tt_usernames = {user.username for user in ONLINE_USERS_CACHE.values() if hasattr(user, 'username')}
+    online_tt_usernames = {ttstr(user.username) for user in ONLINE_USERS_CACHE.values()}
     tasks_list = []
     for chat_id_val in chat_ids:
         user_settings_val = USER_SETTINGS_CACHE.get(chat_id_val)
