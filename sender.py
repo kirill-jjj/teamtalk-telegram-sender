@@ -4,7 +4,6 @@ import sys
 # Setup logging first
 from bot.logging_setup import setup_logging
 logger = setup_logging() # Setup and get a logger for main
-from bot.state_manager import StateManager # <--- ADD IMPORT HERE
 
 try:
     import uvloop
@@ -57,8 +56,6 @@ async def on_aiogram_shutdown(*args, **kwargs): # Keep this handler defined, wil
 async def main_async():
     logger.info("Application starting...")
 
-    state_manager = StateManager()
-
     # --- Единый блок ленивых импортов ---
     from aiogram import Dispatcher
     from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk # Moved from global
@@ -75,10 +72,8 @@ async def main_async():
         DbSessionMiddleware,
         UserSettingsMiddleware,
         TeamTalkInstanceMiddleware,
-        SubscriptionCheckMiddleware,
-        StateManagerMiddleware
+        SubscriptionCheckMiddleware
     )
-    # from bot.state_manager import StateManager # DELETED FROM HERE
     from bot.telegram_bot.handlers import (
         user_commands_router,
         admin_router,
@@ -101,9 +96,8 @@ async def main_async():
     asyncio.create_task(load_user_settings_to_cache(SessionFactory))
     logger.info("User settings cache loading initiated.")
 
-    # TeamTalk Task Creation and StateManager attachment
+    # TeamTalk Task Creation
     await tt_bot_module.tt_bot._async_setup_hook()
-    tt_bot_module.tt_bot.state_manager = state_manager # Attach StateManager to TeamTalkBot instance
     teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")
 
     global _teamtalk_task_ref_for_shutdown
@@ -143,7 +137,6 @@ async def main_async():
     # Register middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
     dp.update.outer_middleware.register(TeamTalkInstanceMiddleware())
-    dp.update.outer_middleware.register(StateManagerMiddleware(state_manager)) # Register StateManagerMiddleware
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
     dp.message.middleware(SubscriptionCheckMiddleware())

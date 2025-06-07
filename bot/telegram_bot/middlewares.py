@@ -75,8 +75,6 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
 from typing import Awaitable # Ensure Awaitable is explicitly imported if not covered by Coroutine
 from bot.database.models import SubscribedUser
 from bot.localization import get_text
-from bot.state_manager import StateManager
-
 
 # --- SubscriptionCheckMiddleware Class Definition ---
 class SubscriptionCheckMiddleware(BaseMiddleware):
@@ -126,19 +124,4 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             return # Stop processing this event further
 
         logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
-        return await handler(event, data)
-
-
-class StateManagerMiddleware(BaseMiddleware):
-    def __init__(self, state_manager: StateManager):
-        super().__init__()
-        self.state_manager = state_manager
-
-    async def __call__(
-        self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
-        event: TelegramObject,
-        data: Dict[str, Any],
-    ) -> Any:
-        data["state_manager"] = self.state_manager
         return await handler(event, data)

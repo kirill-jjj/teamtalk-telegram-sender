@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from bot.core.user_settings import USER_SETTINGS_CACHE # Added import
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base # For type hinting model
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
@@ -146,6 +147,8 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
 
         if not user_settings_record and not subscribed_user_record:
             logger.info(f"No data found for Telegram ID {telegram_id}. Nothing to delete.")
+            # Also ensure cache is clear for this ID, just in case.
+            USER_SETTINGS_CACHE.pop(telegram_id, None)
             return True
 
         if user_settings_record:
@@ -159,7 +162,9 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
         # Commit both deletions (or one of them) in a single transaction.
         await session.commit()
 
-        logger.info(f"Successfully deleted all DB data for {telegram_id}.")
+        # Clear from cache only after the transaction is successfully committed.
+        USER_SETTINGS_CACHE.pop(telegram_id, None)
+        logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from cache.")
         return True
 
     except Exception as e:

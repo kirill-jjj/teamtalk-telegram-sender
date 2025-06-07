@@ -6,7 +6,6 @@ from aiogram.types import Message
 from bot.telegram_bot.filters import IsAdminFilter
 from bot.telegram_bot.utils import show_user_buttons
 from pytalk.instance import TeamTalkInstance # For type hint
-from bot.state_manager import StateManager # Added
 
 logger = logging.getLogger(__name__)
 admin_router = Router(name="admin_router")
@@ -20,19 +19,17 @@ admin_router.callback_query.filter(IsAdminFilter())
 async def kick_command_handler(
     message: Message,
     language: str, # From UserSettingsMiddleware
-    tt_instance: TeamTalkInstance | None, # From TeamTalkInstanceMiddleware
-    state_manager: StateManager # Added
+    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level
-    await show_user_buttons(message, "kick", language, tt_instance, state_manager)
+    await show_user_buttons(message, "kick", language, tt_instance)
 
 
 @admin_router.message(Command("ban"))
 async def ban_command_handler(
     message: Message,
     language: str, # From UserSettingsMiddleware
-    tt_instance: TeamTalkInstance | None, # From TeamTalkInstanceMiddleware
-    state_manager: StateManager # Added
+    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level
-    await show_user_buttons(message, "ban", language, tt_instance, state_manager)
+    await show_user_buttons(message, "ban", language, tt_instance)
