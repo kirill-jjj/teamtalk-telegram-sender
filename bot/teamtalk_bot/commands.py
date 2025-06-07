@@ -1,7 +1,6 @@
 import logging
 import functools # For functools.wraps
 from typing import Optional, Callable, List
-from bot.state import ADMIN_RIGHTS_CACHE # <-- New import
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,6 +58,7 @@ async def _process_admin_ids(
     error_header_key: str,
     commands_to_set_on_success: List[BotCommand],
     log_action_description: str,
+    tt_instance: pytalk.TeamTalk # Added
 ):
     """
     Helper function to process adding or removing admin IDs.
@@ -82,8 +82,11 @@ async def _process_admin_ids(
                     logger.info(f"Admin TG ID {telegram_id_val} {log_action_description} by TT admin {sender_username_val}")
                     # If we are removing an admin, invalidate the cache
                     if crud_function.__name__ == 'remove_admin_db':
-                        ADMIN_RIGHTS_CACHE.pop(telegram_id_val, None)
-                        logger.info(f"Admin rights cache invalidated for user {telegram_id_val}.")
+                        if tt_instance and hasattr(tt_instance, 'bot') and hasattr(tt_instance.bot, 'state_manager'):
+                            tt_instance.bot.state_manager.admin_rights.pop(telegram_id_val, None)
+                            logger.info(f"Admin rights cache invalidated for user {telegram_id_val}.")
+                        else:
+                            logger.warning(f"Could not invalidate admin_rights_cache for {telegram_id_val}: tt_instance or its state_manager not available.")
                     try:
                         await tg_bot_event.set_my_commands(
                             commands=commands_to_set_on_success,
@@ -203,6 +206,7 @@ async def handle_tt_add_admin_command(
     session: AsyncSession,
     bot_language: str
 ):
+    tt_instance = tt_message.server.teamtalk_instance # Added
     parts_list = tt_message.content.split()
     await _process_admin_ids(
         tt_message=tt_message,
@@ -217,6 +221,7 @@ async def handle_tt_add_admin_command(
         error_header_key="TT_ADMIN_ERRORS_HEADER",
         commands_to_set_on_success=ADMIN_COMMANDS,
         log_action_description="added",
+        tt_instance=tt_instance # Added
     )
 
 
@@ -226,6 +231,7 @@ async def handle_tt_remove_admin_command(
     session: AsyncSession,
     bot_language: str
 ):
+    tt_instance = tt_message.server.teamtalk_instance # Added
     parts_list = tt_message.content.split()
     await _process_admin_ids(
         tt_message=tt_message,
@@ -240,6 +246,7 @@ async def handle_tt_remove_admin_command(
         error_header_key="TT_ADMIN_INFO_ERRORS_HEADER", # Specific for remove
         commands_to_set_on_success=USER_COMMANDS, # Set user commands on removal
         log_action_description="removed",
+        tt_instance=tt_instance # Added
     )
 
 
