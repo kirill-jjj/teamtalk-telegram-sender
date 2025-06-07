@@ -9,7 +9,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardButton # Only if builder.button is insufficient
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.localization import get_text
 from bot.telegram_bot.callback_data import (
@@ -187,16 +187,35 @@ def _add_pagination_controls(
 
 def create_paginated_user_list_keyboard(
     language: str,
-    page_users: list[str], # Usernames
+    page_items: list[str], # Usernames
     current_page: int,
     total_pages: int,
     list_type: str, # "muted" or "allowed"
-) -> InlineKeyboardBuilder:
+    user_specific_settings: UserSpecificSettings
+) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
 
-    for idx, username in enumerate(page_users):
-        button_text_key = "UNMUTE_USER_BTN" if list_type == "muted" else "MUTE_USER_BTN"
+    # Determine button text based on list_type AND actual mute status considering mute_all_flag
+    # This logic was simplified in the original user code, but for correctness:
+    for idx, username in enumerate(page_items):
+        is_in_set = username in user_specific_settings.muted_users_set
+
+        # If mute_all_flag is True, the set contains ALLOWED users.
+        #   - If user is in set (allowed), they are NOT effectively muted. Button should offer to MUTE.
+        #   - If user is NOT in set (not allowed), they ARE effectively muted. Button should offer to UNMUTE.
+        # If mute_all_flag is False, the set contains MUTED users.
+        #   - If user is in set (muted), they ARE effectively muted. Button should offer to UNMUTE.
+        #   - If user is NOT in set (not muted), they are NOT effectively muted. Button should offer to MUTE.
+
+        effectively_muted: bool
+        if user_specific_settings.mute_all_flag: # Mute all is ON, set has allowed users
+            effectively_muted = not is_in_set
+        else: # Mute all is OFF, set has muted users
+            effectively_muted = is_in_set
+
+        button_text_key = "UNMUTE_USER_BTN" if effectively_muted else "MUTE_USER_BTN"
+
         button_text = get_text(button_text_key, language, username=username)
         callback_d = ToggleMuteSpecificCallback(
             action="toggle_user",
@@ -207,7 +226,7 @@ def create_paginated_user_list_keyboard(
         builder.button(text=button_text, callback_data=callback_d.pack())
 
     # Adjust rows for user buttons, e.g., 1 per row if many, or more if few. Defaulting to 1.
-    if page_users:
+    if page_items:
         builder.adjust(1)
 
     _add_pagination_controls(builder, language, current_page, total_pages, list_type, PaginateUsersCallback)
@@ -216,28 +235,37 @@ def create_paginated_user_list_keyboard(
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
         callback_data=NotificationActionCallback(action="manage_muted").pack()
     ))
-    return builder
+    return builder.as_markup()
 
 def create_account_list_keyboard(
     language: str,
-    page_accounts: list[pytalk.UserAccount], # List of UserAccount objects for the current page
+    page_items: list[pytalk.UserAccount], # List of UserAccount objects for the current page
     current_page: int,
     total_pages: int,
     user_specific_settings: UserSpecificSettings
-) -> InlineKeyboardBuilder:
+) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""
     builder = InlineKeyboardBuilder()
 
-    for idx, account_obj in enumerate(page_accounts):
-        username_str = ttstr(account_obj._account.szUsername)
-        # Nickname for display purposes; for UserAccount, username is the primary identifier.
-        display_name = username_str
+    for idx, account_obj in enumerate(page_items):
+        # Ensure correct attribute access for username, ttstr should be available
+        username_str = ttstr(account_obj.username) # Assuming .username based on UserAccount objects
+        display_name = username_str # For UserAccount, username is typically the display name
 
+        # Determine mute status for button text
         is_in_set = username_str in user_specific_settings.muted_users_set
-        is_effectively_muted = (user_specific_settings.mute_all_flag and not is_in_set) or \
-                               (not user_specific_settings.mute_all_flag and is_in_set)
+        effectively_muted: bool
+        if user_specific_settings.mute_all_flag: # Mute all is ON, set has allowed users
+            effectively_muted = not is_in_set
+        else: # Mute all is OFF, set has muted users
+            effectively_muted = is_in_set
 
-        current_status_text = get_text("MUTED_STATUS" if is_effectively_muted else "NOT_MUTED_STATUS", language)
+        current_status_text_key = "MUTED_STATUS" if effectively_muted else "NOT_MUTED_STATUS"
+        current_status_text = get_text(current_status_text_key, language)
+
+        # Button text should indicate the action to be taken (e.g., "Mute X" or "Unmute X")
+        # or show current status and allow toggle, e.g. "X (Muted) - Tap to Unmute"
+        # The prompt uses "TOGGLE_MUTE_STATUS_BTN" which implies a dynamic label.
         button_text = get_text("TOGGLE_MUTE_STATUS_BTN", language, username=display_name, current_status=current_status_text)
 
         callback_d = ToggleMuteSpecificCallback(
@@ -248,7 +276,7 @@ def create_account_list_keyboard(
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
-    if page_accounts:
+    if page_items: # Check page_items now
         builder.adjust(1) # User buttons one per row
 
     _add_pagination_controls(builder, language, current_page, total_pages, "all_accounts", PaginateUsersCallback)
@@ -257,7 +285,7 @@ def create_account_list_keyboard(
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
         callback_data=NotificationActionCallback(action="manage_muted").pack()
     ))
-    return builder
+    return builder.as_markup()
 
 # Note: The original show_user_buttons for kick/ban in callbacks.py was dynamic based on users online.
 # Replicating that as a static factory here might be less useful unless generalized.

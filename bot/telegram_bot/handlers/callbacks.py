@@ -593,6 +593,63 @@ async def cq_toggle_mute_all_action(
 
 # --- Paginated User List for Muted/Allowed Users (Refactored) ---
 
+async def _display_paginated_list(
+    callback_query: CallbackQuery,
+    language: str,
+    items: list, # This is the full list of items to paginate
+    page: int, # The requested page number
+    header_text_key: str,
+    empty_list_text_key: str,
+    keyboard_factory: Callable[..., InlineKeyboardMarkup],
+    keyboard_factory_kwargs: dict
+) -> None:
+    """
+    Generic helper to display a paginated list in a Telegram message.
+    """
+    if not callback_query.message:
+        return
+
+    page_slice, total_pages, current_page = _paginate_list(items, page, USERS_PER_PAGE)
+
+    message_parts = [get_text(header_text_key, language)]
+
+    if not items: # Check if the original full list is empty
+        message_parts.append(get_text(empty_list_text_key, language))
+
+    # Page indicator should always be present if there's a message to display
+    # It's added after the potential empty list message.
+    page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=current_page + 1, total_pages=total_pages)
+    message_parts.append(f"\n{page_indicator_text}") # Add a newline before page indicator for better separation
+
+    final_message_text = "\n".join(message_parts)
+
+    # Prepare keyboard
+    # Common arguments for keyboard factories are language, page_slice (as page_items), current_page, total_pages.
+    # Specific keyboard factories might need other arguments, passed via keyboard_factory_kwargs.
+    keyboard_markup = keyboard_factory(
+        language=language,
+        page_items=page_slice, # Pass the slice of items for the current page
+        current_page=current_page,
+        total_pages=total_pages,
+        **keyboard_factory_kwargs
+    )
+
+    try:
+        await callback_query.message.edit_text(
+            text=final_message_text,
+            reply_markup=keyboard_markup,
+            parse_mode="HTML" # Assuming HTML parse mode as it's common in the project
+        )
+    except TelegramBadRequest as e:
+        # Avoid logging if the message content is identical, as this is a common scenario
+        if "message is not modified" not in str(e).lower():
+            logger.error(f"TelegramBadRequest in _display_paginated_list for {header_text_key}: {e}", exc_info=True)
+    except TelegramAPIError as e:
+        logger.error(f"TelegramAPIError in _display_paginated_list for {header_text_key}: {e}", exc_info=True)
+    except Exception as e: # Catch any other unexpected errors
+        logger.error(f"Unexpected error in _display_paginated_list for {header_text_key}: {e}", exc_info=True)
+
+
 def _paginate_list(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
     total_items = len(full_list)
 
@@ -620,52 +677,39 @@ async def _display_paginated_user_list(
     list_type: str,
     page: int = 0
 ):
-    if not callback_query.message: return
-    # await callback_query.answer() # Answered by callers or specific toggle handler
+    if not callback_query.message: return # Keep this initial check
 
-    users_to_list_set = user_specific_settings.muted_users_set
+    # Determine the source of items based on list_type and user_specific_settings.
+    # The set user_specific_settings.muted_users_set contains users that are muted (when mute_all_flag is False)
+    # or users that are allowed (when mute_all_flag is True, these are exceptions to mute all).
+    # The keyboard factory create_paginated_user_list_keyboard handles the display logic based on list_type and the actual mute state.
+    users_to_process = user_specific_settings.muted_users_set
+    sorted_items = sorted(list(users_to_process))
 
-    if list_type == "muted":
-        header_text = get_text("MUTED_USERS_LIST_HEADER", language)
-        empty_list_message = get_text("NO_MUTED_USERS_FOUND", language)
-    elif list_type == "allowed":
-        header_text = get_text("ALLOWED_USERS_LIST_HEADER", language)
-        empty_list_message = get_text("NO_ALLOWED_USERS_FOUND", language)
-    else:
-        logger.error(f"Invalid list_type '{list_type}' in _display_paginated_user_list")
-        await callback_query.message.edit_text("Error: Invalid list type.")
-        return
+    header_key = "MUTED_USERS_LIST_HEADER" if list_type == "muted" else "ALLOWED_USERS_LIST_HEADER"
+    empty_key = "NO_MUTED_USERS_FOUND" if list_type == "muted" else "NO_ALLOWED_USERS_FOUND"
 
-    sorted_users = sorted(list(users_to_list_set))
-    # Use the new helper function for pagination logic
-    page_users_slice, total_pages, page = _paginate_list(sorted_users, page, USERS_PER_PAGE)
+    # The `create_paginated_user_list_keyboard` factory will require:
+    # language (from _display_paginated_list's standard arguments)
+    # page_items (this will be page_slice from _display_paginated_list's standard arguments)
+    # current_page (from _display_paginated_list's standard arguments)
+    # total_pages (from _display_paginated_list's standard arguments)
+    # list_type (specific to this keyboard, passed via keyboard_factory_kwargs)
+    # user_specific_settings (specific to this keyboard, passed via keyboard_factory_kwargs)
 
-    message_parts = [header_text]
-    if not sorted_users: # Check original sorted_users list for emptiness
-        message_parts.append(empty_list_message)
-    else:
-        # Calculate start_index for display numbering based on the corrected page and USERS_PER_PAGE
-        current_page_start_index = page * USERS_PER_PAGE
-        for i, username in enumerate(page_users_slice, start=current_page_start_index + 1):
-            message_parts.append(f"{i}. {html.quote(username)}")
-
-    page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
-
-    # Use factory from keyboards.py
-    # Note: user_specific_settings is not directly passed to create_paginated_user_list_keyboard as it's not in its signature.
-    # The factory derives behavior from list_type.
-    paginated_list_builder = create_paginated_user_list_keyboard(
-        language, page_users_slice, page, total_pages, list_type
+    await _display_paginated_list(
+        callback_query=callback_query,
+        language=language,
+        items=sorted_items, # Pass the full sorted list of relevant usernames/items
+        page=page,
+        header_text_key=header_key,
+        empty_list_text_key=empty_key,
+        keyboard_factory=create_paginated_user_list_keyboard, # Function reference
+        keyboard_factory_kwargs={ # Arguments specific to create_paginated_user_list_keyboard
+            "list_type": list_type,
+            "user_specific_settings": user_specific_settings
+        }
     )
-    try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=paginated_list_builder.as_markup(), parse_mode="HTML")
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for paginated user list ({list_type}, page {page}): {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for paginated user list ({list_type}, page {page}): {e}")
 
 # Consolidated handler for listing muted/allowed users
 @callback_router.callback_query(UserListCallback.filter(F.action.in_(["list_muted", "list_allowed"])))
@@ -708,49 +752,50 @@ async def cq_paginate_internal_user_list(
 async def _display_account_list(
     callback_query: CallbackQuery,
     language: str,
-    user_specific_settings: UserSpecificSettings,
-    tt_instance: TeamTalkInstance,
+    user_specific_settings: UserSpecificSettings, # Needed for keyboard factory
+    tt_instance: TeamTalkInstance, # Keep for USER_ACCOUNTS_CACHE check (though not directly used if cache populated)
     page: int = 0
 ):
-    if not callback_query.message: return
-    # await callback_query.answer() # Answered by callers or specific toggle handler
+    if not callback_query.message: return # Keep this initial check
 
-    if not USER_ACCOUNTS_CACHE:
-        # If the cache is empty (e.g., not yet populated or server has no accounts)
-        await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
+    if not USER_ACCOUNTS_CACHE: # Check if cache is empty
+        # Attempt to edit the message, or answer callback if message is not available/editable
+        try:
+            if callback_query.message:
+                await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
+            else: # Fallback if message is somehow gone
+                await callback_query.answer(get_text("NO_SERVER_ACCOUNTS_FOUND", language), show_alert=True)
+        except TelegramAPIError as e: # Catch potential errors during edit_text or answer
+            logger.error(f"Error informing user about empty USER_ACCOUNTS_CACHE: {e}")
         return
 
     all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
-
-    # Sort accounts by username (case-insensitive)
-    # Assuming acc.username is the correct attribute for pytalk.UserAccount based on cache population logic
-    sorted_accounts_tt = sorted(
+    # Assuming acc.username is how pytalk.UserAccount stores username.
+    # ttstr should be available in the module scope.
+    sorted_items = sorted(
         all_accounts_tt,
         key=lambda acc: ttstr(acc.username).lower()
     )
 
-    # Use the new helper function for pagination logic
-    page_accounts_slice, total_pages, page = _paginate_list(sorted_accounts_tt, page, USERS_PER_PAGE)
+    # The `create_account_list_keyboard` factory will require:
+    # language (from _display_paginated_list)
+    # page_items (this will be page_slice from _display_paginated_list)
+    # current_page (from _display_paginated_list)
+    # total_pages (from _display_paginated_list)
+    # user_specific_settings (specific to this keyboard, passed via keyboard_factory_kwargs)
 
-    message_parts = [get_text("ALL_ACCOUNTS_LIST_HEADER", language)] # New header key
-    if not sorted_accounts_tt: # Check original sorted_accounts_tt list for emptiness
-        message_parts.append(get_text("NO_SERVER_ACCOUNTS_FOUND", language)) # New empty list key
-
-    page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
-
-    # Use factory from keyboards.py
-    account_list_builder = create_account_list_keyboard(
-        language, page_accounts_slice, page, total_pages, user_specific_settings
+    await _display_paginated_list(
+        callback_query=callback_query,
+        language=language,
+        items=sorted_items, # Pass the full sorted list of account objects
+        page=page,
+        header_text_key="ALL_ACCOUNTS_LIST_HEADER",
+        empty_list_text_key="NO_SERVER_ACCOUNTS_FOUND", # Shown if sorted_items is empty
+        keyboard_factory=create_account_list_keyboard, # Function reference
+        keyboard_factory_kwargs={ # Arguments specific to create_account_list_keyboard
+            "user_specific_settings": user_specific_settings
+        }
     )
-    try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=account_list_builder.as_markup(), parse_mode="HTML")
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"Error editing message for account list (page {page}): {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for account list (page {page}): {e}")
 
 @callback_router.callback_query(UserListCallback.filter(F.action == "list_all_accounts"))
 async def cq_show_all_accounts_list( # Renamed
