@@ -32,12 +32,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiogram ~=3.20.0",
-    "py-talk-ex ~=1.6.0",
-    "python-dotenv ~=1.1.0",
-    "SQLAlchemy ~=2.0.41",
-    "aiosqlite ~=0.21.0",
-    'uvloop; sys_platform != "win32"'
+    "aiogram~=3.20.0",
+    "py-talk-ex~=1.6.0",
+    "python-dotenv~=1.1.0",
+    "SQLAlchemy~=2.0.41",
+    "aiosqlite~=0.21.0",
+    'uvloop; sys_platform != "win32"',
+    "Babel>=2.15.0",
+    "SCons>=4.8.0"
 ]
 
 [project.urls]
