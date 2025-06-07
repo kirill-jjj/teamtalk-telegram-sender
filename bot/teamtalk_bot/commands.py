@@ -11,6 +11,7 @@ from pytalk.message import Message as TeamTalkMessage
 
 from bot.config import app_config
 from bot.localization import get_text
+from bot.core.utils import build_help_message # Added
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
@@ -291,10 +292,17 @@ async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
     bot_language: str
 ):
-    help_text_val = get_text("HELP_TEXT", bot_language) # Get the full help text object
-    # The help_text_val is a dict with "en" and "ru" keys, or a string if already resolved.
-    # Assuming get_text resolves it to a string based on bot_language.
-    await send_long_tt_reply(tt_message.reply, help_text_val)
+    # Check admin rights by comparing username with ADMIN_USERNAME from config
+    is_admin = False # Default to not admin
+    tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
+    admin_username_from_config = app_config.get("ADMIN_USERNAME")
+
+    if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
+        is_admin = True
+
+    help_text = build_help_message(bot_language, "teamtalk", is_admin)
+
+    await send_long_tt_reply(tt_message.reply, help_text)
 
 
 async def handle_tt_unknown_command(

@@ -68,3 +68,21 @@ def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount
         return ttstr(username_val)
 
     return str(username_val) if username_val is not None else ""
+
+def build_help_message(language: str, platform: str, is_admin: bool) -> str:
+    """Builds a contextual help message based on platform and user rights."""
+    parts = []
+    if platform == "telegram":
+        parts.append(get_text("HELP_TELEGRAM_USER_HEADER", language))
+        parts.append(get_text("HELP_TELEGRAM_USER_COMMANDS", language))
+        if is_admin:
+            parts.append(get_text("HELP_TELEGRAM_ADMIN_HEADER", language))
+            parts.append(get_text("HELP_TELEGRAM_ADMIN_COMMANDS", language))
+    elif platform == "teamtalk":
+        parts.append(get_text("HELP_TEAMTALK_USER_HEADER", language))
+        parts.append(get_text("HELP_TEAMTALK_USER_COMMANDS", language))
+        if is_admin:
+            parts.append(get_text("HELP_TEAMTALK_ADMIN_HEADER", language))
+            parts.append(get_text("HELP_TEAMTALK_ADMIN_COMMANDS", language))
+
+    return "\n".join(parts)

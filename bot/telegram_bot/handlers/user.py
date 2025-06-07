@@ -5,7 +5,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message # InlineKeyboardMarkup, InlineKeyboardButton removed for now, add back if needed for type hints elsewhere
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.utils import pluralize
+from bot.core.utils import pluralize, build_help_message
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
@@ -213,8 +213,14 @@ async def who_command_handler(
 
 
 @user_commands_router.message(Command("help"))
-async def help_command_handler(message: Message, language: str): # From UserSettingsMiddleware
-    await message.reply(get_text("HELP_TEXT", language), parse_mode="Markdown")
+async def help_command_handler(
+    message: Message,
+    language: str, # Assuming this is passed by middleware
+    session: AsyncSession # Assuming this is passed by middleware
+):
+    is_admin = await IsAdminFilter()(message, session) # Check admin status
+    help_text = build_help_message(language, "telegram", is_admin)
+    await message.reply(help_text, parse_mode="Markdown")
 
 
 @user_commands_router.message(Command("settings"))
