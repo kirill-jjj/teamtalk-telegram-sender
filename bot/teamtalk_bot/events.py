@@ -269,7 +269,7 @@ async def on_message(message: TeamTalkMessage):
         elif message_content.startswith("/"): # An unknown command
             await handle_tt_unknown_command_specific(message, bot_reply_language)
         else: # Not a command, forward to Telegram admin if configured
-            await forward_tt_message_to_telegram_admin(message, tt_bot_module.current_tt_instance)
+            await forward_tt_message_to_telegram_admin(message)
 
 
 @tt_bot_module.tt_bot.event
