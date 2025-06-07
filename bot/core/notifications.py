@@ -133,15 +133,19 @@ async def send_join_leave_notification_logic(
     if not chat_ids_to_notify_list:
         return
 
+    # Get state_manager from tt_instance
+    state_manager = tt_instance.bot.state_manager
+
     def text_generator_func(lang_code: str) -> str:
         key_str = "JOIN_NOTIFICATION" if event_type == NOTIFICATION_EVENT_JOIN else "LEAVE_NOTIFICATION"
         return get_text(key_str, lang_code, user_nickname=html.quote(user_nickname_val), server_name=html.quote(server_name_val))
 
     await send_telegram_messages_to_list(
-        bot_token_to_use=app_config["TG_EVENT_TOKEN"], 
+        bot_token_to_use=app_config["TG_EVENT_TOKEN"],
         chat_ids=chat_ids_to_notify_list,
         text_generator=text_generator_func,
+        state_manager=state_manager, # ADDED
         tt_user_username_for_markup=user_username_val,
-        tt_user_nickname_for_markup=user_nickname_val, 
-        tt_instance_for_check=tt_instance 
+        tt_user_nickname_for_markup=user_nickname_val,
+        tt_instance_for_check=tt_instance
     )
