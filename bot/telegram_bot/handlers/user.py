@@ -214,7 +214,7 @@ async def help_command_handler(
 ):
     is_admin = await IsAdminFilter()(message, session) # Check admin status
     help_text = build_help_message(language, "telegram", is_admin)
-    await message.reply(help_text, parse_mode="Markdown")
+    await message.reply(help_text, parse_mode="HTML")
 
 
 @user_commands_router.message(Command("settings"))
