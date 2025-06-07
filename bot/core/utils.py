@@ -33,3 +33,20 @@ def get_tt_user_display_name(user: TeamTalkUser, language_code: str) -> str:
     if not display_name:
         display_name = get_text("WHO_USER_UNKNOWN", language_code)
     return display_name
+
+def pluralize(number: int, one: str, few: str, many: str) -> str:
+    """
+    Selects the correct plural form of a word based on the number,
+    following Russian language rules.
+    """
+    num_mod100 = number % 100
+    if 11 <= num_mod100 <= 19:
+        return many
+
+    num_mod10 = number % 10
+    if num_mod10 == 1:
+        return one
+    if 2 <= num_mod10 <= 4:
+        return few
+
+    return many

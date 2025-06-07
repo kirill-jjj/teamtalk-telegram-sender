@@ -5,6 +5,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message # InlineKeyboardMarkup, InlineKeyboardButton removed for now, add back if needed for type hints elsewhere
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.core.utils import pluralize
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
@@ -121,20 +122,14 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, la
         # Users are already quoted, sorting will be based on quoted strings
         sorted_users_in_channels[name] = sorted(grouped_data[name])
 
-
-    # Determine pluralization for "user"
-    users_word_total = ""
+    # Determine pluralization for "user" using the new pluralize function
     if lang == "ru":
-        last_digit = total_users % 10
-        last_two_digits = total_users % 100
-        if 11 <= last_two_digits <= 19:
-            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
-        elif last_digit == 1:
-            users_word_total = get_text("WHO_USERS_COUNT_SINGULAR", "ru")
-        elif 2 <= last_digit <= 4:
-            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_2_4", "ru")
-        else:
-            users_word_total = get_text("WHO_USERS_COUNT_PLURAL_5_MORE", "ru")
+        users_word_total = pluralize(
+            total_users,
+            one=get_text("WHO_USERS_COUNT_SINGULAR", lang),    # e.g., "пользователь"
+            few=get_text("WHO_USERS_COUNT_PLURAL_2_4", lang),  # e.g., "пользователя"
+            many=get_text("WHO_USERS_COUNT_PLURAL_5_MORE", lang) # e.g., "пользователей"
+        )
     else:  # en and default
         users_word_total = get_text("WHO_USERS_COUNT_SINGULAR", lang) if total_users == 1 else get_text("WHO_USERS_COUNT_PLURAL_5_MORE", lang)
 
