@@ -291,6 +291,7 @@ async def on_user_login(user: TeamTalkUser):
 
 @tt_bot_module.tt_bot.event
 async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
+    ONLINE_USERS_CACHE[user.id] = user
     # Attempt to get the TeamTalk instance, handling potential issues.
     tt_instance = None
     if hasattr(user, 'server') and hasattr(user.server, 'teamtalk_instance'):
@@ -368,6 +369,14 @@ async def on_user_logout(user: TeamTalkUser):
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time)
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
+
+
+@tt_bot_module.tt_bot.event
+async def on_user_update(user: TeamTalkUser):
+    """Called when a user's information is updated."""
+    if user.id in ONLINE_USERS_CACHE:
+        ONLINE_USERS_CACHE[user.id] = user
+        logger.debug(f"User {user.id} updated in cache.")
 
 
 @tt_bot_module.tt_bot.event
