@@ -121,9 +121,6 @@ async def _execute_tt_user_action(
                         user_nickname=quoted_nickname_for_error,
                         error=str(e))
 
-# The callback query handler process_user_action_selection might need adjustment
-# if it was the sole user of USER_ACTION_CALLBACK_HANDLERS.
-
 @callback_router.callback_query(F.data.startswith(f"{CALLBACK_ACTION_KICK}:") | F.data.startswith(f"{CALLBACK_ACTION_BAN}:"))
 async def process_user_action_selection(
     callback_query: CallbackQuery,

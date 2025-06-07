@@ -2,8 +2,6 @@ import logging
 import sys # Added for sys.stdout
 from bot.constants import LOG_FORMAT
 
-# InfoFilter class removed
-
 def setup_logging():
     log_formatter = logging.Formatter(LOG_FORMAT)
 

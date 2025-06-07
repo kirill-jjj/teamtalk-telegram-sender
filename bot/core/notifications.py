@@ -37,18 +37,10 @@ async def should_notify_user(
     mute_all_flag = user_specific_settings.mute_all_flag
     muted_users = user_specific_settings.muted_users_set
 
-    try:
-        from bot.database.models import NotificationSetting as NotificationSettingEnum
-        if notification_pref == NotificationSettingEnum.NONE: return False
-        if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSettingEnum.JOIN_OFF: return False
-        if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSettingEnum.LEAVE_OFF: return False
-    except ImportError:
-        logger.error("Could not import NotificationSetting enum for should_notify_user checks. String comparison fallback might be unreliable.")
-        # Fallback, если enum не импортируется (менее надежно)
-        if str(notification_pref.value) == "none": return False # Сравнение со строковым значением enum
-        if event_type == NOTIFICATION_EVENT_JOIN and str(notification_pref.value) == "join_off": return False
-        if event_type == NOTIFICATION_EVENT_LEAVE and str(notification_pref.value) == "leave_off": return False
-
+    from bot.database.models import NotificationSetting as NotificationSettingEnum
+    if notification_pref == NotificationSettingEnum.NONE: return False
+    if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSettingEnum.JOIN_OFF: return False
+    if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSettingEnum.LEAVE_OFF: return False
 
     if mute_all_flag:
         return tt_user_username in muted_users
