@@ -278,11 +278,11 @@ async def on_user_login(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance # Get instance from user object
     if tt_instance:
         # Cache management: Add user to cache
-        username_str = ttstr(user.username)
+        username_str = ttstr(user.username) # Still useful for logging
 
-        if username_str: # Ensure username_str is not empty before using as key
-            ONLINE_USERS_CACHE[username_str] = ONLINE_USERS_CACHE.get(username_str, 0) + 1
-            logger.debug(f"User {username_str} session count incremented. New count: {ONLINE_USERS_CACHE[username_str]}. Cache size: {len(ONLINE_USERS_CACHE)}")
+        # 'user' is the pytalk.user.User object from the event
+        ONLINE_USERS_CACHE[user.id] = user
+        logger.debug(f"User session {user.id} ({username_str}) added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance, tt_bot_module.login_complete_time)
     else:
@@ -325,11 +325,13 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
             ONLINE_USERS_CACHE.clear()
             for u in initial_online_users:
                 # Adapt ttstr usage based on how it's available and if u.username is bytes
-                username_str = ttstr(u.username) # Direct access, assuming it's already a string or ttstr handles None
+                username_str = ttstr(u.username) # Used for logging if needed, not for key
 
-                if username_str: # Ensure username_str is not empty
-                    ONLINE_USERS_CACHE[username_str] = ONLINE_USERS_CACHE.get(username_str, 0) + 1
-            logger.info(f"ONLINE_USERS_CACHE initialized/repopulated with {len(ONLINE_USERS_CACHE)} unique users and their session counts.")
+                if hasattr(u, 'id'): # Ensure user object u has an id
+                    ONLINE_USERS_CACHE[u.id] = u
+                else:
+                    logger.warning(f"User object {username_str} missing 'id' attribute during initial cache population. Skipping.")
+            logger.info(f"ONLINE_USERS_CACHE initialized/repopulated with {len(ONLINE_USERS_CACHE)} active user sessions.")
         except Exception as e:
             logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
@@ -354,16 +356,14 @@ async def on_user_logout(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance
     if tt_instance:
         # Cache management: Remove user from cache
-        username_str = ttstr(user.username)
+        username_str = ttstr(user.username) # Still useful for logging
 
-        if username_str and username_str in ONLINE_USERS_CACHE:
-            ONLINE_USERS_CACHE[username_str] -= 1
-            logger.debug(f"User {username_str} session count decremented. New count: {ONLINE_USERS_CACHE[username_str]}.")
-            if ONLINE_USERS_CACHE[username_str] <= 0:
-                del ONLINE_USERS_CACHE[username_str]
-                logger.debug(f"User {username_str} removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
-        elif username_str: # Log if user was not in cache
-            logger.warning(f"User {username_str} attempted logout but was not found in ONLINE_USERS_CACHE.")
+        if user.id in ONLINE_USERS_CACHE:
+            del ONLINE_USERS_CACHE[user.id]
+            logger.debug(f"User session {user.id} ({username_str}) removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+        else:
+            # This case might indicate an issue or that the user was not fully logged in/cached.
+            logger.warning(f"User session {user.id} ({username_str}) attempted logout but was not found in ONLINE_USERS_CACHE.")
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time)
     else:

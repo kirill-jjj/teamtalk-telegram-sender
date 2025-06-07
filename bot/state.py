@@ -4,9 +4,9 @@ from typing import Tuple
 # This module stores global, mutable application state,
 # such as caches and state flags.
 
-# Cache to store usernames of currently online users and their active session count.
-# Key: username (str), Value: session_count (int).
-ONLINE_USERS_CACHE: dict[str, int] = {}
+# Cache to store currently online Pytalk User objects, keyed by their user_id.
+# Key: user_id (int), Value: pytalk.user.User object.
+ONLINE_USERS_CACHE: dict[int, 'pytalk.user.User'] = {}
 
 # Cache to store all registered user accounts on the server.
 # Key - str(username), value - object pytalk.UserAccount.

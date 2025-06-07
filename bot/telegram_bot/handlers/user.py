@@ -171,14 +171,8 @@ async def who_command_handler(
         return
 
     try:
-        all_users_list = []
-        for username, session_count in ONLINE_USERS_CACHE.items(): # Iterate over items()
-            if not username: # Skip if username is empty
-                continue
-            user_obj = tt_instance.get_user(username)
-            if user_obj:
-                # Add the user_obj to the list, repeated session_count times
-                all_users_list.extend([user_obj] * session_count)
+        # New logic for all_users_list:
+        all_users_list = list(ONLINE_USERS_CACHE.values())
     except Exception as e:
         logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
         await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
