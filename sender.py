@@ -4,6 +4,7 @@ import sys
 # Setup logging first
 from bot.logging_setup import setup_logging
 logger = setup_logging() # Setup and get a logger for main
+from bot.state_manager import StateManager # <--- ADD IMPORT HERE
 
 try:
     import uvloop
@@ -77,7 +78,7 @@ async def main_async():
         SubscriptionCheckMiddleware,
         StateManagerMiddleware
     )
-    from bot.state_manager import StateManager # Added for explicitness, though StateManagerMiddleware imports it
+    # from bot.state_manager import StateManager # DELETED FROM HERE
     from bot.telegram_bot.handlers import (
         user_commands_router,
         admin_router,
