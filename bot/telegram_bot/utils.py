@@ -208,17 +208,17 @@ async def show_user_buttons(
     else:
         my_username_str = str(my_username_val)
 
-    # Filter state_manager.online_users to exclude self
-    other_online_usernames = {u_name for u_name in state_manager.online_users if u_name != my_username_str} # MODIFIED
+    # Get all online usernames
+    all_online_usernames = state_manager.online_users # MODIFIED
 
-    if not other_online_usernames:
+    if not all_online_usernames: # MODIFIED
         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))
         return
 
     builder = InlineKeyboardBuilder()
-    # users_added_to_list variable is implicitly handled by checking len(other_online_usernames) or if loop runs
+    # users_added_to_list variable is implicitly handled by checking len(all_online_usernames) or if loop runs
 
-    for username in sorted(list(other_online_usernames), key=str.lower):
+    for username in sorted(list(all_online_usernames), key=str.lower): # MODIFIED
         user_obj = tt_instance.get_user(username) # Username from cache is already a string
         if not user_obj: # Should be rare if cache is consistent
             logger.warning(f"Could not retrieve user object for cached username: {username} in show_user_buttons. Skipping.")
