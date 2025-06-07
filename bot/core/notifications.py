@@ -4,7 +4,7 @@ from aiogram import html
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
-from pytalk.user import User as TeamTalkUser # Убедитесь, что это правильный User
+from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 from bot.localization import get_text
@@ -17,12 +17,51 @@ from bot.constants import (
     NOTIFICATION_EVENT_LEAVE,
     INITIAL_LOGIN_IGNORE_DELAY_SECONDS
 )
-# Import teamtalk_bot.bot_instance carefully
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr # Убедитесь, что sdk здесь доступен или импортируйте правильно
+ttstr = pytalk.instance.sdk.ttstr
+
+
+def _should_ignore_initial_event(event_type: str, username: str, user_id: int) -> bool:
+    """Checks if the event should be ignored due to recent bot login."""
+    current_login_complete_time = tt_bot_module.login_complete_time
+    reason_for_ignore = ""
+
+    if current_login_complete_time is None:
+        reason_for_ignore = "bot still initializing/reconnecting"
+    elif datetime.utcnow() < current_login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
+        reason_for_ignore = "bot login too recent"
+    else:
+        return False # Not ignoring
+
+    if event_type == NOTIFICATION_EVENT_JOIN: # Log only for join events to reduce noise for leave events during init
+        logger.debug(f"Ignoring potential initial sync {event_type} for {username} ({user_id}). Reason: {reason_for_ignore}.")
+    return True # Ignoring the event
+
+
+def _is_user_globally_ignored(username: str) -> bool:
+    """Checks if the user is in the global ignore list from the config."""
+    global_ignore_str = app_config.get("GLOBAL_IGNORE_USERNAMES", "")
+    if not global_ignore_str:
+        return False
+
+    ignored_set = {name.strip() for name in global_ignore_str.split(',') if name.strip()}
+    return username in ignored_set
+
+
+async def _get_recipients_for_notification(username: str, event_type: str) -> list[int]:
+    """
+    Gets a list of Telegram user IDs who should receive a notification for a given event.
+    """
+    recipients = []
+    async with SessionFactory() as session:
+        all_subscriber_ids = await get_all_subscribers_ids(session)
+        for chat_id in all_subscriber_ids:
+            if await should_notify_user(chat_id, username, event_type, session):
+                recipients.append(chat_id)
+    return recipients
 
 
 async def should_notify_user(
@@ -51,89 +90,44 @@ async def should_notify_user(
 async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance
+    tt_instance: TeamTalkInstance # Make sure TeamTalkInstance is the correct type from tt_instance_manager or pytalk
 ):
-    logger.debug(f"--- send_join_leave_notification_logic started for event: {event_type}, user: {ttstr(tt_user.username)} ---")
+    user_nickname = get_tt_user_display_name(tt_user, "en") # For logging and display
+    user_username = ttstr(tt_user.username) # Assuming ttstr is available (e.g. pytalk.instance.sdk.ttstr)
+    user_id = tt_user.id
 
-    # Получаем актуальное значение login_complete_time из модуля bot_instance
-    current_login_complete_time = tt_bot_module.login_complete_time
-    reason_for_ignore = ""
-
-    if current_login_complete_time is None:
-        reason_for_ignore = "bot still initializing/reconnecting"
-    elif datetime.utcnow() < current_login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
-        reason_for_ignore = "bot login too recent"
-
-    if reason_for_ignore:
-        if event_type == NOTIFICATION_EVENT_JOIN:
-             logger.debug(f"Ignoring potential initial sync {event_type} for {ttstr(tt_user.username)} ({tt_user.id}). Reason: {reason_for_ignore}.")
-        logger.debug(f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---")
+    if not user_username: # Check if username is empty or None
+        logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname}, ID: {user_id}). Skipping.")
         return
 
-    user_nickname_val = get_tt_user_display_name(tt_user, "en") # Using "en" as per original logic for this specific var
-    user_username_val = ttstr(tt_user.username) # Still needed for specific checks like global ignore
-    user_id_val = tt_user.id
-
-    global_ignore_usernames_str = app_config.get("GLOBAL_IGNORE_USERNAMES", "")
-    globally_ignored_usernames_set = set()
-    if global_ignore_usernames_str:
-        globally_ignored_usernames_set = {name.strip() for name in global_ignore_usernames_str.split(',') if name.strip()}
-
-    if not user_username_val:
-        logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname_val}, ID: {user_id_val}). Skipping notification.")
-        logger.debug(f"--- send_join_leave_notification_logic finished: Empty username ---")
+    # Call the new helper functions
+    if _should_ignore_initial_event(event_type, user_username, user_id):
         return
 
-    if user_username_val in globally_ignored_usernames_set:
-        logger.debug(f"User {user_username_val} is in the global ignore list. Skipping {event_type} notification.")
-        logger.debug(f"--- send_join_leave_notification_logic finished: User globally ignored ---")
+    if _is_user_globally_ignored(user_username):
+        logger.debug(f"User {user_username} is globally ignored. Skipping {event_type} notification.")
         return
 
-    server_name_val = get_effective_server_name(tt_instance)
+    recipients = await _get_recipients_for_notification(user_username, event_type)
 
-    chat_ids_to_notify_list = []
-    async with SessionFactory() as session:
-        all_subscriber_ids = await get_all_subscribers_ids(session)
-        logger.debug(f"Subscribers to check for notification: {all_subscriber_ids}")
-
-        if not all_subscriber_ids:
-            logger.debug("No subscribers found in the database.") # Changed to debug
-        
-        logger.debug(f"Processing {event_type} notifications for TeamTalk user {user_username_val}. Checking {len(all_subscriber_ids)} subscribed Telegram users.") # Changed to debug
-        for chat_id_val in all_subscriber_ids:
-            user_specific_settings_for_log = await get_or_create_user_settings(chat_id_val, session)
-            # Используем .value для enum, если он доступен, иначе пытаемся привести к строке
-            notification_pref_value = "N/A"
-            if hasattr(user_specific_settings_for_log.notification_settings, 'value'):
-                notification_pref_value = user_specific_settings_for_log.notification_settings.value
-            elif user_specific_settings_for_log.notification_settings is not None:
-                notification_pref_value = str(user_specific_settings_for_log.notification_settings)
-
-            logger.debug(f"Checking notification for TG_ID {chat_id_val}. Settings: NotifyPref={notification_pref_value}, MuteAll={user_specific_settings_for_log.mute_all_flag}, MutedUsers={user_specific_settings_for_log.muted_users_set}. Event TT User: {user_username_val}")
-
-            should_notify_result = await should_notify_user(chat_id_val, user_username_val, event_type, session)
-            logger.debug(f"Result of should_notify_user for TG_ID {chat_id_val}: {should_notify_result}")
-
-            if should_notify_result:
-                chat_ids_to_notify_list.append(chat_id_val)
-                logger.debug(f"TG_ID {chat_id_val} WILL be notified for {user_username_val}.")
-            else:
-                logger.debug(f"TG_ID {chat_id_val} WILL NOT be notified for {user_username_val}.")
-
-    if chat_ids_to_notify_list:
-        logger.info(f"Notifications for {event_type} of {user_username_val} will be sent to {len(chat_ids_to_notify_list)} Telegram users.")
-    if not chat_ids_to_notify_list:
+    if not recipients:
+        logger.debug(f"No recipients found for {event_type} event for user {user_username}.")
         return
 
-    def text_generator_func(lang_code: str) -> str:
-        key_str = "JOIN_NOTIFICATION" if event_type == NOTIFICATION_EVENT_JOIN else "LEAVE_NOTIFICATION"
-        return get_text(key_str, lang_code, user_nickname=html.quote(user_nickname_val), server_name=html.quote(server_name_val))
+    logger.info(f"Notifications for {event_type} of {user_username} will be sent to {len(recipients)} users.")
+
+    server_name = get_effective_server_name(tt_instance)
+
+    def text_generator(lang_code: str) -> str:
+        # Assuming NOTIFICATION_EVENT_JOIN is defined, e.g. from bot.constants
+        key = "JOIN_NOTIFICATION" if event_type == NOTIFICATION_EVENT_JOIN else "LEAVE_NOTIFICATION"
+        return get_text(key, lang_code, user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
 
     await send_telegram_messages_to_list(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"], 
-        chat_ids=chat_ids_to_notify_list,
-        text_generator=text_generator_func,
-        tt_user_username_for_markup=user_username_val,
-        tt_user_nickname_for_markup=user_nickname_val, 
-        tt_instance_for_check=tt_instance 
+        chat_ids=recipients,
+        text_generator=text_generator,
+        tt_user_username_for_markup=user_username, # For potential markup buttons related to the user
+        tt_user_nickname_for_markup=user_nickname, # For potential markup buttons
+        tt_instance_for_check=tt_instance # For context in markup or other checks
     )
