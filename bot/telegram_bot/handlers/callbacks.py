@@ -890,13 +890,22 @@ async def cq_toggle_specific_user_mute_action(
 
         all_cached_accounts = list(USER_ACCOUNTS_CACHE.values()) # pytalk.UserAccount objects
         for acc_obj in all_cached_accounts:
-            # USER_ACCOUNTS_CACHE stores pytalk.UserAccount objects.
-            # .username attribute is a string.
-            current_username_str = acc_obj.username
-            current_hash = hashlib.sha1(current_username_str.encode('utf-8')).hexdigest()
+            # acc_obj.username is string from cache, ttstr() might not be strictly needed here
+            # if USER_ACCOUNTS_CACHE is guaranteed to store already processed strings.
+            # However, to be safe and align with user's prompt style:
+            current_username_val = ttstr(acc_obj.username)
+
+            if isinstance(current_username_val, str):
+                current_username_bytes = current_username_val.encode('utf-8')
+            else: # Assumed to be bytes
+                current_username_bytes = current_username_val
+
+            current_hash = hashlib.sha1(current_username_bytes).hexdigest()
+
             if current_hash == target_hash:
-                username_to_toggle = current_username_str
-                display_nickname_for_toast = current_username_str # For accounts, username is the display name
+                # Ensure username_to_toggle is the string form
+                username_to_toggle = current_username_val if isinstance(current_username_val, str) else current_username_val.decode('utf-8', errors='replace')
+                display_nickname_for_toast = username_to_toggle
                 found_account = True # Mark as found
                 break
 

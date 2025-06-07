@@ -5,8 +5,8 @@ Keyboard utilities for the Telegram bot.
 This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
-
-import hashlib # Added import
+import logging # Added import
+import hashlib
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -27,6 +27,7 @@ from bot.database.models import NotificationSetting # For subscription settings
 from bot.core.user_settings import UserSpecificSettings # For notification and mute settings
 
 ttstr = pytalk.instance.sdk.ttstr # For convenience if dealing with pytalk strings
+logger = logging.getLogger(__name__) # Added logger
 
 # --- Settings Keyboards ---
 
@@ -230,10 +231,26 @@ def create_account_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     for idx, account_obj in enumerate(page_slice): # Iterate over page_slice
-        username_str = ttstr(account_obj._account.szUsername)
-        username_hash = hashlib.sha1(username_str.encode('utf-8')).hexdigest()
-        # Nickname for display purposes; for UserAccount, username is the primary identifier.
-        display_name = username_str
+        # account_obj is pytalk.UserAccount. Its ._account.szUsername is likely bytes.
+        # ttstr() is intended to decode it to str, but might return bytes on some systems/configs.
+        username_val = ttstr(account_obj._account.szUsername)
+
+        if isinstance(username_val, str):
+            username_bytes = username_val.encode('utf-8')
+            username_str = username_val # Keep the string version for display_name
+        else: # Assumed to be bytes if not str
+            username_bytes = username_val
+            try:
+                # Attempt to decode for display_name, fallback if error
+                username_str = username_val.decode('utf-8')
+            except UnicodeDecodeError:
+                logger.warning(f"Could not decode username bytes for display in create_account_list_keyboard: {username_val!r}")
+                # Fallback for display name if bytes cannot be decoded to string.
+                # This is a display issue, hashing will still proceed with original bytes.
+                username_str = "Error: Unreadable Name"
+
+        username_hash = hashlib.sha1(username_bytes).hexdigest()
+        display_name = username_str # Use the (potentially decoded) string for display
 
         is_in_set = username_str in user_specific_settings.muted_users_set
         is_effectively_muted = (user_specific_settings.mute_all_flag and not is_in_set) or \
