@@ -162,25 +162,25 @@ def create_manage_muted_users_keyboard(
 def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
     language: str,
-    current_page: int,
+    page: int, # Renamed from current_page
     total_pages: int,
     list_type: str,
     callback_factory: Callable
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
     pagination_buttons = []
-    if current_page > 0:
+    if page > 0: # Use renamed page
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=get_text("PAGINATION_PREV_BTN", language),
-                callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack()
+                callback_data=callback_factory(list_type=list_type, page=page - 1).pack() # Use renamed page
             )
         )
-    if current_page < total_pages - 1:
+    if page < total_pages - 1: # Use renamed page
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=get_text("PAGINATION_NEXT_BTN", language),
-                callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack()
+                callback_data=callback_factory(list_type=list_type, page=page + 1).pack() # Use renamed page
             )
         )
     if pagination_buttons:
@@ -198,13 +198,14 @@ def create_paginated_user_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     for idx, username in enumerate(page_slice): # Iterate over page_slice
-        button_text_key = "UNMUTE_USER_BTN" if list_type == "muted" else "MUTE_USER_BTN"
+        # username is a str from page_slice
+        username_hash = hashlib.md5(username.encode('utf-8')).hexdigest()
+        button_text_key = "UNMUTE_USER_BTN" if list_type == "m" else "MUTE_USER_BTN" # Handles "m" for muted, "l" for allowed (mute action)
         button_text = get_text(button_text_key, language, username=username)
         callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user",
-            user_idx=idx, # Index within the current page
-            current_page=page, # Use renamed page parameter
-            list_type=list_type
+            username_hash=username_hash,
+            current_page=page,
+            list_type=list_type # This will be "m" or "l"
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
@@ -249,7 +250,7 @@ def create_account_list_keyboard(
                 # This is a display issue, hashing will still proceed with original bytes.
                 username_str = "Error: Unreadable Name"
 
-        username_hash = hashlib.sha1(username_bytes).hexdigest()
+        username_hash = hashlib.md5(username_bytes).hexdigest() # Changed to md5
         display_name = username_str # Use the (potentially decoded) string for display
 
         is_in_set = username_str in user_specific_settings.muted_users_set
@@ -260,17 +261,16 @@ def create_account_list_keyboard(
         button_text = get_text("TOGGLE_MUTE_STATUS_BTN", language, username=display_name, current_status=current_status_text)
 
         callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user",
             username_hash=username_hash, # Use the calculated hash
             current_page=page, # Use renamed page parameter
-            list_type="all_accounts" # Specific list type for server accounts
+            list_type="a" # Changed list_type
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
     if page_slice: # Check page_slice
         builder.adjust(1) # User buttons one per row
 
-    _add_pagination_controls(builder, language, page, total_pages, "all_accounts", PaginateUsersCallback) # Pass page
+    _add_pagination_controls(builder, language, page, total_pages, "a", PaginateUsersCallback) # Pass page, changed list_type
 
     builder.row(InlineKeyboardButton( # Back button on its own row
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),

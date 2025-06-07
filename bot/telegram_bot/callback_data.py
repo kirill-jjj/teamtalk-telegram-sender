@@ -32,8 +32,7 @@ class PaginateUsersCallback(CallbackData, prefix="paginate_list"):
     page: int
 
 # For muting/unmuting a specific user from a list
-class ToggleMuteSpecificCallback(CallbackData, prefix="toggle_user_mute"):
-    action: str # As per subtask example, keeping action.
+class ToggleMuteSpecificCallback(CallbackData, prefix="tum"):
     username_hash: str # Changed from user_idx: int
     current_page: int
     list_type: str  # e.g., "muted", "allowed", "server_users"

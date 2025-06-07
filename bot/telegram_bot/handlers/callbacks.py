@@ -757,24 +757,35 @@ async def cq_list_internal_users(
     callback_query: CallbackQuery,
     language: str,
     user_specific_settings: UserSpecificSettings,
-    callback_data: UserListCallback
+    callback_data: UserListCallback # action is "list_muted" or "list_allowed"
 ):
-    await callback_query.answer() # Acknowledge this initial call
-    list_type = "muted" if callback_data.action == "list_muted" else "allowed"
+    await callback_query.answer()
 
-    # Consistency check
-    is_mute_all = user_specific_settings.mute_all_flag
-    if (list_type == "muted" and is_mute_all) or \
-       (list_type == "allowed" and not is_mute_all):
-        alert_message = "Mute All is ON, showing Allowed list." if is_mute_all else "Mute All is OFF, showing Muted list."
-        logger.warning(f"User {callback_query.from_user.id} triggered {callback_data.action} with inconsistent mute_all_flag ({is_mute_all}). Correcting list_type.")
-        await callback_query.answer(f"Inconsistency: {alert_message}", show_alert=True)
-        list_type = "allowed" if is_mute_all else "muted"
+    user_pressed_list_muted = callback_data.action == "list_muted"
+    mute_all_is_active = user_specific_settings.mute_all_flag
 
-    await _display_paginated_user_list(callback_query, language, user_specific_settings, list_type, 0)
+    # Determine what kind of list the user *thinks* they are seeing vs. what the set *actually* is
+    # list_type_to_display: what _display_paginated_user_list should render ("m" or "l")
+    # This is based on the actual mode of the muted_users_set.
+    list_type_to_display = "l" if mute_all_is_active else "m" # "l" for allow-list mode, "m" for block-list mode
+
+    # Check if what the user pressed is inconsistent with the current state of mute_all_flag
+    # User pressed "View Muted" (expects "m") but mute_all is ON (so set is "l") -> Inconsistent
+    # User pressed "View Allowed" (expects "l") but mute_all is OFF (so set is "m") -> Inconsistent
+    if (user_pressed_list_muted and mute_all_is_active) or \
+       (not user_pressed_list_muted and not mute_all_is_active):
+
+        alert_message_key = "MUTED_LIST_BECOMES_ALLOWED_INFO" if mute_all_is_active else "ALLOWED_LIST_BECOMES_MUTED_INFO"
+        await callback_query.answer(get_text(alert_message_key, language), show_alert=True)
+        logger.info(
+            f"User {callback_query.from_user.id} pressed '{callback_data.action}'. "
+            f"Mute All is {mute_all_is_active}. Displaying list as type '{list_type_to_display}' due to mode switch."
+        )
+
+    await _display_paginated_user_list(callback_query, language, user_specific_settings, list_type_to_display, 0)
 
 
-@callback_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_(["muted", "allowed"])))
+@callback_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_(["m", "l"]))) # Updated to "m", "l"
 async def cq_paginate_internal_user_list(
     callback_query: CallbackQuery,
     language: str,
@@ -876,23 +887,20 @@ async def cq_toggle_specific_user_mute_action(
 
     target_hash = callback_data.username_hash
     current_page = callback_data.current_page # Keep for UI refresh
-    list_type = callback_data.list_type
+    # list_type from callback_data will be "a", "m", or "l"
 
     username_to_toggle: str | None = None
     display_nickname_for_toast: str | None = None
 
-    if list_type == "all_accounts":
+    if callback_data.list_type == "a": # Changed from "all_accounts"
         found_account = False
         if not USER_ACCOUNTS_CACHE: # Ensure cache is not empty
             logger.warning("USER_ACCOUNTS_CACHE is empty during toggle action.")
-            await callback_query.answer(get_text("error_occurred", language), show_alert=True) # Or a more specific error
+            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
             return
 
         all_cached_accounts = list(USER_ACCOUNTS_CACHE.values()) # pytalk.UserAccount objects
         for acc_obj in all_cached_accounts:
-            # acc_obj.username is string from cache, ttstr() might not be strictly needed here
-            # if USER_ACCOUNTS_CACHE is guaranteed to store already processed strings.
-            # However, to be safe and align with user's prompt style:
             current_username_val = ttstr(acc_obj.username)
 
             if isinstance(current_username_val, str):
@@ -900,13 +908,12 @@ async def cq_toggle_specific_user_mute_action(
             else: # Assumed to be bytes
                 current_username_bytes = current_username_val
 
-            current_hash = hashlib.sha1(current_username_bytes).hexdigest()
+            current_hash = hashlib.md5(current_username_bytes).hexdigest() # Changed to md5
 
             if current_hash == target_hash:
-                # Ensure username_to_toggle is the string form
                 username_to_toggle = current_username_val if isinstance(current_username_val, str) else current_username_val.decode('utf-8', errors='replace')
                 display_nickname_for_toast = username_to_toggle
-                found_account = True # Mark as found
+                found_account = True
                 break
 
         if not found_account:
@@ -914,37 +921,32 @@ async def cq_toggle_specific_user_mute_action(
             await callback_query.answer(get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname="the user"), show_alert=True)
             return
 
-    elif list_type in ["muted", "allowed"]:
-        # relevant_set contains strings (usernames) from user_specific_settings.muted_users_set
-        relevant_set = user_specific_settings.muted_users_set
+    elif callback_data.list_type in ["m", "l"]: # Changed from ["muted", "allowed"]
+        relevant_set = user_specific_settings.muted_users_set # Both "m" and "l" operate on this set
 
         for username_str_in_set in relevant_set:
-            current_hash = hashlib.sha1(username_str_in_set.encode('utf-8')).hexdigest()
+            current_hash = hashlib.md5(username_str_in_set.encode('utf-8')).hexdigest() # Changed to md5
             if current_hash == target_hash:
                 username_to_toggle = username_str_in_set
-                display_nickname_for_toast = username_str_in_set # For these lists, username is the display name
-                break # Found the user
+                display_nickname_for_toast = username_str_in_set
+                break
 
-        if not username_to_toggle: # If loop finished without finding
-            logger.warning(f"User with hash {target_hash} not found in {list_type} list ({len(relevant_set)} items checked).")
+        if not username_to_toggle:
+            logger.warning(f"User with hash {target_hash} not found in {callback_data.list_type} list ({len(relevant_set)} items checked).")
             await callback_query.answer(get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname="the user"), show_alert=True)
             return
     else:
-        logger.error(f"Unknown list_type '{list_type}' in cq_toggle_specific_user_mute_action for user {callback_query.from_user.id}.")
+        logger.error(f"Unknown list_type '{callback_data.list_type}' in cq_toggle_specific_user_mute_action for user {callback_query.from_user.id}.")
         await callback_query.answer("Error: Unknown list type.", show_alert=True)
         return
 
-    # If username_to_toggle is still None here, it means an issue not caught above or an unknown list_type
-    # However, the blocks above should `return` if not found.
     if not username_to_toggle:
-        logger.error(f"Critical logic error: username_to_toggle is None after list processing for hash {target_hash}, list_type {list_type}.")
+        logger.error(f"Critical logic error: username_to_toggle is None after list processing for hash {target_hash}, list_type {callback_data.list_type}.")
         await callback_query.answer(get_text("error_occurred", language), show_alert=True)
         return
 
-    # Ensure display_nickname_for_toast is set if username_to_toggle is set.
-    # It should be set within the if/elif blocks for list_type.
     if not display_nickname_for_toast:
-        display_nickname_for_toast = username_to_toggle # Fallback, though should be set.
+        display_nickname_for_toast = username_to_toggle
 
     # Toggle logic
     if username_to_toggle in user_specific_settings.muted_users_set:
@@ -979,7 +981,7 @@ async def cq_toggle_specific_user_mute_action(
         return
 
     # Refresh the correct list to the same page
-    if list_type == "all_accounts":
+    if callback_data.list_type == "a": # Use callback_data.list_type for refresh logic
         if tt_instance and tt_instance.connected: # Ensure tt_instance is still valid
             await _display_account_list(callback_query, language, user_specific_settings, tt_instance, current_page)
         else: # If TT disconnected, cannot refresh the server list, show error or go back
@@ -987,9 +989,9 @@ async def cq_toggle_specific_user_mute_action(
             # Consider navigating back to a previous menu if refresh isn't possible
             await cq_show_manage_muted_menu(callback_query, language, user_specific_settings, NotificationActionCallback(action="manage_muted"))
 
-    elif list_type in ["muted", "allowed"]:
-        await _display_paginated_user_list(callback_query, language, user_specific_settings, list_type, current_page)
+    elif callback_data.list_type in ["m", "l"]: # Use callback_data.list_type for refresh logic
+        await _display_paginated_user_list(callback_query, language, user_specific_settings, callback_data.list_type, current_page)
     else:
         # This case should have been caught earlier, but as a fallback:
-        logger.error(f"Unknown list_type '{list_type}' for refresh in cq_toggle_specific_user_mute_action")
+        logger.error(f"Unknown list_type '{callback_data.list_type}' for refresh in cq_toggle_specific_user_mute_action")
         await callback_query.answer("Error: Could not refresh list due to unknown list type.", show_alert=True)
