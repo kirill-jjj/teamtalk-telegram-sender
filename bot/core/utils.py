@@ -1,9 +1,10 @@
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import pytalk # Required for TeamTalkInstance, TeamTalkUser, ttstr
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
+from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.config import app_config
 from bot.localization import get_text
@@ -50,3 +51,20 @@ def pluralize(number: int, one: str, few: str, many: str) -> str:
         return few
 
     return many
+
+def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount]) -> str:
+    """Safely gets the username from a Pytalk User or UserAccount object as a string."""
+    username_val = None
+    if hasattr(user_or_account, 'username'): # Standard for pytalk.user.User
+        username_val = user_or_account.username
+    elif hasattr(user_or_account, '_account') and hasattr(user_or_account._account, 'szUsername'): # For pytalk.UserAccount
+        # This case handles the structure seen in cq_toggle_specific_user_mute_action for UserAccount
+        username_val = user_or_account._account.szUsername
+    elif hasattr(user_or_account, 'szUsername'): # Direct access if szUsername is an attribute
+         username_val = user_or_account.szUsername
+
+
+    if isinstance(username_val, bytes):
+        return ttstr(username_val)
+
+    return str(username_val) if username_val is not None else ""
