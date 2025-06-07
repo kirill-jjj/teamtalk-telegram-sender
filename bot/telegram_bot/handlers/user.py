@@ -171,13 +171,14 @@ async def who_command_handler(
         return
 
     try:
-        # Reconstruct pytalk.User objects from usernames in the cache
-        # tt_instance.get_user(username) is expected to be a fast in-memory lookup
-        # if the user object itself is cached by pytalk or if it reconstructs it quickly.
-        all_users_list = [tt_instance.get_user(username) for username in ONLINE_USERS_CACHE.keys() if username]
-        # Filter out None results if get_user might return None for a cached username
-        # that somehow doesn't resolve to a full user object anymore (should be rare if cache is consistent)
-        all_users_list = [user for user in all_users_list if user is not None]
+        all_users_list = []
+        for username, session_count in ONLINE_USERS_CACHE.items(): # Iterate over items()
+            if not username: # Skip if username is empty
+                continue
+            user_obj = tt_instance.get_user(username)
+            if user_obj:
+                # Add the user_obj to the list, repeated session_count times
+                all_users_list.extend([user_obj] * session_count)
     except Exception as e:
         logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
         await message.reply(get_text("TT_ERROR_GETTING_USERS", language))
@@ -186,8 +187,6 @@ async def who_command_handler(
     is_caller_admin_val = await IsAdminFilter()(message, session)
 
     # Use the first helper to group users
-    # tt_instance.getMyUserID() can be None if not logged in, but previous checks should prevent this.
-    # Adding a type ignore or check if myUserID could be None here.
     bot_user_id = tt_instance.getMyUserID()
     if bot_user_id is None: # Should ideally not happen due to earlier checks
         logger.error("Could not get bot's own user ID from TeamTalk instance.")
