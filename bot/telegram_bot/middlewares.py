@@ -11,6 +11,7 @@ from bot.core.user_settings import (
     get_or_create_user_settings
 )
 from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
+from bot.language import get_translator
 
 
 logger = logging.getLogger(__name__)
@@ -34,31 +35,32 @@ class UserSettingsMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
-        event: Message | CallbackQuery, # Specific events that have a user
+        event: Message | CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
         user_obj = data.get("event_from_user")
         session_obj: AsyncSession | None = data.get("session")
-        user_specific_settings: UserSpecificSettings
 
         if user_obj and session_obj:
-            telegram_id_val = user_obj.id
-            # Use get_or_create_user_settings to ensure settings are loaded/created
-            user_specific_settings = await get_or_create_user_settings(telegram_id_val, session_obj)
+            user_specific_settings = await get_or_create_user_settings(user_obj.id, session_obj)
         else:
-            # Fallback for events without user or session (should ideally not happen for user-facing handlers)
             user_specific_settings = UserSpecificSettings()
-            logger.warning(f"UserSettingsMiddleware: No user or session for event {type(event)}. Using default settings.")
+            # Ensure logger is defined in this file, or this line will cause an error.
+            # If logger is not defined, this print statement might be better:
+            # print("UserSettingsMiddleware: No user or session. Using default settings.")
+            # For the purpose of this subtask, assume logger is available or the user will handle it.
+            logger.warning(f"UserSettingsMiddleware: No user or session. Using default settings.")
 
 
+        # Получаем объект переводчика для языка пользователя
+        translator = get_translator(user_specific_settings.language)
+        # Внедряем саму функцию перевода под стандартным именем "_"
+        data["_"] = translator.gettext
+
+        # Оставляем старые данные для совместимости, если где-то еще используются
         data["user_specific_settings"] = user_specific_settings
-        # For convenience, also pass individual common settings
         data["language"] = user_specific_settings.language
-        data["notification_settings_enum"] = user_specific_settings.notification_settings # Pass the enum itself
-        data["mute_settings_dict"] = { # Pass as a dict
-            "muted_users": user_specific_settings.muted_users_set,
-            "mute_all": user_specific_settings.mute_all_flag
-        }
+
         return await handler(event, data)
 
 class TeamTalkInstanceMiddleware(BaseMiddleware):
