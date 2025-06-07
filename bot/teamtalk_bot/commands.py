@@ -1,6 +1,7 @@
 import logging
 import functools # For functools.wraps
 from typing import Optional, Callable, List
+from bot.state import ADMIN_RIGHTS_CACHE # <-- New import
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,6 +80,10 @@ async def _process_admin_ids(
                 if await crud_function(session, telegram_id_val):
                     processed_count += 1
                     logger.info(f"Admin TG ID {telegram_id_val} {log_action_description} by TT admin {sender_username_val}")
+                    # If we are removing an admin, invalidate the cache
+                    if crud_function.__name__ == 'remove_admin_db':
+                        ADMIN_RIGHTS_CACHE.pop(telegram_id_val, None)
+                        logger.info(f"Admin rights cache invalidated for user {telegram_id_val}.")
                     try:
                         await tg_bot_event.set_my_commands(
                             commands=commands_to_set_on_success,

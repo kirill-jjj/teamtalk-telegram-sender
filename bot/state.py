@@ -1,4 +1,6 @@
 # bot/state.py
+import time
+from typing import Tuple
 
 # This module stores global, mutable application state,
 # such as caches and state flags.
@@ -11,3 +13,8 @@ ONLINE_USERS_CACHE: set[str] = set()
 # Key - str(username), value - object pytalk.UserAccount.
 # This avoids the slow list_user_accounts() call in menus.
 USER_ACCOUNTS_CACHE: dict[str, 'pytalk.UserAccount'] = {}
+
+# Cache to store admin rights of users.
+# Key - int(user_id), value - Tuple[bool(is_admin), float(timestamp)]
+ADMIN_RIGHTS_CACHE: dict[int, Tuple[bool, float]] = {}
+ADMIN_CACHE_TTL_SECONDS = 60
