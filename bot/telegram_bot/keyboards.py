@@ -6,6 +6,7 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
+import hashlib # Added import
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -187,30 +188,30 @@ def _add_pagination_controls(
 
 def create_paginated_user_list_keyboard(
     language: str,
-    page_users: list[str], # Usernames
-    current_page: int,
+    page_slice: list[str], # Renamed from page_users
+    page: int,             # Renamed from current_page for consistency
     total_pages: int,
     list_type: str, # "muted" or "allowed"
 ) -> InlineKeyboardBuilder:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
 
-    for idx, username in enumerate(page_users):
+    for idx, username in enumerate(page_slice): # Iterate over page_slice
         button_text_key = "UNMUTE_USER_BTN" if list_type == "muted" else "MUTE_USER_BTN"
         button_text = get_text(button_text_key, language, username=username)
         callback_d = ToggleMuteSpecificCallback(
             action="toggle_user",
             user_idx=idx, # Index within the current page
-            current_page=current_page,
+            current_page=page, # Use renamed page parameter
             list_type=list_type
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
     # Adjust rows for user buttons, e.g., 1 per row if many, or more if few. Defaulting to 1.
-    if page_users:
+    if page_slice: # Check page_slice
         builder.adjust(1)
 
-    _add_pagination_controls(builder, language, current_page, total_pages, list_type, PaginateUsersCallback)
+    _add_pagination_controls(builder, language, page, total_pages, list_type, PaginateUsersCallback) # Pass page
 
     builder.row(InlineKeyboardButton( # Use .row() to ensure it's on its own line
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),
@@ -220,16 +221,17 @@ def create_paginated_user_list_keyboard(
 
 def create_account_list_keyboard(
     language: str,
-    page_accounts: list[pytalk.UserAccount], # List of UserAccount objects for the current page
-    current_page: int,
+    page_slice: list[pytalk.UserAccount], # Renamed
+    page: int,                            # Renamed
     total_pages: int,
     user_specific_settings: UserSpecificSettings
 ) -> InlineKeyboardBuilder:
     """Creates keyboard for a paginated list of all server user accounts."""
     builder = InlineKeyboardBuilder()
 
-    for idx, account_obj in enumerate(page_accounts):
+    for idx, account_obj in enumerate(page_slice): # Iterate over page_slice
         username_str = ttstr(account_obj._account.szUsername)
+        username_hash = hashlib.sha1(username_str.encode('utf-8')).hexdigest()
         # Nickname for display purposes; for UserAccount, username is the primary identifier.
         display_name = username_str
 
@@ -242,16 +244,16 @@ def create_account_list_keyboard(
 
         callback_d = ToggleMuteSpecificCallback(
             action="toggle_user",
-            user_idx=idx, # Index within the current page
-            current_page=current_page,
+            username_hash=username_hash, # Use the calculated hash
+            current_page=page, # Use renamed page parameter
             list_type="all_accounts" # Specific list type for server accounts
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
-    if page_accounts:
+    if page_slice: # Check page_slice
         builder.adjust(1) # User buttons one per row
 
-    _add_pagination_controls(builder, language, current_page, total_pages, "all_accounts", PaginateUsersCallback)
+    _add_pagination_controls(builder, language, page, total_pages, "all_accounts", PaginateUsersCallback) # Pass page
 
     builder.row(InlineKeyboardButton( # Back button on its own row
         text=get_text("BACK_TO_MANAGE_MUTED_BTN", language),

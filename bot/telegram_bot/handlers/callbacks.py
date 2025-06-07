@@ -1,8 +1,10 @@
+import hashlib
 import logging
 import math # For pagination
 from typing import Callable
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -593,6 +595,91 @@ async def cq_toggle_mute_all_action(
 
 # --- Paginated User List for Muted/Allowed Users (Refactored) ---
 
+async def display_paginated_list(
+    callback_query: CallbackQuery,
+    language: str,
+    items: list, # Original full list of items
+    page: int, # Requested page number (0-indexed)
+    header_text_key: str,
+    empty_list_text_key: str,
+    keyboard_factory: Callable[..., InlineKeyboardMarkup | InlineKeyboardBuilder],
+    keyboard_factory_kwargs: dict
+) -> None:
+    if not callback_query.message:
+        logger.warning("display_paginated_list called with no message in callback_query.")
+        # Attempt to answer callback to clear loading state, though without message context it's limited.
+        try:
+            await callback_query.answer("Error: Message context not available for display.")
+        except TelegramAPIError:
+            pass # Ignore if answer fails
+        return
+
+    # The _paginate_list function is defined later in the file.
+    # It's assumed to be available in this scope.
+    page_slice, total_pages, current_page = _paginate_list(items, page, USERS_PER_PAGE)
+
+    message_parts = [get_text(header_text_key, language)]
+
+    if not items: # Check if the original list of items is empty
+        message_parts.append(get_text(empty_list_text_key, language))
+
+    # Page indicator is always added, as per instruction ("текст сообщения будет состоять только из заголовка и индикатора страниц")
+    # when items are present. If items are empty, it still shows Page 1/1.
+    message_parts.append(f"""
+{get_text('PAGE_INDICATOR', language, current_page=current_page + 1, total_pages=total_pages)}""")
+
+    final_message_text = """
+""".join(message_parts)
+
+    # Prepare arguments for the keyboard factory
+    # Common arguments are language, page_slice, current_page (0-indexed), total_pages
+    # Specific arguments come from keyboard_factory_kwargs
+    kb_factory_args = {
+        "language": language,
+        "page_slice": page_slice,
+        "page": current_page, # Pass the 0-indexed corrected page
+        "total_pages": total_pages,
+        **keyboard_factory_kwargs # Spread specific arguments for the factory
+    }
+
+    markup_obj = keyboard_factory(**kb_factory_args)
+
+    actual_markup: InlineKeyboardMarkup | None
+    if isinstance(markup_obj, InlineKeyboardBuilder):
+        actual_markup = markup_obj.as_markup()
+    elif isinstance(markup_obj, InlineKeyboardMarkup):
+        actual_markup = markup_obj
+    else: # Should not happen if type hints are correct for factories
+        logger.error(f"Keyboard factory returned unexpected type: {type(markup_obj)}")
+        actual_markup = None
+
+
+    try:
+        await callback_query.message.edit_text(
+            text=final_message_text,
+            reply_markup=actual_markup,
+            parse_mode="HTML" # Assuming HTML parse mode is desired for get_text
+        )
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            logger.error(f"TelegramBadRequest editing message for paginated list for user {callback_query.from_user.id}: {e}")
+        # If message is not modified, it might mean the text and markup are identical.
+        # The user might have clicked a pagination button that leads to the same page view.
+        # Answering the callback is important to remove the loading state from the button.
+        await callback_query.answer()
+    except TelegramAPIError as e:
+        logger.error(f"TelegramAPIError editing message for paginated list for user {callback_query.from_user.id}: {e}")
+        try:
+            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
+        except TelegramAPIError as ans_err:
+            logger.warning(f"Could not send error alert for paginated list display failure: {ans_err}")
+    except Exception as e_display:
+        logger.error(f"Unexpected error during paginated list display for user {callback_query.from_user.id}: {e_display}", exc_info=True)
+        try:
+            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
+        except TelegramAPIError as ans_err:
+            logger.warning(f"Could not send error alert for unexpected paginated list display failure: {ans_err}")
+
 def _paginate_list(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
     total_items = len(full_list)
 
@@ -617,55 +704,52 @@ async def _display_paginated_user_list(
     callback_query: CallbackQuery,
     language: str,
     user_specific_settings: UserSpecificSettings,
-    list_type: str,
+    list_type: str, # "muted" or "allowed"
     page: int = 0
 ):
-    if not callback_query.message: return
-    # await callback_query.answer() # Answered by callers or specific toggle handler
+    # The initial check for callback_query.message is now handled by display_paginated_list.
+    # The callback_query.answer() call that was commented out is also handled by the new helper (implicitly, or explicitly on error/no change).
 
-    users_to_list_set = user_specific_settings.muted_users_set
+    users_to_list_set = user_specific_settings.muted_users_set # This is specific to this list type
+    sorted_users = sorted(list(users_to_list_set))
 
+    header_key: str
+    empty_key: str
     if list_type == "muted":
-        header_text = get_text("MUTED_USERS_LIST_HEADER", language)
-        empty_list_message = get_text("NO_MUTED_USERS_FOUND", language)
+        header_key = "MUTED_USERS_LIST_HEADER"
+        empty_key = "NO_MUTED_USERS_FOUND"
     elif list_type == "allowed":
-        header_text = get_text("ALLOWED_USERS_LIST_HEADER", language)
-        empty_list_message = get_text("NO_ALLOWED_USERS_FOUND", language)
+        header_key = "ALLOWED_USERS_LIST_HEADER"
+        empty_key = "NO_ALLOWED_USERS_FOUND"
     else:
-        logger.error(f"Invalid list_type '{list_type}' in _display_paginated_user_list")
-        await callback_query.message.edit_text("Error: Invalid list type.")
+        # This error case should ideally be caught before calling this display function,
+        # or handled by the calling context (e.g., cq_list_internal_users).
+        # For robustness, if it reaches here, log and inform the user.
+        logger.error(f"Invalid list_type '{list_type}' in _display_paginated_user_list for user {callback_query.from_user.id}")
+        try:
+            await callback_query.message.edit_text("Error: Invalid list type specified.")
+        except TelegramAPIError:
+            pass # If editing fails, not much more to do here.
         return
 
-    sorted_users = sorted(list(users_to_list_set))
-    # Use the new helper function for pagination logic
-    page_users_slice, total_pages, page = _paginate_list(sorted_users, page, USERS_PER_PAGE)
-
-    message_parts = [header_text]
-    if not sorted_users: # Check original sorted_users list for emptiness
-        message_parts.append(empty_list_message)
-    else:
-        # Calculate start_index for display numbering based on the corrected page and USERS_PER_PAGE
-        current_page_start_index = page * USERS_PER_PAGE
-        for i, username in enumerate(page_users_slice, start=current_page_start_index + 1):
-            message_parts.append(f"{i}. {html.quote(username)}")
-
-    page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
-
-    # Use factory from keyboards.py
-    # Note: user_specific_settings is not directly passed to create_paginated_user_list_keyboard as it's not in its signature.
-    # The factory derives behavior from list_type.
-    paginated_list_builder = create_paginated_user_list_keyboard(
-        language, page_users_slice, page, total_pages, list_type
+    # The core logic of pagination, message assembly, and sending is now delegated.
+    # The keyboard_factory_kwargs need to pass what create_paginated_user_list_keyboard expects
+    # beyond the standard ones (language, page_slice, page, total_pages).
+    # In this case, it's 'list_type'.
+    await display_paginated_list(
+        callback_query=callback_query,
+        language=language,
+        items=sorted_users, # Pass the full sorted list of items
+        page=page,          # Pass the requested page number
+        header_text_key=header_key,
+        empty_list_text_key=empty_key,
+        keyboard_factory=create_paginated_user_list_keyboard, # Pass the factory function itself
+        keyboard_factory_kwargs={
+            "list_type": list_type
+            # user_specific_settings is not directly needed by create_paginated_user_list_keyboard
+            # as per its signature (language, page_slice, page, total_pages, list_type)
+        }
     )
-    try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=paginated_list_builder.as_markup(), parse_mode="HTML")
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for paginated user list ({list_type}, page {page}): {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for paginated user list ({list_type}, page {page}): {e}")
 
 # Consolidated handler for listing muted/allowed users
 @callback_router.callback_query(UserListCallback.filter(F.action.in_(["list_muted", "list_allowed"])))
@@ -709,48 +793,45 @@ async def _display_account_list(
     callback_query: CallbackQuery,
     language: str,
     user_specific_settings: UserSpecificSettings,
-    tt_instance: TeamTalkInstance,
+    tt_instance: TeamTalkInstance, # This parameter is kept in the signature for now, though not directly used by display_paginated_list or its direct keyboard factory. It might be used by callers or future versions.
     page: int = 0
 ):
-    if not callback_query.message: return
-    # await callback_query.answer() # Answered by callers or specific toggle handler
-
-    if not USER_ACCOUNTS_CACHE:
-        # If the cache is empty (e.g., not yet populated or server has no accounts)
-        await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
+    if not USER_ACCOUNTS_CACHE: # This specific check remains here
+        # Consider answering callback if possible, though message might not exist
+        # For now, matching original behavior.
+        if callback_query.message:
+            try:
+                await callback_query.message.edit_text(get_text("NO_SERVER_ACCOUNTS_FOUND", language))
+            except TelegramAPIError as e:
+                logger.error(f"Error editing message for NO_SERVER_ACCOUNTS_FOUND: {e}")
+        else:
+            # If no message, maybe a silent answer or log
+            logger.warning("Cannot display 'NO_SERVER_ACCOUNTS_FOUND' as callback_query has no message.")
         return
 
     all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
-
-    # Sort accounts by username (case-insensitive)
-    # Assuming acc.username is the correct attribute for pytalk.UserAccount based on cache population logic
+    # This TeamTalk-specific sorting logic remains here
     sorted_accounts_tt = sorted(
         all_accounts_tt,
-        key=lambda acc: ttstr(acc.username).lower()
+        key=lambda acc: ttstr(acc.username).lower() # Assuming acc.username from USER_ACCOUNTS_CACHE values
     )
 
-    # Use the new helper function for pagination logic
-    page_accounts_slice, total_pages, page = _paginate_list(sorted_accounts_tt, page, USERS_PER_PAGE)
-
-    message_parts = [get_text("ALL_ACCOUNTS_LIST_HEADER", language)] # New header key
-    if not sorted_accounts_tt: # Check original sorted_accounts_tt list for emptiness
-        message_parts.append(get_text("NO_SERVER_ACCOUNTS_FOUND", language)) # New empty list key
-
-    page_indicator_text = get_text("PAGE_INDICATOR", language, current_page=page + 1, total_pages=total_pages)
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
-
-    # Use factory from keyboards.py
-    account_list_builder = create_account_list_keyboard(
-        language, page_accounts_slice, page, total_pages, user_specific_settings
+    # The keyboard_factory_kwargs need to pass what create_account_list_keyboard expects
+    # beyond the standard ones. In this case, it's 'user_specific_settings'.
+    # 'language' is passed by display_paginated_list directly to the factory.
+    await display_paginated_list(
+        callback_query=callback_query,
+        language=language,
+        items=sorted_accounts_tt, # Pass the full sorted list of items
+        page=page,                # Pass the requested page number
+        header_text_key="ALL_ACCOUNTS_LIST_HEADER",
+        empty_list_text_key="NO_SERVER_ACCOUNTS_FOUND", # This key is used if items is empty
+        keyboard_factory=create_account_list_keyboard,  # Pass the factory function
+        keyboard_factory_kwargs={
+            "user_specific_settings": user_specific_settings
+            # tt_instance is not a direct kwarg for create_account_list_keyboard
+        }
     )
-    try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=account_list_builder.as_markup(), parse_mode="HTML")
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"Error editing message for account list (page {page}): {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for account list (page {page}): {e}")
 
 @callback_router.callback_query(UserListCallback.filter(F.action == "list_all_accounts"))
 async def cq_show_all_accounts_list( # Renamed
@@ -793,62 +874,68 @@ async def cq_toggle_specific_user_mute_action(
 ):
     if not callback_query.message or not callback_query.from_user: return
 
-    user_idx = callback_data.user_idx
-    current_page = callback_data.current_page
+    target_hash = callback_data.username_hash
+    current_page = callback_data.current_page # Keep for UI refresh
     list_type = callback_data.list_type
 
     username_to_toggle: str | None = None
-    display_nickname_for_toast: str | None = None # For toast messages
+    display_nickname_for_toast: str | None = None
 
-    # Retrieve the actual username based on list_type and user_idx
     if list_type == "all_accounts":
-        if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-            await callback_query.answer(get_text("TT_BOT_NOT_CONNECTED_FOR_LIST", language), show_alert=True)
+        found_account = False
+        if not USER_ACCOUNTS_CACHE: # Ensure cache is not empty
+            logger.warning("USER_ACCOUNTS_CACHE is empty during toggle action.")
+            await callback_query.answer(get_text("error_occurred", language), show_alert=True) # Or a more specific error
             return
-        try:
-            all_accounts_tt = await tt_instance.list_user_accounts()
-            # Ensure sorting is identical to how it was displayed
-            sorted_accounts = sorted(all_accounts_tt, key=lambda acc: ttstr(acc._account.szUsername).lower())
 
-            start_index = current_page * USERS_PER_PAGE
-            current_page_items = sorted_accounts[start_index : start_index + USERS_PER_PAGE]
+        all_cached_accounts = list(USER_ACCOUNTS_CACHE.values()) # pytalk.UserAccount objects
+        for acc_obj in all_cached_accounts:
+            # USER_ACCOUNTS_CACHE stores pytalk.UserAccount objects.
+            # .username attribute is a string.
+            current_username_str = acc_obj.username
+            current_hash = hashlib.sha1(current_username_str.encode('utf-8')).hexdigest()
+            if current_hash == target_hash:
+                username_to_toggle = current_username_str
+                display_nickname_for_toast = current_username_str # For accounts, username is the display name
+                found_account = True # Mark as found
+                break
 
-            if 0 <= user_idx < len(current_page_items):
-                target_account = current_page_items[user_idx]
-                username_to_toggle = ttstr(target_account._account.szUsername)
-                display_nickname_for_toast = username_to_toggle # UserAccount has no separate nickname
-            else:
-                logger.warning(f"Invalid user_idx {user_idx} for all_accounts list page {current_page}.")
-        except Exception as e:
-            logger.error(f"Error retrieving account for toggle: {e}")
-            await callback_query.answer(get_text("error_occurred", language), show_alert=True)
+        if not found_account:
+            logger.warning(f"User account with hash {target_hash} not found in USER_ACCOUNTS_CACHE.")
+            await callback_query.answer(get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname="the user"), show_alert=True)
             return
 
     elif list_type in ["muted", "allowed"]:
+        # relevant_set contains strings (usernames) from user_specific_settings.muted_users_set
         relevant_set = user_specific_settings.muted_users_set
-        sorted_list_usernames = sorted(list(relevant_set))
 
-        start_index = current_page * USERS_PER_PAGE
-        current_page_items = sorted_list_usernames[start_index : start_index + USERS_PER_PAGE]
+        for username_str_in_set in relevant_set:
+            current_hash = hashlib.sha1(username_str_in_set.encode('utf-8')).hexdigest()
+            if current_hash == target_hash:
+                username_to_toggle = username_str_in_set
+                display_nickname_for_toast = username_str_in_set # For these lists, username is the display name
+                break # Found the user
 
-        if 0 <= user_idx < len(current_page_items):
-            username_to_toggle = current_page_items[user_idx]
-            display_nickname_for_toast = username_to_toggle # Nickname is username for these lists
-        else:
-            logger.warning(f"Invalid user_idx {user_idx} for {list_type} list page {current_page}.")
+        if not username_to_toggle: # If loop finished without finding
+            logger.warning(f"User with hash {target_hash} not found in {list_type} list ({len(relevant_set)} items checked).")
+            await callback_query.answer(get_text("CALLBACK_USER_NOT_FOUND_ANYMORE", language, user_nickname="the user"), show_alert=True)
+            return
     else:
-        logger.error(f"Unknown list_type '{list_type}' in cq_toggle_specific_user_mute_action.")
+        logger.error(f"Unknown list_type '{list_type}' in cq_toggle_specific_user_mute_action for user {callback_query.from_user.id}.")
         await callback_query.answer("Error: Unknown list type.", show_alert=True)
         return
 
-    if not username_to_toggle or not display_nickname_for_toast:
-        logger.error(f"Could not determine username for toggle. user_idx: {user_idx}, list_type: {list_type}, page: {current_page}")
+    # If username_to_toggle is still None here, it means an issue not caught above or an unknown list_type
+    # However, the blocks above should `return` if not found.
+    if not username_to_toggle:
+        logger.error(f"Critical logic error: username_to_toggle is None after list processing for hash {target_hash}, list_type {list_type}.")
         await callback_query.answer(get_text("error_occurred", language), show_alert=True)
-        if list_type == "all_accounts" and tt_instance and tt_instance.connected:
-             await _display_account_list(callback_query, language, user_specific_settings, tt_instance, 0) # Refresh to page 0
-        elif list_type in ["muted", "allowed"]:
-             await _display_paginated_user_list(callback_query, language, user_specific_settings, list_type, 0) # Refresh to page 0
         return
+
+    # Ensure display_nickname_for_toast is set if username_to_toggle is set.
+    # It should be set within the if/elif blocks for list_type.
+    if not display_nickname_for_toast:
+        display_nickname_for_toast = username_to_toggle # Fallback, though should be set.
 
     # Toggle logic
     if username_to_toggle in user_specific_settings.muted_users_set:
