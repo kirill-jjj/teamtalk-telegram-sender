@@ -193,7 +193,7 @@ async def who_command_handler(
     # Need to pass state_manager to IsAdminFilter now.
     # Assuming IsAdminFilter is already updated and registered to receive it via data dict from middleware.
     # For direct call, we'd pass it:
-    is_caller_admin_val = await IsAdminFilter()(message=message, session=session, state_manager=state_manager)
+    is_caller_admin_val = await IsAdminFilter()(event=message, session=session, state_manager=state_manager) # MODIFIED: message to event
 
 
     # Use the first helper to group users
