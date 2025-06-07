@@ -57,7 +57,7 @@ async def load_user_settings_to_cache(session_factory) -> None: # session_factor
         user_settings_list = result.scalars().all()
         for settings_row in user_settings_list:
             USER_SETTINGS_CACHE[settings_row.telegram_id] = UserSpecificSettings.from_db_row(settings_row)
-    logger.info(f"{len(USER_SETTINGS_CACHE)} user settings loaded into cache.")
+    logger.debug(f"{len(USER_SETTINGS_CACHE)} user settings loaded into cache.") # Changed to debug
 
 async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -> UserSpecificSettings:
     """
@@ -88,7 +88,7 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
         try:
             await session.commit()
             USER_SETTINGS_CACHE[telegram_id] = default_settings
-            logger.info(f"Created default settings for user {telegram_id} in DB and cache.")
+            logger.debug(f"Created default settings for user {telegram_id} in DB and cache.") # Changed to debug
             return default_settings
         except Exception as e:
             await session.rollback()

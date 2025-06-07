@@ -15,7 +15,7 @@ async def handle_unknown_command_or_message(
         return
 
     # Log that an unknown command/message was received
-    logger.info(f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'")
+    logger.debug(f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'") # Changed to debug
 
     if message.text.startswith("/"):
         await message.reply(get_text("UNKNOWN_COMMAND", language))

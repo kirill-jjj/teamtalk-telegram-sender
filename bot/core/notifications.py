@@ -61,7 +61,7 @@ async def send_join_leave_notification_logic(
     tt_user: TeamTalkUser,
     tt_instance: TeamTalkInstance
 ):
-    logger.info(f"--- send_join_leave_notification_logic started for event: {event_type}, user: {ttstr(tt_user.username)} ---")
+    logger.debug(f"--- send_join_leave_notification_logic started for event: {event_type}, user: {ttstr(tt_user.username)} ---")
 
     # Получаем актуальное значение login_complete_time из модуля bot_instance
     current_login_complete_time = tt_bot_module.login_complete_time
@@ -75,7 +75,7 @@ async def send_join_leave_notification_logic(
     if reason_for_ignore:
         if event_type == NOTIFICATION_EVENT_JOIN:
              logger.debug(f"Ignoring potential initial sync {event_type} for {ttstr(tt_user.username)} ({tt_user.id}). Reason: {reason_for_ignore}.")
-        logger.info(f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---")
+        logger.debug(f"--- send_join_leave_notification_logic finished: Ignored. Reason: {reason_for_ignore} ---")
         return
 
     user_nickname_val = get_tt_user_display_name(tt_user, "en") # Using "en" as per original logic for this specific var
@@ -89,12 +89,12 @@ async def send_join_leave_notification_logic(
 
     if not user_username_val:
         logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname_val}, ID: {user_id_val}). Skipping notification.")
-        logger.info(f"--- send_join_leave_notification_logic finished: Empty username ---")
+        logger.debug(f"--- send_join_leave_notification_logic finished: Empty username ---")
         return
 
     if user_username_val in globally_ignored_usernames_set:
-        logger.info(f"User {user_username_val} is in the global ignore list. Skipping {event_type} notification.")
-        logger.info(f"--- send_join_leave_notification_logic finished: User globally ignored ---")
+        logger.debug(f"User {user_username_val} is in the global ignore list. Skipping {event_type} notification.")
+        logger.debug(f"--- send_join_leave_notification_logic finished: User globally ignored ---")
         return
 
     server_name_val = get_effective_server_name(tt_instance)
@@ -105,9 +105,9 @@ async def send_join_leave_notification_logic(
         logger.debug(f"Subscribers to check for notification: {all_subscriber_ids}")
 
         if not all_subscriber_ids:
-            logger.info("No subscribers found in the database.")
+            logger.debug("No subscribers found in the database.") # Changed to debug
         
-        logger.info(f"Processing {event_type} notifications for TeamTalk user {user_username_val}. Checking {len(all_subscriber_ids)} subscribed Telegram users.")
+        logger.debug(f"Processing {event_type} notifications for TeamTalk user {user_username_val}. Checking {len(all_subscriber_ids)} subscribed Telegram users.") # Changed to debug
         for chat_id_val in all_subscriber_ids:
             user_specific_settings_for_log = await get_or_create_user_settings(chat_id_val, session)
             # Используем .value для enum, если он доступен, иначе пытаемся привести к строке

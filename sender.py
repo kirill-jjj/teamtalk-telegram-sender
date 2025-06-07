@@ -85,7 +85,7 @@ async def main_async():
     # Define ttstr if it was globally aliased from sdk and is used within main_async or passed down
     ttstr = sdk.ttstr
 
-    logger.info("Core modules imported. Initializing...")
+    logger.debug("Core modules imported. Initializing...") # Changed to debug
 
     # --- ЭТАП 1: Действия для PYTALK ---
     logger.info("Initializing TeamTalk components (Stage 1)...")
@@ -111,7 +111,7 @@ async def main_async():
     if tg_admin_chat_id_str:
         try:
             tg_admin_chat_id = int(tg_admin_chat_id_str)
-            logger.info(f"Ensuring TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is admin...")
+            logger.debug(f"Ensuring TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is admin...") # Changed to debug
             async with SessionFactory() as session:
                 await crud.add_admin(session, tg_admin_chat_id)
         except ValueError:
@@ -120,17 +120,17 @@ async def main_async():
         logger.info("TG_ADMIN_CHAT_ID not set. Skipping auto-admin registration.")
 
     # Fetch all admin IDs from the database to set their commands
-    logger.info("Fetching admin IDs for Telegram command setup...")
+    logger.debug("Fetching admin IDs for Telegram command setup...") # Changed to debug
     db_admin_ids = []
     try:
         async with SessionFactory() as session:
             db_admin_ids = await crud.get_all_admins_ids(session)
-        logger.info(f"Fetched {len(db_admin_ids)} admin IDs: {db_admin_ids}")
+        logger.debug(f"Fetched {len(db_admin_ids)} admin IDs: {db_admin_ids}") # Changed to debug
     except Exception as e:
         logger.error(f"Failed to fetch admin IDs: {e}", exc_info=True)
 
     asyncio.create_task(set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids))
-    logger.info("Telegram command setup initiated.")
+    logger.debug("Telegram command setup initiated.") # Changed to debug
 
     dp = Dispatcher()
 
@@ -141,14 +141,14 @@ async def main_async():
     dp.callback_query.middleware(UserSettingsMiddleware())
     dp.message.middleware(SubscriptionCheckMiddleware())
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
-    logger.info("Aiogram middlewares registered.")
+    logger.debug("Aiogram middlewares registered.") # Changed to debug
 
     # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
     dp.include_router(catch_all_router)
-    logger.info("Aiogram routers included.")
+    logger.debug("Aiogram routers included.") # Changed to debug
 
     dp.shutdown.register(on_aiogram_shutdown) # Register existing shutdown handler
 
@@ -203,13 +203,13 @@ async def main_async():
                 try:
                     if tt_instance_item.logged_in:
                         tt_instance_item.logout()
-                        logger.info(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+                        logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}") # Changed to debug
                     if tt_instance_item.connected:
                         tt_instance_item.disconnect()
-                        logger.info(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+                        logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}") # Changed to debug
                     if hasattr(tt_instance_item, 'closeTeamTalk'):
                         tt_instance_item.closeTeamTalk()
-                    logger.info(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+                    logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}") # Changed to debug
                 except Exception as e_tt_close:
                     logger.error(f"Error closing TeamTalk instance: {e_tt_close}", exc_info=True)
         else:

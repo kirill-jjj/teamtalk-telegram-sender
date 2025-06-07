@@ -40,9 +40,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, lang
                 if removed:
                     logger.info(f"Successfully unsubscribed blocked/deactivated user {chat_id}.")
                 else:
-                    logger.info(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
+                    logger.debug(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).") # Changed to debug
                 USER_SETTINGS_CACHE.pop(chat_id, None)
-                logger.info(f"Removed user {chat_id} from settings cache.")
+                logger.debug(f"Removed user {chat_id} from settings cache.") # Changed to debug
             except Exception as db_err:
                 logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
@@ -61,9 +61,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, lang
                     logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
 
                 if USER_SETTINGS_CACHE.pop(chat_id, None): # Remove from cache regardless
-                    logger.info(f"Removed user {chat_id} from settings cache after chat not found.")
+                    logger.debug(f"Removed user {chat_id} from settings cache after chat not found.") # Changed to debug
                 else:
-                    logger.info(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
+                    logger.debug(f"User {chat_id} was not in settings cache (or already removed) after chat not found.") # Changed to debug
             except Exception as db_cleanup_err:
                 logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
         else:
@@ -94,7 +94,7 @@ async def _should_send_silently(chat_id: int, tt_instance_for_check: TeamTalkIns
     ):
         tt_username_to_check = recipient_settings.teamtalk_username
         if tt_username_to_check in ONLINE_USERS_CACHE:
-            logger.info(f"Message to {chat_id} will be silent: linked user '{tt_username_to_check}' is in the online cache.")
+            logger.debug(f"Message to {chat_id} will be silent: linked user '{tt_username_to_check}' is in the online cache.") # Changed to debug
             return True
 
     return False

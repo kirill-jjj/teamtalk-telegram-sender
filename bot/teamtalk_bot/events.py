@@ -68,7 +68,7 @@ async def populate_user_accounts_cache(tt_instance):
 
             if username_str: # Ensure username is not empty
                 USER_ACCOUNTS_CACHE[username_str] = acc
-        logger.info(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.")
+        logger.debug(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.") # Changed to debug
     except Exception as e:
         logger.error(f"Failed to populate user accounts cache: {e}", exc_info=True)
 
@@ -82,14 +82,14 @@ async def _initiate_reconnect(reason: str):
 
     ONLINE_USERS_CACHE.clear()
     USER_ACCOUNTS_CACHE.clear() # <-- ADDED THIS LINE
-    logger.info("Online users and user accounts caches have been cleared due to reconnection.") # <-- MODIFIED LOG
+    logger.info("Online users and user accounts caches have been cleared due to reconnection.")
 
     if tt_bot_module.current_tt_instance is not None:
-        logger.info(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
+        logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}") # Changed to debug
         tt_bot_module.current_tt_instance = None
         tt_bot_module.login_complete_time = None
     else:
-        logger.info(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}")
+        logger.debug(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}") # Changed to debug
 
     # Schedule the reconnection task
     asyncio.create_task(_tt_reconnect())
@@ -165,7 +165,7 @@ async def on_my_login(server: PytalkServer):
                 configured_status = get_configured_status()
                 tt_instance_val.change_status(configured_status, app_config["STATUS_TEXT"])
                 tt_bot_module.login_complete_time = datetime.utcnow()
-                logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
+                logger.debug(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'") # Changed to debug
                 logger.info(f"TeamTalk login sequence complete (in current/root channel) at {tt_bot_module.login_complete_time}.")
             except Exception as e:
                 logger.error(f"Error setting status or login_complete_time in on_my_login (root channel): {e}", exc_info=True)
@@ -233,7 +233,7 @@ async def on_message(message: TeamTalkMessage):
     sender_username = ttstr(message.user.username)
     message_content = message.content.strip() # Strip whitespace for command checking
 
-    logger.info(f"Received private TT message from {sender_username}: '{message_content[:100]}...'")
+    logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'") # Changed to debug
 
     bot_reply_language = DEFAULT_LANGUAGE
     if app_config.get("TG_ADMIN_CHAT_ID"):
@@ -323,7 +323,7 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
 
                 if username_str: # Ensure username is not empty after conversion
                     ONLINE_USERS_CACHE.add(username_str)
-            logger.info(f"Cache populated with {len(ONLINE_USERS_CACHE)} users.")
+            logger.debug(f"Cache populated with {len(ONLINE_USERS_CACHE)} users.") # Changed to debug
         except Exception as e:
             logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
@@ -335,7 +335,7 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
             configured_status = get_configured_status()
             tt_instance.change_status(configured_status, app_config["STATUS_TEXT"])
             tt_bot_module.login_complete_time = datetime.utcnow()
-            logger.info(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
+            logger.debug(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'") # Changed to debug
             logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
         except Exception as e:
             logger.error(f"Error setting status or login_complete_time for bot in on_user_join: {e}", exc_info=True)
@@ -374,7 +374,7 @@ async def on_user_account_new(account: 'pytalk.UserAccount'): # Use quoted type 
 
     if username_str:
         USER_ACCOUNTS_CACHE[username_str] = account
-        logger.info(f"New user account '{username_str}' added to cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")
+        logger.debug(f"New user account '{username_str}' added to cache. Cache size: {len(USER_ACCOUNTS_CACHE)}") # Changed to debug
 
 
 @tt_bot_module.tt_bot.event
@@ -388,4 +388,4 @@ async def on_user_account_remove(account: 'pytalk.UserAccount'): # Use quoted ty
 
     if username_str and username_str in USER_ACCOUNTS_CACHE:
         del USER_ACCOUNTS_CACHE[username_str]
-        logger.info(f"User account '{username_str}' removed from cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")
+        logger.debug(f"User account '{username_str}' removed from cache. Cache size: {len(USER_ACCOUNTS_CACHE)}") # Changed to debug
