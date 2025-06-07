@@ -264,11 +264,7 @@ async def on_user_login(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance # Get instance from user object
     if tt_instance:
         # Cache management: Add user to cache
-        username_val = user.username
-        if isinstance(username_val, bytes):
-            username_str = ttstr(username_val)
-        else:
-            username_str = str(username_val)
+        username_str = ttstr(user.username)
 
         if username_str:
             ONLINE_USERS_CACHE.add(username_str)
@@ -315,11 +311,7 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
             ONLINE_USERS_CACHE.clear()
             for u in initial_online_users:
                 # Adapt ttstr usage based on how it's available and if u.username is bytes
-                username_val = u.username # Direct access, assuming it's already a string or ttstr handles None
-                if isinstance(username_val, bytes):
-                    username_str = ttstr(username_val)
-                else:
-                    username_str = str(username_val) # Ensure string type
+                username_str = ttstr(u.username) # Direct access, assuming it's already a string or ttstr handles None
 
                 if username_str: # Ensure username is not empty after conversion
                     ONLINE_USERS_CACHE.add(username_str)
@@ -348,11 +340,7 @@ async def on_user_logout(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance
     if tt_instance:
         # Cache management: Remove user from cache
-        username_val = user.username
-        if isinstance(username_val, bytes):
-            username_str = ttstr(username_val)
-        else:
-            username_str = str(username_val)
+        username_str = ttstr(user.username)
 
         if username_str:
             ONLINE_USERS_CACHE.discard(username_str)
