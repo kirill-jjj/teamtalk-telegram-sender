@@ -204,7 +204,7 @@ async def show_user_buttons(
         my_username_str = str(my_username_val)
 
     # Filter ONLINE_USERS_CACHE to exclude self
-    other_online_usernames = {u_name for u_name in ONLINE_USERS_CACHE if u_name != my_username_str}
+    other_online_usernames = {u_name for u_name in ONLINE_USERS_CACHE.keys() if u_name != my_username_str}
 
     if not other_online_usernames:
         await message.reply(get_text("SHOW_USERS_NO_OTHER_USERS_ONLINE", language))

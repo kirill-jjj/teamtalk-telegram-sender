@@ -4,9 +4,9 @@ from typing import Tuple
 # This module stores global, mutable application state,
 # such as caches and state flags.
 
-# Cache to store usernames of all currently online users.
-# Using a set for efficient (O(1)) lookups.
-ONLINE_USERS_CACHE: set[str] = set()
+# Cache to store usernames of currently online users and their active session count.
+# Key: username (str), Value: session_count (int).
+ONLINE_USERS_CACHE: dict[str, int] = {}
 
 # Cache to store all registered user accounts on the server.
 # Key - str(username), value - object pytalk.UserAccount.

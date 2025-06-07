@@ -280,9 +280,9 @@ async def on_user_login(user: TeamTalkUser):
         # Cache management: Add user to cache
         username_str = ttstr(user.username)
 
-        if username_str:
-            ONLINE_USERS_CACHE.add(username_str)
-            logger.debug(f"User {username_str} added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+        if username_str: # Ensure username_str is not empty before using as key
+            ONLINE_USERS_CACHE[username_str] = ONLINE_USERS_CACHE.get(username_str, 0) + 1
+            logger.debug(f"User {username_str} session count incremented. New count: {ONLINE_USERS_CACHE[username_str]}. Cache size: {len(ONLINE_USERS_CACHE)}")
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance)
     else:
@@ -327,9 +327,9 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
                 # Adapt ttstr usage based on how it's available and if u.username is bytes
                 username_str = ttstr(u.username) # Direct access, assuming it's already a string or ttstr handles None
 
-                if username_str: # Ensure username is not empty after conversion
-                    ONLINE_USERS_CACHE.add(username_str)
-            logger.debug(f"Cache populated with {len(ONLINE_USERS_CACHE)} users.") # Changed to debug
+                if username_str: # Ensure username_str is not empty
+                    ONLINE_USERS_CACHE[username_str] = ONLINE_USERS_CACHE.get(username_str, 0) + 1
+            logger.info(f"ONLINE_USERS_CACHE initialized/repopulated with {len(ONLINE_USERS_CACHE)} unique users and their session counts.")
         except Exception as e:
             logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
@@ -356,9 +356,14 @@ async def on_user_logout(user: TeamTalkUser):
         # Cache management: Remove user from cache
         username_str = ttstr(user.username)
 
-        if username_str:
-            ONLINE_USERS_CACHE.discard(username_str)
-            logger.debug(f"User {username_str} removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+        if username_str and username_str in ONLINE_USERS_CACHE:
+            ONLINE_USERS_CACHE[username_str] -= 1
+            logger.debug(f"User {username_str} session count decremented. New count: {ONLINE_USERS_CACHE[username_str]}.")
+            if ONLINE_USERS_CACHE[username_str] <= 0:
+                del ONLINE_USERS_CACHE[username_str]
+                logger.debug(f"User {username_str} removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
+        elif username_str: # Log if user was not in cache
+            logger.warning(f"User {username_str} attempted logout but was not found in ONLINE_USERS_CACHE.")
 
         await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance)
     else:
