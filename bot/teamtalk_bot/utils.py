@@ -1,11 +1,10 @@
 import logging
 import asyncio
-from typing import Callable, Optional
+from typing import Callable
 from aiogram import html
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
-from pytalk.user import User as TeamTalkUser
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.enums import UserStatusMode
 

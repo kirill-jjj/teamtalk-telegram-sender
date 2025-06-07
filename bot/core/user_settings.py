@@ -1,7 +1,6 @@
 import logging
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from bot.database.models import UserSettings, NotificationSetting
@@ -32,16 +31,6 @@ class UserSpecificSettings:
             not_on_online_enabled=settings_row.not_on_online_enabled,
             not_on_online_confirmed=settings_row.not_on_online_confirmed,
         )
-
-    def to_cache_dict(self) -> dict[str, Any]: # Not directly used but kept for potential future use
-         return {
-            "language": self.language,
-            "notification_settings": self.notification_settings,
-            "mute_settings": {"muted_users": self.muted_users_set, "mute_all": self.mute_all_flag},
-            "teamtalk_username": self.teamtalk_username,
-            "not_on_online_enabled": self.not_on_online_enabled,
-            "not_on_online_confirmed": self.not_on_online_confirmed,
-        }
 
 def _prepare_muted_users_string(users_set: set[str]) -> str:
     if not users_set: # Handle empty set directly to avoid unnecessary list conversion and sort

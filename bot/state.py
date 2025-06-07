@@ -1,5 +1,4 @@
 # bot/state.py
-import time
 from typing import Tuple
 
 # This module stores global, mutable application state,

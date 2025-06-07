@@ -171,9 +171,6 @@ async def on_my_login(server: PytalkServer):
                 logger.error(f"Error setting status or login_complete_time in on_my_login (root channel): {e}", exc_info=True)
 
         # Note: If channel_id_val != -1, status setting and login_complete_time are handled by on_user_join.
-        # The comment below is removed as it's now implicit.
-        # # change_status and login_complete_time are intentionally only set in the 'else' block above as per specific instructions.
-        # # If channel_id_val != -1, these are not set here.
 
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)

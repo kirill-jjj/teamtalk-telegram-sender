@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, language: str): # language may be unused
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # language may be unused
     """
     Handles specific Telegram API errors, performing actions like unsubscribing users
     or logging detailed error information.
@@ -107,7 +107,6 @@ async def send_telegram_message_individual(
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_instance_for_check: TeamTalkInstance | None = None
-    # reply_tt_method: Callable | None = None, # Parameter removed
 ) -> bool: # Return type bool is already present, ensuring it stays.
     # Determine if the message should be sent silently using the helper function
     send_silently = await _should_send_silently(chat_id, tt_instance_for_check)
@@ -124,7 +123,7 @@ async def send_telegram_message_individual(
 
     except TelegramAPIError as e:
         # Delegate Telegram API error handling to the new helper function
-        await _handle_telegram_api_error(e, chat_id, language)
+        await _handle_telegram_api_error(e, chat_id)
         return False # Message sending failed
 
     # Non-TelegramAPIError exceptions will propagate if not caught by the caller.
