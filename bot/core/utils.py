@@ -73,16 +73,16 @@ def build_help_message(language: str, platform: str, is_admin: bool) -> str:
     """Builds a contextual help message based on platform and user rights."""
     parts = []
     if platform == "telegram":
-        parts.append(get_text("HELP_TELEGRAM_USER_HEADER", language))
-        parts.append(get_text("HELP_TELEGRAM_USER_COMMANDS", language))
+        parts.append(get_text("help_telegram_user_header", language))
+        parts.append(get_text("help_telegram_user_commands", language))
         if is_admin:
-            parts.append(get_text("HELP_TELEGRAM_ADMIN_HEADER", language))
-            parts.append(get_text("HELP_TELEGRAM_ADMIN_COMMANDS", language))
+            parts.append(get_text("help_telegram_admin_header", language))
+            parts.append(get_text("help_telegram_admin_commands", language))
     elif platform == "teamtalk":
-        parts.append(get_text("HELP_TEAMTALK_USER_HEADER", language))
-        parts.append(get_text("HELP_TEAMTALK_USER_COMMANDS", language))
+        parts.append(get_text("help_teamtalk_user_header", language))
+        parts.append(get_text("help_teamtalk_user_commands", language))
         if is_admin:
-            parts.append(get_text("HELP_TEAMTALK_ADMIN_HEADER", language))
-            parts.append(get_text("HELP_TEAMTALK_ADMIN_COMMANDS", language))
+            parts.append(get_text("help_teamtalk_admin_header", language))
+            parts.append(get_text("help_teamtalk_admin_commands", language))
 
     return "\n".join(parts)
