@@ -3,7 +3,16 @@ from glob import glob
 
 LOCALE_DIR = os.path.join('bot', 'locales')
 DOMAIN = 'messages'
-LANGS = ['ru']
+# --- Динамический поиск языков ---
+try:
+    # Ищем все директории внутри bot/locales (например, 'ru', 'en', 'de')
+    LANGS = [d.name for d in os.scandir(LOCALE_DIR) if d.is_dir()]
+    if not LANGS:
+        print("Предупреждение: Не найдено ни одного языка в директории 'bot/locales'.")
+except FileNotFoundError:
+    print("Предупреждение: Директория 'bot/locales' не найдена. Список языков пуст.")
+    LANGS = []
+# --- Конец конфигурации ---
 
 env = Environment()
 
