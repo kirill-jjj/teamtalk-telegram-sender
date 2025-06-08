@@ -123,6 +123,53 @@ def _create_admin_action_report(
     return "\n\n".join(reply_parts)
 
 
+async def _manage_admin_ids(
+    tt_message: TeamTalkMessage,
+    command: CommandObject,
+    session: AsyncSession,
+    _: callable,
+    crud_function: Callable[[AsyncSession, int], bool],
+    commands_to_set: list[BotCommand],
+    prompt_msg_key: str,
+    success_msg_key: str,
+    error_msg_key: str,
+    invalid_id_msg_key: str,
+    header_msg_key: str,
+):
+    """A generic handler for adding or removing admin IDs."""
+    valid_ids, invalid_entries = _parse_telegram_ids(command.args)
+
+    if not valid_ids and not invalid_entries:
+        tt_message.reply(_(prompt_msg_key))
+        return
+
+    success_count = 0
+    failed_action_ids = []
+
+    for telegram_id in valid_ids:
+        logger.info(f"Attempting to {crud_function.__name__} for TG ID {telegram_id} by TT admin {ttstr(tt_message.user.username)}.")
+        if await _execute_admin_action_for_id(
+            session=session, telegram_id=telegram_id, crud_function=crud_function, commands_to_set=commands_to_set
+        ):
+            success_count += 1
+            logger.info(f"Successfully processed {crud_function.__name__} for TG ID {telegram_id} and set commands.")
+        else:
+            failed_action_ids.append(telegram_id)
+            logger.warning(f"Failed to process {crud_function.__name__} for TG ID {telegram_id} (e.g., already in state or DB error).")
+
+    report_message = _create_admin_action_report(
+        _,
+        success_count,
+        failed_action_ids,
+        invalid_entries,
+        success_msg_key,
+        error_msg_key,
+        invalid_id_msg_key,
+        header_msg_key
+    )
+    tt_message.reply(report_message)
+
+
 async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
@@ -211,37 +258,19 @@ async def handle_tt_add_admin_command(
     session: AsyncSession,
     _: callable
 ):
-    valid_ids, invalid_entries = _parse_telegram_ids(command.args)
-
-    if not valid_ids and not invalid_entries:
-        tt_message.reply(_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432")) # TT_ADD_ADMIN_PROMPT_IDS
-        return
-
-    success_count = 0
-    failed_action_ids = []
-
-    for telegram_id in valid_ids:
-        logger.info(f"Attempting to add TG ID {telegram_id} as admin by TT admin {ttstr(tt_message.user.username)}.")
-        if await _execute_admin_action_for_id( # This helper does not need `_`
-            session=session, telegram_id=telegram_id, crud_function=add_admin, commands_to_set=ADMIN_COMMANDS
-        ):
-            success_count += 1
-            logger.info(f"Successfully added TG ID {telegram_id} as admin and set commands.")
-        else:
-            failed_action_ids.append(telegram_id)
-            logger.warning(f"Failed to add TG ID {telegram_id} as admin (e.g., already admin or DB error).")
-
-    report_message = _create_admin_action_report(
+    await _manage_admin_ids(
+        tt_message=tt_message,
+        command=command,
+        session=session,
         _=_,
-        success_count=success_count,
-        failed_ids=failed_action_ids,
-        invalid_entries=invalid_entries,
-        success_msg_source="Successfully added {count} admin(s).", # TT_ADD_ADMIN_SUCCESS
-        error_msg_source="ID {telegram_id} is already an admin or failed to add.", # TT_ADD_ADMIN_ERROR_ALREADY_ADMIN
-        invalid_id_msg_source="'{telegram_id_str}' is not a valid numeric Telegram ID.", # TT_ADD_ADMIN_ERROR_INVALID_ID
-        header_source="Errors:\n- " # TT_ADMIN_ERRORS_HEADER
+        crud_function=add_admin,
+        commands_to_set=ADMIN_COMMANDS,
+        prompt_msg_key="Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432",
+        success_msg_key="Successfully added {count} admin(s).",
+        error_msg_key="ID {telegram_id} is already an admin or failed to add.",
+        invalid_id_msg_key="'{telegram_id_str}' is not a valid numeric Telegram ID.",
+        header_msg_key="Errors:\n- "
     )
-    tt_message.reply(report_message)
 
 
 @is_tt_admin # Passes `_` in kwargs
@@ -251,37 +280,19 @@ async def handle_tt_remove_admin_command(
     session: AsyncSession,
     _: callable
 ):
-    valid_ids, invalid_entries = _parse_telegram_ids(command.args)
-
-    if not valid_ids and not invalid_entries:
-        tt_message.reply(_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432")) # TT_REMOVE_ADMIN_PROMPT_IDS
-        return
-
-    success_count = 0
-    failed_action_ids = []
-
-    for telegram_id in valid_ids:
-        logger.info(f"Attempting to remove TG ID {telegram_id} as admin by TT admin {ttstr(tt_message.user.username)}.")
-        if await _execute_admin_action_for_id( # This helper does not need `_`
-            session=session, telegram_id=telegram_id, crud_function=remove_admin_db, commands_to_set=USER_COMMANDS
-        ):
-            success_count += 1
-            logger.info(f"Successfully removed TG ID {telegram_id} as admin and set user commands.")
-        else:
-            failed_action_ids.append(telegram_id)
-            logger.warning(f"Failed to remove TG ID {telegram_id} as admin (e.g., was not admin or DB error).")
-
-    report_message = _create_admin_action_report(
+    await _manage_admin_ids(
+        tt_message=tt_message,
+        command=command,
+        session=session,
         _=_,
-        success_count=success_count,
-        failed_ids=failed_action_ids,
-        invalid_entries=invalid_entries,
-        success_msg_source="Successfully removed {count} admin(s).", # TT_REMOVE_ADMIN_SUCCESS
-        error_msg_source="Admin with ID {telegram_id} not found.", # TT_REMOVE_ADMIN_ERROR_NOT_FOUND
-        invalid_id_msg_source="'{telegram_id_str}' is not a valid numeric Telegram ID.", # TT_ADD_ADMIN_ERROR_INVALID_ID (reused)
-        header_source="Info/Errors:\n- " # TT_ADMIN_INFO_ERRORS_HEADER
+        crud_function=remove_admin_db,
+        commands_to_set=USER_COMMANDS,
+        prompt_msg_key="Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432",
+        success_msg_key="Successfully removed {count} admin(s).",
+        error_msg_key="Admin with ID {telegram_id} not found.",
+        invalid_id_msg_key="'{telegram_id_str}' is not a valid numeric Telegram ID.",
+        header_msg_key="Info/Errors:\n- "
     )
-    tt_message.reply(report_message)
 
 
 async def handle_tt_help_command(
