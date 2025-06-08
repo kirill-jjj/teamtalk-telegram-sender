@@ -35,7 +35,7 @@ async def start_command_handler(
     message: Message,
     command: CommandObject,
     session: AsyncSession, # From DbSessionMiddleware
-    _: callable, # Changed from language: str
+    _: callable,
     user_specific_settings: UserSpecificSettings # From UserSettingsMiddleware
 ):
     if not message.from_user: return
@@ -155,15 +155,10 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, _:
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
-    _: callable, # Changed from language: str
+    _: callable,
     tt_instance: TeamTalkInstance | None,
-    session: AsyncSession,
-    data: dict[str, Any] # Middleware might pass _ via data as well
+    session: AsyncSession
 ):
-    # If _ is not passed directly by DI, get from data (safer)
-    # _ = data.get("_", get_translator("en").gettext) # Fallback, assuming get_translator available
-    # For this refactor, assuming _ is passed directly as per signature change.
-
     if not message.from_user:
         return
 
@@ -203,11 +198,9 @@ async def who_command_handler(
 @user_commands_router.message(Command("help"))
 async def help_command_handler(
     message: Message,
-    _: callable, # Changed from language: str
-    session: AsyncSession,
-    data: dict[str, Any] # For is_bot_admin if needed from user_specific_settings
+    _: callable,
+    session: AsyncSession
 ):
-    # _ = data["_"] # If _ is not passed directly
     is_admin = await IsAdminFilter()(message, session) # This checks if TG user is a bot admin
     # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
     # Assuming IsAdminFilter result means they are a bot admin.
@@ -220,10 +213,8 @@ async def help_command_handler(
 @user_commands_router.message(Command("settings"))
 async def settings_command_handler(
     message: Message,
-    _: callable, # Changed from language: str
-    data: dict[str, Any] # For _ if not direct param
+    _: callable
 ):
-    # _ = data["_"] # If _ is not passed directly
     if not message.from_user: return
 
     try:
