@@ -1,4 +1,5 @@
 import logging
+import gettext # Added
 from typing import Optional, Union
 
 import pytalk # Required for TeamTalkInstance, TeamTalkUser, ttstr
@@ -27,12 +28,12 @@ def get_effective_server_name(tt_instance: Optional[TeamTalkInstance]) -> str:
             server_name = "Unknown Server"
     return server_name if server_name else "Unknown Server" # Final fallback
 
-def get_tt_user_display_name(user: TeamTalkUser, _: callable) -> str:
+def get_tt_user_display_name(user: TeamTalkUser, translator: "gettext.GNUTranslations") -> str:
     display_name = ttstr(user.nickname)
     if not display_name:
         display_name = ttstr(user.username)
     if not display_name:
-        display_name = _("unknown user") # Was WHO_USER_UNKNOWN
+        display_name = translator.gettext("unknown user") # Was WHO_USER_UNKNOWN
     return display_name
 
 def pluralize(number: int, one: str, few: str, many: str) -> str:

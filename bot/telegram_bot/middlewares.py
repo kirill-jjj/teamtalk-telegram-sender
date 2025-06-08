@@ -56,6 +56,7 @@ class UserSettingsMiddleware(BaseMiddleware):
         translator = get_translator(user_specific_settings.language)
         # Внедряем саму функцию перевода под стандартным именем "_"
         data["_"] = translator.gettext
+        data["translator"] = translator
 
         # Оставляем старые данные для совместимости, если где-то еще используются
         data["user_specific_settings"] = user_specific_settings
