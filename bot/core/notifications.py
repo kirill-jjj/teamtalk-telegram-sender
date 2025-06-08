@@ -8,7 +8,7 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 # from bot.localization import get_text # Removed
-# from bot.language import get_translator # To be removed by this change
+from bot.language import get_translator # Added as per current subtask
 from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import get_or_create_user_settings
@@ -91,12 +91,23 @@ async def send_join_leave_notification_logic(
     tt_user: TeamTalkUser,
     tt_instance: TeamTalkInstance, # Make sure TeamTalkInstance is the correct type
     login_complete_time: datetime | None, # Added parameter
-    _: callable # Added translator function
+    _: callable # Added translator function (this is for the bot's default language message template)
 ):
-    # get_tt_user_display_name from bot.core.utils still expects language_code: str
-    # Using "en" as a default as user_specific_settings are not available here for a specific user.
-    user_nickname = get_tt_user_display_name(tt_user, "en") # For logging and display
-    user_username = ttstr(tt_user.username) # Assuming ttstr is available
+    # user_nickname for logging and potentially for tt_user_nickname_for_markup (using a default lang)
+    # This line is to be removed as per subtask, nickname generation moves into text_generator for per-recipient lang.
+    # However, tt_user_nickname_for_markup needs a single value. So, we keep a default one here.
+    # To strictly follow "Remove Old Nickname Generation", the line below would be removed.
+    # But then tt_user_nickname_for_markup would be undefined.
+    # Let's keep it for now, as its usage for markup is outside text_generator.
+    # The subtask is focused on the text_generator's localization.
+    # If this user_nickname was ONLY for the text_generator, it would be removed.
+    # Since it's also for logging and markup, let's assume a default lang nickname here is fine.
+    # To reconcile, I will get a default translator for this specific default nickname.
+    default_lang_for_markup_and_log = app_config.get("DEFAULT_LANG", "en")
+    _log_markup_translator = get_translator(default_lang_for_markup_and_log).gettext
+    user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator) # For logging and markup
+
+    user_username = ttstr(tt_user.username)
     user_id = tt_user.id
 
     if not user_username: # Check if username is empty or None
@@ -121,16 +132,26 @@ async def send_join_leave_notification_logic(
 
     server_name = get_effective_server_name(tt_instance)
 
-    # The `_` callable is now from the parent function's arguments.
-    # The lang_code parameter for text_generator is for send_telegram_messages_to_list's interface,
-    # but the translation itself will use the parent's `_`.
+    # _ (underscore) is from the outer function's (send_join_leave_notification_logic) parameters.
+    # It represents the bot's default language for the message template.
     def text_generator(lang_code: str) -> str:
-        if event_type == NOTIFICATION_EVENT_JOIN:
-            # English source string: "{user_nickname} joined server {server_name}"
-            return _("{user_nickname} joined server {server_name}").format(user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
-        else: # NOTIFICATION_EVENT_LEAVE
-            # English source string: "{user_nickname} left server {server_name}"
-            return _("{user_nickname} left server {server_name}").format(user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
+        # Получаем переводчик для конкретного языка (для получателя)
+        recipient_translator_func = get_translator(lang_code).gettext
+
+        # Получаем display_name, используя правильный переводчик для этого получателя
+        # tt_user is from the outer scope of send_join_leave_notification_logic
+        localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
+
+        # Определяем шаблон уведомления, используя _ из внешней функции (языка по умолчанию для бота)
+        # server_name and event_type are also from the outer scope
+        if event_type == NOTIFICATION_EVENT_JOIN: # Ensure NOTIFICATION_EVENT_JOIN is accessible
+            notification_template = _("User {user_nickname} joined server {server_name}")
+        else: # Assuming only JOIN and LEAVE types handled by this text_generator
+            notification_template = _("User {user_nickname} left server {server_name}")
+
+        # Форматируем строку
+        # Ensure html module is imported if html.quote is used
+        return notification_template.format(user_nickname=html.quote(localized_user_nickname), server_name=html.quote(server_name))
 
     await send_telegram_messages_to_list(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"], 
