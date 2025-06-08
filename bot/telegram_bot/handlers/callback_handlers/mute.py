@@ -432,5 +432,3 @@ async def cq_toggle_specific_user_mute_action(
         await _display_internal_user_list(callback_query, _, user_specific_settings, effective_list_to_refresh, current_page_for_refresh)
     else:
         logger.error(f"Unknown list_type '{list_type_user_was_on}' for refresh in toggle_user")
-
-```
