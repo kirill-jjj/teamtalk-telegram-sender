@@ -337,7 +337,7 @@ async def cq_toggle_specific_user_mute_action(
         all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
         sorted_accounts = sorted(all_accounts_tt, key=lambda acc: ttstr(acc.username).lower())
 
-        page_items, _, _ = _paginate_list_util(sorted_accounts, current_page_for_refresh, USERS_PER_PAGE)
+        page_items, _total_pages_discard, _page_idx_discard = _paginate_list_util(sorted_accounts, current_page_for_refresh, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             target_account = page_items[user_idx]
             username_to_toggle = ttstr(target_account.username)
@@ -346,7 +346,7 @@ async def cq_toggle_specific_user_mute_action(
 
     elif list_type_user_was_on in ["muted", "allowed"]:
         relevant_usernames = sorted(list(user_specific_settings.muted_users_set))
-        page_items, _, _ = _paginate_list_util(relevant_usernames, current_page_for_refresh, USERS_PER_PAGE)
+        page_items, _total_pages_discard, _page_idx_discard = _paginate_list_util(relevant_usernames, current_page_for_refresh, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             username_to_toggle = page_items[user_idx]
         else:

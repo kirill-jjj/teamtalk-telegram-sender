@@ -703,7 +703,7 @@ dependencies = [
 requires-dist = [
     { name = "aiogram", specifier = "~=3.20.0" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
-    { name = "babel", specifier = ">=2.15.0" },
+    { name = "babel", specifier = ">=2.17.0" },
     { name = "py-talk-ex", specifier = "~=1.6.0" },
     { name = "python-dotenv", specifier = "~=1.1.0" },
     { name = "sqlalchemy", specifier = "~=2.0.41" },
