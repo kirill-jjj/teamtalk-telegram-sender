@@ -38,7 +38,6 @@ venv.bak/
 *.sln
 *.sw?
 
-# Файлы SCons и системы локализации (gettext)
-.sconsign.dblite
+# Файлы системы локализации (gettext)
 bot/locales/*.pot
 bot/locales/**/*.mo
