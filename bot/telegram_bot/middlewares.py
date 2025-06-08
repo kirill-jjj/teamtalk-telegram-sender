@@ -59,7 +59,7 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         # Оставляем старые данные для совместимости, если где-то еще используются
         data["user_specific_settings"] = user_specific_settings
-        data["language"] = user_specific_settings.language
+        # data["language"] = user_specific_settings.language # Removed as per subtask
 
         return await handler(event, data)
 
