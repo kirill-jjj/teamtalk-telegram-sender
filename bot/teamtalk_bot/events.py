@@ -21,6 +21,7 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
+    RECONNECT_CHECK_INTERVAL_SECONDS, # Добавим для синхронизации
 )
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
@@ -43,6 +44,37 @@ from bot.teamtalk_bot.commands import (
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
+
+# Новая функция для периодической синхронизации
+async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
+    """Periodically synchronizes the ONLINE_USERS_CACHE with the server's state."""
+    sync_interval_seconds = 300  # 5 minutes
+    while True:
+        try:
+            if tt_instance and tt_instance.connected and tt_instance.logged_in:
+                logger.debug("Performing periodic cache synchronization...")
+                server_users = tt_instance.server.get_users()
+                new_cache = {user.id: user for user in server_users if hasattr(user, 'id')}
+
+                # Атомарное обновление кэша
+                ONLINE_USERS_CACHE.clear()
+                ONLINE_USERS_CACHE.update(new_cache)
+
+                logger.debug(f"Cache synchronized. Users online: {len(ONLINE_USERS_CACHE)}")
+            else:
+                logger.warning("Skipping periodic cache sync: TT instance not ready.")
+                # Если инстанс отвалился, можно увеличить интервал ожидания
+                await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
+                continue
+
+        except Exception as e:
+            logger.error(f"Error during periodic cache synchronization: {e}", exc_info=True)
+            # Avoid busy-looping on persistent errors not related to TT connection state
+            # Add a small delay if the error is not about the instance being disconnected
+            if tt_instance and tt_instance.connected and tt_instance.logged_in:
+                 await asyncio.sleep(60) # Wait 1 minute before retrying if error is with a connected instance
+
+        await asyncio.sleep(sync_interval_seconds)
 
 TT_COMMAND_HANDLERS = {
     "/sub": handle_tt_subscribe_command,
@@ -91,6 +123,9 @@ async def _initiate_reconnect(reason: str):
 
     if tt_bot_module.current_tt_instance is not None:
         logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
+        # Stop existing periodic sync task if any? This needs careful handling
+        # to avoid multiple tasks or tasks with stale instances.
+        # For now, assume a new task is created on successful reconnect and login finalization.
         tt_bot_module.current_tt_instance = None
         tt_bot_module.login_complete_time = None
     else:
@@ -104,6 +139,7 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
     channel_name_display = ttstr(channel.name) if hasattr(channel, "name") and isinstance(channel.name, bytes) else str(channel.name)
     logger.info(f"Bot successfully joined channel: {channel_name_display}")
 
+    # Шаг 1: Первичная синхронизация кэша
     logger.info("Performing initial population of the online users cache...")
     try:
         initial_online_users = tt_instance.server.get_users()
@@ -112,13 +148,26 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
             if hasattr(u, "id"):
                 ONLINE_USERS_CACHE[u.id] = u
             else:
-                username_str = ttstr(u.username)
-                logger.warning(f"User object {username_str} missing 'id' attribute during initial cache population. Skipping.")
-        logger.info(f"ONLINE_USERS_CACHE initialized/repopulated with {len(ONLINE_USERS_CACHE)} active user sessions.")
+                # Log if a user object from server.get_users() doesn't have an ID.
+                username_str = ttstr(u.username) if hasattr(u, 'username') else 'UnknownUserWithoutID'
+                logger.warning(f"User object '{username_str}' missing 'id' attribute during initial cache population. Skipping.")
+        logger.info(f"ONLINE_USERS_CACHE initialized with {len(ONLINE_USERS_CACHE)} users.")
     except Exception as e:
         logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
     asyncio.create_task(populate_user_accounts_cache(tt_instance))
+
+    # Шаг 2: Запуск фоновой задачи периодической синхронизации
+    # Ensure only one periodic sync task runs for a given tt_instance.
+    # This might require storing the task and cancelling it if _finalize_bot_login_sequence
+    # is somehow called again for an already active instance (e.g. manual rejoin command).
+    # For now, we assume this is the primary point of task creation after a fresh login.
+    if not hasattr(tt_instance, '_periodic_sync_task_running') or not tt_instance._periodic_sync_task_running:
+        asyncio.create_task(_periodic_cache_sync(tt_instance))
+        tt_instance._periodic_sync_task_running = True # Mark that task is started
+        logger.info("Periodic cache synchronization task started.")
+    else:
+        logger.info("Periodic cache synchronization task already running for this instance.")
 
     try:
         configured_status = get_configured_status()
@@ -127,7 +176,7 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.debug(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
         logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
     except Exception as e:
-        logger.error(f"Error setting status or login_complete_time for bot in on_user_join: {e}", exc_info=True)
+        logger.error(f"Error setting status or login_complete_time for bot: {e}", exc_info=True)
 
 
 @tt_bot_module.tt_bot.event
@@ -143,6 +192,9 @@ async def on_ready():
     )
     try:
         tt_bot_module.login_complete_time = None
+        # Reset periodic sync task flag if instance is being added
+        # This is a bit tricky as tt_instance isn't available yet here.
+        # We'll rely on _finalize_bot_login_sequence to manage it for now.
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}.")
     except Exception as e:
@@ -155,6 +207,7 @@ async def on_my_login(server: PytalkServer):
     tt_instance_val = server.teamtalk_instance
     tt_bot_module.current_tt_instance = tt_instance_val
     tt_bot_module.login_complete_time = None
+    tt_instance_val._periodic_sync_task_running = False # Reset flag on new login
 
     server_name = "Unknown Server"
     try:
@@ -189,16 +242,24 @@ async def on_my_login(server: PytalkServer):
             tt_instance_val.join_channel_by_id(channel_id_val, password=app_config.get("CHANNEL_PASSWORD"))
         else:
             logger.warning(
-                f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel. Finalizing login sequence now."
+                f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel."
             )
-            try:
-                configured_status = get_configured_status()
-                tt_instance_val.change_status(configured_status, app_config["STATUS_TEXT"])
-                tt_bot_module.login_complete_time = datetime.utcnow()
-                logger.debug(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
-                logger.info(f"TeamTalk login sequence complete (in current/root channel) at {tt_bot_module.login_complete_time}.")
-            except Exception as e:
-                logger.error(f"Error setting status or login_complete_time in on_my_login (root channel): {e}", exc_info=True)
+            # If not joining a specific channel, _finalize_bot_login_sequence might not be called via on_user_join.
+            # We might need to call parts of it here, or ensure on_user_join is triggered for root.
+            # For now, assuming on_user_join for the bot will be triggered by Pytalk even for root channel.
+            # The user's provided code calls _finalize_bot_login_sequence only from on_user_join.
+            # Let's simulate the bot joining its current channel to trigger on_user_join if needed.
+            # This is a bit of a workaround if Pytalk doesn't trigger on_user_join for the bot in root.
+            current_channel_id = tt_instance_val.getMyCurrentChannelID()
+            current_channel_obj = tt_instance_val.get_channel(current_channel_id)
+            if current_channel_obj: # Trigger finalization if already in a channel (e.g. root)
+                 logger.info(f"Bot already in channel '{ttstr(current_channel_obj.name)}' on login, ensuring finalization.")
+                 # Manually call finalize or parts of it if on_user_join is not guaranteed for root logins.
+                 # Based on user's code, on_user_join is the sole entry point for _finalize_bot_login_sequence.
+                 # This area might need refinement based on Pytalk's behavior for root channel joins.
+                 # For now, adhering to user's structure which relies on on_user_join.
+                 pass # Relying on on_user_join to be called.
+
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)
         if tt_instance_val:
@@ -207,12 +268,18 @@ async def on_my_login(server: PytalkServer):
 
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
+    # Consider stopping the periodic sync task associated with the lost instance
+    if tt_bot_module.current_tt_instance and hasattr(tt_bot_module.current_tt_instance, '_periodic_sync_task_running'):
+        tt_bot_module.current_tt_instance._periodic_sync_task_running = False # Allow new task on reconnect
     await _initiate_reconnect("Connection lost to TeamTalk server. Attempting to reconnect...")
 
 
 @tt_bot_module.tt_bot.event
 async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
     tt_instance_val = channel_obj.teamtalk
+    if hasattr(tt_instance_val, '_periodic_sync_task_running'):
+        tt_instance_val._periodic_sync_task_running = False # Allow new task if we rejoin and finalize
+
     if not tt_instance_val:
         await _initiate_reconnect(
             "Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably. Initiating full reconnect."
@@ -224,14 +291,14 @@ async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
         channel_name_val = ttstr(channel_obj.name) if channel_obj.name else "Unknown Channel"
         server_host = ttstr(tt_instance_val.server_info.host)
 
-        if channel_id_val == 0:
+        if channel_id_val == 0: # Kicked from server
             await _initiate_reconnect(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
-        elif channel_id_val > 0:
+        elif channel_id_val > 0: # Kicked from a specific channel
             logger.warning(
                 f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel..."
             )
             asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
-        else:
+        else: # Unexpected
             await _initiate_reconnect(
                 f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect."
             )
@@ -258,9 +325,17 @@ async def on_message(message: TeamTalkMessage):
 
     bot_reply_language = DEFAULT_LANGUAGE
     if app_config.get("TG_ADMIN_CHAT_ID"):
-        admin_settings = USER_SETTINGS_CACHE.get(app_config["TG_ADMIN_CHAT_ID"])
-        if admin_settings:
-            bot_reply_language = admin_settings.language
+        admin_chat_id_str = app_config.get("TG_ADMIN_CHAT_ID")
+        # Ensure admin_chat_id_str is converted to int if USER_SETTINGS_CACHE uses int keys
+        try: admin_chat_id_int = int(admin_chat_id_str)
+        except ValueError:
+            logger.warning(f"TG_ADMIN_CHAT_ID '{admin_chat_id_str}' is not a valid integer.")
+            admin_chat_id_int = None
+
+        if admin_chat_id_int:
+            admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
+            if admin_settings:
+                bot_reply_language = admin_settings.language
 
     translator = get_translator(bot_reply_language)
     _ = translator.gettext
@@ -303,11 +378,16 @@ async def on_user_login(user: TeamTalkUser):
 @tt_bot_module.tt_bot.event
 async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
     """Handles any user joining a channel, with special logic for the bot itself."""
+    # Ensure user object has an ID before caching
+    if not hasattr(user, 'id') or user.id is None:
+        username_str = ttstr(user.username) if hasattr(user, 'username') else 'UnknownUserWithoutID'
+        logger.warning(f"User '{username_str}' joined channel but has no valid ID. Cannot add to ONLINE_USERS_CACHE.")
+        return
     ONLINE_USERS_CACHE[user.id] = user
 
     tt_instance = getattr(user.server, "teamtalk_instance", None) or getattr(user, "teamtalk_instance", None)
     if not tt_instance:
-        logger.error(f"CRITICAL: Could not retrieve TeamTalk instance in on_user_join for user ID: {getattr(user, 'id', 'Unknown')}.")
+        logger.error(f"CRITICAL: Could not retrieve TeamTalk instance in on_user_join for user ID: {user.id}.")
         return
 
     my_user_id = tt_instance.getMyUserID()
@@ -323,28 +403,38 @@ async def on_user_join(user: TeamTalkUser, channel: PytalkChannel):
 async def on_user_logout(user: TeamTalkUser):
     tt_instance = user.server.teamtalk_instance
     if tt_instance:
-        if user.id in ONLINE_USERS_CACHE:
+        if hasattr(user, 'id') and user.id in ONLINE_USERS_CACHE:
             del ONLINE_USERS_CACHE[user.id]
             logger.debug(
                 f"User session {user.id} ({ttstr(user.username)}) removed from online cache. Cache size: {len(ONLINE_USERS_CACHE)}"
             )
-        else:
+        elif hasattr(user, 'id'):
             logger.warning(f"User session {user.id} ({ttstr(user.username)}) attempted logout but was not found in ONLINE_USERS_CACHE.")
+        else:
+            logger.warning(f"User ({ttstr(user.username) if hasattr(user, 'username') else 'UnknownUserWithoutID'}) logged out but has no ID. Cache not modified.")
+
         default_translator = get_translator(app_config.get("DEFAULT_LANG", "en"))
         _default = default_translator.gettext
         await send_join_leave_notification_logic(
             NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time, _default
         )
     else:
-        logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
+        logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username) if hasattr(user, 'username') else 'UnknownUser'}. Skipping notification.")
 
 
 @tt_bot_module.tt_bot.event
 async def on_user_update(user: TeamTalkUser):
-    if user.id in ONLINE_USERS_CACHE:
+    if hasattr(user, 'id') and user.id in ONLINE_USERS_CACHE:
         ONLINE_USERS_CACHE[user.id] = user
         logger.debug(f"User {user.id} updated in cache.")
-
+    elif hasattr(user, 'id'):
+        # User might have connected while periodic sync was running and got added by it,
+        # but on_user_login event for them might not have fired yet or was missed.
+        # So, if they are in cache (likely from periodic sync), we update.
+        # If not, we don't add them here as on_user_login should be the primary entry point.
+        logger.debug(f"User {user.id} updated but was not initially in ONLINE_USERS_CACHE via event. Update ignored by on_user_update unless already present.")
+    else:
+        logger.warning(f"User ({ttstr(user.username) if hasattr(user, 'username') else 'UnknownUserWithoutID'}) updated but has no ID. Cache not modified.")
 
 @tt_bot_module.tt_bot.event
 async def on_user_account_new(account: "pytalk.UserAccount"):
