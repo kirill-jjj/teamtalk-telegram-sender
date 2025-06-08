@@ -7,7 +7,7 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.config import app_config
-from bot.localization import get_text
+# from bot.localization import get_text # Removed by this change
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -27,12 +27,12 @@ def get_effective_server_name(tt_instance: Optional[TeamTalkInstance]) -> str:
             server_name = "Unknown Server"
     return server_name if server_name else "Unknown Server" # Final fallback
 
-def get_tt_user_display_name(user: TeamTalkUser, language_code: str) -> str:
+def get_tt_user_display_name(user: TeamTalkUser, _: callable) -> str:
     display_name = ttstr(user.nickname)
     if not display_name:
         display_name = ttstr(user.username)
     if not display_name:
-        display_name = get_text("WHO_USER_UNKNOWN", language_code)
+        display_name = _("unknown user") # Was WHO_USER_UNKNOWN
     return display_name
 
 def pluralize(number: int, one: str, few: str, many: str) -> str:
@@ -69,20 +69,28 @@ def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount
 
     return str(username_val) if username_val is not None else ""
 
-def build_help_message(language: str, platform: str, is_admin: bool) -> str:
+def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin: bool) -> str: # Added is_bot_admin
     """Builds a contextual help message based on platform and user rights."""
     parts = []
     if platform == "telegram":
-        parts.append(get_text("help_telegram_user_header", language))
-        parts.append(get_text("help_telegram_user_commands", language))
-        if is_admin:
-            parts.append(get_text("help_telegram_admin_header", language))
-            parts.append(get_text("help_telegram_admin_commands", language))
+        parts.append(_("<b>Available Commands:</b>")) # Changed to HTML bold
+        parts.append(_("/who - Show online users.\n"
+                       "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
+                       "/help - Show this help message.\n"
+                       "(Note: `/start` is used to initiate the bot and process deeplinks.)"))
+        if is_admin: # This is_admin likely refers to general admin privileges on Telegram side
+            parts.append(_("\n<b>Admin Commands:</b>")) # Changed to HTML bold
+            parts.append(_("/kick - Kick a user from the server (via buttons).\n"
+                           "/ban - Ban a user from the server (via buttons)."))
     elif platform == "teamtalk":
-        parts.append(get_text("help_teamtalk_user_header", language))
-        parts.append(get_text("help_teamtalk_user_commands", language))
-        if is_admin:
-            parts.append(get_text("help_teamtalk_admin_header", language))
-            parts.append(get_text("help_teamtalk_admin_commands", language))
+        parts.append(_("Available commands:")) # Keep as plain text for TeamTalk
+        parts.append(_("/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
+                       "/unsub - Get a link to unsubscribe from notifications.\n"
+                       "/help - Show help."))
+        # For TeamTalk, is_admin might mean TT server admin, and is_bot_admin for specific bot management commands
+        if is_bot_admin: # Assuming MAIN_ADMIN check maps to is_bot_admin
+            parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):")) # Keep as plain text
+            parts.append(_("/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
+                           "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
 
     return "\n".join(parts)

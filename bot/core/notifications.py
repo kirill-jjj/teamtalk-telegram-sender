@@ -7,7 +7,8 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
-from bot.localization import get_text
+# from bot.localization import get_text # Removed
+# from bot.language import get_translator # To be removed by this change
 from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import get_or_create_user_settings
@@ -89,8 +90,11 @@ async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
     tt_instance: TeamTalkInstance, # Make sure TeamTalkInstance is the correct type
-    login_complete_time: datetime | None # Added parameter
+    login_complete_time: datetime | None, # Added parameter
+    _: callable # Added translator function
 ):
+    # get_tt_user_display_name from bot.core.utils still expects language_code: str
+    # Using "en" as a default as user_specific_settings are not available here for a specific user.
     user_nickname = get_tt_user_display_name(tt_user, "en") # For logging and display
     user_username = ttstr(tt_user.username) # Assuming ttstr is available
     user_id = tt_user.id
@@ -117,10 +121,16 @@ async def send_join_leave_notification_logic(
 
     server_name = get_effective_server_name(tt_instance)
 
+    # The `_` callable is now from the parent function's arguments.
+    # The lang_code parameter for text_generator is for send_telegram_messages_to_list's interface,
+    # but the translation itself will use the parent's `_`.
     def text_generator(lang_code: str) -> str:
-        # Assuming NOTIFICATION_EVENT_JOIN is defined, e.g. from bot.constants
-        key = "JOIN_NOTIFICATION" if event_type == NOTIFICATION_EVENT_JOIN else "LEAVE_NOTIFICATION"
-        return get_text(key, lang_code, user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
+        if event_type == NOTIFICATION_EVENT_JOIN:
+            # English source string: "{user_nickname} joined server {server_name}"
+            return _("{user_nickname} joined server {server_name}").format(user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
+        else: # NOTIFICATION_EVENT_LEAVE
+            # English source string: "{user_nickname} left server {server_name}"
+            return _("{user_nickname} left server {server_name}").format(user_nickname=html.quote(user_nickname), server_name=html.quote(server_name))
 
     await send_telegram_messages_to_list(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"], 
