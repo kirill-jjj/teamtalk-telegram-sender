@@ -123,7 +123,7 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, _:
     # Using simple English pluralization, or rely on gettext providing correct plural form for "users"
     # The `pluralize` function is language-specific in its current form.
     # For gettext, you'd typically use `ngettext`. Here, we simplify.
-    users_word_total = _("user") if total_users == 1 else _("users")
+    users_word_total = _.ngettext("user", "users", total_users)
     # For Russian, the keys were:
     # "WHO_USERS_COUNT_SINGULAR": "пользователь"
     # "WHO_USERS_COUNT_PLURAL_2_4": "пользователя"

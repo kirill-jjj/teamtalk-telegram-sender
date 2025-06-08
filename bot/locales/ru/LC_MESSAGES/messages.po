@@ -346,17 +346,12 @@ msgstr "в неизвестном месте"
 msgid "No users found online."
 msgstr "Пользователей онлайн не найдено."
 
-#: bot/telegram_bot/handlers/user.py:126
-#, fuzzy
+#: bot/telegram_bot/handlers/user.py:124
 msgid "user"
-msgstr "пользователь"
-
-# | msgid "user"
-# | msgid_plural "users"
-#: bot/telegram_bot/handlers/user.py:126
-#, fuzzy
-msgid "users"
-msgstr "пользователь"
+msgid_plural "users"
+msgstr[0] "пользователь"
+msgstr[1] "пользователя"
+msgstr[2] "пользователей"
 
 #: bot/telegram_bot/handlers/user.py:134
 #, python-brace-format
@@ -403,7 +398,7 @@ msgstr "У вас нет прав на выполнение этого дейс�
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:48
 msgid "An error occurred during the action on the user."
-msgstr ""
+msgstr "Произошла ошибка при действии с пользователем."
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:66
 msgid "You do not have permission to execute this action."
@@ -435,11 +430,11 @@ msgstr "Страница {current_page}/{total_pages}"
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:361
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:410
 msgid "GENERIC_ERROR_TEXT"
-msgstr ""
+msgstr "Произошла ошибка."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:145
 msgid "SERVER_ACCOUNTS_NOT_LOADED_TEXT"
-msgstr ""
+msgstr "Учетные записи сервера не загружены."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:185
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:220
@@ -454,29 +449,29 @@ msgstr "Ошибка: Отсутствуют данные для переклю�
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:216
 msgid "MUTE_ALL_UPDATED_TO"
-msgstr ""
+msgstr "Режим \"Блокировать всех\" обновлен на"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:287
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:306
 msgid "TT_BOT_NOT_CONNECTED_FOR_USERS_TEXT"
-msgstr ""
+msgstr "Бот TeamTalk не подключен. Невозможно получить список пользователей."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:290
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:309
 msgid "NO_SERVER_ACCOUNTS_LOADED_TEXT"
-msgstr ""
+msgstr "Учетные записи сервера не загружены."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:335
 msgid "SERVER_ACCOUNTS_UNAVAILABLE_TOAST"
-msgstr ""
+msgstr "Учетные записи сервера недоступны."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:394
 msgid "USER_MUTE_STATUS_UPDATED_TOAST"
-msgstr ""
+msgstr "Статус блокировки пользователя обновлен."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:419
 msgid "TT_BOT_DISCONNECTED_REFRESH_FAILED_TOAST"
-msgstr ""
+msgstr "Бот TeamTalk отключен, не удалось обновить."
 
 #: bot/telegram_bot/handlers/callback_handlers/notifications.py:47
 msgid "Error: Missing data for NOON toggle."
@@ -568,4 +563,3 @@ msgstr "Настройка подписок обновлена на: {setting_na
 
 #~ msgid "ALL_SERVER_ACCOUNTS_HEADER"
 #~ msgstr "Аккаунты сервера (для блокировки)"
-
