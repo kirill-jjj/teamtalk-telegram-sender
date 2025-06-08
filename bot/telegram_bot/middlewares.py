@@ -76,7 +76,7 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
 
 from typing import Awaitable # Ensure Awaitable is explicitly imported if not covered by Coroutine
 from bot.database.models import SubscribedUser
-from bot.localization import get_text
+# from bot.localization import get_text # Removed
 
 # --- SubscriptionCheckMiddleware Class Definition ---
 class SubscriptionCheckMiddleware(BaseMiddleware):
@@ -95,7 +95,15 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         telegram_id = user.id
         session: AsyncSession | None = data.get("session") # From DbSessionMiddleware
-        language: str = data.get("language", "en") # From UserSettingsMiddleware (or default)
+        # language: str = data.get("language", "en") # Removed
+
+        # Retrieve the translator function, with a fallback
+        temp_translator_func = data.get("_")
+        if temp_translator_func is None:
+            logger.warning("SubscriptionCheckMiddleware: Translator '_' not found in data. Using default English translator for this message.")
+            # get_translator is imported at the top of the file
+            temp_translator_func = get_translator("en").gettext
+        _ = temp_translator_func
 
         if not session:
             logger.error("SubscriptionCheckMiddleware: No database session found in event data. Ensure DbSessionMiddleware runs before.")
@@ -114,7 +122,8 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         if not subscriber:
             logger.info(f"SubscriptionCheckMiddleware: User {telegram_id} is not subscribed. Blocking further processing.")
-            message_text = get_text("PLEASE_SUBSCRIBE_FIRST", language)
+            # English source for PLEASE_SUBSCRIBE_FIRST: "You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe."
+            message_text = _("You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe.")
             try:
                 if isinstance(event, Message):
                     await event.reply(message_text)
