@@ -38,8 +38,7 @@ dependencies = [
     "SQLAlchemy~=2.0.41",
     "aiosqlite~=0.21.0",
     'uvloop; sys_platform != "win32"',
-    "Babel>=2.15.0",
-    "SCons>=4.8.0"
+    "Babel>=2.15.0"
 ]
 
 [project.urls]
