@@ -1,6 +1,6 @@
 import logging
 import math # For pagination
-from typing import Callable
+from typing import Callable, Any
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
