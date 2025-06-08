@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, Telegra
 
 
 from bot.config import app_config
-from bot.localization import get_text
+# from bot.localization import get_text # Removed
 from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory # For direct session usage if needed
 from bot.core.user_settings import USER_SETTINGS_CACHE

@@ -9,7 +9,8 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
-from bot.localization import get_text
+# from bot.localization import get_text # Removed
+from bot.language import get_translator # Added
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
@@ -129,19 +130,21 @@ async def forward_tt_message_to_telegram_admin(
     admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id)
     admin_language = admin_settings.language if admin_settings else DEFAULT_LANGUAGE
 
-    tt_instance_val = message.teamtalk_instance # Instance from which message originated
+    translator = get_translator(admin_language)
+    _ = translator.gettext
+
+    tt_instance_val = message.teamtalk_instance
 
     server_name_val = get_effective_server_name(tt_instance_val)
-    sender_display_val = get_tt_user_display_name(message.user, admin_language)
+    # get_tt_user_display_name now expects `_` (translator func) as its second argument
+    sender_display_val = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
-    text_to_send = get_text(
-        "TT_FORWARD_MESSAGE_TEXT", # This still uses get_text directly
-        admin_language,
+    text_to_send = _("Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}").format(
         server_name=html.quote(server_name_val),
         sender_display=html.quote(sender_display_val),
         message_text=html.quote(message_content)
-    )
+    ) # TT_FORWARD_MESSAGE_TEXT
 
     # Use the individual message sending utility
     was_sent: bool = await send_telegram_message_individual(
@@ -155,12 +158,9 @@ async def forward_tt_message_to_telegram_admin(
     )
 
     if was_sent:
-        message.reply(get_text("tt_reply_success", admin_language))
+        message.reply(_("Message sent to Telegram successfully.")) # tt_reply_success
     else:
-        # Specific error details are logged within _handle_telegram_api_error (called by send_telegram_message_individual)
-        # or _should_send_silently logs if it's due to NOON.
-        # Here, we provide a generic failure message back to the TeamTalk user.
-        message.reply(get_text("tt_reply_fail_generic_error", admin_language, error="Failed to deliver message to Telegram"))
+        message.reply(_("Failed to send message: {error}").format(error="Failed to deliver message to Telegram")) # tt_reply_fail_generic_error
 
 
 async def _tt_reconnect():

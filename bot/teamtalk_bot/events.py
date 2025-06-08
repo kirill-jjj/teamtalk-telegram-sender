@@ -10,8 +10,9 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.enums import Status # Replaced UserStatusMode
 
 from bot.config import app_config
+from bot.language import get_translator # Added
 from bot.database.engine import SessionFactory
-from bot.core.notifications import send_join_leave_notification_logic
+from bot.core.notifications import send_join_leave_notification_logic # Now expects `_`
 from bot.core.user_settings import USER_SETTINGS_CACHE # For admin lang in on_message
 from bot.constants import (
     DEFAULT_LANGUAGE, TEAMTALK_PRIVATE_MESSAGE_TYPE,
@@ -239,11 +240,15 @@ async def on_message(message: TeamTalkMessage):
         if admin_settings:
             bot_reply_language = admin_settings.language
 
+    # Get the translator function for the determined language
+    translator = get_translator(bot_reply_language)
+    _ = translator.gettext
+
     async with SessionFactory() as session: # Create a new session for this event
         if message_content.lower().startswith("/sub"):
-            await handle_tt_subscribe_command(message, session, bot_reply_language)
+            await handle_tt_subscribe_command(message, session, _)
         elif message_content.lower().startswith("/unsub"):
-            await handle_tt_unsubscribe_command(message, session, bot_reply_language)
+            await handle_tt_unsubscribe_command(message, session, _)
         elif message_content.lower().startswith("/add_admin"):
             parts = message.content.split(maxsplit=1)
             args_str = parts[1] if len(parts) > 1 else None
@@ -252,7 +257,7 @@ async def on_message(message: TeamTalkMessage):
                 tt_message=message,
                 command=command_obj,
                 session=session,
-                bot_language=bot_reply_language
+                _=_ # Pass translator
             )
         elif message_content.lower().startswith("/remove_admin"):
             parts = message.content.split(maxsplit=1)
@@ -262,12 +267,12 @@ async def on_message(message: TeamTalkMessage):
                 tt_message=message,
                 command=command_obj,
                 session=session,
-                bot_language=bot_reply_language
+                _=_ # Pass translator
             )
         elif message_content.lower().startswith("/help"):
-            await handle_tt_help_command(message, bot_reply_language)
+            await handle_tt_help_command(message, _)
         elif message_content.startswith("/"): # An unknown command
-            await handle_tt_unknown_command_specific(message, bot_reply_language)
+            await handle_tt_unknown_command_specific(message, _)
         else: # Not a command, forward to Telegram admin if configured
             await forward_tt_message_to_telegram_admin(message)
 
@@ -284,7 +289,16 @@ async def on_user_login(user: TeamTalkUser):
         ONLINE_USERS_CACHE[user.id] = user
         logger.debug(f"User session {user.id} ({username_str}) added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
 
-        await send_join_leave_notification_logic(NOTIFICATION_EVENT_JOIN, user, tt_instance, tt_bot_module.login_complete_time)
+        # Use a default translator for global notifications
+        default_translator = get_translator(app_config.get("DEFAULT_LANG", "en"))
+        _default = default_translator.gettext
+        await send_join_leave_notification_logic(
+            NOTIFICATION_EVENT_JOIN,
+            user,
+            tt_instance,
+            tt_bot_module.login_complete_time,
+            _default # Pass default translator
+        )
     else:
         logger.warning(f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 
@@ -366,7 +380,16 @@ async def on_user_logout(user: TeamTalkUser):
             # This case might indicate an issue or that the user was not fully logged in/cached.
             logger.warning(f"User session {user.id} ({username_str}) attempted logout but was not found in ONLINE_USERS_CACHE.")
 
-        await send_join_leave_notification_logic(NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time)
+        # Use a default translator for global notifications
+        default_translator = get_translator(app_config.get("DEFAULT_LANG", "en"))
+        _default = default_translator.gettext
+        await send_join_leave_notification_logic(
+            NOTIFICATION_EVENT_LEAVE,
+            user,
+            tt_instance,
+            tt_bot_module.login_complete_time,
+            _default # Pass default translator
+        )
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
 

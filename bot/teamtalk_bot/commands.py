@@ -10,8 +10,9 @@ import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
 from bot.config import app_config
-from bot.localization import get_text
-from bot.core.utils import build_help_message # Added
+# from bot.localization import get_text # Removed
+from bot.language import get_translator # Added
+from bot.core.utils import build_help_message # Already refactored to take `_`
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
@@ -28,8 +29,12 @@ ttstr = pytalk.instance.sdk.ttstr # Convenience variable
 def is_tt_admin(func):
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
-        # Мы ожидаем, что bot_language будет в kwargs.
-        bot_language = kwargs.get("bot_language")
+        # Expect `_` (translator) in kwargs instead of bot_language
+        _ = kwargs.get("_")
+        if not _: # Fallback if _ is not provided
+            # If this fallback is hit often, it means `_` is not being passed correctly by the caller of decorated functions
+            _ = get_translator(app_config.get("DEFAULT_LANG", "en")).gettext
+            kwargs["_"] = _ # Ensure _ is in kwargs for the wrapped function if it was missing
 
         username = ttstr(tt_message.user.username)
         admin_username = app_config.get("ADMIN_USERNAME")
@@ -38,12 +43,9 @@ def is_tt_admin(func):
             logger.warning(
                 f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}."
             )
-            # Если язык не передан, используем запасной вариант
-            lang_for_reply = bot_language or app_config.get("DEFAULT_LANG", "en")
-            tt_message.reply(get_text("TT_ADMIN_CMD_NO_PERMISSION", lang_for_reply))
+            tt_message.reply(_("You do not have permission to use this command.")) # TT_ADMIN_CMD_NO_PERMISSION
             return None
 
-        # Если проверка пройдена, вызываем оригинальную функцию
         return await func(tt_message, *args, **kwargs)
     return wrapper
 
@@ -91,35 +93,32 @@ async def _execute_admin_action_for_id(
 
 
 def _create_admin_action_report(
-    language: str,
+    _: callable, # Changed from language: str
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
-    success_msg_key: str,
-    error_msg_key: str,
-    invalid_id_msg_key: str,
-    header_key: str
+    success_msg_source: str, # English source string
+    error_msg_source: str,   # English source string
+    invalid_id_msg_source: str, # English source string
+    header_source: str        # English source string
 ) -> str:
     """Creates a final report message for the admin action."""
     reply_parts = []
     if success_count > 0:
-        reply_parts.append(get_text(success_msg_key, language, count=success_count))
+        reply_parts.append(_(success_msg_source).format(count=success_count))
 
     errors = []
     for failed_id in failed_ids:
-        errors.append(get_text(error_msg_key, language, telegram_id=failed_id))
+        errors.append(_(error_msg_source).format(telegram_id=failed_id))
     for invalid_entry in invalid_entries:
-        errors.append(get_text(invalid_id_msg_key, language, telegram_id_str=invalid_entry))
+        errors.append(_(invalid_id_msg_source).format(telegram_id_str=invalid_entry))
 
     if errors:
         error_messages_formatted = "- " + "\n- ".join(errors)
-        reply_parts.append(f"{get_text(header_key, language)}\n{error_messages_formatted}")
+        reply_parts.append(f"{_(header_source)}\n{error_messages_formatted}")
 
     if not reply_parts:
-        # This fallback is if both success_count is 0 and errors list is empty.
-        # The calling functions (handle_tt_..._admin_command) should ideally handle cases
-        # where no valid IDs were provided to parse in the first place.
-        return get_text("TT_NO_ACTION_PERFORMED", language)
+        return _("No action was performed. Please check the IDs provided.") # TT_NO_ACTION_PERFORMED
 
     return "\n\n".join(reply_parts)
 
@@ -127,100 +126,104 @@ def _create_admin_action_report(
 async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    bot_language: str,
+    _: callable, # Changed from bot_language: str
     action: str,
     success_log_message: str,
-    reply_text_key: str,
-    error_reply_key: str,
+    reply_text_source: str, # English source string
+    error_reply_source: str,  # English source string
     payload: Optional[str] = None,
 ):
     """
     Helper function to generate a deeplink, log success, and reply to the TeamTalk message.
     Includes error handling.
     """
-    sender_tt_username = ttstr(tt_message.user.username) # Moved here for consistent logging
+    sender_tt_username = ttstr(tt_message.user.username)
     try:
         token_val = await create_deeplink(
-            session,
-            action,
-            payload=payload,
-            expected_telegram_id=None
+            session, action, payload=payload, expected_telegram_id=None
         )
-        bot_info_val = await tg_bot_event.get_me()
+        bot_info_val = await tg_bot_event.get_me() # Bot username for the deeplink
         deeplink_url_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
 
         logger.info(success_log_message.format(token=token_val, sender_username=sender_tt_username))
-        reply_text_val = get_text(reply_text_key, bot_language, deeplink_url=deeplink_url_val)
+
+        # The original TT_SUBSCRIBE_DEEPLINK_TEXT included {deeplink_url} but also mentioned {bot_username} and {tt_user_id}
+        # The prompt's example for /sub is:
+        # _("To subscribe to Telegram notifications and link your TeamTalk account for NOON, please use the following command with the bot @{bot_username} on Telegram:\n\n/start {token}\n\nYour TeamTalk User ID is: {tt_user_id}")
+        # This is more complex than a simple reply_text_source.format(deeplink_url=...).
+        # For now, I'll use the simpler source strings that match the old keys' direct purpose.
+        if "{deeplink_url}" in reply_text_source: # Check if placeholder exists
+             reply_text_val = _(reply_text_source).format(deeplink_url=deeplink_url_val)
+        else: # If not, the source string is static (e.g. error message)
+             reply_text_val = _(reply_text_source)
+
         tt_message.reply(reply_text_val)
     except Exception as e:
         logger.error(
             f"Error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
             exc_info=True
         )
-        tt_message.reply(get_text(error_reply_key, bot_language))
+        tt_message.reply(_(error_reply_source))
 
 
 async def handle_tt_subscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    bot_language: str # Language for bot's replies in TT
+    _: callable # Changed from bot_language: str
 ):
     sender_tt_username = ttstr(tt_message.user.username)
+    # English Source for TT_SUBSCRIBE_DEEPLINK_TEXT: "Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}"
+    # The prompt example is more detailed, but this matches the old key.
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
-        bot_language=bot_language,
+        _=_,
         action=ACTION_SUBSCRIBE_AND_LINK_NOON,
         payload=sender_tt_username,
         success_log_message="Generated subscribe and link NOON deeplink {token} for TT user {sender_username}",
-        reply_text_key="TT_SUBSCRIBE_DEEPLINK_TEXT",
-        error_reply_key="TT_SUBSCRIBE_ERROR",
+        reply_text_source="Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}",
+        error_reply_source="An error occurred while processing the subscription request.",
     )
 
 
 async def handle_tt_unsubscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    bot_language: str
+    _: callable # Changed from bot_language: str
 ):
+    # English Source for TT_UNSUBSCRIBE_DEEPLINK_TEXT: "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
-        bot_language=bot_language,
+        _=_,
         action=ACTION_UNSUBSCRIBE,
-        payload=None, # No payload for unsubscribe
+        payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
-        reply_text_key="TT_UNSUBSCRIBE_DEEPLINK_TEXT",
-        error_reply_key="TT_UNSUBSCRIBE_ERROR",
+        reply_text_source="Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}",
+        error_reply_source="An error occurred while processing the unsubscription request.",
     )
 
 
-@is_tt_admin
+@is_tt_admin # Passes `_` in kwargs
 async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage, *,
-    command: CommandObject, # Use CommandObject for arguments
+    command: CommandObject,
     session: AsyncSession,
-    bot_language: str
+    _: callable
 ):
-    """Handles the /addadmin TeamTalk command."""
-    # command.args will be a string like "12345 67890" or None
     valid_ids, invalid_entries = _parse_telegram_ids(command.args)
 
     if not valid_ids and not invalid_entries:
-        tt_message.reply(get_text("TT_ADD_ADMIN_PROMPT_IDS", bot_language))
+        tt_message.reply(_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432")) # TT_ADD_ADMIN_PROMPT_IDS
         return
 
     success_count = 0
-    failed_action_ids = [] # IDs where add_admin returned False (e.g., already admin)
+    failed_action_ids = []
 
     for telegram_id in valid_ids:
-        # Log attempt before execution for better traceability if _execute crashes
         logger.info(f"Attempting to add TG ID {telegram_id} as admin by TT admin {ttstr(tt_message.user.username)}.")
-        if await _execute_admin_action_for_id(
-            session=session,
-            telegram_id=telegram_id,
-            crud_function=add_admin, # Pass the actual add_admin function
-            commands_to_set=ADMIN_COMMANDS
+        if await _execute_admin_action_for_id( # This helper does not need `_`
+            session=session, telegram_id=telegram_id, crud_function=add_admin, commands_to_set=ADMIN_COMMANDS
         ):
             success_count += 1
             logger.info(f"Successfully added TG ID {telegram_id} as admin and set commands.")
@@ -229,44 +232,38 @@ async def handle_tt_add_admin_command(
             logger.warning(f"Failed to add TG ID {telegram_id} as admin (e.g., already admin or DB error).")
 
     report_message = _create_admin_action_report(
-        language=bot_language,
+        _=_,
         success_count=success_count,
-        failed_ids=failed_action_ids, # Pass IDs that failed the CRUD operation
-        invalid_entries=invalid_entries, # Pass entries that were not valid IDs
-        success_msg_key="TT_ADD_ADMIN_SUCCESS",
-        error_msg_key="TT_ADD_ADMIN_ERROR_ALREADY_ADMIN", # For failed add_admin (e.g. already admin)
-        invalid_id_msg_key="TT_ADD_ADMIN_ERROR_INVALID_ID", # For non-integer inputs
-        header_key="TT_ADMIN_ERRORS_HEADER"
+        failed_ids=failed_action_ids,
+        invalid_entries=invalid_entries,
+        success_msg_source="Successfully added {count} admin(s).", # TT_ADD_ADMIN_SUCCESS
+        error_msg_source="ID {telegram_id} is already an admin or failed to add.", # TT_ADD_ADMIN_ERROR_ALREADY_ADMIN
+        invalid_id_msg_source="'{telegram_id_str}' is not a valid numeric Telegram ID.", # TT_ADD_ADMIN_ERROR_INVALID_ID
+        header_source="Errors:\n- " # TT_ADMIN_ERRORS_HEADER
     )
-
     tt_message.reply(report_message)
 
 
-@is_tt_admin
+@is_tt_admin # Passes `_` in kwargs
 async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage, *,
-    command: CommandObject, # Use CommandObject for arguments
+    command: CommandObject,
     session: AsyncSession,
-    bot_language: str
+    _: callable
 ):
-    """Handles the /removeadmin TeamTalk command."""
     valid_ids, invalid_entries = _parse_telegram_ids(command.args)
 
     if not valid_ids and not invalid_entries:
-        tt_message.reply(get_text("TT_REMOVE_ADMIN_PROMPT_IDS", bot_language))
+        tt_message.reply(_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432")) # TT_REMOVE_ADMIN_PROMPT_IDS
         return
 
     success_count = 0
-    failed_action_ids = [] # IDs where remove_admin_db returned False
+    failed_action_ids = []
 
     for telegram_id in valid_ids:
-        # Log attempt before execution
         logger.info(f"Attempting to remove TG ID {telegram_id} as admin by TT admin {ttstr(tt_message.user.username)}.")
-        if await _execute_admin_action_for_id(
-            session=session,
-            telegram_id=telegram_id,
-            crud_function=remove_admin_db, # Pass the actual remove_admin_db function
-            commands_to_set=USER_COMMANDS # Set user commands on successful removal
+        if await _execute_admin_action_for_id( # This helper does not need `_`
+            session=session, telegram_id=telegram_id, crud_function=remove_admin_db, commands_to_set=USER_COMMANDS
         ):
             success_count += 1
             logger.info(f"Successfully removed TG ID {telegram_id} as admin and set user commands.")
@@ -275,41 +272,38 @@ async def handle_tt_remove_admin_command(
             logger.warning(f"Failed to remove TG ID {telegram_id} as admin (e.g., was not admin or DB error).")
 
     report_message = _create_admin_action_report(
-        language=bot_language,
+        _=_,
         success_count=success_count,
         failed_ids=failed_action_ids,
         invalid_entries=invalid_entries,
-        success_msg_key="TT_REMOVE_ADMIN_SUCCESS",
-        error_msg_key="TT_REMOVE_ADMIN_ERROR_NOT_FOUND", # For failed remove_admin_db (e.g. not an admin)
-        invalid_id_msg_key="TT_ADD_ADMIN_ERROR_INVALID_ID", # Reused: for non-integer inputs
-        header_key="TT_ADMIN_INFO_ERRORS_HEADER" # Specific header for remove command context
+        success_msg_source="Successfully removed {count} admin(s).", # TT_REMOVE_ADMIN_SUCCESS
+        error_msg_source="Admin with ID {telegram_id} not found.", # TT_REMOVE_ADMIN_ERROR_NOT_FOUND
+        invalid_id_msg_source="'{telegram_id_str}' is not a valid numeric Telegram ID.", # TT_ADD_ADMIN_ERROR_INVALID_ID (reused)
+        header_source="Info/Errors:\n- " # TT_ADMIN_INFO_ERRORS_HEADER
     )
-
     tt_message.reply(report_message)
 
 
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
-    bot_language: str
+    _: callable # Changed from bot_language: str
 ):
-    # Check admin rights by comparing username with ADMIN_USERNAME from config
-    is_admin = False # Default to not admin
+    is_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
     admin_username_from_config = app_config.get("ADMIN_USERNAME")
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
-        is_admin = True
+        is_admin = True # This user is the main TeamTalk admin specified in config
 
-    help_text = build_help_message(bot_language, "teamtalk", is_admin)
-
+    # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
+    help_text = build_help_message(_, "teamtalk", is_admin, is_admin)
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
 async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
-    bot_language: str
+    _: callable # Changed from bot_language: str
 ):
-    # Use a specific "unknown command" message for TeamTalk if available
-    reply_text_val = get_text("TT_UNKNOWN_COMMAND", bot_language)
+    reply_text_val = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.") # TT_UNKNOWN_COMMAND
     tt_message.reply(reply_text_val)
     logger.warning(f"Received unknown TT command from {ttstr(tt_message.user.username)}: {tt_message.content[:100]}")
