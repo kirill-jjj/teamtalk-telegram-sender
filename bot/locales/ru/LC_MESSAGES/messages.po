@@ -436,7 +436,7 @@ msgstr "Произошла ошибка."
 msgid "SERVER_ACCOUNTS_NOT_LOADED_TEXT"
 msgstr "Учетные записи сервера не загружены."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:160
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:161
 msgid "ALL_SERVER_ACCOUNTS_HEADER"
 msgstr "Аккаунты сервера (для блокировки)"
 

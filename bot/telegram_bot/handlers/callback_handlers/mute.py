@@ -56,7 +56,7 @@ async def _display_paginated_list_ui(
 
     page_slice, total_pages, current_page_idx = _paginate_list_util(items, page, USERS_PER_PAGE)
 
-    message_parts = [_(header_text_key)]
+    message_parts = [header_text_key]
     if not items:
         message_parts.append(_(empty_list_text_key))
 
@@ -158,7 +158,7 @@ async def _display_all_server_accounts_list(
         _=_,
         items=sorted_items,
         page=page,
-        header_text_key="ALL_SERVER_ACCOUNTS_HEADER",
+        header_text_key=_("ALL_SERVER_ACCOUNTS_HEADER"),
         empty_list_text_key="NO_SERVER_ACCOUNTS_TEXT",
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={
