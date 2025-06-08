@@ -145,9 +145,9 @@ async def send_join_leave_notification_logic(
         # Определяем шаблон уведомления, используя _ из внешней функции (языка по умолчанию для бота)
         # server_name and event_type are also from the outer scope
         if event_type == NOTIFICATION_EVENT_JOIN: # Ensure NOTIFICATION_EVENT_JOIN is accessible
-            notification_template = _("User {user_nickname} joined server {server_name}")
+            notification_template = recipient_translator_func("User {user_nickname} joined server {server_name}")
         else: # Assuming only JOIN and LEAVE types handled by this text_generator
-            notification_template = _("User {user_nickname} left server {server_name}")
+            notification_template = recipient_translator_func("User {user_nickname} left server {server_name}")
 
         # Форматируем строку
         # Ensure html module is imported if html.quote is used
