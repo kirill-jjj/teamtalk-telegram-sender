@@ -21,7 +21,8 @@ from bot.telegram_bot.callback_data import (
     MuteAllCallback,
     UserListCallback,
     PaginateUsersCallback,
-    ToggleMuteSpecificCallback
+    ToggleMuteSpecificCallback,
+    AdminActionCallback
 )
 from bot.database.models import NotificationSetting # For subscription settings
 from bot.core.user_settings import UserSpecificSettings # For notification and mute settings
@@ -284,7 +285,7 @@ def create_account_list_keyboard(
 # End of bot/telegram_bot/keyboards.py
 
 def create_user_selection_keyboard(
-    _: callable, # Changed from language: str
+    _: callable,
     users_to_display: list[pytalk.user.User],
     command_type: str
 ) -> InlineKeyboardBuilder:
@@ -297,19 +298,22 @@ def create_user_selection_keyboard(
         if not user_obj:
             continue
 
-        user_nickname_val = get_tt_user_display_name(user_obj, _) # Pass _
+        user_nickname_val = get_tt_user_display_name(user_obj, _)
 
-        raw_nickname = ttstr(user_obj.nickname) if hasattr(user_obj, 'nickname') and user_obj.nickname is not None else ""
-        raw_username = ttstr(user_obj.username) if hasattr(user_obj, 'username') and user_obj.username is not None else ""
-        effective_name_for_callback = raw_nickname or raw_username or "unknown"
-        callback_nickname_val = effective_name_for_callback[:CALLBACK_NICKNAME_MAX_LENGTH]
-        user_id = user_obj.id if hasattr(user_obj, 'id') else "unknown_id"
-        if user_id == "unknown_id":
+        # Убедимся, что user_id существует и является валидным
+        if not hasattr(user_obj, 'id'):
             continue
+        user_id = user_obj.id
+
+        # Используем AdminActionCallback вместо "магической строки"
+        callback_data = AdminActionCallback(
+            action=command_type,  # "kick" или "ban"
+            user_id=user_id
+        ).pack()
 
         builder.button(
             text=html.escape(user_nickname_val),
-            callback_data=f"{command_type}:{user_id}:{callback_nickname_val}"
+            callback_data=callback_data
         )
 
     builder.adjust(2)
