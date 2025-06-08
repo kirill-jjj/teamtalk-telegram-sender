@@ -160,11 +160,9 @@ async def _execute_tt_user_action(
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     session: AsyncSession, # From DbSessionMiddleware
-    # language: str, # From UserSettingsMiddleware - REMOVED
+    _: callable, # Translator function from UserSettingsMiddleware
     tt_instance: TeamTalkInstance | None, # From TeamTalkInstanceMiddleware
-    data: dict[str, Any] # To get `_`
 ):
-    _ = data["_"] # Translator function
     await callback_query.answer() # Acknowledge the callback quickly
     if not callback_query.message or not callback_query.from_user: return
 
@@ -226,10 +224,9 @@ from bot.language import get_translator # Added import
 @callback_router.callback_query(SettingsCallback.filter(F.action == "language"))
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
-    callback_data: SettingsCallback,
-    data: dict[str, Any]
+    _: callable,
+    callback_data: SettingsCallback
 ):
-    _ = data["_"]
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
         return
@@ -254,13 +251,11 @@ async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,
     user_specific_settings: UserSpecificSettings,
-    callback_data: LanguageCallback, # Consumes LanguageCallback
-    data: dict[str, Any]
+    _: callable, # Translator for current language
+    callback_data: LanguageCallback # Consumes LanguageCallback
 ):
-    # _ for current language errors, _new for new language UI
-    _current = data["_"]
     if not callback_query.message or not callback_query.from_user or not callback_data.lang_code:
-        await callback_query.answer(_current("Error: Missing data for language update."), show_alert=True)
+        await callback_query.answer(_("Error: Missing data for language update."), show_alert=True) # Use current language `_`
         return
 
     new_lang_code = callback_data.lang_code
@@ -297,12 +292,12 @@ async def cq_set_language(
         return main_settings_text, main_settings_builder.as_markup()
 
     # _process_setting_update needs a single `_` for its internal error messages.
-    # We'll pass the one for the new language, as that's the most sensible for this context.
+    # We pass `_new` (translator for the new language) for messages related to the update itself.
     await _process_setting_update(
         callback_query=callback_query,
         session=session,
         user_settings=user_specific_settings,
-        _= _new, # Pass translator for the new language
+        _= _new, # Pass translator for the NEW language for toast and UI refresh
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=toast_text,
@@ -317,12 +312,10 @@ from bot.database.models import NotificationSetting
 @callback_router.callback_query(SettingsCallback.filter(F.action == "subscriptions"))
 async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: SettingsCallback,
-    data: dict[str, Any]
+    callback_data: SettingsCallback
 ):
-    _ = data["_"]
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
         return
@@ -346,12 +339,10 @@ async def cq_show_subscriptions_menu(
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: SubscriptionCallback,
-    data: dict[str, Any]
+    callback_data: SubscriptionCallback
 ):
-    _ = data["_"]
     if not callback_query.message or not callback_query.from_user:
         await callback_query.answer(_("Error: Missing data for subscription update."), show_alert=True)
         return
@@ -409,11 +400,9 @@ async def cq_set_subscription_setting(
 @callback_router.callback_query(SettingsCallback.filter(F.action == "back_to_main"))
 async def cq_back_to_main_settings_menu(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
-    callback_data: SettingsCallback,
-    data: dict[str, Any]
+    _: callable,
+    callback_data: SettingsCallback
 ):
-    _ = data["_"]
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
         return
@@ -438,12 +427,10 @@ async def cq_back_to_main_settings_menu(
 @callback_router.callback_query(SettingsCallback.filter(F.action == "notifications"))
 async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: SettingsCallback,
-    data: dict[str, Any]
+    callback_data: SettingsCallback
 ):
-    _ = data["_"]
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
         return
@@ -464,12 +451,10 @@ async def cq_show_notifications_menu(
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: NotificationActionCallback,
-    data: dict[str, Any]
+    callback_data: NotificationActionCallback
 ):
-    _ = data["_"]
     if not callback_query.message or not callback_query.from_user:
         await callback_query.answer(_("Error: Missing data for NOON toggle."), show_alert=True)
         return
@@ -507,19 +492,19 @@ async def cq_toggle_noon_setting_action(
 @callback_router.callback_query(NotificationActionCallback.filter(F.action == "manage_muted"))
 async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
-    language: str,
+    _: callable,
     user_specific_settings: UserSpecificSettings,
     callback_data: NotificationActionCallback # Consumes
 ):
     if not callback_query.message:
-        await callback_query.answer("Error: No message.")
+        await callback_query.answer("Error: No message.") # This string should ideally be localized if it's user-facing.
         return
     await callback_query.answer()
     # Use factory from keyboards.py
-    manage_muted_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
+    manage_muted_builder = create_manage_muted_users_keyboard(_, user_specific_settings)
     try:
         await callback_query.message.edit_text(
-            text=get_text("MANAGE_MUTED_MENU_HEADER", language),
+            text=_("MANAGE_MUTED_MENU_HEADER"),
             reply_markup=manage_muted_builder.as_markup()
         )
     except TelegramBadRequest as e:
@@ -533,11 +518,12 @@ async def cq_show_manage_muted_menu(
 async def cq_toggle_mute_all_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    language: str, # Current language from UserSettingsMiddleware
+    _: callable, # Translator from UserSettingsMiddleware
     user_specific_settings: UserSpecificSettings,
     callback_data: MuteAllCallback # Consumes
 ):
     if not callback_query.message or not callback_query.from_user:
+        # This string should ideally be localized if it's user-facing.
         await callback_query.answer("Error: Missing data.", show_alert=True)
         return
 
@@ -551,13 +537,13 @@ async def cq_toggle_mute_all_action(
 
     # Determine the status text based on the state *after* the toggle
     new_status_text_key = "ENABLED_STATUS" if not original_flag else "DISABLED_STATUS"
-    new_status_display_text = get_text(new_status_text_key, language)
-    toast_text = get_text("MUTE_ALL_UPDATED_TO", language, status=new_status_display_text)
+    new_status_display_text = _(new_status_text_key)
+    toast_text = _("MUTE_ALL_UPDATED_TO").format(status=new_status_display_text) # Assuming MUTE_ALL_UPDATED_TO is "Mute All updated to: {status}"
 
     def refresh_ui() -> tuple[str, InlineKeyboardMarkup]:
         # user_specific_settings will have the updated mute_all_flag value here
-        updated_builder = create_manage_muted_users_keyboard(language, user_specific_settings)
-        menu_text = get_text("MANAGE_MUTED_MENU_HEADER", language)
+        updated_builder = create_manage_muted_users_keyboard(_, user_specific_settings)
+        menu_text = _("MANAGE_MUTED_MENU_HEADER")
         return menu_text, updated_builder.as_markup()
 
     # The initial callback_query.answer() is removed as _process_setting_update handles it.
@@ -565,7 +551,7 @@ async def cq_toggle_mute_all_action(
         callback_query=callback_query,
         session=session,
         user_settings=user_specific_settings,
-        language=language, # User's current language
+        _=_, # Pass the translator
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=toast_text,
@@ -677,12 +663,10 @@ async def _display_paginated_user_list(
 @callback_router.callback_query(UserListCallback.filter(F.action.in_(["list_muted", "list_allowed"])))
 async def cq_list_internal_users(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: UserListCallback,
-    data: dict[str, Any]
+    callback_data: UserListCallback
 ):
-    _ = data["_"]
     await callback_query.answer()
     list_type = "muted" if callback_data.action == "list_muted" else "allowed"
 
@@ -701,12 +685,10 @@ async def cq_list_internal_users(
 @callback_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_(["muted", "allowed"])))
 async def cq_paginate_internal_user_list(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: PaginateUsersCallback,
-    data: dict[str, Any]
+    callback_data: PaginateUsersCallback
 ):
-    _ = data["_"]
     await _display_paginated_user_list(
         callback_query, _, user_specific_settings, callback_data.list_type, callback_data.page
     )
@@ -755,13 +737,11 @@ async def _display_account_list(
 @callback_router.callback_query(UserListCallback.filter(F.action == "list_all_accounts"))
 async def cq_show_all_accounts_list(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance | None,
-    callback_data: UserListCallback,
-    data: dict[str, Any]
+    callback_data: UserListCallback
 ):
-    _ = data["_"]
     await callback_query.answer()
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await callback_query.answer(_("TeamTalk bot is not connected. Cannot fetch server users."), show_alert=True)
@@ -771,13 +751,11 @@ async def cq_show_all_accounts_list(
 @callback_router.callback_query(PaginateUsersCallback.filter(F.list_type == "all_accounts"))
 async def cq_paginate_all_accounts_list_action(
     callback_query: CallbackQuery,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance | None,
-    callback_data: PaginateUsersCallback,
-    data: dict[str, Any]
+    callback_data: PaginateUsersCallback
 ):
-    _ = data["_"]
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await callback_query.answer(_("TeamTalk bot is not connected. Cannot fetch server users."), show_alert=True)
         return
@@ -789,13 +767,11 @@ async def cq_paginate_all_accounts_list_action(
 async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    # language: str, # REMOVED
+    _: callable,
     user_specific_settings: UserSpecificSettings,
     tt_instance: TeamTalkInstance | None,
-    callback_data: ToggleMuteSpecificCallback,
-    data: dict[str, Any]
+    callback_data: ToggleMuteSpecificCallback
 ):
-    _ = data["_"]
     if not callback_query.message or not callback_query.from_user: return
 
     user_idx = callback_data.user_idx
@@ -885,8 +861,8 @@ async def cq_toggle_specific_user_mute_action(
             await _display_account_list(callback_query, _, user_specific_settings, tt_instance, current_page)
         else:
             await callback_query.answer(_("TeamTalk bot is not connected. Cannot fetch server users."), show_alert=True) # TT_BOT_NOT_CONNECTED_FOR_LIST
-            # Pass data with _ to cq_show_manage_muted_menu
-            await cq_show_manage_muted_menu(callback_query, user_specific_settings=user_specific_settings, callback_data=NotificationActionCallback(action="manage_muted"), data=data)
+            # Pass _ to cq_show_manage_muted_menu
+            await cq_show_manage_muted_menu(callback_query, _, user_specific_settings=user_specific_settings, callback_data=NotificationActionCallback(action="manage_muted"))
 
     elif list_type in ["muted", "allowed"]:
         await _display_paginated_user_list(callback_query, _, user_specific_settings, list_type, current_page)
