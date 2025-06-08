@@ -37,3 +37,8 @@ class ToggleMuteSpecificCallback(CallbackData, prefix="toggle_user_mute"):
     user_idx: int  # Changed from username/nickname
     current_page: int
     list_type: str  # e.g., "muted", "allowed", "server_users"
+
+# For Admin actions like kick/ban
+class AdminActionCallback(CallbackData, prefix="admin_action"):
+    action: str  # e.g., "kick", "ban"
+    user_id: int # TeamTalk user ID
