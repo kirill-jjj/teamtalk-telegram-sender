@@ -5,10 +5,10 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
-import html
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.html_decoration import html_quote # Added
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # from bot.localization import get_text # Removed
@@ -307,7 +307,7 @@ def create_user_selection_keyboard(
             continue
 
         builder.button(
-            text=html.quote(user_nickname_val),
+            text=html_quote(user_nickname_val),
             callback_data=f"{command_type}:{user_id}:{callback_nickname_val}"
         )
 
