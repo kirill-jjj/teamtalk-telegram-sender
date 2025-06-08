@@ -1,3 +1,5 @@
+# bot/telegram_bot/handlers/callback_handlers/admin.py
+
 import logging
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery
@@ -17,35 +19,38 @@ ttstr = pytalk.instance.sdk.ttstr
 
 async def _execute_tt_user_action(
     action_val: str,
-    user_id_val: int,
-    user_nickname_val: str,
+    user_to_act_on: pytalk.user.User,
     _: callable,
-    tt_instance: TeamTalkInstance,
     admin_tg_id: int
-) -> str:
-    try:
-        user_to_act_on = tt_instance.get_user(user_id_val)
-        if not user_to_act_on:
-            return _("User not found on server anymore.")
+) -> tuple[bool, str]:
+    """
+    Executes a moderation action on a TeamTalk user.
+    Returns a tuple of (success_boolean, message_string).
+    """
+    user_nickname_val = get_tt_user_display_name(user_to_act_on, _)
+    quoted_nickname = html.quote(user_nickname_val)
 
-        quoted_nickname = html.quote(user_nickname_val)
+    try:
         if action_val == "kick":
             user_to_act_on.kick(from_server=True)
-            logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname_val}' (ID: {user_id_val})")
-            return _("User {user_nickname} kicked from server.").format(user_nickname=quoted_nickname)
+            logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname_val}' (ID: {user_to_act_on.id})")
+            return True, _("User {user_nickname} kicked from server.").format(user_nickname=quoted_nickname)
         elif action_val == "ban":
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
-            logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname_val}' (ID: {user_id_val})")
-            return _("User {user_nickname} banned and kicked from server.").format(user_nickname=quoted_nickname)
+            logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname_val}' (ID: {user_to_act_on.id})")
+            return True, _("User {user_nickname} banned and kicked from server.").format(user_nickname=quoted_nickname)
         else:
-            return _("Unknown action.")
+            logger.warning(f"Unknown action '{action_val}' passed to _execute_tt_user_action.")
+            return False, _("Unknown action.")
+
     except PytalkPermissionError as e:
-        logger.error(f"PermissionError during '{action_val}' on TT user ID {user_id_val}: {e}")
-        return _("You do not have permission to perform this action on the server.")
+        logger.error(f"PermissionError during '{action_val}' on TT user ID {user_to_act_on.id}: {e}")
+        return False, _("The bot lacks permissions on the TeamTalk server to perform this action.")
     except Exception as e:
-        logger.error(f"Error during '{action_val}' on TT user ID {user_id_val}: {e}", exc_info=True)
-        return _("An error occurred during the action on the user.")
+        logger.error(f"Error during '{action_val}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
+        return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
+
 
 @admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({"kick", "ban"})))
 async def process_user_action_selection(
@@ -55,34 +60,47 @@ async def process_user_action_selection(
     _: callable,
     tt_instance: TeamTalkInstance | None
 ):
-    await callback_query.answer()
-    if not callback_query.message or not callback_query.from_user: return
+    if not callback_query.message or not callback_query.from_user:
+        await callback_query.answer() # Answer silently if essential parts of callback are missing
+        return
+
     if not tt_instance or not tt_instance.connected:
-         await callback_query.message.edit_text(_("TeamTalk bot is not connected."))
+         await callback_query.answer(_("TeamTalk bot is not connected."), show_alert=True)
          return
 
-    is_admin_caller = await IsAdminFilter()(callback_query, session)
+    # Admin check should be here, before trying to get user from tt_instance
+    is_admin_caller = await IsAdminFilter()(callback_query, session) # Assuming IsAdminFilter is async or can be awaited
     if not is_admin_caller:
         await callback_query.answer(_("You do not have permission to execute this action."), show_alert=True)
         return
 
     user_to_act_on = tt_instance.get_user(callback_data.user_id)
     if not user_to_act_on:
-        await callback_query.message.edit_text(_("User not found on server anymore."))
+        await callback_query.answer(_("User not found on server anymore."), show_alert=True)
+        try:
+            # Убираем кнопки, так как они больше не актуальны
+            await callback_query.message.edit_reply_markup(reply_markup=None)
+        except TelegramAPIError:
+            logger.debug(f"Failed to remove reply markup when user {callback_data.user_id} was not found.")
+            pass # Не страшно, если не получилось
         return
 
-    user_nickname_val = get_tt_user_display_name(user_to_act_on, _)
-
-    reply_text_val = await _execute_tt_user_action(
+    # Выполняем действие
+    success, message_text = await _execute_tt_user_action(
         action_val=callback_data.action,
-        user_id_val=callback_data.user_id,
-        user_nickname_val=user_nickname_val,
-        _=_,
-        tt_instance=tt_instance,
+        user_to_act_on=user_to_act_on,
+        _=_, # Pass the translator function
         admin_tg_id=callback_query.from_user.id
     )
 
-    try:
-        await callback_query.message.edit_text(reply_text_val, reply_markup=None)
-    except TelegramAPIError as e:
-        logger.error(f"Error editing message after user action callback: {e}")
+    if success:
+        # При успехе показываем короткое уведомление и редактируем сообщение
+        await callback_query.answer("Success!", show_alert=False)
+        try:
+            await callback_query.message.edit_text(message_text, reply_markup=None)
+        except TelegramAPIError as e:
+            logger.error(f"Error editing message after successful user action: {e}")
+    else:
+        # При ошибке показываем модальное окно с текстом ошибки
+        # (не редактируем исходное сообщение с кнопками)
+        await callback_query.answer(message_text, show_alert=True)
