@@ -1,5 +1,5 @@
 import logging
-import gettext # Added
+import gettext
 from typing import Optional, Union
 
 import pytalk # Required for TeamTalkInstance, TeamTalkUser, ttstr
@@ -8,7 +8,6 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.config import app_config
-# from bot.localization import get_text # Removed by this change
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -70,17 +69,17 @@ def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount
 
     return str(username_val) if username_val is not None else ""
 
-def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin: bool) -> str: # Added is_bot_admin
+def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin: bool) -> str:
     """Builds a contextual help message based on platform and user rights."""
     parts = []
     if platform == "telegram":
-        parts.append(_("<b>Available Commands:</b>")) # Changed to HTML bold
+        parts.append(_("<b>Available Commands:</b>"))
         parts.append(_("/who - Show online users.\n"
                        "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
                        "/help - Show this help message.\n"
                        "(Note: `/start` is used to initiate the bot and process deeplinks.)"))
         if is_admin: # This is_admin likely refers to general admin privileges on Telegram side
-            parts.append(_("\n<b>Admin Commands:</b>")) # Changed to HTML bold
+            parts.append(_("\n<b>Admin Commands:</b>"))
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
                            "/ban - Ban a user from the server (via buttons)."))
     elif platform == "teamtalk":

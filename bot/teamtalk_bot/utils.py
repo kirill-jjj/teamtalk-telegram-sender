@@ -9,8 +9,7 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
-# from bot.localization import get_text # Removed
-from bot.language import get_translator # Added
+from bot.language import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
@@ -27,10 +26,6 @@ from bot.constants import (
 from bot.telegram_bot.utils import send_telegram_message_individual # For forwarding
 from bot.telegram_bot.bot_instances import tg_bot_message # For forwarding
 from bot.core.user_settings import USER_SETTINGS_CACHE # For admin language
-# from bot.localization import get_text # Ensured single import - get_text is already imported above
-# from bot.constants import DEFAULT_LANGUAGE # DEFAULT_LANGUAGE is imported from the group import of bot.constants
-# from bot.localization import get_text # This line was a comment in the search, ensuring it's handled.
-# DEFAULT_LANGUAGE is imported from the group import of bot.constants
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 

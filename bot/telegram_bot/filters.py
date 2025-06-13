@@ -1,9 +1,9 @@
-import time # <-- New import
+import time
 from aiogram.filters import BaseFilter
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.crud import is_admin as db_is_admin
-from bot.state import ADMIN_RIGHTS_CACHE, ADMIN_CACHE_TTL_SECONDS # <-- New imports
+from bot.state import ADMIN_RIGHTS_CACHE, ADMIN_CACHE_TTL_SECONDS
 
 class IsAdminFilter(BaseFilter):
     async def __call__(self, event: Message | CallbackQuery, session: AsyncSession) -> bool:

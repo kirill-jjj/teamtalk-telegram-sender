@@ -10,8 +10,7 @@ import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
 from bot.config import app_config
-# from bot.localization import get_text # Removed
-from bot.language import get_translator # Added
+from bot.language import get_translator
 from bot.core.utils import build_help_message # Already refactored to take `_`
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
@@ -93,7 +92,7 @@ async def _execute_admin_action_for_id(
 
 
 def _create_admin_action_report(
-    _: callable, # Changed from language: str
+    _: callable,
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
@@ -173,7 +172,7 @@ async def _manage_admin_ids(
 async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    _: callable, # Changed from bot_language: str
+    _: callable,
     action: str,
     success_log_message: str,
     reply_text_source: str, # English source string
@@ -216,7 +215,7 @@ async def _generate_and_reply_deeplink(
 async def handle_tt_subscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    _: callable # Changed from bot_language: str
+    _: callable
 ):
     sender_tt_username = ttstr(tt_message.user.username)
     # English Source for TT_SUBSCRIBE_DEEPLINK_TEXT: "Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}"
@@ -236,7 +235,7 @@ async def handle_tt_subscribe_command(
 async def handle_tt_unsubscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    _: callable # Changed from bot_language: str
+    _: callable
 ):
     # English Source for TT_UNSUBSCRIBE_DEEPLINK_TEXT: "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
     await _generate_and_reply_deeplink(
@@ -297,7 +296,7 @@ async def handle_tt_remove_admin_command(
 
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
-    _: callable # Changed from bot_language: str
+    _: callable
 ):
     is_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
@@ -313,7 +312,7 @@ async def handle_tt_help_command(
 
 async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
-    _: callable # Changed from bot_language: str
+    _: callable
 ):
     reply_text_val = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.") # TT_UNKNOWN_COMMAND
     tt_message.reply(reply_text_val)

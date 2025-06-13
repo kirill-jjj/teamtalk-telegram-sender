@@ -2,22 +2,20 @@ import logging
 import asyncio
 import pytalk
 from typing import Callable
-from aiogram import Bot # html removed
+from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, Message
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
-# InlineKeyboardBuilder removed
 
 
 from bot.config import app_config
-# from bot.localization import get_text # Removed
 from bot.database.crud import remove_subscriber, delete_user_data_fully
-from bot.database.engine import SessionFactory # For direct session usage if needed
+from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Import bot instances
+from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
@@ -37,9 +35,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # l
                 if removed:
                     logger.info(f"Successfully unsubscribed blocked/deactivated user {chat_id}.")
                 else:
-                    logger.debug(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).") # Changed to debug
+                    logger.debug(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
                 USER_SETTINGS_CACHE.pop(chat_id, None)
-                logger.debug(f"Removed user {chat_id} from settings cache.") # Changed to debug
+                logger.debug(f"Removed user {chat_id} from settings cache.")
             except Exception as db_err:
                 logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
@@ -58,9 +56,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # l
                     logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
 
                 if USER_SETTINGS_CACHE.pop(chat_id, None): # Remove from cache regardless
-                    logger.debug(f"Removed user {chat_id} from settings cache after chat not found.") # Changed to debug
+                    logger.debug(f"Removed user {chat_id} from settings cache after chat not found.")
                 else:
-                    logger.debug(f"User {chat_id} was not in settings cache (or already removed) after chat not found.") # Changed to debug
+                    logger.debug(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
             except Exception as db_cleanup_err:
                 logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
         else:
@@ -100,7 +98,7 @@ async def send_telegram_message_individual(
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_user_is_online: bool = False
-) -> bool: # Return type bool is already present, ensuring it stays.
+) -> bool:
     # Determine if the message should be sent silently using the helper function
     send_silently = _should_send_silently(chat_id, tt_user_is_online)
 

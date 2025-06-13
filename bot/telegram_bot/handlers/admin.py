@@ -3,7 +3,6 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-# from bot.localization import get_text # Removed
 from bot.state import ONLINE_USERS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name # get_tt_user_display_name now expects `_`
 from bot.telegram_bot.keyboards import create_user_selection_keyboard # create_user_selection_keyboard will expect `_`
@@ -23,7 +22,7 @@ admin_router.callback_query.filter(IsAdminFilter())
 async def _show_user_buttons(
     message: Message,
     command_type: str,
-    _: callable, # Changed from language: str
+    _: callable,
     tt_instance: TeamTalkInstance | None
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
@@ -74,7 +73,7 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"))
 async def kick_command_handler(
     message: Message,
-    _: callable, # Changed from language: str
+    _: callable,
     tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level
@@ -84,7 +83,7 @@ async def kick_command_handler(
 @admin_router.message(Command("ban"))
 async def ban_command_handler(
     message: Message,
-    _: callable, # Changed from language: str
+    _: callable,
     tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level

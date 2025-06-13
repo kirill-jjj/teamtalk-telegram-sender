@@ -6,23 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.crud import (
     add_subscriber,
-    delete_user_data_fully, # Added for new _handle_unsubscribe_deeplink
+    delete_user_data_fully,
     get_deeplink as db_get_deeplink,
     delete_deeplink_by_token
 )
-# from bot.database.models import UserSettings # Removed as UserSpecificSettings is used for type hints
 from bot.core.user_settings import (
-    # USER_SETTINGS_CACHE, # No longer directly used in this file
     UserSpecificSettings,
     get_or_create_user_settings,
     update_user_settings_in_db
 )
-# from bot.localization import get_text # Removed
 from bot.constants import (
     ACTION_SUBSCRIBE,
     ACTION_UNSUBSCRIBE,
     ACTION_SUBSCRIBE_AND_LINK_NOON,
-    DEFAULT_LANGUAGE, # Added for new _handle_unsubscribe_deeplink
+    DEFAULT_LANGUAGE,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    _: callable, # Changed from language: str
+    _: callable,
     payload: Any, # Kept for signature consistency if needed by other actions
     user_specific_settings: UserSpecificSettings # To update cache if needed
 ) -> str:
@@ -44,7 +41,7 @@ async def _handle_subscribe_deeplink(
 async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    _: callable # Added translator
+    _: callable
 ) -> str:
     if await delete_user_data_fully(session, telegram_id): # delete_user_data_fully now also clears USER_SETTINGS_CACHE
         logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink.")
@@ -58,7 +55,7 @@ async def _handle_unsubscribe_deeplink(
 async def _handle_subscribe_and_link_noon_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    _: callable, # Changed from language: str
+    _: callable,
     payload: str | None,
     user_specific_settings: UserSpecificSettings
 ) -> str:
@@ -134,7 +131,7 @@ async def handle_deeplink_payload(
     message: Message,
     token: str,
     session: AsyncSession,
-    _: callable, # Changed from language: str, now the translator function
+    _: callable,
     user_specific_settings: UserSpecificSettings # User's current settings object
 ):
     if not message.from_user:

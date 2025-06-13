@@ -7,8 +7,7 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
-# from bot.localization import get_text # Removed
-from bot.language import get_translator # Added as per current subtask
+from bot.language import get_translator
 from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import get_or_create_user_settings
@@ -28,9 +27,9 @@ def _should_ignore_initial_event(event_type: str, username: str, user_id: int, l
     """Checks if the event should be ignored due to recent bot login."""
     reason_for_ignore = ""
 
-    if login_complete_time is None: # Use parameter directly
+    if login_complete_time is None:
         reason_for_ignore = "bot still initializing/reconnecting"
-    elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS): # Use parameter directly
+    elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
         reason_for_ignore = "bot login too recent"
     else:
         return False # Not ignoring
@@ -89,9 +88,9 @@ async def should_notify_user(
 async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance, # Make sure TeamTalkInstance is the correct type
-    login_complete_time: datetime | None, # Added parameter
-    _: callable # Added translator function (this is for the bot's default language message template)
+    tt_instance: TeamTalkInstance,
+    login_complete_time: datetime | None,
+    _: callable
 ):
     # user_nickname for logging and potentially for tt_user_nickname_for_markup (using a default lang)
     # This line is to be removed as per subtask, nickname generation moves into text_generator for per-recipient lang.
@@ -115,7 +114,7 @@ async def send_join_leave_notification_logic(
         return
 
     # Call the new helper functions
-    if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time): # Pass login_complete_time
+    if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
         return
 
     if _is_user_globally_ignored(user_username):
@@ -144,7 +143,7 @@ async def send_join_leave_notification_logic(
 
         # Определяем шаблон уведомления, используя _ из внешней функции (языка по умолчанию для бота)
         # server_name and event_type are also from the outer scope
-        if event_type == NOTIFICATION_EVENT_JOIN: # Ensure NOTIFICATION_EVENT_JOIN is accessible
+        if event_type == NOTIFICATION_EVENT_JOIN:
             notification_template = recipient_translator_func("User {user_nickname} joined server {server_name}")
         else: # Assuming only JOIN and LEAVE types handled by this text_generator
             notification_template = recipient_translator_func("User {user_nickname} left server {server_name}")
@@ -159,5 +158,4 @@ async def send_join_leave_notification_logic(
         text_generator=text_generator,
         tt_user_username_for_markup=user_username, # For potential markup buttons related to the user
         tt_user_nickname_for_markup=user_nickname # For potential markup buttons
-        # tt_instance_for_check argument removed, tt_user_is_online_for_check will default to False
     )

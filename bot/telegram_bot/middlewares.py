@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Coroutine, Any, Dict
+from typing import Callable, Coroutine, Any, Dict, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, User
 from sqlalchemy.orm import sessionmaker
@@ -10,8 +10,9 @@ from bot.core.user_settings import (
     UserSpecificSettings,
     get_or_create_user_settings
 )
-from bot.teamtalk_bot import bot_instance as tt_bot_module # Импортируем сам модуль
+from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
+from bot.database.models import SubscribedUser
 
 
 logger = logging.getLogger(__name__)
@@ -45,22 +46,14 @@ class UserSettingsMiddleware(BaseMiddleware):
             user_specific_settings = await get_or_create_user_settings(user_obj.id, session_obj)
         else:
             user_specific_settings = UserSpecificSettings()
-            # Ensure logger is defined in this file, or this line will cause an error.
-            # If logger is not defined, this print statement might be better:
-            # print("UserSettingsMiddleware: No user or session. Using default settings.")
-            # For the purpose of this subtask, assume logger is available or the user will handle it.
             logger.warning(f"UserSettingsMiddleware: No user or session. Using default settings.")
 
-
-        # Получаем объект переводчика для языка пользователя
         translator = get_translator(user_specific_settings.language)
-        # Внедряем саму функцию перевода под стандартным именем "_"
         data["_"] = translator.gettext
         data["translator"] = translator
 
         # Оставляем старые данные для совместимости, если где-то еще используются
         data["user_specific_settings"] = user_specific_settings
-        # data["language"] = user_specific_settings.language # Removed as per subtask
 
         return await handler(event, data)
 
@@ -75,10 +68,6 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
         data["tt_instance"] = actual_tt_instance
         return await handler(event, data)
 
-from typing import Awaitable # Ensure Awaitable is explicitly imported if not covered by Coroutine
-from bot.database.models import SubscribedUser
-# from bot.localization import get_text # Removed
-
 # --- SubscriptionCheckMiddleware Class Definition ---
 class SubscriptionCheckMiddleware(BaseMiddleware):
     async def __call__(
@@ -87,7 +76,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         event: Message | CallbackQuery,
         data: Dict[str, Any],
     ) -> Any:
-        # Try to get user object from event
         user: User | None = data.get("event_from_user") # Aiogram 3.x puts it here
 
         if not user: # Should not happen if events are from users
@@ -96,13 +84,11 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         telegram_id = user.id
         session: AsyncSession | None = data.get("session") # From DbSessionMiddleware
-        # language: str = data.get("language", "en") # Removed
 
         # Retrieve the translator function, with a fallback
         temp_translator_func = data.get("_")
         if temp_translator_func is None:
             logger.warning("SubscriptionCheckMiddleware: Translator '_' not found in data. Using default English translator for this message.")
-            # get_translator is imported at the top of the file
             temp_translator_func = get_translator("en").gettext
         _ = temp_translator_func
 

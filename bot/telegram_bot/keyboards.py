@@ -5,14 +5,12 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
-import html # Added back
+import html
 import pytalk # For UserAccount type hint
 from typing import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-# from aiogram.utils.html_decoration import html_quote # Removed
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# from bot.localization import get_text # Removed
 from bot.telegram_bot.callback_data import (
     SettingsCallback,
     LanguageCallback,
@@ -164,7 +162,7 @@ def create_manage_muted_users_keyboard(
 
 def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
-    _: callable, # Changed from language: str
+    _: callable,
     current_page: int,
     total_pages: int,
     list_type: str,
@@ -191,7 +189,7 @@ def _add_pagination_controls(
 
 
 def create_paginated_user_list_keyboard(
-    _: callable, # Changed from language: str
+    _: callable,
     page_items: list[str],
     current_page: int,
     total_pages: int,
@@ -232,7 +230,7 @@ def create_paginated_user_list_keyboard(
     return builder.as_markup()
 
 def create_account_list_keyboard(
-    _: callable, # Changed from language: str
+    _: callable,
     page_items: list[pytalk.UserAccount],
     current_page: int,
     total_pages: int,

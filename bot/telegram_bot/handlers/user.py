@@ -1,10 +1,10 @@
 import logging
 import asyncio
-import gettext # Added
-from typing import Any # Added import
+import gettext
+from typing import Any
 from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message # InlineKeyboardMarkup, InlineKeyboardButton removed for now, add back if needed for type hints elsewhere
+from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.utils import pluralize, build_help_message
@@ -12,7 +12,6 @@ import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
-# from bot.localization import get_text # Removed
 from bot.telegram_bot.deeplink import handle_deeplink_payload # Will take `_`
 from bot.core.user_settings import UserSpecificSettings # For type hint
 from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
@@ -52,7 +51,7 @@ async def start_command_handler(
 def _get_user_display_channel_name(
     user_obj: TeamTalkUser,
     is_caller_admin: bool,
-    translator: "gettext.GNUTranslations" # Changed from language: str
+    translator: "gettext.GNUTranslations"
 ) -> str:
     channel_obj = user_obj.channel
     user_display_channel_name_val = ""
@@ -89,7 +88,7 @@ def _group_users_for_who_command(
     users: list[TeamTalkUser],
     bot_user_id: int,
     is_caller_admin: bool,
-    translator: "gettext.GNUTranslations" # Changed from lang: str
+    translator: "gettext.GNUTranslations"
 ) -> tuple[dict[str, list[str]], int]:
     """Groups users by channel display name for the /who command."""
     channels_display_data: dict[str, list[str]] = {}
@@ -111,7 +110,7 @@ def _group_users_for_who_command(
     return channels_display_data, users_added_to_groups_count
 
 
-def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, translator: "gettext.GNUTranslations") -> str: # Changed lang to _
+def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, translator: "gettext.GNUTranslations") -> str:
     """Formats the /who command's reply message."""
     if total_users == 0:
         return translator.gettext("No users found online.") # WHO_NO_USERS_ONLINE
@@ -159,7 +158,7 @@ async def who_command_handler(
     _: callable, # Keep _ for other direct uses if any, or remove if translator replaces all its uses
     tt_instance: TeamTalkInstance | None,
     session: AsyncSession,
-    translator: "gettext.GNUTranslations" # Added translator
+    translator: "gettext.GNUTranslations"
 ):
     if not message.from_user:
         return

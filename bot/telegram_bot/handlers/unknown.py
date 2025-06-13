@@ -1,8 +1,7 @@
 import logging
-from typing import Any # Added for data type hint
+from typing import Any
 from aiogram import Router
 from aiogram.types import Message
-# from bot.localization import get_text # Removed
 
 logger = logging.getLogger(__name__)
 catch_all_router = Router(name="catch_all_router")
