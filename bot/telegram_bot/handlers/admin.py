@@ -38,15 +38,15 @@ async def _show_user_buttons(
         await message.reply(_("TeamTalk bot is not connected.")) # TT_BOT_NOT_CONNECTED
         return
 
-    my_user_id_val = tt_instance.getMyUserID()
-    if my_user_id_val is None:
+    my_user_id = tt_instance.getMyUserID()
+    if my_user_id is None:
         logger.error("Could not get own user ID in _show_user_buttons.")
         await message.reply(_("An error occurred.")) # error_occurred
         return
 
-    my_user_account = tt_instance.get_user(my_user_id_val)
+    my_user_account = tt_instance.get_user(my_user_id)
     if not my_user_account:
-        logger.error(f"Could not get own user account object for ID {my_user_id_val}.")
+        logger.error(f"Could not get own user account object for ID {my_user_id}.")
         await message.reply(_("An error occurred.")) # error_occurred
         return
 

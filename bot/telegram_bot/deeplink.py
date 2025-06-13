@@ -102,8 +102,8 @@ async def _handle_subscribe_and_link_noon_deeplink(
     # Always use DEEPLINK_SUBSCRIBED key (English: "You have successfully subscribed to notifications.")
     # This message is generic and doesn't include the username.
     logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username} via combined deeplink. Sending DEEPLINK_SUBSCRIBED message.")
-    reply_text_val = _("You have successfully subscribed to notifications.")
-    return reply_text_val
+    reply_text = _("You have successfully subscribed to notifications.")
+    return reply_text
 
 
 # Define a type for the handler functions
@@ -144,10 +144,10 @@ async def handle_deeplink_payload(
         await message.reply(_("Invalid or expired deeplink.")) # DEEPLINK_INVALID_OR_EXPIRED
         return
 
-    telegram_id_val = message.from_user.id
-    reply_text_val = _("An error occurred.") # Default error message (ERROR_OCCURRED)
+    telegram_id = message.from_user.id
+    reply_text = _("An error occurred.") # Default error message (ERROR_OCCURRED)
 
-    if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != telegram_id_val:
+    if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != telegram_id:
         await message.reply(_("This confirmation link was intended for a different Telegram account.")) # DEEPLINK_WRONG_ACCOUNT
         # Do not delete the deeplink here, it might be for someone else who hasn't clicked yet.
         # Or, if one-time use per link is strict, delete it. For now, let it expire.
@@ -159,22 +159,22 @@ async def handle_deeplink_payload(
             # Pass `_` (translator) to all handlers.
             # Adjust payloads based on original logic.
             if deeplink_obj.action == ACTION_UNSUBSCRIBE:
-                reply_text_val = await handler_func(session, telegram_id_val, _)
+                reply_text = await handler_func(session, telegram_id, _)
             elif deeplink_obj.action == ACTION_SUBSCRIBE_AND_LINK_NOON:
-                reply_text_val = await handler_func(session, telegram_id_val, _, deeplink_obj.payload, user_specific_settings)
+                reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
             elif deeplink_obj.action == ACTION_SUBSCRIBE:
                  # payload for ACTION_SUBSCRIBE was effectively None or not used by _handle_subscribe_deeplink
-                reply_text_val = await handler_func(session, telegram_id_val, _, None, user_specific_settings)
+                reply_text = await handler_func(session, telegram_id, _, None, user_specific_settings)
             else:
                 logger.warning(f"Deeplink action '{deeplink_obj.action}' has a handler but no specific call structure in handle_deeplink_payload.")
-                reply_text_val = _("An error occurred.") # ERROR_OCCURRED or DEEPLINK_INVALID_ACTION
+                reply_text = _("An error occurred.") # ERROR_OCCURRED or DEEPLINK_INVALID_ACTION
 
         except Exception as e:
             logger.error(f"Error executing deeplink handler for action '{deeplink_obj.action}', token {token}: {e}", exc_info=True)
-            reply_text_val = _("An error occurred.") # ERROR_OCCURRED
+            reply_text = _("An error occurred.") # ERROR_OCCURRED
     else:
-        reply_text_val = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
+        reply_text = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
         logger.warning(f"Invalid deeplink action '{deeplink_obj.action}' for token {token}")
 
-    await message.reply(reply_text_val)
+    await message.reply(reply_text)
     await delete_deeplink_by_token(session, token) # Delete after processing or attempt

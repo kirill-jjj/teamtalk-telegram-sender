@@ -102,11 +102,11 @@ async def populate_user_accounts_cache(tt_instance):
         all_accounts = await tt_instance.list_user_accounts()
         USER_ACCOUNTS_CACHE.clear()
         for acc in all_accounts:
-            username_val = acc.username
-            if isinstance(username_val, bytes):
-                username_str = ttstr(username_val)
+            username = acc.username
+            if isinstance(username, bytes):
+                username_str = ttstr(username)
             else:
-                username_str = str(username_val)
+                username_str = str(username)
 
             if username_str:
                 USER_ACCOUNTS_CACHE[username_str] = acc
@@ -204,14 +204,14 @@ async def on_ready():
 
 @tt_bot_module.tt_bot.event
 async def on_my_login(server: PytalkServer):
-    tt_instance_val = server.teamtalk_instance
-    tt_bot_module.current_tt_instance = tt_instance_val
+    tt_instance = server.teamtalk_instance
+    tt_bot_module.current_tt_instance = tt_instance
     tt_bot_module.login_complete_time = None
-    tt_instance_val._periodic_sync_task_running = False # Reset flag on new login
+    tt_instance._periodic_sync_task_running = False # Reset flag on new login
 
     server_name = "Unknown Server"
     try:
-        server_props = tt_instance_val.server.get_properties()
+        server_props = tt_instance.server.get_properties()
         if server_props:
             server_name = ttstr(server_props.server_name)
     except Exception as e_prop:
@@ -220,26 +220,26 @@ async def on_my_login(server: PytalkServer):
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({server.info.host})")
 
     try:
-        channel_id_or_path_val = app_config["CHANNEL"]
-        channel_id_val = -1
-        target_channel_name_log = channel_id_or_path_val
+        channel_id_or_path = app_config["CHANNEL"]
+        channel_id = -1
+        target_channel_name_log = channel_id_or_path
 
-        if channel_id_or_path_val.isdigit():
-            channel_id_val = int(channel_id_or_path_val)
-            chan_obj_log = tt_instance_val.get_channel(channel_id_val)
+        if channel_id_or_path.isdigit():
+            channel_id = int(channel_id_or_path)
+            chan_obj_log = tt_instance.get_channel(channel_id)
             if chan_obj_log:
                 target_channel_name_log = ttstr(chan_obj_log.name)
         else:
-            channel_obj_val = tt_instance_val.get_channel_from_path(channel_id_or_path_val)
-            if channel_obj_val:
-                channel_id_val = channel_obj_val.id
-                target_channel_name_log = ttstr(channel_obj_val.name)
+            channel_obj = tt_instance.get_channel_from_path(channel_id_or_path)
+            if channel_obj:
+                channel_id = channel_obj.id
+                target_channel_name_log = ttstr(channel_obj.name)
             else:
-                logger.error(f"Channel path '{channel_id_or_path_val}' not found during login.")
+                logger.error(f"Channel path '{channel_id_or_path}' not found during login.")
 
-        if channel_id_val != -1:
-            logger.info(f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id_val})")
-            tt_instance_val.join_channel_by_id(channel_id_val, password=app_config.get("CHANNEL_PASSWORD"))
+        if channel_id != -1:
+            logger.info(f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id})")
+            tt_instance.join_channel_by_id(channel_id, password=app_config.get("CHANNEL_PASSWORD"))
         else:
             logger.warning(
                 f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel."
@@ -262,8 +262,8 @@ async def on_my_login(server: PytalkServer):
 
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)
-        if tt_instance_val:
-            asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
+        if tt_instance:
+            asyncio.create_task(_tt_rejoin_channel(tt_instance))
 
 
 @tt_bot_module.tt_bot.event
@@ -276,31 +276,31 @@ async def on_my_connection_lost(server: PytalkServer):
 
 @tt_bot_module.tt_bot.event
 async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
-    tt_instance_val = channel_obj.teamtalk
-    if hasattr(tt_instance_val, '_periodic_sync_task_running'):
-        tt_instance_val._periodic_sync_task_running = False # Allow new task if we rejoin and finalize
+    tt_instance = channel_obj.teamtalk
+    if hasattr(tt_instance, '_periodic_sync_task_running'):
+        tt_instance._periodic_sync_task_running = False # Allow new task if we rejoin and finalize
 
-    if not tt_instance_val:
+    if not tt_instance:
         await _initiate_reconnect(
             "Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably. Initiating full reconnect."
         )
         return
 
     try:
-        channel_id_val = channel_obj.id
-        channel_name_val = ttstr(channel_obj.name) if channel_obj.name else "Unknown Channel"
-        server_host = ttstr(tt_instance_val.server_info.host)
+        channel_id = channel_obj.id
+        channel_name = ttstr(channel_obj.name) if channel_obj.name else "Unknown Channel"
+        server_host = ttstr(tt_instance.server_info.host)
 
-        if channel_id_val == 0: # Kicked from server
+        if channel_id == 0: # Kicked from server
             await _initiate_reconnect(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
-        elif channel_id_val > 0: # Kicked from a specific channel
+        elif channel_id > 0: # Kicked from a specific channel
             logger.warning(
-                f"Kicked from TeamTalk channel '{channel_name_val}' (ID: {channel_id_val}) on server {server_host}. Attempting to rejoin configured channel..."
+                f"Kicked from TeamTalk channel '{channel_name}' (ID: {channel_id}) on server {server_host}. Attempting to rejoin configured channel..."
             )
-            asyncio.create_task(_tt_rejoin_channel(tt_instance_val))
+            asyncio.create_task(_tt_rejoin_channel(tt_instance))
         else: # Unexpected
             await _initiate_reconnect(
-                f"Received unexpected kick event from server {server_host} with channel ID: {channel_id_val}. Attempting full reconnect."
+                f"Received unexpected kick event from server {server_host} with channel ID: {channel_id}. Attempting full reconnect."
             )
 
     except Exception as e:
@@ -438,8 +438,8 @@ async def on_user_update(user: TeamTalkUser):
 
 @tt_bot_module.tt_bot.event
 async def on_user_account_new(account: "pytalk.UserAccount"):
-    username_val = account.username
-    username_str = ttstr(username_val) if isinstance(username_val, bytes) else str(username_val)
+    username = account.username
+    username_str = ttstr(username) if isinstance(username, bytes) else str(username)
     if username_str:
         USER_ACCOUNTS_CACHE[username_str] = account
         logger.debug(f"New user account '{username_str}' added to cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")
@@ -447,8 +447,8 @@ async def on_user_account_new(account: "pytalk.UserAccount"):
 
 @tt_bot_module.tt_bot.event
 async def on_user_account_remove(account: "pytalk.UserAccount"):
-    username_val = account.username
-    username_str = ttstr(username_val) if isinstance(username_val, bytes) else str(username_val)
+    username = account.username
+    username_str = ttstr(username) if isinstance(username, bytes) else str(username)
     if username_str and username_str in USER_ACCOUNTS_CACHE:
         del USER_ACCOUNTS_CACHE[username_str]
         logger.debug(f"User account '{username_str}' removed from cache. Cache size: {len(USER_ACCOUNTS_CACHE)}")

@@ -355,7 +355,7 @@ def create_user_selection_keyboard(
         if not user_obj:
             continue
 
-        user_nickname_val = get_tt_user_display_name(user_obj, _)
+        user_nickname = get_tt_user_display_name(user_obj, _)
 
         # Убедимся, что user_id существует и является валидным
         if not hasattr(user_obj, 'id'):
@@ -369,7 +369,7 @@ def create_user_selection_keyboard(
         ).pack()
 
         builder.button(
-            text=html.escape(user_nickname_val),
+            text=html.escape(user_nickname),
             callback_data=callback_data
         )
 

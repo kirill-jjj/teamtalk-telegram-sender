@@ -185,13 +185,13 @@ async def _generate_and_reply_deeplink(
     """
     sender_tt_username = ttstr(tt_message.user.username)
     try:
-        token_val = await create_deeplink(
+        token = await create_deeplink(
             session, action, payload=payload, expected_telegram_id=None
         )
-        bot_info_val = await tg_bot_event.get_me() # Bot username for the deeplink
-        deeplink_url_val = f"https://t.me/{bot_info_val.username}?start={token_val}"
+        bot_info = await tg_bot_event.get_me() # Bot username for the deeplink
+        deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
 
-        logger.info(success_log_message.format(token=token_val, sender_username=sender_tt_username))
+        logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
 
         # The original TT_SUBSCRIBE_DEEPLINK_TEXT included {deeplink_url} but also mentioned {bot_username} and {tt_user_id}
         # The prompt's example for /sub is:
@@ -199,11 +199,11 @@ async def _generate_and_reply_deeplink(
         # This is more complex than a simple reply_text_source.format(deeplink_url=...).
         # For now, I'll use the simpler source strings that match the old keys' direct purpose.
         if "{deeplink_url}" in reply_text_source: # Check if placeholder exists
-             reply_text_val = _(reply_text_source).format(deeplink_url=deeplink_url_val)
+             reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
         else: # If not, the source string is static (e.g. error message)
-             reply_text_val = _(reply_text_source)
+             reply_text = _(reply_text_source)
 
-        tt_message.reply(reply_text_val)
+        tt_message.reply(reply_text)
     except Exception as e:
         logger.error(
             f"Error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
@@ -314,6 +314,6 @@ async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
     _: callable
 ):
-    reply_text_val = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.") # TT_UNKNOWN_COMMAND
-    tt_message.reply(reply_text_val)
+    reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.") # TT_UNKNOWN_COMMAND
+    tt_message.reply(reply_text)
     logger.warning(f"Received unknown TT command from {ttstr(tt_message.user.username)}: {tt_message.content[:100]}")

@@ -18,7 +18,7 @@ admin_actions_router = Router(name="callback_handlers.admin")
 ttstr = pytalk.instance.sdk.ttstr
 
 async def _execute_tt_user_action(
-    action_val: str,
+    action: str,
     user_to_act_on: pytalk.user.User,
     _: callable,
     admin_tg_id: int
@@ -27,28 +27,28 @@ async def _execute_tt_user_action(
     Executes a moderation action on a TeamTalk user.
     Returns a tuple of (success_boolean, message_string).
     """
-    user_nickname_val = get_tt_user_display_name(user_to_act_on, _)
-    quoted_nickname = html.quote(user_nickname_val)
+    user_nickname = get_tt_user_display_name(user_to_act_on, _)
+    quoted_nickname = html.quote(user_nickname)
 
     try:
-        if action_val == "kick":
+        if action == "kick":
             user_to_act_on.kick(from_server=True)
-            logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname_val}' (ID: {user_to_act_on.id})")
+            logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname}' (ID: {user_to_act_on.id})")
             return True, _("User {user_nickname} kicked from server.").format(user_nickname=quoted_nickname)
-        elif action_val == "ban":
+        elif action == "ban":
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
-            logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname_val}' (ID: {user_to_act_on.id})")
+            logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname}' (ID: {user_to_act_on.id})")
             return True, _("User {user_nickname} banned and kicked from server.").format(user_nickname=quoted_nickname)
         else:
-            logger.warning(f"Unknown action '{action_val}' passed to _execute_tt_user_action.")
+            logger.warning(f"Unknown action '{action}' passed to _execute_tt_user_action.")
             return False, _("Unknown action.")
 
     except PytalkPermissionError as e:
-        logger.error(f"PermissionError during '{action_val}' on TT user ID {user_to_act_on.id}: {e}")
+        logger.error(f"PermissionError during '{action}' on TT user ID {user_to_act_on.id}: {e}")
         return False, _("The bot lacks permissions on the TeamTalk server to perform this action.")
     except Exception as e:
-        logger.error(f"Error during '{action_val}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
+        logger.error(f"Error during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
         return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
 
 
@@ -87,7 +87,7 @@ async def process_user_action_selection(
 
     # Выполняем действие
     success, message_text = await _execute_tt_user_action(
-        action_val=callback_data.action,
+        action=callback_data.action,
         user_to_act_on=user_to_act_on,
         _=_, # Pass the translator function
         admin_tg_id=callback_query.from_user.id
