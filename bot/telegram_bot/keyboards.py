@@ -20,7 +20,8 @@ from bot.telegram_bot.callback_data import (
     UserListCallback,
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
-    AdminActionCallback
+    AdminActionCallback,
+    SubscriberListCallback
 )
 from bot.database.models import NotificationSetting # For subscription settings
 from bot.core.user_settings import UserSpecificSettings # For notification and mute settings
@@ -279,6 +280,59 @@ def create_account_list_keyboard(
 # For now, focusing on the settings-related keyboards as per the main structure of the request.
 # The kick/ban buttons were also simpler and directly constructed in the handler.
 # If a generic "select user from list" keyboard factory is needed, it would be a new addition.
+
+def create_subscriber_list_keyboard(
+    _: Callable,
+    subscriber_ids: list[int],
+    current_page: int,
+    total_pages: int
+) -> InlineKeyboardMarkup:
+    """Creates the keyboard for managing the subscriber list."""
+    builder = InlineKeyboardBuilder()
+
+    # Subscriber buttons (one per row)
+    for telegram_id in subscriber_ids:
+        builder.row(
+            InlineKeyboardButton(
+                text=_("Delete {telegram_id}").format(telegram_id=telegram_id),
+                callback_data=SubscriberListCallback(
+                    action="delete_subscriber",
+                    telegram_id=telegram_id,
+                    page=current_page  # Keep track of current page for refresh
+                ).pack()
+            )
+        )
+
+    # Pagination buttons row
+    pagination_buttons = []
+    if current_page > 0:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=_("⬅️ Prev"),
+                callback_data=SubscriberListCallback(
+                    action="page",
+                    page=current_page - 1
+                ).pack()
+            )
+        )
+    if current_page < total_pages - 1:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=_("Next ➡️"),
+                callback_data=SubscriberListCallback(
+                    action="page",
+                    page=current_page + 1
+                ).pack()
+            )
+        )
+
+    if pagination_buttons:
+        builder.row(*pagination_buttons) # Add them in a single row
+
+    # Optionally, add a back button if needed, e.g., back to main menu or settings
+    # builder.row(InlineKeyboardButton(text=_("⬅️ Back"), callback_data=SomeOtherCallback().pack()))
+
+    return builder.as_markup()
 
 # End of bot/telegram_bot/keyboards.py
 

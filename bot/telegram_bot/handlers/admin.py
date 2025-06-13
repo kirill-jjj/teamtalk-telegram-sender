@@ -2,16 +2,20 @@ import logging
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.state import ONLINE_USERS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name # get_tt_user_display_name now expects `_`
-from bot.telegram_bot.keyboards import create_user_selection_keyboard # create_user_selection_keyboard will expect `_`
+from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
+from bot.database.crud import get_all_subscribers_ids
 import pytalk # For TeamTalkUser used in _show_user_buttons
 
 from bot.telegram_bot.filters import IsAdminFilter
 from pytalk.instance import TeamTalkInstance # For type hint
 
 logger = logging.getLogger(__name__)
+
+SUBSCRIBERS_PER_PAGE = 10
 admin_router = Router(name="admin_router")
 
 # Apply the IsAdminFilter to all message and callback_query handlers in this router
@@ -88,3 +92,38 @@ async def ban_command_handler(
 ):
     # IsAdminFilter already applied at router level
     await _show_user_buttons(message, "ban", _, tt_instance)
+
+
+@admin_router.message(Command("subscribers"))
+async def subscribers_command_handler(message: Message, session: AsyncSession, _: callable):
+    """
+    Handles the /subscribers command to display a paginated list of subscribed users.
+    Admins only.
+    """
+    all_subscriber_ids = await get_all_subscribers_ids(session)
+
+    if not all_subscriber_ids:
+        await message.reply(_("No subscribers found.")) # SUBSCRIBERS_NONE_FOUND
+        return
+
+    current_page = 0  # Initial page
+    total_pages = (len(all_subscriber_ids) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
+
+    start_index = current_page * SUBSCRIBERS_PER_PAGE
+    end_index = start_index + SUBSCRIBERS_PER_PAGE
+    page_subscriber_ids = all_subscriber_ids[start_index:end_index]
+
+    keyboard = create_subscriber_list_keyboard(
+        _,
+        subscriber_ids=page_subscriber_ids,
+        current_page=current_page,
+        total_pages=total_pages
+    )
+
+    await message.reply(
+        _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+            current_page_display=current_page + 1,
+            total_pages=total_pages
+        ), # SUBSCRIBERS_LIST_HEADER
+        reply_markup=keyboard
+    )
