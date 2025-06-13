@@ -8,6 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
+from bot.constants.enums import SubscriberListAction
 from bot.telegram_bot.filters import IsAdminFilter
 
 logger = logging.getLogger(__name__)
@@ -90,10 +91,10 @@ async def handle_subscriber_list_actions(
     _: callable
 ):
     """Handles actions from the subscriber list keyboard (delete, paginate)."""
-    action = callback_data.action
+    action = callback_data.action # This is now a SubscriberListAction member
     page_from_callback = callback_data.page if callback_data.page is not None else 0
 
-    if action == "delete_subscriber":
+    if action == SubscriberListAction.DELETE_SUBSCRIBER:
         if callback_data.telegram_id is None:
             await query.answer(_("Error: No Telegram ID specified for deletion."), show_alert=True)
             return
@@ -128,7 +129,7 @@ async def handle_subscriber_list_actions(
                 reply_markup=new_keyboard
             )
 
-    elif action == "page":
+    elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
         if requested_page is None:
             await query.answer("Error: Page number missing.", show_alert=True)
@@ -155,5 +156,5 @@ async def handle_subscriber_list_actions(
                 reply_markup=keyboard
             )
         await query.answer()
-    else:
+    else: # Should ideally not be hit if callback_data.action is always a valid SubscriberListAction
         await query.answer(_("Unknown action."), show_alert=True) # UNKNOWN_ACTION

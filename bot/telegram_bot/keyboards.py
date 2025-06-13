@@ -11,6 +11,18 @@ from typing import Callable, List # Added List
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from bot.constants.enums import (
+    AdminAction,
+    SettingsNavAction,
+    LanguageAction,
+    SubscriptionAction,
+    NotificationAction,
+    MuteAllAction,
+    UserListAction,
+    ToggleMuteSpecificAction,
+    SubscriberListAction
+    # PaginateUsersAction might not be directly used here if pagination is implicit
+)
 from bot.telegram_bot.callback_data import (
     SettingsCallback,
     LanguageCallback,
@@ -37,15 +49,15 @@ def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("Language"), # SETTINGS_BTN_LANGUAGE
-        callback_data=SettingsCallback(action="language").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.LANGUAGE).pack()
     )
     builder.button(
         text=_("Subscription Settings"), # SETTINGS_BTN_SUBSCRIPTIONS
-        callback_data=SettingsCallback(action="subscriptions").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.SUBSCRIPTIONS).pack()
     )
     builder.button(
         text=_("Notification Settings"), # SETTINGS_BTN_NOTIFICATIONS
-        callback_data=SettingsCallback(action="notifications").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack()
     )
     builder.adjust(1)
     return builder
@@ -55,15 +67,15 @@ def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("English"), # language_btn_en (English source string)
-        callback_data=LanguageCallback(action="set_lang", lang_code="en").pack()
+        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code="en").pack()
     )
     builder.button(
         text=_("Русский"), # language_btn_ru (English source string)
-        callback_data=LanguageCallback(action="set_lang", lang_code="ru").pack()
+        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code="ru").pack()
     )
     builder.button(
         text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
-        callback_data=SettingsCallback(action="back_to_main").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
     return builder
@@ -89,12 +101,12 @@ def create_subscription_settings_keyboard(
         button_text = f"{prefix}{_(text_source)}"
         builder.button(
             text=button_text,
-            callback_data=SubscriptionCallback(action="set_sub", setting_value=val_str).pack()
+            callback_data=SubscriptionCallback(action=SubscriptionAction.SET_SUB, setting_value=val_str).pack()
         )
 
     builder.button(
         text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
-        callback_data=SettingsCallback(action="back_to_main").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
     return builder
@@ -112,15 +124,15 @@ def create_notification_settings_keyboard(
 
     builder.button(
         text=noon_button_text,
-        callback_data=NotificationActionCallback(action="toggle_noon").pack()
+        callback_data=NotificationActionCallback(action=NotificationAction.TOGGLE_NOON).pack()
     )
     builder.button(
         text=_("Manage Muted/Allowed Users"), # NOTIF_SETTING_MANAGE_MUTED_BTN
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
+        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     )
     builder.button(
         text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
-        callback_data=SettingsCallback(action="back_to_main").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
     return builder
@@ -137,24 +149,24 @@ def create_manage_muted_users_keyboard(
     mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text) # MUTE_ALL_BTN_TOGGLE
     builder.button(
         text=mute_all_button_text,
-        callback_data=MuteAllCallback(action="toggle_mute_all").pack()
+        callback_data=MuteAllCallback(action=MuteAllAction.TOGGLE_MUTE_ALL).pack()
     )
 
     if is_mute_all_enabled:
         list_users_button_text = _("View Allowed Users (Allow List)") # LIST_ALLOWED_USERS_BTN
-        list_users_cb_data = UserListCallback(action="list_allowed").pack()
+        list_users_cb_data = UserListCallback(action=UserListAction.LIST_ALLOWED).pack()
     else:
         list_users_button_text = _("View Muted Users (Block List)") # LIST_MUTED_USERS_BTN
-        list_users_cb_data = UserListCallback(action="list_muted").pack()
+        list_users_cb_data = UserListCallback(action=UserListAction.LIST_MUTED).pack()
     builder.button(text=list_users_button_text, callback_data=list_users_cb_data)
 
     builder.button(
         text=_("Mute/Unmute from Server List"), # MUTE_FROM_SERVER_LIST_BTN
-        callback_data=UserListCallback(action="list_all_accounts").pack()
+        callback_data=UserListCallback(action=UserListAction.LIST_ALL_ACCOUNTS).pack()
     )
     builder.button(
         text=_("⬅️ Back to Notification Settings"), # BACK_TO_NOTIF_SETTINGS_BTN
-        callback_data=SettingsCallback(action="notifications").pack()
+        callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack()
     )
     builder.adjust(1)
     return builder
@@ -166,7 +178,7 @@ def _add_pagination_controls(
     _: callable,
     current_page: int,
     total_pages: int,
-    list_type: str,
+    list_type: UserListAction,
     callback_factory: Callable
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
@@ -194,7 +206,7 @@ def create_paginated_user_list_keyboard(
     page_items: list[str],
     current_page: int,
     total_pages: int,
-    list_type: str,
+    list_type: UserListAction,
     user_specific_settings: UserSpecificSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
@@ -212,7 +224,7 @@ def create_paginated_user_list_keyboard(
         button_text = _(button_text_src).format(username=username)
 
         callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user",
+            action=ToggleMuteSpecificAction.TOGGLE_USER,
             user_idx=idx,
             current_page=current_page,
             list_type=list_type
@@ -226,7 +238,7 @@ def create_paginated_user_list_keyboard(
 
     builder.row(InlineKeyboardButton(
         text=_("⬅️ Back to Mute Management"), # BACK_TO_MANAGE_MUTED_BTN
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
+        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     ))
     return builder.as_markup()
 
@@ -257,21 +269,21 @@ def create_account_list_keyboard(
         button_text = _("{username} (Status: {current_status})").format(username=display_name, current_status=current_status_text) # TOGGLE_MUTE_STATUS_BTN
 
         callback_d = ToggleMuteSpecificCallback(
-            action="toggle_user",
+        action=ToggleMuteSpecificAction.TOGGLE_USER,
             user_idx=idx,
             current_page=current_page,
-            list_type="all_accounts"
+        list_type=UserListAction.LIST_ALL_ACCOUNTS
         )
         builder.button(text=button_text, callback_data=callback_d.pack())
 
     if page_items:
         builder.adjust(1)
 
-    _add_pagination_controls(builder, _, current_page, total_pages, "all_accounts", PaginateUsersCallback)
+    _add_pagination_controls(builder, _, current_page, total_pages, UserListAction.LIST_ALL_ACCOUNTS, PaginateUsersCallback)
 
     builder.row(InlineKeyboardButton(
         text=_("⬅️ Back to Mute Management"), # BACK_TO_MANAGE_MUTED_BTN
-        callback_data=NotificationActionCallback(action="manage_muted").pack()
+        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     ))
     return builder.as_markup()
 
@@ -298,7 +310,7 @@ def create_subscriber_list_keyboard(
             InlineKeyboardButton(
                 text=button_text,
                 callback_data=SubscriberListCallback(
-                    action="delete_subscriber",
+                    action=SubscriberListAction.DELETE_SUBSCRIBER,
                     telegram_id=subscriber['telegram_id'], # Using telegram_id from dict
                     page=current_page  # Keep track of current page for refresh
                 ).pack()
@@ -315,7 +327,7 @@ def create_subscriber_list_keyboard(
             InlineKeyboardButton(
                 text=_("⬅️ Prev"),
                 callback_data=SubscriberListCallback(
-                    action="page",
+                    action=SubscriberListAction.PAGE,
                     page=current_page - 1
                 ).pack()
             )
@@ -325,7 +337,7 @@ def create_subscriber_list_keyboard(
             InlineKeyboardButton(
                 text=_("Next ➡️"),
                 callback_data=SubscriberListCallback(
-                    action="page",
+                    action=SubscriberListAction.PAGE,
                     page=current_page + 1
                 ).pack()
             )
@@ -344,7 +356,7 @@ def create_subscriber_list_keyboard(
 def create_user_selection_keyboard(
     _: callable,
     users_to_display: list[pytalk.user.User],
-    command_type: str
+    command_type: AdminAction
 ) -> InlineKeyboardBuilder:
     """
     Creates a keyboard with buttons for each user in the provided list.
@@ -364,7 +376,7 @@ def create_user_selection_keyboard(
 
         # Используем AdminActionCallback вместо "магической строки"
         callback_data = AdminActionCallback(
-            action=command_type,  # "kick" или "ban"
+            action=command_type,
             user_id=user_id
         ).pack()
 

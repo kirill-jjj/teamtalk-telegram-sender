@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Coroutine, Any
+from typing import Callable, Coroutine, Any, Optional
 from aiogram import html
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,12 +15,7 @@ from bot.core.user_settings import (
     get_or_create_user_settings,
     update_user_settings_in_db
 )
-from bot.constants import (
-    ACTION_SUBSCRIBE,
-    ACTION_UNSUBSCRIBE,
-    ACTION_SUBSCRIBE_AND_LINK_NOON,
-    DEFAULT_LANGUAGE,
-)
+from bot.constants.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +66,7 @@ async def _handle_subscribe_and_link_noon_deeplink(
     # Account Linking Logic
     tt_username_from_payload = payload
     if not tt_username_from_payload:
-        logger.error(f"Deeplink for '{ACTION_SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
+        logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
         return _("Error: Missing TeamTalk username in confirmation link.") # DEEPLINK_NOON_CONFIRM_MISSING_PAYLOAD
 
     if current_settings.not_on_online_confirmed and \
@@ -120,10 +115,10 @@ UnsubscribeDeeplinkHandlerType = Callable[
     Coroutine[Any, Any, str]
 ]
 
-DEEPLINK_ACTION_HANDLERS: dict[str, Any] = { # Using Any for now due to signature differences
-    ACTION_SUBSCRIBE: _handle_subscribe_deeplink,
-    ACTION_UNSUBSCRIBE: _handle_unsubscribe_deeplink, # type: ignore
-    ACTION_SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
+DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, Any] = { # Key type changed to DeeplinkAction
+    DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink,
+    DeeplinkAction.UNSUBSCRIBE: _handle_unsubscribe_deeplink, # type: ignore
+    DeeplinkAction.SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
 }
 
 
@@ -153,28 +148,38 @@ async def handle_deeplink_payload(
         # Or, if one-time use per link is strict, delete it. For now, let it expire.
         return
 
-    handler_func = DEEPLINK_ACTION_HANDLERS.get(deeplink_obj.action)
-    if handler_func:
-        try:
-            # Pass `_` (translator) to all handlers.
-            # Adjust payloads based on original logic.
-            if deeplink_obj.action == ACTION_UNSUBSCRIBE:
-                reply_text = await handler_func(session, telegram_id, _)
-            elif deeplink_obj.action == ACTION_SUBSCRIBE_AND_LINK_NOON:
-                reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
-            elif deeplink_obj.action == ACTION_SUBSCRIBE:
-                 # payload for ACTION_SUBSCRIBE was effectively None or not used by _handle_subscribe_deeplink
-                reply_text = await handler_func(session, telegram_id, _, None, user_specific_settings)
-            else:
-                logger.warning(f"Deeplink action '{deeplink_obj.action}' has a handler but no specific call structure in handle_deeplink_payload.")
-                reply_text = _("An error occurred.") # ERROR_OCCURRED or DEEPLINK_INVALID_ACTION
+    action_enum_member: Optional[DeeplinkAction] = None
+    try:
+        if deeplink_obj.action: # Ensure action is not None
+            action_enum_member = DeeplinkAction(str(deeplink_obj.action))
+    except ValueError:
+        logger.warning(f"Invalid deeplink action string from DB: '{deeplink_obj.action}' for token {token}")
+        action_enum_member = None # Will be handled by "Invalid deeplink action"
 
-        except Exception as e:
-            logger.error(f"Error executing deeplink handler for action '{deeplink_obj.action}', token {token}: {e}", exc_info=True)
-            reply_text = _("An error occurred.") # ERROR_OCCURRED
+    if action_enum_member:
+        handler_func = DEEPLINK_ACTION_HANDLERS.get(action_enum_member)
+        if handler_func:
+            try:
+                if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
+                    reply_text = await handler_func(session, telegram_id, _)
+                elif action_enum_member == DeeplinkAction.SUBSCRIBE_AND_LINK_NOON:
+                    reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+                elif action_enum_member == DeeplinkAction.SUBSCRIBE:
+                    reply_text = await handler_func(session, telegram_id, _, None, user_specific_settings)
+                # Add other specific handlers if any were missed by the original if/elifs
+                # else: # This else would imply an action_enum_member exists but no specific call structure defined
+                #    logger.warning(f"Deeplink action Enum member '{action_enum_member}' has a handler but no specific call structure in handle_deeplink_payload.")
+                #    reply_text = _("An error occurred.") # ERROR_OCCURRED
+            except Exception as e:
+                logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
+                reply_text = _("An error occurred.") # ERROR_OCCURRED
+        else:
+            # This case should ideally not be hit if DEEPLINK_ACTION_HANDLERS covers all DeeplinkAction members
+            logger.warning(f"No handler found for DeeplinkAction member: {action_enum_member}")
+            reply_text = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
     else:
         reply_text = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
-        logger.warning(f"Invalid deeplink action '{deeplink_obj.action}' for token {token}")
+        logger.warning(f"Deeplink action '{deeplink_obj.action}' for token {token} is not a valid or recognized DeeplinkAction.")
 
     await message.reply(reply_text)
     await delete_deeplink_by_token(session, token) # Delete after processing or attempt

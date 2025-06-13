@@ -8,12 +8,13 @@ from bot.core.user_settings import UserSpecificSettings
 from bot.database.models import NotificationSetting
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
+from bot.constants.enums import SettingsNavAction, SubscriptionAction
 from ._helpers import process_setting_update
 
 logger = logging.getLogger(__name__)
 subscription_router = Router(name="callback_handlers.subscription")
 
-@subscription_router.callback_query(SettingsCallback.filter(F.action == "subscriptions"))
+@subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
 async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     _: callable,
@@ -39,7 +40,7 @@ async def cq_show_subscriptions_menu(
     except TelegramAPIError as e:
         logger.error(f"TelegramAPIError editing message for subscription settings menu: {e}")
 
-@subscription_router.callback_query(SubscriptionCallback.filter(F.action == "set_sub"))
+@subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionAction.SET_SUB))
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,

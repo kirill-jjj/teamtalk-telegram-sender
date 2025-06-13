@@ -11,6 +11,7 @@ from pytalk.exceptions import PermissionError as PytalkPermissionError
 
 from bot.telegram_bot.filters import IsAdminFilter
 from bot.telegram_bot.callback_data import AdminActionCallback
+from bot.constants.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ admin_actions_router = Router(name="callback_handlers.admin")
 ttstr = pytalk.instance.sdk.ttstr
 
 async def _execute_tt_user_action(
-    action: str,
+    action: AdminAction,
     user_to_act_on: pytalk.user.User,
     _: callable,
     admin_tg_id: int
@@ -31,11 +32,11 @@ async def _execute_tt_user_action(
     quoted_nickname = html.quote(user_nickname)
 
     try:
-        if action == "kick":
+        if action == AdminAction.KICK:
             user_to_act_on.kick(from_server=True)
             logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname}' (ID: {user_to_act_on.id})")
             return True, _("User {user_nickname} kicked from server.").format(user_nickname=quoted_nickname)
-        elif action == "ban":
+        elif action == AdminAction.BAN:
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
             logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname}' (ID: {user_to_act_on.id})")
@@ -52,7 +53,7 @@ async def _execute_tt_user_action(
         return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
 
 
-@admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({"kick", "ban"})))
+@admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
