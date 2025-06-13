@@ -1,0 +1,4803 @@
+--- START OF FILE pytalk_070625061017_dir2txt.txt ---
+
+Folder: C:\Users\kirill\pytalk
+
+
+File: docs/_static/csv/bot.csv
+on_message	pytalk.Message (either pytalk.ChannelMessage, pytalk.DirectMessage, pytalk.BroadcastMessage)	Called when the bot receives a message.
+on_my_connect	pytalk.Server	Called when the bot has successfully connected to the pytalk.Server
+on_my_login	pytalk.Server	Called when the bot has successfully logged in to the pytalk.Server
+on_my_logout	pytalk.Server	Called when the bot has successfully logged out from the pytalk.Server
+on_my_disconnec	pytalk.Server	Called when the bot has successfully disconnected from the pytalk.Server
+on_my_connection_lost	pytalk.instance	Called when the bot has lost connection to the pytalk.Server
+on_my_kicked_from_channel	pytalk.Channel	Called when the bot has been kicked from pytalk.Channel
+
+File: docs/_static/csv/miss.csv
+on_ready	None	Called when the bot is started and ready to accept events.
+on_error	event_name (str), \*args (Any), \*\*kwargs (Any)	Called when another event errors. Has a default implementation
+
+File: docs/_static/csv/server_channel_n_file.csv
+on_channel_new	pytalk.Channel	Called when a new channel (pytalk.Channel) is created.
+on_channel_update	pytalk.Channel	Called when a pytalk.Channel has been updated.
+on_channel_delete	pytalk.Channel	Called when a pytalk.Channel has been deleted from the server.
+on_server_update	pytalk.Server	Called when a pytalk.Server has updated its settings.
+on_server_statistics	pytalk.Statistics	Called when a TeamTalk server sends it's statistics.
+on_file_new	pytalk.RemoteFile	Called when a file has been uploaded to a channel.
+on_file_delete	pytalk.RemoteFile	Called when a file has been deleted from a channel.
+on_muxed_audio	pytalk.MuxedAudioBlock	called when a muxed audio block is recieved, this is used to get audio from all users in the channel at once.
+on_user_audio	pytalk.AudioBlock	called when an audio block is recieved from a user, this is the audio for an individual user, not the hole server.
+
+File: docs/_static/csv/user.csv
+on_user_audio	pytalk.AudioBlock	Called when a user transmits audio.
+on_user_login	pytalk.user	Called when a user logs in to a server that the bot is on
+on_user_logout	pytalk.User	Called when a user logs out from a server that the bot is on
+on_user_update	pytalk.User	Called when a user gets updated
+on_user_join	pytalk.User, pytalk.Channel	Called when a pytalk.User joins a pytalk.Channel
+on_user_left	pytalk.User, pytalk.Channel	Called when a pytalk.User leaves a pytalk.Channel
+on_user_account_new	pytalk.UserAccount	Called when a new user account is created on the server.
+on_user_account_remove	pytalk.UserAccount	Called when a user account is deleted from the server.
+
+File: docs/api.rst
+API Reference
+===============
+
+The following section outlines the API of pytalk.
+
+.. note::
+
+    This module uses the Python logging module to log diagnostic and errors
+    in an output independent way.  If the logging module is not configured,
+
+
+Bot
+--------
+
+.. automodule:: pytalk.bot
+
+.. autoclass:: pytalk.bot.TeamTalkBot
+    :members:
+    :exclude-members: event,dispatch
+
+    .. automethod:: pytalk.bot.TeamTalkBot.event()
+        :decorator:
+
+
+Enums
+--------
+
+.. automodule:: pytalk.enums
+    :members:
+
+
+Server
+--------
+
+.. automodule:: pytalk.server
+    :members:
+
+
+Channel
+--------
+
+.. automodule:: pytalk.channel
+    :members:
+
+
+UserAccount
+--------
+
+.. automodule:: pytalk.user_account
+    :members:
+
+
+User
+--------
+
+.. automodule:: pytalk.user
+    :members:
+
+
+Message
+-----------
+
+.. automodule:: pytalk.message
+    :members:
+
+
+Audio Streaming
+--------------------
+
+.. automodule:: pytalk.streamer
+    :members:
+
+
+Files
+--------
+
+.. automodule:: pytalk.tt_file
+    :members:
+
+
+Permission
+-------------
+
+.. automodule:: pytalk.permission
+    :members:
+
+
+Subscriptions
+-------------
+
+.. automodule:: pytalk.subscription
+    :members:
+
+
+Exceptions
+------------
+
+.. automodule:: pytalk.exceptions
+    :members:
+
+
+TeamTalkInstance (low level)
+--------------------------------
+
+.. automodule:: pytalk.instance
+    :members:
+
+File: docs/conf.py
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = 'pytalk'
+copyright = '2025, BlindMaster24'
+author = 'BlindMaster24'
+
+# check if the current commit is tagged as a release (vX.Y.Z) and set the version
+import subprocess, re
+
+GIT_TAG_OUTPUT = subprocess.check_output(["git", "tag", "--points-at", "HEAD"])
+current_tag = GIT_TAG_OUTPUT.decode().strip()
+if re.match(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$", current_tag):
+    version = current_tag
+else:
+    version = "latest"
+
+release = version
+
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath('..'))
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = [
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
+    "sphinxcontrib_trio",
+    "sphinx.ext.autodoc",
+    "sphinx_sitemap",
+]
+
+templates_path = ['_templates']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = 'scrolls'
+html_static_path = ['_static']
+
+sitemap_url_scheme = "{lang}/{version}/{link}"
+html_baseurl = 'https://pytalk.readthedocs.io/'
+html_extra_path = [
+    "robots.txt",
+]
+
+# autodoc settings
+autodoc_class_signature = "separated"
+autodoc_member_order = 'bysource'
+
+extlinks = {
+    'issue': ('https://github.com/BlindMaster24/pytalk/issues/%s', '#%s'),
+    'version': ('https://pypi.org/project/py-talk-ex/%s', 'v%s'),
+}
+
+# Links used for cross-referencing stuff in other documentation
+intersphinx_mapping = {
+    'py': ('https://docs.python.org/3', None),
+}
+
+rst_prolog = """
+.. |coro| replace:: This function is a |coroutine_link|_.
+.. |maybecoro| replace:: This function *could be a* |coroutine_link|_.
+.. |coroutine_link| replace:: *coroutine*
+.. _coroutine_link: https://docs.python.org/3/library/asyncio-task.html#coroutine
+"""
+
+# napoleon settings
+
+napoleon_google_docstring = True
+napoleon_include_init_with_doc = True
+
+File: docs/events.rst
+event reference
+==================
+
+This page documents the various events that a TeamTalk Bot can listen to.
+
+The tables are grouped by relevance.
+
+For more information, on what each pytalk.* function does, please refer to the :doc:`/api` documentation.
+
+
+How do I use these events?
+----------------------------
+
+The events are listed in the following tables. Each event has a name, a list of arguments that are passed to the event handler and a description of what the event is.
+
+To listen to an event, you must use the :func:`pytalk.bot.event` decorator.
+
+
+example:
+
+.. code-block:: python
+
+    @bot.event
+    def on_message(message):
+        print(message)
+
+
+The above code will print the message object to the console whenever a message is sent. The message object is passed to the event handler as an argument.
+
+
+Missellaneous Events
+-----------------------
+
+.. csv-table:: Miscellaneous Events
+   :delim: \u0009
+   :file: _static/csv/miss.csv
+
+
+Bot Events
+-------------
+
+.. csv-table:: Bot Events
+   :delim: \u0009
+   :file: _static/csv/bot.csv
+
+Server, Channel & File Events
+--------------------------------------
+
+.. csv-table:: Server, Channel & File Events
+   :delim: \u0009
+   :file: _static/csv/server_channel_n_file.csv
+
+
+User Events
+--------------
+
+.. csv-table:: User Events
+   :delim: \u0009
+   :file: _static/csv/user.csv
+
+File: docs/index.rst
+Welcome to the Pytalk Documentation
+========================================
+
+Pytalk is a Python library that provides a simple interface to connect to, and interact with, TeamTalk servers.
+
+
+Installation
+------------
+
+To install Pytalk, simply run the following command:
+
+.. code-block::
+
+    pip install py-talk-ex
+
+Alternatively, you can download the source code from the GitHub repository and run the following command:
+
+.. code-block::
+
+    git clone https://github.com/BlindMaster24/pytalk.git
+    cd pytalk
+    uv build
+    pip install dist/py_talk_ex-*.tar.gz
+
+
+Quick Start
+-----------
+
+To quickly get started with Pytalk, you can use the following code snippet:
+
+.. code-block::
+
+    import pytalk
+
+bot = pytalk.TeamTalkBot()
+
+@bot.event
+async def on_ready():
+    test_server = pytalk.TeamTalkServerInfo("localhost", 10335, 10335, "user", "pass")
+    await bot.add_server(test_server)
+
+@bot.event
+async def on_message(message):
+    if message.content.lower() == "ping":
+        message.reply("pong")
+
+bot.run()
+
+
+Useful Links
+------------
+
+Below are some useful links to help you get started with teamtalk.py:
+
+* :doc:`event reference </events>`
+* :doc:`API Documentation </api>`
+* :doc:`whats-new </whats-new>`
+* `GitHub Repository <https://github.com/BlindMaster24/pytalk>`_
+* `PyPI <https://pypi.org/project/py-talk-ex/>`_
+
+
+Contributing
+------------
+
+So you want to contribute to teamtalk.py? Great! There are many ways to contribute to this project, and all contributions are welcome.
+
+If you have found a bug, have a feature request or want to help improve documentation please `open an issue <https://github.com/BlindMaster24/pytalk/issues/new>`_
+
+
+License
+-------
+
+Pytalk is licensed under the MIT License. See the `LICENSE <https://github.com/BlindMaster24/pytalk/blob/master/LICENSE>`_ file for more information.
+
+File: docs/make.bat
+@ECHO OFF
+
+pushd %~dp0
+
+REM Command file for Sphinx documentation
+
+if "%SPHINXBUILD%" == "" (
+	set SPHINXBUILD=sphinx-build
+)
+set SOURCEDIR=.
+set BUILDDIR=_build
+
+%SPHINXBUILD% >NUL 2>NUL
+if errorlevel 9009 (
+	echo.
+	echo.The 'sphinx-build' command was not found. Make sure you have Sphinx
+	echo.installed, then set the SPHINXBUILD environment variable to point
+	echo.to the full path of the 'sphinx-build' executable. Alternatively you
+	echo.may add the Sphinx directory to PATH.
+	echo.
+	echo.If you don't have Sphinx installed, grab it from
+	echo.https://www.sphinx-doc.org/
+	exit /b 1
+)
+
+if "%1" == "" goto help
+
+%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+goto end
+
+:help
+%SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+
+:end
+popd
+
+File: docs/Makefile
+# Minimal makefile for Sphinx documentation
+#
+
+# You can set these variables from the command line, and also
+# from the environment for the first two.
+SPHINXOPTS    ?=
+SPHINXBUILD   ?= sphinx-build
+SOURCEDIR     = .
+BUILDDIR      = _build
+
+# Put it first so that "make" without argument is like "make help".
+help:
+	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: help Makefile
+
+# Catch-all target: route all unknown targets to Sphinx using the new
+# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+%: Makefile
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+File: docs/robots.txt
+Sitemap: https://pytalk.readthedocs.io/en/latest/sitemap.xml
+
+File: docs/whats-new.rst
+What's new
+===============
+
+This document holds a human-readable list of changes between releases.
+
+.. note::
+   pytalk follows the Semantic Versioning guidelines. Releases are numbered with the following format:
+
+    <major>.<minor>.<patch>
+
+   And constructed with the following guidelines:
+
+    Breaking backward compatibility bumps the major (and resets the minor and patch)
+    New additions without breaking backward compatibility bumps the minor (and resets the patch)
+    Bug fixes and misc changes bump the patch
+
+    For more information on SemVer, please visit http://semver.org/.
+
+:version:`2.0.0` - Unreleased
+---------------------------------
+
+Fixed
+~~~~~
+
+- Fixed documentation not being generated correctly.
+
+:version:`1.6.0` - 2025-06-05
+---------------------------------
+
+Added
+~~~~~
+- Added media file streaming capabilities:
+    - Introduced `pytalk.TeamTalkInstance.start_streaming_media_file_to_channel` for streaming local media files to a channel.
+    - Introduced `pytalk.TeamTalkInstance.stop_streaming_media_file_to_channel` to stop active media file streaming.
+- Introduced a new `pytalk.enums.Status` helper class for `pytalk.TeamTalkInstance.change_status`:
+    - Allows combining user status modes (e.g., `online`, `away`) with gender properties (`.male`, `.female`, `.neutral`) in a more Pythonic and intuitive manner (e.g., `Status.online.female`).
+
+Improved
+~~~~~~~~
+- The `pytalk.TeamTalkInstance.change_status` method now accepts a combined status integer, intelligently preserving other non-mode/gender related status flags (like video or desktop sharing) when updating.
+
+Changed
+~~~~~~~
+- In `TeamTalkInstance.login()`, the automatic channel join based on `server_info.join_channel_id`
+  will now only attempt to join a channel if `join_channel_id` is strictly positive (>0).
+  Previously, a value of 0 or negative would result in joining the root channel. Now, such
+  values will result in no channel being joined automatically.
+
+Fixed
+~~~~~
+- In `Server.join_channel()`, attempting to join a channel by path with an empty or
+  whitespace-only string now correctly results in no action (and returns `False`).
+  Previously, this would lead to an attempt to join the root channel.
+- Fixed several linter issues.
+
+:version:`1.5.1` - 2025-05-16
+---------------------------------
+
+Fixed
+~~~~~
+- Improved stability of audio event processing in ``pytalk.TeamTalkInstance`` by implementing an SDK lock (`_audio_sdk_lock`) to serialize access to critical TeamTalk SDK audio functions. This addresses potential segmentation faults and race conditions during high-frequency audio events.
+- Enhanced resource management for audio blocks by ensuring SDK pointers are correctly acquired, data is copied, and pointers are released reliably, even in error scenarios within the event processing loop.
+- Refined the internal logic for handling ``CLIENTEVENT_USER_STATECHANGE`` to correctly enable/disable audio block events based on user voice transmission status.
+
+Improved
+~~~~~~~~
+- Restructured parts of the internal ``_process_events`` method in ``pytalk.TeamTalkInstance`` for better clarity and logical flow of event handling.
+
+:version:`1.5.0` - 2025-05-15
+---------------------------------
+
+Added
+~~~~~
+- Reinstated audio receiving events: `on_user_audio` and `on_muxed_audio` are now available again. (Originally planned for 1.4.5)
+- Added new events: `on_user_account_new` (called when a new user account is created on the server) and `on_user_account_remove` (called when a user account is deleted from the server).
+- Enhanced `pytalk.TeamTalkInstance.create_user_account` method:
+    - Added `user_rights` parameter to allow specifying user permissions (using `pytalk.Permission` values) upon user account creation.
+    - Added `note` parameter to allow setting a note upon user account creation.
+
+Changed
+~~~~~~~
+- Corrected the return type annotation for `pytalk.TeamTalkInstance.create_user_account` from `TeamTalkUserAccount` to `bool` to accurately reflect its actual return value.
+
+Fixed
+~~~~~
+- Resolved an issue where documentation was not being generated correctly for some elements.
+- Fixed Flake8 `DAR203` error related to return type mismatch in `pytalk.TeamTalkInstance.create_user_account` docstring.
+
+Improved
+~~~~~~~~
+- Updated and significantly clarified docstrings for `pytalk.TeamTalkInstance.create_user_account`, including detailed explanations of new parameters and default behaviors.
+
+Notes
+~~~~~
+- The core logic for `on_user_audio` and `on_muxed_audio` has not been altered in this version. If your bot encounters issues or crashes when using these re-enabled audio events, please report them via a GitHub issue. While they may function correctly, thorough testing in your environment is recommended. (Note originally from 1.4.5)
+
+:version:`1.4.1` - 2025-05-01
+---------------------------------
+
+This release marks a significant transition! The library is now **Pytalk**, residing in its own dedicated repository. This separation stems from the current maintainer's decision to pursue a distinct development path, introducing changes that may differ from the original vision for teamtalk.py held by its previous owner. Driven by differing opinions on future development, a desire for more rapid updates, and the goal of making specific improvements, Pytalk now operates independently as a separate library. As part of this new direction, the restructuring also aims to align Pytalk more closely with the user-friendly patterns found in libraries like discord.py/py-cord, enhancing the developer experience.
+
+Breaking Changes & Important Notices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- **Project Renamed:** The library is now officially ``pytalk``. This project is independent and not related to ``teamtalk.py``.
+  **Action Required:** You **must** update your import statements (e.g., change ``import teamtalk`` to ``import pytalk``) and any other code references. Please review the updated documentation for new conventions.
+- **Separate Repository:** Pytalk has been moved to its own repository.
+- **PyPI Availability:** Versions prior to 1.4.4 under the old name will **no longer be available** for installation from PyPI. You must use version 1.4.4 or newer of ``pytalk``.
+- **Changelog History:** While older versions are unavailable on PyPI, previous changelog entries will be maintained within the new repository for historical reference.
+
+Fixes / Improvements
+~~~~~~~~~~~~~~~~~~~~
+- **Complete Audio Function Overhaul:** All audio-related functions have been thoroughly reviewed, fixed, and rewritten for improved stability and correctness.
+- **Accurate Audio Calculations:** Audio calculation formulas were taken directly from the official TeamTalk Qt client and now work perfectly.
+
+Notes
+~~~~~
+- Please update your dependencies to use the new ``pytalk`` package name and version 1.4.1 or later.
+- Review your existing code for any instances of the old library name and update them to ``pytalk``.
+
+:version:`1.4.0` - 2025-04-28
+---------------------------------
+
+Added new capabilities for managing audio input devices and settings.
+
+Added
+~~~~~
+
+- Added the ability to list available sound devices and select the desired input device.
+- Added functions to get and set the microphone input gain level.
+- Added control to enable or disable voice transmission.
+
+:version:`1.3.1` - 2025-04-12
+---------------------------------
+
+Removed
+~~~~~~~
+- Temporarily removed audio receiving event.
+
+:version:`1.3.0` - 2024-11-23
+---------------------------------
+
+This release adds audio receiving support through the on_user_audio and on_muxed_audio event. It also adds server statistics support through the teamtalk.Statistics class. In addition, we now do not ignore the first 1 second of events, and we have fixed various recursion errors when trying to get underlying SDK properties from a teamtalk.Channel. We have also fixed a PermissionError when trying to kick a user from a channel, and errors on linux with certain functions due to improper use of sdk.ttstr.
+
+Added
+~~~~~
+
+- Added server statistics support. See the new teamtalk.Statistics class for more information.
+- Added audio receiving support, see the teamtalk.AudioBlock and teamtalk.MuxedAudioBlock classes for more information.
+- Added so we now do not ignore the first 1 second of events.
+
+Fixed
+~~~~~
+
+- Fixed various recursion errors when trying to get underlying SDK properties from a teamtalk.Channel.
+- Fixed PermissionError when trying to kick a user from a channel.
+- Fixed errors on linux with certain functions do to improper use of sdk.ttstr.
+
+:version:`1.2.1` - 2024-07-12
+---------------------------------
+
+This release adds the handling of the bot lost connection to the server event, a join_channel method to the teamtalk.Server class, an is_me function to the teamtalk.User class, and more descriptive error messages for the TT SDK Downloader, when failing to extract the sdk due to missing 7zip or equivalent.
+
+Added
+~~~~~
+
+- Added the handling of the bot lost connection to the server event.
+- Added a join_channel method to the teamtalk.Server class.
+- Added an is_me function to the teamtalk.User class.
+- Added more descriptive error messages for the TT SDK Downloader, when failing to extract the sdk due to missing 7zip or equivalent.
+
+Fixed
+~~~~~
+
+- Fixed a bug that would force debug logging to be enabled globally.
+
+
+
+:version:`1.2.0` - 2024-01-31
+---------------------------------
+
+This release adds subscriptions, and more expressive dir methods for Permissions, Channel Types and Server Properties, as well as fixing some long standing asyncio bugs. In addition, we also drop test compatibility for python 3.8, and we have updated to TeamTalk SDK 5.15
+
+Added
+~~~~~
+
+- Added support for subscriptions. You can now subscribe to events per user and get notified when they happen. You can also unsubscribe from events.
+- Added more expressive dir methods for Permissions, Channel Types and Server Properties. Now you can call dir(teamtalk.Permissions) and get a list of all permissions. Same for Channel Types and Server Properties.
+
+Changed / Fixed
+~~~~~~~~~~~~~~~
+
+- Updated to TeamTalk SDK 5.15
+- Fixed a bug where if a registered coroutine called asyncio.sleep, the entire event loop would freeze until a new event was received.
+
+:version:`1.1.0` - 2023-03-24
+---------------------------------
+
+Added
+~~~~~
+
+- Added the possibility to get and update TeamTalk Server properties.
+- Added the possibility to create, delete, get and list user accounts.
+- Added the possibility to create, update and delete channels.
+- Added a teamtalk.UserAccount and teamtalk.BannedUserAccount type.
+- Added a method that can list banned users.
+- Added methods to get a channel from a path and a path from a channel.
+- Added methods to make or remove a user as a channel operator.
+
+Changed / Fixed
+~~~~~~~~~~~~~~~
+
+- Changed the way we check for permissions. If the bot is admin, it will have all
+    permissions. If it is not, it will only have the permissions that are set
+    for the bot's user account.
+- Fixed the teamtalk.Instance.get_channel function so it now returns correctly.
+- Fixed kicking and banning users. We now handle the case where the bot is not
+    admin.
+- Fixed kicking and banning users. We now handle more errors and raise when appropriate.
+- Fixed a bug where it was impossible to get the server from the channel class
+    when using it as part of a chain.
+- Fixed a bug where it was impossible to get the server from the user class
+    when using it as part of a chain.
+- Fixed a bug where the sdk downloader would not work on linux, due to missing a user agent.
+
+
+
+:version:`1.0.0` - 2023-03-01
+----------------------------------
+
+Initial release.
+
+File: LICENSE
+Copyright 2023 JessicaTegner
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+File: pyproject.toml
+[project]
+name = "py-talk-ex"
+version = "1.6.0"
+description = "a simple but powerful pythonic library for making bots for the TeamTalk5 Conferencing System"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "BlindMaster24", email = "jessica.tegner@outlook.com"}]
+keywords = ["teamtalk", "teamtalk5", "teamtalk sdk", "conferencing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "patool>=3.0",
+    "requests>=2.32",
+    "typing-extensions>=4.12",
+]
+
+[project.urls]
+"Issue Tracker" = "https://github.com/BlindMaster24/pytalk/issues"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx-sitemap>=2.6",
+    "sphinx>=8.1",
+    "sphinxcontrib-napoleon>=0.7",
+    "sphinxcontrib-trio>=1.1",
+]
+
+[tool.black]
+line-length = 125
+skip-string-normalization = true
+
+[tool.flake8]
+ignore = ["E203", "E731", "W503", "D401", "DAR402", "DAR103"]
+exclude = [
+    "docs/*",
+    "tests/*",
+    "pytalk/tools/*",
+    "__pycache__",
+    "pytalk/implementation/*",
+    "pytalk/__init__.py",
+    "pytalk/implementation/__init__.py",
+    "example.py",
+]
+max-line-length = 125
+count = true
+statistics = true
+max-complexity = 20
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.1",
+]
+
+File: pytalk/__init__.py
+# if the implementation can't be found. Try to download it
+# from the internet and install it.
+
+# first add our to be implementation/TeamTalk_DLL to the path
+import os
+import sys
+
+from ctypes import *
+
+# if we are on linux we do a little hack for the LD_LIBRARY_PATH
+try:
+    if sys.platform.startswith("linux"):
+        # get the full path to the implementation/TeamTalk_DLL folder
+        libpath = os.path.join(os.path.dirname(__file__), "implementation", "TeamTalk_DLL", "libTeamTalk5.so")
+        dll = cdll.LoadLibrary(libpath)
+    from .implementation.TeamTalkPy import TeamTalk5 as sdk
+except:
+    from .download_sdk import download_sdk
+
+    download_sdk()
+    if sys.platform.startswith("linux"):
+        # get the full path to the implementation/TeamTalk_DLL folder
+        libpath = os.path.join(os.path.dirname(__file__), "implementation", "TeamTalk_DLL", "libTeamTalk5.so")
+        dll = cdll.LoadLibrary(libpath)
+    from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+from .bot import TeamTalkBot
+from .channel import Channel
+from .user_account import UserAccount, BannedUserAccount
+from .enums import Status, TeamTalkServerInfo, UserStatusMode, UserType
+from .instance import TeamTalkInstance
+from .message import BroadcastMessage, ChannelMessage, CustomMessage, DirectMessage
+from .permission import Permission
+from .streamer import Streamer
+from .subscription import Subscription
+
+File: pytalk/_utils.py
+import math
+import time
+import threading
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+timestamp = lambda: int(round(time.time() * 1000))
+DEF_WAIT = 1500
+
+
+def _waitForEvent(ttclient, event, timeout=DEF_WAIT):
+    msg = ttclient.getMessage(timeout)
+    end = timestamp() + timeout
+    while msg.nClientEvent != event:
+        if timestamp() >= end:
+            return False, sdk.TTMessage()
+        msg = ttclient.getMessage(timeout)
+
+    return True, msg
+
+
+def _waitForCmdSuccess(ttclient, cmdid, timeout):
+    result = True
+    while result:
+        result, msg = _waitForEvent(ttclient, sdk.ClientEvent.CLIENTEVENT_CMD_SUCCESS, timeout)
+        if result and msg.nSource == cmdid:
+            return result, msg
+
+    return False, sdk.TTMessage()
+
+
+def _waitForCmd(ttclient, cmdid, timeout):
+    end = timestamp() + timeout
+    while True:
+        msg = ttclient.getMessage()
+        if msg.nClientEvent == sdk.ClientEvent.CLIENTEVENT_CMD_ERROR:
+            if msg.nSource == cmdid:
+                return False, msg.clienterrormsg
+        elif msg.nClientEvent == sdk.ClientEvent.CLIENTEVENT_CMD_SUCCESS:
+            if msg.nSource == cmdid:
+                return True, msg
+        if timestamp() >= end:
+            return False, sdk.TTMessage()
+
+
+def _getAbsTimeDiff(t1, t2):
+    t1 = int(round(t1 * 1000))
+    t2 = int(round(t2 * 1000))
+    return abs(t1 - t2)
+
+
+def _get_tt_obj_attribute(obj, attr):
+    name = ""
+    for name_part in attr.split("_"):
+        # if the name_part is "id" or "ID" then we want to keep it as "ID"
+        if name_part.lower() == "id":
+            name += "ID"
+        else:
+            # otherwise we want to capitalize the first letter
+            name += name_part.capitalize()
+    # first try to prefix with "n" and then get obj.name
+    try:
+        return getattr(obj, f"n{name}")
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "sz" and then get obj.name
+    try:
+        return getattr(obj, f"sz{name}")
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "b" and then get obj.name
+    try:
+        return getattr(obj, f"b{name}")
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "u" and then get obj.name
+    try:
+        return getattr(obj, f"u{name}")
+    except AttributeError:
+        pass
+    # if that fails, try to lowercase the first letter name and then get obj.name
+    try:
+        return getattr(obj, f"{name[0].lower()}{name[1:]}")
+    except AttributeError:
+        pass
+    # if we are still here we failed to get the attribute
+    raise AttributeError(f"Could not find attribute {name} in {obj}")
+
+
+def percent_to_ref_volume(percent: float) -> int:
+    """Converts a percentage (0-100) to the internal TeamTalk volume value.
+
+    Matches the TeamTalk Qt client's user volume scaling.
+
+    Args:
+        percent (float): The volume percentage (0.0 to 100.0).
+
+    Returns:
+        int: The corresponding internal TeamTalk volume value, clamped to SDK limits.
+    """
+    if percent <= 0:
+        return sdk.SoundLevel.SOUND_VOLUME_MIN
+
+    percent = max(0.0, min(100.0, percent))
+
+    try:
+        internal_volume_float = 82.832 * math.exp(0.0508 * percent) - 50.0
+    except OverflowError:
+        return sdk.SoundLevel.SOUND_VOLUME_MAX
+
+    internal_volume = int(round(internal_volume_float))
+    return max(sdk.SoundLevel.SOUND_VOLUME_MIN, min(sdk.SoundLevel.SOUND_VOLUME_MAX, internal_volume))
+
+
+def ref_volume_to_percent(volume: int) -> int:
+    """Converts an internal TeamTalk volume value to a percentage (0-100).
+
+    Matches the TeamTalk Qt client's user volume scaling.
+
+    Args:
+        volume (int): The internal TeamTalk volume value.
+
+    Returns:
+        int: The corresponding volume percentage (0-100).
+    """
+    if volume <= sdk.SoundLevel.SOUND_VOLUME_MIN:
+        return 0
+
+    try:
+        internal_volume_float = float(volume)
+        safe_volume = max(internal_volume_float, float(sdk.SoundLevel.SOUND_VOLUME_MIN) - 49.9)
+        d = (safe_volume + 50.0) / 82.832
+        if d <= 0:
+            return 0
+        percentage = math.log(d) / 0.0508
+    except (ValueError, OverflowError):
+        return 0
+
+    rounded_percentage = int(round(percentage))
+    return max(0, min(100, rounded_percentage))
+
+
+def _set_tt_obj_attribute(obj, attr, value):
+    name = ""
+    for name_part in attr.split("_"):
+        # if the name_part is "id" or "ID" then we want to keep it as "ID"
+        if name_part.lower() == "id":
+            name += "ID"
+        else:
+            # otherwise we want to capitalize the first letter
+            name += name_part.capitalize()
+    # first try to prefix with "n" and then set obj.name to value
+    try:
+        setattr(obj, f"n{name}", value)
+        return
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "sz" and then set obj.name to value
+    try:
+        setattr(obj, f"sz{name}", value)
+        return
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "b" and then set obj.name to value
+    try:
+        setattr(obj, f"b{name}", value)
+        return
+    except AttributeError:
+        pass
+    # if that fails, try to prefix name with "u" and then set obj.name to value
+    try:
+        setattr(obj, f"u{name}", value)
+        return
+    except AttributeError:
+        pass
+    # if that fails, try to lowercase the first letter name and then set obj.name to value
+    try:
+        setattr(obj, f"{name[0].lower()}{name[1:]}", value)
+        return
+    except AttributeError:
+        pass
+    # if we are still here we failed to get the attribute
+    raise AttributeError(f"Could not set attribute {name} in {obj}")
+
+
+# now convert the _get_tt_obj_attribute names to python names that can be used in set_tt_obj_attribute
+def _tt_attr_to_py_attr(attr):
+    name = ""
+    # if the attr is id, keep it
+    if attr.lower() == "id":
+        name = "id"
+    else:
+        # we want to discard all letters before the first capital letter, keeping the rest
+        new_attr = ""
+        for x in range(len(attr)):
+            if attr[x].isupper():
+                new_attr = attr[x:]
+                break
+        # if everything is ubber, just lowercase everything and return
+        if new_attr.isupper():
+            return new_attr.lower()
+        # now we want to lowercase the first letter
+        name = new_attr[0].lower()
+        # then replace every other capital letter with an underscore and the lowercase version of that letter
+        for x in range(1, len(new_attr)):
+            if new_attr[x].isupper():
+                # if the next letter is also uppercase, we want to just lowercase this one
+                # IF the next letter is lowercase, we want to lowercase this letter and put an underscore after it
+                if x + 1 < len(new_attr) and new_attr[x + 1].isupper():
+                    name += new_attr[x].lower()
+                else:
+                    name += f"_{new_attr[x].lower()}"
+            else:
+                name += new_attr[x]
+    return name
+
+
+def _do_after(delay, func):
+    def _do_after_thread(delay, func):
+        initial_time = time.time()
+        while _getAbsTimeDiff(initial_time, time.time()) < (delay * 1000):
+            time.sleep(0.001)
+        func()
+
+    threading.Thread(
+        daemon=True,
+        target=_do_after_thread,
+        args=(
+            delay,
+            func,
+        ),
+    ).start()
+
+File: pytalk/audio.py
+"""This module contains the AudioBlock class.
+
+Not to be confused with the underlying AudioBlock class, this is used in the "on_user_audio" event. # noqa
+
+        Example
+        -------
+
+        .. code-block:: python3
+
+            import pyaudio
+            streams: dict = {}
+            p = pyaudio.PyAudio()
+            @client.event
+            async def on_user_audio(block):
+                print(block.user.username) # Print the username that the audio is from.
+                if block.user.id not in streams.keys(): streams [block.user.id] = p.open(format=pyaudio.paInt16, channels = block.channels, rate = block.sample_rate, output = True)
+                stream = streams[block.user.id]
+                stream.write(block.data) # Play the audio data.
+                # for more information, see the AudioBlock class
+
+
+        See the :doc:`event Reference </events>` for more information and a list of all events.
+
+
+"""
+
+import ctypes
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+from ._utils import _get_tt_obj_attribute
+
+
+_AcquireUserAudioBlock = sdk.function_factory(
+    sdk.dll.TT_AcquireUserAudioBlock, [sdk.POINTER(sdk.AudioBlock), [sdk._TTInstance, sdk.StreamType, sdk.INT32]]
+)
+_ReleaseUserAudioBlock = sdk.function_factory(
+    sdk.dll.TT_ReleaseUserAudioBlock, [sdk.BOOL, [sdk._TTInstance, sdk.POINTER(sdk.AudioBlock)]]
+)
+
+
+class AudioBlock:
+    """Represents an audio block for the on_user_audio event.
+
+    Attributes:
+        user: The user that the audio is from.
+        id: The stream ID of the audio block.
+        data: The audio data.
+        sample_rate: The sample rate of the audio data.
+        channels: The number of channels in the audio data.
+        samples: The number of samples in the audio data.
+    """
+
+    def __init__(self, user, block):
+        """Represents an audio block for the on_user_audio event.
+
+        Args:
+            user: The user that the audio is from.
+            block: The underlying AudioBlock object.
+        """
+        self.user = user
+        self._block = block
+        self.id = block.nStreamID
+        self.data_pointer = block.lpRawAudio
+        self._data = None
+
+    @property
+    def data(self):
+        """The audio data.
+
+        Returns:
+            The audio data.
+        """
+        if self._data is None:
+            total_samples = self._block.nSamples * self._block.nChannels
+            buffer_type = ctypes.c_short * total_samples
+            buffer_ptr = ctypes.cast(self.data_pointer, ctypes.POINTER(buffer_type))
+            self._data = bytes(buffer_ptr.contents)
+        return self._data
+
+    def __getattr__(self, name: str):
+        """Try to get the attribute from the AUdioBlock object.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self._block, name)
+
+
+class MuxedAudioBlock(AudioBlock):
+    """Represents an audio block for the on_muxed_audio event.
+
+    .. note:
+        This class inherits from :class:`AudioBlock`.
+
+    Attributes:
+        id: The stream ID of the audio block.
+        data: The audio data.
+        sample_rate: The sample rate of the audio data.
+        channels: The number of channels in the audio data.
+        samples: The number of samples in the audio data.
+    """
+
+    def __init__(self, block):
+        """Represents an audio block for the on_muxed_audio event.
+
+        Args:
+            block: The underlying AudioBlock object.
+        """
+        super().__init__(None, block)
+
+        @property
+        def user(self):
+            raise AttributeError("MuxedAudioBlock has no attribute 'user'")
+
+File: pytalk/backoff.py
+import random
+
+class Backoff:
+    def __init__(
+        self,
+        base: int = 1,
+        exponent: float = 2,
+        max_value: float = 60,
+        max_tries: int | None = None
+    ):
+        self.base = base
+        self.exponent = exponent
+        self.max_value = max_value
+        self.max_tries = max_tries
+        self.attempts = 0
+
+    def delay(self) -> float | None:
+        if self.max_tries is not None and self.attempts >= self.max_tries:
+            return None
+
+        calculated_delay = self.base * (self.exponent ** self.attempts)
+
+        jitter_delay = random.uniform(0.5 * calculated_delay, calculated_delay)
+
+        actual_delay = min(jitter_delay, self.max_value)
+
+        self.attempts += 1
+        return actual_delay
+
+    def reset(self):
+        self.attempts = 0
+
+File: pytalk/bot.py
+"""A module that contains the TeamTalkBot class.
+
+The TeamTalkBot class is the main class of the library.
+It's used to create a bot,connect to any amount of TeamTalk servers and dispatch events.
+"""
+
+import asyncio
+import logging
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
+from typing_extensions import Self
+
+from .enums import TeamTalkServerInfo
+from .instance import TeamTalkInstance
+
+T = TypeVar("T")
+Coro = Coroutine[Any, Any, T]
+CoroT = TypeVar("CoroT", bound=Callable[..., Coro[Any]])
+
+
+class _LoopSentinel:
+    __slots__ = ()
+
+    def __getattr__(self, attr: str) -> None:
+        msg = "loop attribute cannot be accessed in non-async contexts. "
+        raise AttributeError(msg)
+
+
+_loop: Any = _LoopSentinel()
+_log = logging.getLogger(__name__)
+
+
+class TeamTalkBot:
+    """A class that represents a TeamTalk bot."""
+
+    def __init__(self, client_name: Optional[str] = "PyTalk") -> None:
+        """Initialize a TeamTalkBot object.
+
+        Args:
+            client_name (Optional[str]): The name of the client. Defaults to "Teamtalk.py".
+        """
+        self.client_name = client_name
+        self.loop: asyncio.AbstractEventLoop = _loop
+        # hold a list of TeamTalk instances
+        self.teamtalks: List[TeamTalkInstance] = []
+        self._listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
+
+    async def add_server(self, server: Union[TeamTalkServerInfo, dict]) -> None:
+        """Add a server to the bot.
+
+        Args:
+            server: A Union[TeamTalkServerInfo, dict] object representing the server to add.
+                If a dictionary is provided, it will be converted to a TeamTalkServerInfo object.
+        """
+        if isinstance(server, dict):
+            server = TeamTalkServerInfo.from_dict(server)
+        _log.debug(f"Adding server: {self, server}")
+        tt = TeamTalkInstance(self, server)
+        # connect
+        tt.connect()
+        # login
+        tt.login()
+        self.teamtalks.append(tt)
+
+    def run(self):
+        """A blocking call that connects to all added servers and handles all events."""
+
+        async def runner():
+            async with self:
+                await self._start()
+
+        try:
+            # set our loop the asyncio event loop
+            asyncio.run(runner())
+        except KeyboardInterrupt:
+            # nothing to do here
+            # `asyncio.run` handles the loop cleanup
+            # and `self.start` closes all sockets and the HTTPClient instance.
+            return
+
+    async def _async_setup_hook(self) -> None:
+        # Called whenever the client needs to initialise asyncio objects with a running loop
+        loop = asyncio.get_running_loop()
+        self.loop = loop
+
+    async def __aenter__(self) -> Self:
+        """A context manager that is used to get the correct event loop.
+
+        Returns:
+            Self: The TeamTalkBot object.
+        """
+        await self._async_setup_hook()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback,
+    ) -> None:
+        """When we exit the program, try to disconnect from all servers.
+
+        Args:
+            exc_type (Optional[Type[BaseException]]): The exception type.
+            exc_value (Optional[BaseException]): The exception value.
+            traceback: The traceback.
+        """
+        for teamtalk in self.teamtalks:
+            teamtalk.disconnect()
+            teamtalk.closeTeamTalk()
+
+    def event(self, coro: CoroT, /) -> CoroT:
+        """A decorator that registers an event to listen to.
+
+        The events must be a :ref:`coroutine <coroutine>`, if not, :exc:`TypeError` is raised.
+
+        Example
+        ---------
+
+        .. code-block:: python3
+
+            @client.event
+            async def on_ready():
+                print('Ready!')
+
+
+        See the :doc:`event Reference </events>` for more information and a list of all events.
+
+
+        Args:
+            coro (CoroT): The coroutine to register.
+
+        Returns:
+            CoroT: The coroutine that was registered.
+
+        Raises:
+            TypeError: The coroutine is not a coroutine function.
+        """
+        _log.debug("Registering event %s", coro.__name__)
+
+        if not asyncio.iscoroutinefunction(coro):
+            raise TypeError("event registered must be a coroutine function")
+
+        setattr(self, coro.__name__, coro)
+        _log.debug("Registered event %s", coro.__name__)
+        return coro
+
+    async def _run_event(
+        self,
+        coro: Callable[..., Coroutine[Any, Any, Any]],
+        event_name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        try:
+            _log.debug("Running event %s", event_name)
+            await coro(*args, **kwargs)
+        except asyncio.CancelledError:
+            _log.debug("Event %s was cancelled", event_name)
+        except Exception:
+            try:
+                await self.on_error(event_name, *args, **kwargs)
+            except asyncio.CancelledError:
+                pass
+
+    def _schedule_event(
+        self,
+        coro: Callable[..., Coroutine[Any, Any, Any]],
+        event_name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> asyncio.Task:
+        # print all the events to log
+        wrapped = self._run_event(coro, event_name, *args, **kwargs)
+        # Schedules the task
+        return self.loop.create_task(wrapped, name=f"teamtalk.py: {event_name}")
+
+    async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
+        """|coro| .
+
+        The default error handler provided by the client.
+
+        By default this logs to the library logger however it could be
+        overridden to have a different implementation.
+        The traceback from this exception is logged to the logging module.
+
+        Args:
+            event_method (str): The event method that errored.
+            *args (Any): The arguments to the event.
+            **kwargs (Any): The keyword arguments to the event.
+        """
+        _log.exception("Ignoring exception in %s", event_method)
+
+    def dispatch(self, event: str, /, *args: Any, **kwargs: Any) -> None:
+        """Dispatch an event to all listeners. This is called internally.
+
+        Args:
+            event (str): The name of the event to dispatch.
+            *args (Any): The arguments to the event.
+            **kwargs (Any): The keyword arguments to the event.
+        """
+        _log.debug("Dispatching event %s", event)
+        method = "on_" + event
+
+        listeners = self._listeners.get(event)
+        if listeners:
+            removed = []
+            for i, (future, condition) in enumerate(listeners):
+                if future.cancelled():
+                    removed.append(i)
+                    continue
+
+                try:
+                    result = condition(*args)
+                except Exception as exc:
+                    future.set_exception(exc)
+                    removed.append(i)
+                else:
+                    if result:
+                        if len(args) == 0:
+                            future.set_result(None)
+                        elif len(args) == 1:
+                            future.set_result(args[0])
+                        else:
+                            future.set_result(args)
+                        removed.append(i)
+
+            if len(removed) == len(listeners):
+                self._listeners.pop(event)
+            else:
+                for idx in reversed(removed):
+                    del listeners[idx]
+
+        try:
+            coro = getattr(self, method)
+        except AttributeError:
+            pass
+        else:
+            self._schedule_event(coro, method, *args, **kwargs)
+
+    async def _start(self):
+        self.dispatch("ready")
+        # make a while loop and allow it to run forever
+        try:
+            while True:
+                # loop through the teamtalks and check  for events
+                for teamtalk in self.teamtalks:
+                    await teamtalk._process_events()
+                await asyncio.sleep(0.001)
+        except KeyboardInterrupt:
+            # try to disconnect everything cleanly
+            for teamtalk in self.teamtalks:
+                # disconnect from the server
+                teamtalk.doLogout()
+                self.dispatch("my_logout", teamtalk.server)
+                teamtalk.disconnect()
+                self.dispatch("my_disconnect", teamtalk.server)
+
+    async def _do_after_delay(self, delay, func, *args, **kwargs):
+        await asyncio.sleep(delay)
+        print("WORKS")
+
+File: pytalk/channel.py
+"""Channel module for pytalk."""
+
+from typing import List, Union
+
+from ._utils import _get_tt_obj_attribute, _set_tt_obj_attribute, _waitForCmd
+from .permission import Permission
+from .exceptions import PermissionError
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+from .tt_file import RemoteFile
+from .user import User as TeamTalkUser
+
+
+class Channel:
+    """Represents a channel on a TeamTalk server."""
+
+    def __init__(self, teamtalk, channel: Union[int, sdk.Channel]) -> None:
+        """Initialize a Channel object.
+
+        Args:
+            teamtalk: The pytalk.TeamTalkInstance instance.
+            channel (Union[int, sdk.Channel]): The channel ID or a sdk.Channel object.
+        """
+        self.teamtalk = teamtalk
+        # if the channel_id is a int, set it to the channel_id
+        if isinstance(channel, int):
+            self.id = channel
+            self._channel, self.path = self.teamtalk._get_channel_info(self.id)
+
+        # if the channel is a sdk.Channel, set it to self._channel
+        elif isinstance(channel, sdk.Channel):
+            self._channel = channel
+            self.id = channel.nChannelID
+            self._channel, self.path = self.teamtalk._get_channel_info(self.id)
+        self.server = self.teamtalk.server
+
+    def update(self) -> bool:
+        """Update the channel information.
+
+        Example:
+            >>> channel = teamtalk.get_channel(1)
+            >>> channel.name = "New Channel Name"
+            >>> channel.update()
+
+        Raises:
+            PermissionError: If the bot does not have permission to update the channel.
+            ValueError: If the channel could not be updated.
+
+        Returns:
+            bool: True if the channel was updated successfully.
+        """
+        if not self.teamtalk.has_permission(Permission.MODIFY_CHANNELS) or not sdk._IsChannelOperator(
+            self._tt, self.super.getMyUserID(), self.id
+        ):
+            raise PermissionError("the bot does not have permission to update the channel.")
+        result = sdk._DoUpdateChannel(self.teamtalk._tt, self._channel)
+        if result == -1:
+            raise ValueError("Channel could not be updated")
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to update channels")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                raise ValueError("Channel could not be found")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_ALREADY_EXISTS:
+                raise ValueError("Channel already exists")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_HAS_USERS:
+                raise ValueError("Channel has users and can therefore not be updated")
+        return True
+
+    def _refresh(self) -> None:
+        self._channel, self.path = self.teamtalk._get_channel_info(self.id)
+
+    def send_message(self, content: str, **kwargs) -> None:
+        """Send a message to the channel.
+
+        Args:
+            content: The message to send.
+            **kwargs: Keyword arguments. See pytalk.TeamTalkInstance.send_message for more information.
+
+        Raises:
+            PermissionError: If the bot is not in the channel and is not an admin.
+        """
+        # get the bots current channel id with getMyChannelID
+        # if the bots current channel id is not the same as the channel id we are trying to send a message to, return
+        if self.teamtalk.getMyChannelID() != self.id:
+            if not self.teamtalk.is_admin():
+                raise PermissionError("Missing permission to send message to channel that the bot is not in")
+        msg = sdk.TextMessage()
+        msg.nMsgType = sdk.TextMsgType.MSGTYPE_CHANNEL
+        msg.nFromUserID = self.teamtalk.getMyUserID()
+        msg.szFromUsername = self.teamtalk.getMyUserAccount().szUsername
+        msg.nChannelID = self.id
+        msg.szMessage = sdk.ttstr(content)
+        msg.bMore = False
+        # get a pointer to our message
+        self.teamtalk._send_message(msg, **kwargs)
+
+    def upload_file(self, filepath):
+        """Upload a file to the channel.
+
+        Args:
+            filepath (str): The local path to the file to upload.
+        """
+        self.teamtalk.upload_file(self.id, filepath)
+
+    def get_users(self) -> List[TeamTalkUser]:
+        """Get a list of users in the channel.
+
+        Returns:
+            List[TeamTalkUser]: A list of pytalk.User instances in the channel.
+        """
+        users = self.teamtalk.super.getChannelUsers(self.id)
+        return [TeamTalkUser(self.teamtalk, user) for user in users]
+
+    def get_files(self) -> List[RemoteFile]:
+        """Get a list of files in the channel.
+
+        Returns:
+            List[RemoteFile]: A list of pytalk.RemoteFile instances in the channel.
+        """
+        files = self.teamtalk.super.getChannelFiles(self.id)
+        return [RemoteFile(self.teamtalk, f) for f in files]
+
+    def move(self, user: Union[TeamTalkUser, int]) -> None:
+        """Move a user to this channel.
+
+        Args:
+            user: The user to move.
+        """
+        self.teamtalk.move_user(user, self, False)
+
+    def kick(self, user: Union[TeamTalkUser, int]) -> None:
+        """Kick a user from this channel.
+
+        Args:
+            user: The user to kick.
+        """
+        self.teamtalk.kick_user(user, self)
+
+    def ban(self, user: Union[TeamTalkUser, int]) -> None:
+        """Ban a user from this channel.
+
+        Args:
+            user: The user to ban.
+        """
+        self.teamtalk.ban_user(user, self)
+
+    def subscribe(self, subscription) -> None:
+        """Subscribe to a subscription for all users in this channel.
+
+        Args:
+            subscription: The subscription to subscribe to.
+        """
+        users = self.get_users()
+        for user in users:
+            user.subscribe(subscription)
+
+    def unsubscribe(self, subscription) -> None:
+        """Unsubscribe from a subscription for all users in this channel.
+
+        Args:
+            subscription: The subscription to unsubscribe from.
+        """
+        users = self.get_users()
+        for user in users:
+            user.unsubscribe(subscription)
+
+    def __getattr__(self, name: str):
+        """Try to get the attribute from the channel object.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self._channel, name)
+
+    def __setattr__(self, name: str, value):
+        """Try to set the specified attribute.
+
+        Args:
+            name: The name of the attribute.
+            value: The value to set the attribute to.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            self.__dict__[name] = value
+        else:
+            # id cannot be change.
+            if name in ["teamtalk", "id", "server", "path", "_channel"]:
+                self.__dict__[name] = value
+            else:
+                _get_tt_obj_attribute(self._channel, name)
+                # if we have gotten here, we can set the attribute
+                _set_tt_obj_attribute(self._channel, name, value)
+
+
+class _ChannelTypeMeta(type):
+    def __getattr__(cls, name: str) -> sdk.UserRight:
+        name = f"CHANNEL_{name}"
+        return getattr(sdk.ChannelType, name, None)
+
+    def __dir__(cls) -> list[str]:
+        return [attr[8:] for attr in dir(sdk.ChannelType) if attr.startswith("CHANNEL_")]
+
+
+class ChannelType(metaclass=_ChannelTypeMeta):
+    """A class representing Channel types in TeamTalk."""
+
+File: pytalk/codec.py
+"""Provides a dynamic way to access SDK codec identifiers by user-friendly names."""
+
+from typing import Any
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class _CodecTypeMeta(type):
+    def __getattr__(cls, name: str) -> Any:
+        name_upper = name.upper()
+
+        potential_names_in_sdk = [
+            name_upper,
+            name_upper + "_CODEC",
+        ]
+        if name_upper.endswith("_CODEC"):
+            potential_names_in_sdk.append(name_upper[:-6])
+
+        for sdk_name_candidate in potential_names_in_sdk:
+            if hasattr(sdk.Codec, sdk_name_candidate):
+                return getattr(sdk.Codec, sdk_name_candidate)
+
+        raise AttributeError(
+            f"'{cls.__name__}' has no attribute '{name}' corresponding to a "
+            f"known SDK Codec. Tried resolving from: "
+            f"{potential_names_in_sdk} in sdk.Codec."
+        )
+
+    def __dir__(cls) -> list[str]:
+        members = set()
+        excluded_attributes = [
+            'name',
+            'value',
+            'values',
+            'name_mapping',
+            'value_mapping',
+            'mro',
+        ]
+
+        for attr_name_sdk in dir(sdk.Codec):
+            if not attr_name_sdk.startswith('_') and attr_name_sdk not in excluded_attributes:
+
+                user_friendly_name = attr_name_sdk
+                if user_friendly_name.endswith("_CODEC"):
+                    user_friendly_name = user_friendly_name[:-6]
+
+                try:
+                    resolved_attr = getattr(cls, user_friendly_name)
+                    if isinstance(resolved_attr, int):
+                        members.add(user_friendly_name)
+                except AttributeError:
+                    pass
+
+        return sorted(list(members))
+
+
+class CodecType(metaclass=_CodecTypeMeta):
+    """Represents media codec types available in the SDK (both audio and video).
+
+    Allows dynamic access to SDK codec integer values by their common names,
+    similar to how `pytalk.Permission` works. The lookup is case-insensitive
+    and attempts to match common naming patterns in `sdk.Codec`.
+
+    Example:
+        `CodecType.WEBM_VP8` (resolves to `sdk.Codec.WEBM_VP8_CODEC`)
+        `CodecType.OPUS` (resolves to `sdk.Codec.OPUS_CODEC`)
+
+    Warning:
+        When using these values with specific SDK functions (like setting
+        a video codec for media file streaming), ensure you are passing a codec type
+        appropriate for that function's parameter.
+    """
+
+    pass
+
+File: pytalk/device.py
+"""Provides the SoundDevice class representing a TeamTalk audio device."""
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+from ._utils import _get_tt_obj_attribute
+
+
+class SoundDevice:
+    """Represents a sound device available in TeamTalk."""
+
+    def __init__(self, device_struct: sdk.SoundDevice, is_default_input: bool = False):
+        """Initializes a SoundDevice object.
+
+        Args:
+            device_struct: The sdk.SoundDevice struct from the TeamTalk SDK.
+            is_default_input: True if this is the default system input device.
+        """
+        self._device_struct = device_struct
+        self._is_default_input = is_default_input
+
+    def __getattr__(self, name: str):  # noqa: DAR101, DAR401
+        """Gets an attribute from the underlying SDK structure.
+
+        Args:
+            name: The pythonic name of the attribute to get.
+
+        Returns:
+            The value of the attribute from the SDK structure.
+
+        Raises:
+            AttributeError: If the attribute is not found in the structure.
+        """
+        if name == "_device_struct":
+            return self.__dict__["_device_struct"]
+        if name == "_is_default_input":
+            return self.__dict__["_is_default_input"]
+        try:
+            value = _get_tt_obj_attribute(self._device_struct, name)
+            if isinstance(value, (bytes, sdk.TTCHAR, sdk.TTCHAR_P)):
+                return sdk.ttstr(value)
+            return value
+        except AttributeError:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    @property  # noqa: DAR201
+    def id(self) -> int:
+        """Gets the ID of the device.
+
+        Returns:
+            The integer device ID.
+        """
+        return self.device_id
+
+    @property  # noqa: DAR201
+    def name(self) -> str:
+        """Gets the name of the device.
+
+        Returns:
+            The string name of the device.
+        """
+        return self.device_name
+
+    @property  # noqa: DAR201
+    def sound_system(self) -> int:
+        """Gets the sound system ID (e.g., WASAPI, ALSA).
+
+        Returns:
+            The integer ID of the sound system.
+        """
+        return self.sound_system
+
+    @property  # noqa: DAR201
+    def is_input(self) -> bool:
+        """Returns True if this is an input device.
+
+        Returns:
+            True if the device has input channels, False otherwise.
+        """
+        try:
+            return self.max_input_channels > 0
+        except AttributeError:
+            return False
+
+    @property  # noqa: DAR201
+    def is_output(self) -> bool:
+        """Returns True if this is an output device.
+
+        Returns:
+            True if the device has output channels, False otherwise.
+        """
+        try:
+            return self.max_output_channels > 0
+        except AttributeError:
+            return False
+
+    @property  # noqa: DAR201
+    def is_default_input(self) -> bool:
+        """Returns True if this is the default system input device.
+
+        Returns:
+            True if the device was marked as the default input, False otherwise.
+        """
+        return self._is_default_input
+
+    def __repr__(self) -> str:  # noqa: DAR201
+        """Return a developer-friendly string representation of the device.
+
+        Returns:
+            A string representation of the SoundDevice instance.
+        """
+        input_output = []
+        default_marker = " (Default)" if self.is_default_input else ""
+        try:
+            if self.is_input:
+                input_output.append("Input")
+            if self.is_output:
+                input_output.append("Output")
+        except AttributeError:
+            pass
+        type_str = "/".join(input_output)
+        try:
+            return f"SoundDevice(id={self.id}, name='{self.name}{default_marker}', type='{type_str}')"
+        except AttributeError:
+            _id = getattr(self._device_struct, 'nDeviceID', 'N/A')
+            _name = sdk.ttstr(getattr(self._device_struct, 'szDeviceName', 'N/A'))
+            return f"SoundDevice(id={_id}, name='{_name}{default_marker}', type='{type_str}')"
+
+File: pytalk/download_sdk.py
+"""Download the TeamTalk SDK and extract it to the implementation directory."""
+
+from .tools import ttsdk_downloader
+
+
+def download_sdk():
+    """Download the TeamTalk SDK and extract it to the implementation directory."""
+    ttsdk_downloader.install()
+
+File: pytalk/enums.py
+"""TeamTalk enums and constants."""
+
+from typing_extensions import Self
+
+
+class TeamTalkServerInfo:
+    """Holds the required information to connect and login to a TeamTalk server."""
+
+    def __init__(
+        self,
+        host: str,
+        tcp_port: int,
+        udp_port: int,
+        username: str,
+        password: str = "",
+        encrypted: bool = False,
+        nickname: str = "",
+        join_channel_id: int = -1,
+        join_channel_password: str = "",
+    ) -> None:
+        """Initialize a TeamTalkServerInfo object.
+
+        Args:
+            host (str): The host of the TeamTalk server.
+            tcp_port (int): The TCP port of the TeamTalk server.
+            udp_port (int): The UDP port of the TeamTalk server.
+            username (str): The username to login with.
+            password (str): The password to login with. Defaults to "" (no password).
+            encrypted (bool): Whether or not to use encryption. Defaults to False.
+            nickname (str): The nickname to use. Defaults to "teamtalk.py Bot".
+            join_channel_id (int): The channel ID to join. Defaults to -1 (don't join a channel on login). Set to 0 to join the root channel, or a positive integer to join a specific channel. # noqa: E501
+            join_channel_password (str): The password to join the channel with. Defaults to "" (no password).
+        """
+        self.host = host
+        self.tcp_port = tcp_port
+        self.udp_port = udp_port
+        self.username = username
+        self.password = password
+        self.encrypted = encrypted
+        self.nickname = nickname if nickname else username
+        self.join_channel_id = join_channel_id
+        self.join_channel_password = join_channel_password
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Self:
+        """Construct a TeamTalkServerInfo object from a dictionary.
+
+        Args:
+            data (dict): The dictionary to construct the object from.
+
+        Returns:
+            Self: The constructed object.
+        """
+        return cls(**data)
+
+    # convert this object to a dictionary
+    def to_dict(self) -> dict:
+        """Convert this object to a dictionary.
+
+        Returns:
+            dict: The dictionary representation of this object.
+        """
+        return {
+            "host": self.host,
+            "tcp_port": self.tcp_port,
+            "udp_port": self.udp_port,
+            "username": self.username,
+            "password": self.password,
+            "encrypted": self.encrypted,
+            "nickname": self.nickname if self.nickname else "",
+            "join_channel_id": self.join_channel_id,
+            "join_channel_password": self.join_channel_password,
+        }
+
+    # compare this object to another object
+    def __eq__(self, other: object) -> bool:
+        """Compare this object to another object.
+
+        Args:
+            other: The object to compare to.
+
+        Returns:
+            bool: Whether or not the objects are equal.
+        """
+        if not isinstance(other, TeamTalkServerInfo):
+            return False
+        return (
+            self.host == other.host
+            and self.tcp_port == other.tcp_port
+            and self.udp_port == other.udp_port
+            and self.username == other.username
+            and self.password == other.password
+            and self.encrypted == other.encrypted
+        )
+
+    # compare this object to another object
+    def __ne__(self, other: object) -> bool:
+        """Compare this object to another object.
+
+        Args:
+            other: The object to compare to.
+
+        Returns:
+            bool: Whether or not the objects are not equal.
+        """
+        return not self.__eq__(other)
+
+
+class UserStatusMode:
+    """Represents user status modes (mutually exclusive)."""
+
+    ONLINE = 0
+    """The user is online."""
+
+    AWAY = 1
+    """The user is away."""
+
+    QUESTION = 2
+    """The user has a question."""
+
+
+class _Gender:
+    """Internal representation of gender flags (bitwise combinable)."""
+
+    MALE = 0x00000000
+    """Represents a male user status. This corresponds to no specific gender bit being set in the SDK."""
+
+    FEMALE = 0x00000100
+    """Represents a female user status. Corresponds to `sdk.StatusMode.STATUSMODE_FEMALE`."""
+
+    NEUTRAL = 0x00001000
+    """Represents a neutral gender user status. Corresponds to `sdk.StatusMode.STATUSMODE_NEUTRAL`."""
+
+
+class Status:
+    """A helper class to construct combined status values for a user.
+
+    Use `Status.online`, `Status.away`, or `Status.question` properties,
+    then chain them with a gender property (`.male`, `.female`, `.neutral`)
+    to get the final status value for `pytalk.TeamTalkInstance.change_status`.
+
+    Examples:
+        `Status.online.male`
+        `Status.away.female`
+        `Status.question.neutral`
+
+    This class should not be instantiated directly.
+    """
+
+    def __init__(self) -> None:
+        """Prevent direct instantiation of the Status class.
+
+        Raises:
+            TypeError: If an attempt is made to instantiate this class.
+        """
+        raise TypeError(
+            "Status class is not meant to be instantiated directly. "
+            "Use class properties like Status.online, Status.away, or Status.question instead."
+        )
+
+    class _StatusBuilder:
+        """Internal builder for combining status mode and gender."""
+
+        def __init__(self, base_mode_value: int):
+            """Initializes the status builder with a base mode value.
+
+            Args:
+                base_mode_value (int): The base integer value for the status mode.
+            """
+            self._value = base_mode_value
+
+        @property
+        def male(self) -> int:
+            """Represents a male status.
+
+            Returns:
+                int: The combined status integer value.
+            """
+            return self._value | _Gender.MALE
+
+        @property
+        def female(self) -> int:
+            """Represents a female status.
+
+            Returns:
+                int: The combined status integer value.
+            """
+            return self._value | _Gender.FEMALE
+
+        @property
+        def neutral(self) -> int:
+            """Represents a neutral gender status.
+
+            Returns:
+                int: The combined status integer value.
+            """
+            return self._value | _Gender.NEUTRAL
+
+    _MODE_MASK = 0xFF
+    """A bitmask for extracting the status mode from a combined status integer."""
+
+    _GENDER_MASK = _Gender.FEMALE | _Gender.NEUTRAL
+    """A bitmask for extracting the gender bits from a combined status integer."""
+
+    @classmethod
+    @property
+    def online(cls) -> _StatusBuilder:
+        """Sets the user status to 'online'.
+
+        Returns:
+            _StatusBuilder: An internal builder to further specify gender.
+        """
+        return cls._StatusBuilder(UserStatusMode.ONLINE)
+
+    @classmethod
+    @property
+    def away(cls) -> _StatusBuilder:
+        """Sets the user status to 'away'.
+
+        Returns:
+            _StatusBuilder: An internal builder to further specify gender.
+        """
+        return cls._StatusBuilder(UserStatusMode.AWAY)
+
+    @classmethod
+    @property
+    def question(cls) -> _StatusBuilder:
+        """Sets the user status to 'question'.
+
+        Returns:
+            _StatusBuilder: An internal builder to further specify gender.
+        """
+        return cls._StatusBuilder(UserStatusMode.QUESTION)
+
+
+class UserType:
+    """The type of a user account."""
+
+    DEFAULT = 0x1
+    """The default user type. This only has the permissions set, and no other permissions."""
+
+    ADMIN = 0x02
+    """The admin user type. This has all permissions."""
+
+File: pytalk/exceptions.py
+"""teamtalk.py exceptions."""
+
+
+class TeamTalkException(Exception):
+    """Base exception class for teamtalk.py.
+
+    All other exceptions inherit from this class, which inherits from :exc:`Exception`.
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialise the exception.
+
+        Args:
+            message (str): The message to be displayed when the exception is raised.
+        """
+        super().__init__(message)
+
+
+class PermissionError(TeamTalkException):
+    """Exception raised when the bot does not have permission to perform an action."""
+
+File: pytalk/implementation/__init__.py
+
+
+File: pytalk/instance.py
+"""This module contains the TeamTalkInstance class.
+
+The TeamTalkInstance class contains one instance of a connection to a TeamTalkServer.
+It is used to send and receive messages, join and leave channels, and perform other actions.
+In addition, it's also here that events are dispatched.
+"""
+
+import asyncio
+import ctypes
+import logging
+import os
+import threading
+import time
+from typing import List, Optional, Union
+
+from ._utils import (
+    _do_after,
+    _waitForCmd,
+    _waitForEvent,
+    percent_to_ref_volume,
+    ref_volume_to_percent,
+)
+from .audio import (
+    AudioBlock,
+    MuxedAudioBlock,
+    _AcquireUserAudioBlock,
+    _ReleaseUserAudioBlock,
+)
+from .channel import Channel as TeamTalkChannel
+from .channel import ChannelType
+from .codec import CodecType
+from .device import SoundDevice
+from .enums import TeamTalkServerInfo, Status, UserType
+from .exceptions import PermissionError
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+from .message import BroadcastMessage, ChannelMessage, CustomMessage, DirectMessage
+from .permission import Permission
+from .server import Server as TeamTalkServer
+from .statistics import Statistics as TeamTalkServerStatistics
+from .subscription import Subscription
+from .tt_file import RemoteFile
+from .user import User as TeamTalkUser
+from .user_account import BannedUserAccount as TeamTalkBannedUserAccount
+from .user_account import UserAccount as TeamTalkUserAccount
+
+
+_log = logging.getLogger(__name__)
+
+
+class TeamTalkInstance(sdk.TeamTalk):
+    """Represents a TeamTalk5 instance."""
+
+    def __init__(self, bot, server_info: TeamTalkServerInfo) -> None:
+        """Initializes a pytalk.TeamTalkInstance instance.
+
+        Args:
+            bot: The pytalk.Bot instance.
+            server_info: The server info for the server we wish to connect to.
+        """
+        # put the super class in a variable so we can call it later
+        self.super = super()
+        # call the super class's __init__ method
+        self.super.__init__()
+        # set the bot
+        self.bot = bot
+        # set the server info
+        self.server_info = server_info
+        self.server = TeamTalkServer(self, server_info)
+        self.channel = lambda: self.get_channel(self.super.getMyChannelID())
+        self.connected = False
+        self.logged_in = False
+        self.init_time = time.time()
+        self.user_accounts = []
+        self.banned_users = []
+        self._current_input_device_id: Optional[int] = -1
+        self._audio_sdk_lock = threading.Lock()
+
+    def connect(self) -> bool:
+        """Connects to the server. This doesn't return until the connection is successful or fails.
+
+        Returns:
+            bool: True if the connection was successful, False otherwise.
+        """
+        if not self.super.connect(
+            sdk.ttstr(self.server_info.host),
+            self.server_info.tcp_port,
+            self.server_info.udp_port,
+            bEncrypted=self.server_info.encrypted,
+        ):
+            return False
+        result, msg = _waitForEvent(self.super, sdk.ClientEvent.CLIENTEVENT_CON_SUCCESS)
+        if not result:
+            return False
+        self.bot.dispatch("my_connect", self.server)
+        self.connected = True
+        self.init_time = time.time()
+        return True
+
+    def login(self, join_channel_on_login: bool = True) -> bool:
+        """Logs in to the server. This doesn't return until the login is successful or fails.
+
+        Args:
+            join_channel_on_login: Whether to join the channel on login or not.
+
+        Returns:
+            bool: True if the login was successful, False otherwise.
+        """
+        self.super.doLogin(
+            sdk.ttstr(self.server_info.nickname),
+            sdk.ttstr(self.server_info.username),
+            sdk.ttstr(self.server_info.password),
+            sdk.ttstr(self.bot.client_name),
+        )
+        result, msg = _waitForEvent(self.super, sdk.ClientEvent.CLIENTEVENT_CMD_MYSELF_LOGGEDIN)
+        if not result:
+            return False
+        self.bot.dispatch("my_login", self.server)
+        self.logged_in = True
+        #        self.super.initSoundInputDevice(1978)
+        #        self.super.initSoundOutputDevice(1978)
+        if join_channel_on_login:
+            channel_id_to_join = self.server_info.join_channel_id
+            if channel_id_to_join > 0:  # Only join if channel_id is strictly positive
+                self.join_channel_by_id(channel_id_to_join)
+            # If channel_id_to_join is 0 or negative, nothing happens.
+        self.init_time = time.time()
+        return True
+
+    def logout(self):
+        """Logs out of the server."""
+        self.super.doLogout()
+        self.logged_in = False
+
+    def disconnect(self):
+        """Disconnects from the server."""
+        self.super.disconnect()
+        self.connected = False
+
+    def change_nickname(self, nickname: str):
+        """Changes the nickname of the bot.
+
+        Args:
+            nickname: The new nickname.
+        """
+        self.super.doChangeNickname(sdk.ttstr(nickname))
+
+    def change_status(self, status_flags: int, status_message: str) -> None:
+        """Changes the status of the bot using combined status flags.
+
+        This method allows setting the user's online mode (online, away, question)
+        and gender simultaneously, while preserving other active status flags
+        (like video/desktop transmission).
+
+        Args:
+            status_flags (int): A combined integer value representing the desired
+                                  status mode and gender. This can be constructed
+                                  using the `pytalk.enums.Status` helper class
+                                  (e.g., `Status.online.female`).
+            status_message (str): The status message to display.
+        """
+        current_user_obj = self.get_user(self.super.getMyUserID())
+        current_full_status_mode = current_user_obj.status_mode
+
+        new_mode_bits = status_flags & Status._MODE_MASK
+        new_gender_bits = status_flags & Status._GENDER_MASK
+
+        other_flags_mask = ~(Status._MODE_MASK | Status._GENDER_MASK)
+        preserved_other_flags = current_full_status_mode & other_flags_mask
+
+        final_status = new_mode_bits | new_gender_bits | preserved_other_flags
+
+        self.super.doChangeStatus(final_status, sdk.ttstr(status_message))
+
+    def get_sound_devices(self) -> List[SoundDevice]:
+        """Gets the list of available TeamTalk sound devices, marking the default input.
+
+        Returns:
+            A list of SoundDevice objects representing the available devices.
+            Returns an empty list if the SDK call fails.
+        """
+        default_in_id = -1
+        try:
+            defaults = self.super.getDefaultSoundDevices()
+            if defaults:
+                if isinstance(defaults, (tuple, list)) and len(defaults) == 2:
+                    default_in_id, _ = defaults
+                else:
+                    _log.warning(f"Unexpected return type from getDefaultSoundDevices: {type(defaults)}")
+            else:
+                _log.warning(f"Call to getDefaultSoundDevices returned None or False for instance {self.server_info.host}")
+        except Exception as e:
+            _log.exception(f"Error getting default sound devices for instance {self.server_info.host}: {e}")
+
+        sdk_devices = self.super.getSoundDevices()
+        if not sdk_devices:
+            _log.warning(f"Failed to get sound device list via superclass for instance {self.server_info.host}")
+            return []
+
+        devices = [SoundDevice(dev, is_default_input=(dev.nDeviceID == default_in_id)) for dev in sdk_devices]
+        return devices
+
+    def get_current_input_device_id(self) -> Optional[int]:
+        """Gets the ID of the currently active input device for this instance.
+
+        Note:
+            This returns the ID that was stored when the input device was
+            last initialized or set for this instance using set_input_device.
+            It does not query the SDK directly for the current device.
+
+        Returns:
+            The ID of the current input device, or -1 if not set or unknown.
+        """
+        return self._current_input_device_id
+
+    def set_input_device(self, device_id_or_name: Union[int, str]) -> bool:
+        """Sets and initializes the input device for this instance.
+
+        Accepts a specific device ID (int) or the string "default" to use the
+        system default input device.
+        Updates the stored current input device ID on success.
+
+        Args:
+            device_id_or_name: The ID (int) of the device or the string "default".
+
+        Returns:
+            True on success, False on initialization failure or if default not found.
+
+        Raises:
+            ValueError: If the input is not a valid integer or "default".
+        """
+        target_device_id = -1
+
+        if isinstance(device_id_or_name, str) and device_id_or_name.lower() == "default":
+            _log.debug(f"Attempting to set default input device for instance {self.server_info.host}")
+            try:
+                defaults = self.super.getDefaultSoundDevices()
+                if defaults and isinstance(defaults, (tuple, list)) and len(defaults) == 2:
+                    target_device_id = defaults[0]
+                    if target_device_id < 0:
+                        _log.error(
+                            f"System returned invalid default input device ID ({target_device_id}) "
+                            f"for instance {self.server_info.host}"
+                        )
+                        return False
+                    _log.info(f"Resolved 'default' to input device ID: {target_device_id}")
+                else:
+                    _log.error(f"Could not determine default input device for instance {self.server_info.host}")
+                    return False
+            except Exception as e:
+                _log.exception(f"Error getting default sound devices when setting 'default': {e}")
+                return False
+        else:
+            try:
+                target_device_id = int(device_id_or_name)
+            except ValueError:
+                raise ValueError("Input must be int ID or 'default'")
+            except TypeError:
+                raise ValueError("Input must be int ID or 'default'")
+
+        _log.debug(f"Setting input device for instance {self.server_info.host} to ID: {target_device_id}")
+        sdk._CloseSoundInputDevice(self._tt)
+        success = sdk._InitSoundInputDevice(self._tt, target_device_id)
+
+        if success:
+            self._current_input_device_id = target_device_id
+            _log.info(f"Successfully set input device for instance {self.server_info.host} to ID: {target_device_id}")
+        else:
+            self._current_input_device_id = -1
+            _log.error(f"Failed to set input device for instance {self.server_info.host} to ID: {target_device_id}")
+        return success
+
+    def enable_voice_transmission(self, enabled: bool) -> bool:
+        """Enables or disables voice transmission state for this instance.
+
+        Args:
+            enabled: True to enable voice transmission, False to disable it.
+
+        Returns:
+            True if the SDK call was successful, False otherwise.
+        """
+        action = "Enabling" if enabled else "Disabling"
+        _log.debug(f"{action} voice transmission for instance {self.server_info.host}")
+        success = self.super.enableVoiceTransmission(enabled)
+        if not success:
+            _log.error(f"Failed to {action.lower()} voice transmission for instance {self.server_info.host}")
+        return success
+
+    def get_input_volume(self) -> int:
+        """Gets the current input gain level as percentage (0-100).
+
+        Matches the TeamTalk Qt client's user volume scaling.
+
+        Returns:
+            int: The volume percentage (0-100). Returns 0 if the SDK call fails.
+        """
+        sdk_gain = sdk._GetSoundInputGainLevel(self._tt)
+        if sdk_gain < 0:
+            _log.warning(f"Could not get input gain for instance {self.server_info.host}, SDK returned {sdk_gain}")
+            return 0
+        return ref_volume_to_percent(sdk_gain)
+
+    def set_input_volume(self, percentage: int) -> bool:
+        """Sets the input gain level from a percentage (0-100).
+
+        Matches the TeamTalk Qt client's user volume scaling.
+
+        Args:
+            percentage (int): The desired volume percentage (0-100).
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        Raises:
+            ValueError: If percentage is out of range (0-100).
+        """
+        if not 0 <= percentage <= 100:
+            raise ValueError("Percentage must be between 0 and 100")
+
+        internal_volume = percent_to_ref_volume(float(percentage))
+
+        _log.debug(
+            f"Setting input volume for instance {self.server_info.host} to {percentage}% (internal: {internal_volume})"
+        )
+        success = sdk._SetSoundInputGainLevel(self._tt, internal_volume)
+        if not success:
+            _log.error(f"Failed to set input volume for instance {self.server_info.host}")
+        return success
+
+    # Media File Streaming Functions
+    def start_streaming_media_file_to_channel(self, path: str, video_codec: Optional[sdk.VideoCodec] = None) -> bool:
+        """Starts streaming a media file to the channel.
+
+        If no video codec is specified, it defaults to WebM VP8.
+
+        Args:
+            path (str): The path to the media file.
+            video_codec (Optional[sdk.VideoCodec]): An optional video codec object.
+
+        Returns:
+            bool: True if the streaming started successfully, False otherwise.
+        """
+        if video_codec is None:
+            codec_to_use = sdk.VideoCodec()
+            codec_to_use.nCodec = CodecType.WEBM_VP8
+        else:
+            codec_to_use = video_codec
+
+        return self.super.startStreamingMediaFileToChannel(sdk.ttstr(path), ctypes.byref(codec_to_use))
+
+    def stop_streaming_media_file_to_channel(self) -> bool:
+        """Stops the current media file streaming to the channel.
+
+        Returns:
+            bool: True if the streaming stopped successfully, False otherwise.
+        """
+        return self.super.stopStreamingMediaFileToChannel()
+
+    # permission stuff
+    def has_permission(self, permission: Permission) -> bool:
+        """Checks if the bot has a permission.
+
+        If the user is an admin, they have all permissions.
+
+        Args:
+            permission: The permission to check for.
+
+        Returns:
+            bool: True if the bot has the permission, False otherwise.
+        """
+        user = self.super.getMyUserAccount()
+        # first check if they are an admin
+        if user.uUserType == sdk.UserType.USERTYPE_ADMIN:
+            return True
+        user_rights = user.uUserRights
+        return (user_rights & permission) == permission
+
+    def is_admin(self) -> bool:
+        """Checks if the bot is an admin.
+
+        Returns:
+            bool: True if the bot is an admin, False otherwise.
+        """
+        return self.is_user_admin(self.super.getMyUserID())
+
+    def is_user_admin(self, user: Union[TeamTalkUser, int]) -> bool:
+        """Checks if a user is an admin.
+
+        Args:
+            user: The user to check.
+
+        Returns:
+            bool: True if the user is an admin, False otherwise.
+
+        Raises:
+            TypeError: If the user is not of type pytalk.User or int.
+        """
+        if isinstance(user, int):
+            user = self.super.getUser(user)
+            return user.uUserType == sdk.UserType.USERTYPE_ADMIN
+        if isinstance(user, TeamTalkUser):
+            return user.user_type == sdk.UserType.USERTYPE_ADMIN
+        raise TypeError("User must be of type pytalk.User or int")
+
+    # Subscription stuff
+    def subscribe(self, user: TeamTalkUser, subscription: Subscription):
+        """Subscribes to a subscription.
+
+        Args:
+            user: The user to subscribe to.
+            subscription: The subscription to subscribe to.
+        """
+        sdk._DoSubscribe(self._tt, user.id, subscription)
+
+    def unsubscribe(self, user: TeamTalkUser, subscription: Subscription):
+        """Unsubscribes from a subscription.
+
+        Args:
+            user: The user to unsubscribe from.
+            subscription: The subscription to unsubscribe from.
+        """
+        sdk._DoUnsubscribe(self._tt, user.id, subscription)
+
+    def is_subscribed(self, subscription: Subscription) -> bool:
+        """Checks if the bot is subscribed to a subscription.
+
+        Args:
+            subscription: The subscription to check.
+
+        Returns:
+            bool: True if the bot is subscribed to the subscription, False otherwise.
+        """
+        current_subscriptions = self._get_my_user().local_subscriptions
+        # it's a bitfield so we can just check if the subscription is in the bitfield
+        return (current_subscriptions & subscription) == subscription
+
+    def join_root_channel(self):
+        """Joins the root channel."""
+        self.join_channel_by_id(self.super.getRootChannelID())
+
+    def join_channel_by_id(self, id: int, password: str = ""):
+        """Joins a channel by its ID.
+
+        Args:
+            id: The ID of the channel to join.
+            password: The password of the channel to join.
+        """
+        self.super.doJoinChannelByID(id, sdk.ttstr(password))
+
+    def join_channel(self, channel: TeamTalkChannel):
+        """Joins a channel.
+
+        Args:
+            channel: The channel to join.
+        """
+        self.super.doJoinChannelByID(channel.id, channel.password)
+
+    def leave_channel(self):
+        """Leaves the current channel."""
+        self.super.doLeaveChannel()
+
+    def get_channel(self, channel_id: int) -> TeamTalkChannel:
+        """Gets a channel by its ID.
+
+        Args:
+            channel_id: The ID of the channel to get.
+
+        Returns:
+            TeamTalkChannel: The channel.
+        """
+        return TeamTalkChannel(self, channel_id)
+
+    def get_path_from_channel(self, channel: Union[TeamTalkChannel, int]) -> str:
+        """Gets the path of a channel.
+
+        Args:
+            channel: The channel to get the path of.
+
+        Returns:
+            str: The path of the channel.
+
+        Raises:
+            TypeError: If the channel is not of type pytalk.Channel or int.
+            ValueError: If the channel is not found.
+        """
+        if isinstance(channel, TeamTalkChannel):
+            channel = channel.id
+        # variable to hold the path
+        path = sdk.TTCHAR()
+        result = sdk._GetChannelPath(self.super, channel, path)
+        if not result:
+            raise ValueError("Channel not found")
+        return path.value
+
+    def get_channel_from_path(self, path: str) -> TeamTalkChannel:
+        """Gets a channel by its path.
+
+        Args:
+            path: The path of the channel to get.
+
+        Returns:
+            TeamTalkChannel: The channel.
+
+        Raises:
+            ValueError: If the channel is not found.
+        """
+        result = sdk._GetChannelIDFromPath(self._tt, sdk.ttstr(path))
+        if result == 0:
+            raise ValueError("Channel not found")
+        return TeamTalkChannel(self, result)
+
+    # create a channel. Take in a name, parent channel. Optionally take in a topic, password and channel type
+    def create_channel(
+        self,
+        name: str,
+        parent_channel: Union[TeamTalkChannel, int],
+        topic: str = "",
+        password: str = "",
+        channel_type: ChannelType = ChannelType.CHANNEL_DEFAULT,
+    ) -> bool:
+        """Creates a channel.
+
+        Args:
+            name: The name of the channel to create.
+            parent_channel: The parent channel of the channel.
+            topic: The topic of the channel.
+            password: The password of the channel. Leave empty for no password.
+            channel_type: The type of the channel. Defaults to CHANNEL_DEFAULT.
+
+        Raises:
+            PermissionError: If the bot does not have permission to create channels.
+            ValueError: If the channel could not be created.
+
+        Returns:
+            bool: True if the channel was created, False otherwise.
+        """
+        if not self.has_permission(Permission.MODIFY_CHANNELS):
+            raise PermissionError("The bot does not have permission to create channels")
+        if isinstance(parent_channel, TeamTalkChannel):
+            parent_channel = parent_channel.id
+        new_channel = sdk.Channel()
+        new_channel.nParentID = parent_channel
+        new_channel.szName = sdk.ttstr(name)
+        new_channel.szTopic = sdk.ttstr(topic)
+        new_channel.szPassword = sdk.ttstr(password)
+        new_channel.bPassword = password != ""
+        new_channel.uChannelType = channel_type
+        result = sdk._DoMakeChannel(self._tt, new_channel)
+        if result == -1:
+            raise ValueError("Channel could not be created")
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to create channels")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_ALREADY_EXISTS:
+                raise ValueError("Channel already exists")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                raise ValueError("Combined channel path is too long. Try using a shorter channel name")
+            if err_nr == sdk.ClientError.CMDERR_INCORRECT_CHANNEL_PASSWORD:
+                raise ValueError("Channel password too long")
+        return True
+
+    def delete_channel(self, channel: Union[TeamTalkChannel, int]):
+        """Deletes a channel.
+
+        Args:
+            channel: The channel to delete.
+
+        Raises:
+            TypeError: If the channel is not of type pytalk.Channel or int.
+            PermissionError: If the bot doesn't have the permission to delete the channel.
+            ValueError: If the channel is not found.
+
+        Returns:
+            bool: True if the channel was deleted.
+        """
+        if not self.has_permission(Permission.MODIFY_CHANNELS):
+            raise PermissionError("The bot does not have permission to delete channels")
+        if isinstance(channel, TeamTalkChannel):
+            channel = channel.id
+        result = sdk._DoRemoveChannel(self._tt, channel)
+        if result == -1:
+            raise ValueError("Channel could not be deleted")
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to delete channels")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                raise ValueError("Channel not found.")
+        return True
+
+    def make_channel_operator(
+        self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkUser, int], operator_password: str = ""
+    ) -> bool:
+        """Makes a user the channel operator.
+
+        Args:
+            user: The user to make the channel operator.
+            channel: The channel to make the user the channel operator in.
+            operator_password: The operator password of the channel.
+
+        Raises:
+            TypeError: If the user or channel is not of type pytalk.User or int.
+            PermissionError: If the bot doesn't have the permission to make a user the channel operator.
+            ValueError: If the user or channel is not found.
+
+        Returns:
+            bool: True if the user was made the channel operator, False otherwise.
+        """
+        if isinstance(user, int):
+            user = self.get_user(user)
+        if isinstance(channel, int):
+            channel = self.get_channel(channel)
+        result = sdk.DoChannelOpEx(self.super, user.id, channel.id, sdk.ttstr(operator_password), True)
+        if result == -1:
+            raise PermissionError("The bot does not have the permission to make a user the channel operator")
+            return False
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to make a user the channel operator")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                raise ValueError("The channel does not exist")
+            if err_nr == sdk.ClientError.CMDERR_USER_NOT_FOUND:
+                raise ValueError("The user does not exist")
+            if err_nr == sdk.ClientError.CMDERR_INCORRECT_OP_PASSWORD:
+                raise ValueError("The operator password is incorrect")
+            return False
+        return True
+
+    def remove_channel_operator(
+        self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkUser, int], operator_password: str = ""
+    ) -> bool:
+        """Removes a user as the channel operator.
+
+        Args:
+            user: The user to make the channel operator.
+            channel: The channel to make the user the channel operator in.
+            operator_password: The operator password of the channel.
+
+        Raises:
+            TypeError: If the user or channel is not of type pytalk.User or int.
+            PermissionError: If the bot doesn't have the permission to make a user the channel operator.
+            ValueError: If the channel or user does not exist.
+
+        Returns:
+            bool: True if the user was removed as the channel operator, False otherwise.
+        """
+        if isinstance(user, int):
+            user = self.get_user(user)
+        if isinstance(channel, int):
+            channel = self.get_channel(channel)
+        result = sdk.DoChannelOpEx(self.super, user.id, channel.id, sdk.ttstr(operator_password), False)
+        if result == -1:
+            raise PermissionError("The bot does not have the permission to make a user the channel operator")
+            return False
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to make a user the channel operator")
+            if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                raise ValueError("The channel does not exist")
+            if err_nr == sdk.ClientError.CMDERR_USER_NOT_FOUND:
+                raise ValueError("The user does not exist")
+            if err_nr == sdk.ClientError.CMDERR_INCORRECT_OP_PASSWORD:
+                raise ValueError("The operator password is incorrect")
+            return False
+        return True
+
+    def get_user(self, user_id: int) -> TeamTalkUser:
+        """Gets a user by its ID.
+
+        Args:
+            user_id: The ID of the user to get.
+
+        Returns:
+            TeamTalkUser: The user.
+        """
+        return TeamTalkUser(self, user_id)
+
+    # user account stuff
+    def create_user_account(
+        self, username: str, password: str, usertype: UserType, user_rights: Optional[int] = None, note: str = ""
+    ) -> bool:
+        """Creates a user account on the server.
+
+        Args:
+            username (str): The username for the new account.
+            password (str): The password for the new account.
+            usertype (UserType): The type of user account (e.g.,
+                `pytalk.UserType.DEFAULT` or `pytalk.UserType.ADMIN`).
+            user_rights (Optional[int], optional): Specific rights to assign,
+                as a bitmask of `pytalk.Permission` values. If `None`
+                (default), `uUserRights` is sent as `0`, and server
+                defaults based on `usertype` will apply.
+            note (str, optional): An optional note for the user account.
+                If this argument is not provided when calling the
+                function, it defaults to an empty string, which means
+                no note will be set.
+
+        Returns:
+            bool: True if the command to create the account was
+                successfully dispatched.
+
+        Raises:
+            ValueError: If username or password is invalid.
+            PermissionError: If the bot lacks permission to create accounts
+                or is not logged in.
+        """
+        account = sdk.UserAccount()
+        account.szUsername = sdk.ttstr(username)
+        account.szPassword = sdk.ttstr(password)
+        account.uUserType = usertype
+        account.szNote = sdk.ttstr(note)
+
+        if user_rights is not None:
+            account.uUserRights = user_rights
+
+        result = sdk._DoNewUserAccount(self._tt, account)
+        if result == -1:
+            raise ValueError("Username or password is invalid")
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_INVALID_USERNAME:
+                raise ValueError("Username is invalid")
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to create a user account")
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+        return True
+
+    def delete_user_account(self, username: str) -> bool:
+        """Deletes a user account.
+
+        Args:
+            username: The username of the user account to delete.
+
+        Returns:
+            bool: True if the user account was deleted, False otherwise.
+
+        Raises:
+            ValueError: If the username is empty or the user account does not exist.
+            PermissionError: If the user does not have permission to delete a user account.
+        """
+        if not username:
+            raise ValueError("Username is empty")
+        username = sdk.ttstr(username)
+        result = sdk._DoDeleteUserAccount(self._tt, username)
+        if result == -1:
+            raise ValueError("User account does not exist")
+        cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+        if not cmd_result:
+            err_nr = cmd_err.nErrorNo
+            if err_nr == sdk.ClientError.CMDERR_NOT_AUTHORIZED:
+                raise PermissionError("The bot does not have permission to delete a user account")
+            if err_nr == sdk.ClientError.CMDERR_NOT_LOGGEDIN:
+                raise PermissionError("The bot is not logged in")
+            if err_nr == sdk.ClientError.CMDERR_ACCOUNT_NOT_FOUND:
+                raise ValueError("User account does not exist")
+        return True
+
+    async def list_user_accounts(self) -> List[TeamTalkUserAccount]:
+        """Lists all user accounts on the server.
+
+        Returns:
+            A list of all user accounts.
+
+        Raises:
+            PermissionError: If the bot is not an admin.
+            ValueError: If an unknown error occurred.
+        """
+        if not self.is_admin():
+            raise PermissionError("The bot is not an admin")
+        self.user_accounts = []
+        result = sdk._DoListUserAccounts(self._tt, 0, 1000000)
+        if result == -1:
+            raise ValueError("Unknown error")
+        await asyncio.sleep(1)
+        return self.user_accounts
+
+    # file stuff
+    def upload_file(self, channel_id: int, filepath: str) -> None:
+        """Uploads a local file to a channel.
+
+        Args:
+            channel_id: The ID of the channel to upload the file to.
+            filepath: The path to the local file to upload.
+
+        Raises:
+            PermissionError: If the bot does not have permission to upload files.
+            ValueError: If the channel ID is less than 0.
+            FileNotFoundError: If the local file does not exist.
+        """
+        if not self.has_permission(Permission.UPLOAD_FILES):
+            raise PermissionError("You do not have permission to upload files")
+        if channel_id < 0:
+            raise ValueError("Channel ID must be greater than 0")
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"File {filepath} does not exist")
+        self.super.doSendFile(channel_id, sdk.ttstr(filepath))
+
+    def download_file(self, channel_id: int, remote_file_name: str, local_file_path: str) -> None:
+        """Downloads a remote file from a channel.
+
+        Args:
+            channel_id: The ID of the channel to download the file from.
+            remote_file_name: The name of the remote file to download.
+            local_file_path: The path to save the file to.
+
+        Raises:
+            PermissionError: If the bot does not have permission to download files.
+            ValueError: If the channel ID is less than 0.
+        """
+        if not self.has_permission(Permission.DOWNLOAD_FILES):
+            raise PermissionError("You do not have permission to download files")
+        if channel_id < 0:
+            raise ValueError("Channel ID must be greater than 0")
+        remote_files = self.get_channel_files(channel_id)
+        # loop through files and print the name
+        for file in remote_files:
+            if file.file_name == remote_file_name:
+                self.download_file_by_id(channel_id, file.file_id, local_file_path)
+
+    def download_file_by_id(self, channel_id: int, file_id: int, filepath: str):
+        """Downloads a remote file from a channel by its ID.
+
+        Args:
+            channel_id: The ID of the channel to download the file from.
+            file_id: The ID of the file to download.
+            filepath: The path to save the file to.
+
+        Raises:
+            PermissionError: If the bot does not have permission to download files.
+        """
+        if not self.has_permission(Permission.DOWNLOAD_FILES):
+            raise PermissionError("You do not have permission to download files")
+        self.super.doRecvFile(channel_id, file_id, sdk.ttstr(filepath))
+
+    def delete_file_by_id(self, channel_id: int, file_id: int):
+        """Deletes a remote file from a channel by its ID.
+
+        Args:
+            channel_id: The ID of the channel to delete the file from.
+            file_id: The ID of the file to delete.
+
+        Raises:
+            PermissionError: If the bot does not have permission to delete files.
+        """
+        if not self.is_admin(self.super.getMyUserID()):
+            raise PermissionError("You do not have permission to delete files")
+        self.super.doDeleteFile(channel_id, file_id)
+
+    def get_channel_files(self, channel_id: int) -> List[RemoteFile]:
+        """Gets a list of remote files in a channel.
+
+        Args:
+            channel_id: The ID of the channel to get the files from.
+
+        Returns:
+            List[RemoteFile]: A list of remote files in the channel.
+        """
+        files = self.super.getChannelFiles(channel_id)
+        return [RemoteFile(self, file) for file in files]
+
+    def move_user(self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkChannel, int]) -> None:
+        """Moves a user to a channel.
+
+        Args:
+            user: The user to move.
+            channel: The channel to move the user to.
+
+        Raises:
+            PermissionError: If the bot does not have permission to move users.
+            TypeError: If the user or channel is not a subclass of User or Channel.
+        """
+        if not self.has_permission(Permission.MOVE_USERS):
+            raise PermissionError("You do not have permission to move users")
+        _log.debug(f"Moving user {user} to channel {channel}")
+        self._do_cmd(user, channel, "_DoMoveUser")
+
+    def kick_user(self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkChannel, int]) -> None:
+        """Kicks a user from a channel or the server.
+
+        Args:
+            user: The user to kick.
+            channel: The channel to kick the user from. If 0, the user will be kicked from the server. # noqa
+
+        Raises:
+            PermissionError: If the bot does not have permission to kick users.
+            TypeError: If the user or channel is not a subclass of User or Channel.
+            ValueError: If the user or channel is not found.
+        """
+        # first check if we are kicking from channel or server
+        if channel == 0:  # server
+            if not self.has_permission(Permission.KICK_USERS):
+                raise PermissionError("You do not have permission to kick users")
+            _log.debug(f"Kicking user {user} from channel {channel}")
+            self._do_cmd(user, channel, "_DoKickUser")
+        else:  # channel
+            if not self.has_permission(Permission.KICK_USERS_FROM_CHANNEL) and not sdk._IsChannelOperator(
+                self._tt, self.super.getMyUserID(), channel
+            ):
+                raise PermissionError("You do not have permission to kick users from channels")
+            result = self._do_cmd(user, channel, "_DoKickUser")
+        if result == -1:
+            raise ValueError("Uknown error")
+            cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+            if not cmd_result:
+                err_nr = cmd_err.nErrorNo
+                if err_nr == sdk.ClientError.CMDERR_USER_NOT_FOUND:
+                    raise ValueError("User not found")
+                if err_nr == sdk.ClientError.CMDERR_CHANNEL_NOT_FOUND:
+                    raise ValueError("Channel not found")
+            return cmd_result
+
+    def ban_user(self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkChannel, int]) -> None:
+        """Bans a user from a channel or the server.
+
+        Args:
+            user: The user to ban.
+            channel: The channel to ban the user from. If 0, the user will be banned from the server. # noqa
+
+        Raises:
+            PermissionError: If the bot does not have permission to ban users.
+            TypeError: If the user or channel is not a subclass of User or Channel.
+            ValueError: If the user is not found.
+        """
+        if not self.has_permission(Permission.BAN_USERS):
+            raise PermissionError("You do not have permission to ban users")
+        _log.debug(f"Banning user {user} from channel {channel}")
+        result = self._do_cmd(user, channel, "_DoBanUser")
+        if result == -1:
+            raise ValueError("Uknown error")
+            cmd_result, cmd_err = _waitForCmd(self.super, result, 2000)
+            if not cmd_result:
+                err_nr = cmd_err.nErrorNo
+                if err_nr == sdk.ClientError.CMDERR_USER_NOT_FOUND:
+                    raise ValueError("User not found")
+            return cmd_result
+
+    def unban_user(self, ip: str, channel: Union[TeamTalkChannel, int]) -> None:
+        """Unbans a user from the server.
+
+        Args:
+            ip: The IP address of the user to unban.
+            channel: The channel to unban the user from. If 0, the user will be unbanned from the server. # noqa
+
+        Raises:
+            PermissionError: If the bot does not have permission to unban users.
+        """
+        if not self.has_permission(Permission.UNBAN_USERS):
+            raise PermissionError("You do not have permission to unban users")
+        if not isinstance(ip, str):
+            raise TypeError("IP must be a string")
+        if not isinstance(channel, (TeamTalkChannel, int)):
+            raise TypeError("Channel must be a subclass of Channel or a channel ID")
+        channel_id = channel
+        if isinstance(channel, TeamTalkChannel):
+            channel_id = channel.id
+        _log.debug(f"Unbanning user {ip}")
+        sdk._DoUnBanUser(self._tt, sdk.ttstr(ip), channel_id)
+
+    async def list_banned_users(self) -> List[TeamTalkBannedUserAccount]:
+        """Lists all banned users.
+
+        Returns:
+            List[BannedUserAccount]: A list of banned users.
+
+        Raises:
+            PermissionError: If the bot is not an admin.
+            ValueError: If an unknown error occurs.
+        """
+        if not self.is_admin():
+            raise PermissionError("The bot is not an admin")
+        self.banned_users = []
+        result = sdk._DoListBans(self._tt, 0, 0, 1000000)
+        if result == -1:
+            raise ValueError("Unknown error")
+        await asyncio.sleep(1)
+        return self.banned_users
+
+    def get_server_statistics(self, timeout: int) -> TeamTalkServerStatistics:
+        """
+        Gets the statistics from the server.
+
+        Args:
+            timeout: The time to wait before assuming that getting the servers statistics failed.
+
+        Raises:
+            TimeoutError: If the server statistics are not received with in the given time.
+
+        returns:
+            The pytalk.statistics object representing the servers statistics.
+        """
+        sdk._DoQueryServerStats(self._tt)
+        result, msg = _waitForEvent(self.super, sdk.ClientEvent.CLIENTEVENT_CMD_SERVERSTATISTICS, timeout)
+        if not result:
+            raise TimeoutError("The request for server statistics timed out.")
+        return TeamTalkServerStatistics(self, msg.serverstatistics)
+
+    def _send_message(self, message: sdk.TextMessage, **kwargs):
+        """Sends a message.
+
+        Args:
+            message: The message to send.
+            delay: The delay in seconds before sending the message. Defaults to 0 which means no delay. # noqa
+            **kwargs: Keyword arguments. Reserved for future use.
+
+
+        Raises:
+            TypeError: If the message is not a subclass of Message.
+        """
+        if not isinstance(message, sdk.TextMessage):
+            raise TypeError("Message must be a subclass of sdk.TextMessage")
+        if not issubclass(type(message), sdk.TextMessage):
+            raise TypeError("Message must be a subclass of sdk.TextMessage")
+        delay = kwargs.get("delay", 0)
+        _do_after(delay, lambda: self.super.doTextMessage(ctypes.POINTER(sdk.TextMessage)(message)))
+
+    async def _process_events(self) -> None:  # noqa: C901
+        """Processes events from the server. This is automatically called by pytalk.Bot."""
+        msg = self.super.getMessage(100)
+        event = msg.nClientEvent
+
+        # Ignore Events
+        if event == sdk.ClientEvent.CLIENTEVENT_NONE:
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_USER_FIRSTVOICESTREAMPACKET:
+            return
+
+        # My Events
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_MYSELF_KICKED:
+            self.bot.dispatch("my_kicked_from_channel", TeamTalkChannel(self, msg.nSource))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CON_LOST:
+            self.connected = False
+            self.logged_in = False
+            self.bot.dispatch("my_connection_lost", self.server)
+            return
+
+        # User Events
+        if event == sdk.ClientEvent.CLIENTEVENT_USER_STATECHANGE:
+            user_id = msg.user.nUserID
+            current_user_state = msg.user.uUserState
+            if current_user_state & sdk.UserState.USERSTATE_VOICE:
+                sdk._EnableAudioBlockEventEx(self._tt, user_id, sdk.StreamType.STREAMTYPE_VOICE, None, True)
+            else:
+                sdk._EnableAudioBlockEventEx(self._tt, user_id, sdk.StreamType.STREAMTYPE_VOICE, None, False)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_USER_AUDIOBLOCK:
+            sdk_audio_block_ptr = None
+            py_sdk_audio_block_struct_instance = None
+            source_id = msg.nSource
+            with self._audio_sdk_lock:
+                stream_type_enum = sdk.StreamType(msg.nStreamType)
+                sdk_audio_block_ptr = _AcquireUserAudioBlock(self._tt, stream_type_enum, source_id)
+                if not sdk_audio_block_ptr:
+                    return
+                py_sdk_audio_block_struct_instance = sdk.AudioBlock()
+                try:
+                    ctypes.memmove(
+                        ctypes.addressof(py_sdk_audio_block_struct_instance),
+                        sdk_audio_block_ptr,
+                        ctypes.sizeof(py_sdk_audio_block_struct_instance),
+                    )
+                except OSError:
+                    _ReleaseUserAudioBlock(self._tt, sdk_audio_block_ptr)
+                    return
+                _ReleaseUserAudioBlock(self._tt, sdk_audio_block_ptr)
+            py_audio_block_wrapper = None
+            try:
+                if source_id == sdk.TT_MUXED_USERID:
+                    py_audio_block_wrapper = MuxedAudioBlock(py_sdk_audio_block_struct_instance)
+                    self.bot.dispatch("muxed_audio", py_audio_block_wrapper)
+                else:
+                    user = TeamTalkUser(self, source_id)
+                    py_audio_block_wrapper = AudioBlock(user, py_sdk_audio_block_struct_instance)
+                    self.bot.dispatch("user_audio", py_audio_block_wrapper)
+            except Exception as e:
+                error_message = (
+                    f"CLIENTEVENT_USER_AUDIOBLOCK: Error during Python wrapper creation or dispatch"
+                    f" for source_id {source_id}. Error: {e}"
+                )
+                _log.exception(error_message)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_JOINED:
+            user_joined = TeamTalkUser(self, msg.user)
+            if user_joined.id == self.super.getMyUserID():
+                sdk._EnableAudioBlockEventEx(self._tt, sdk.TT_MUXED_USERID, sdk.StreamType.STREAMTYPE_VOICE, None, True)
+            self.bot.dispatch("user_join", user_joined, user_joined.channel)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_LEFT:
+            user_left = TeamTalkUser(self, msg.user)
+            channel_left_from = TeamTalkChannel(self, msg.nSource)
+            if user_left.id == self.super.getMyUserID():
+                sdk._EnableAudioBlockEventEx(self._tt, sdk.TT_MUXED_USERID, sdk.StreamType.STREAMTYPE_VOICE, None, False)
+            self.bot.dispatch("user_left", user_left, channel_left_from)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_LOGGEDIN:
+            self.bot.dispatch("user_login", TeamTalkUser(self, msg.user))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_LOGGEDOUT:
+            self.bot.dispatch("user_logout", TeamTalkUser(self, msg.user))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_UPDATE:
+            self.bot.dispatch("user_update", TeamTalkUser(self, msg.user))
+            return
+
+        # Message Event
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USER_TEXTMSG:
+            message = None
+            if msg.textmessage.nMsgType == sdk.TextMsgType.MSGTYPE_USER:
+                message = DirectMessage(self, msg.textmessage)
+            elif msg.textmessage.nMsgType == sdk.TextMsgType.MSGTYPE_CHANNEL:
+                message = ChannelMessage(self, msg.textmessage)
+            elif msg.textmessage.nMsgType == sdk.TextMsgType.MSGTYPE_BROADCAST:
+                message = BroadcastMessage(self, msg.textmessage)
+            elif msg.textmessage.nMsgType == sdk.TextMsgType.MSGTYPE_CUSTOM:
+                message = CustomMessage(self, msg.textmessage)
+            if message:
+                self.bot.dispatch("message", message)
+            return
+
+        # Channel Events
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_CHANNEL_NEW:
+            self.bot.dispatch("channel_new", TeamTalkChannel(self, msg.channel))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_CHANNEL_UPDATE:
+            self.bot.dispatch("channel_update", TeamTalkChannel(self, msg.channel))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_CHANNEL_REMOVE:
+            self.bot.dispatch("channel_delete", TeamTalkChannel(self, msg.channel))
+            return
+
+        # File Events
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_FILE_NEW:
+            self.bot.dispatch("file_new", RemoteFile(self, msg.remotefile))
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_FILE_REMOVE:
+            self.bot.dispatch("file_delete", RemoteFile(self, msg.remotefile))
+            return
+
+        # Server Events
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_SERVER_UPDATE:
+            self.bot.dispatch("server_update", self.server)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_SERVERSTATISTICS:
+            self.bot.dispatch("server_statistics", TeamTalkServerStatistics(self, msg.serverstatistics))
+            return
+
+        # User Account Management Events
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USERACCOUNT_NEW:
+            account = TeamTalkUserAccount(self, msg.useraccount)
+            self.bot.dispatch("user_account_new", account)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USERACCOUNT_REMOVE:
+            account = TeamTalkUserAccount(self, msg.useraccount)
+            self.bot.dispatch("user_account_remove", account)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_USERACCOUNT:  # Internal
+            account = TeamTalkUserAccount(self, msg.useraccount)
+            self.user_accounts.append(account)
+            return
+        if event == sdk.ClientEvent.CLIENTEVENT_CMD_BANNEDUSER:  # Internal
+            banned_user_struct = sdk.BannedUser()
+            ctypes.memmove(ctypes.byref(banned_user_struct), ctypes.byref(msg.useraccount), ctypes.sizeof(sdk.BannedUser))
+            banned_user = TeamTalkBannedUserAccount(self, banned_user_struct)
+            self.banned_users.append(banned_user)
+            return
+
+        # Other Unhandled Events
+        if event not in (
+            sdk.ClientEvent.CLIENTEVENT_CMD_PROCESSING,
+            sdk.ClientEvent.CLIENTEVENT_CMD_ERROR,
+            sdk.ClientEvent.CLIENTEVENT_CMD_SUCCESS,
+            sdk.ClientEvent.CLIENTEVENT_AUDIOINPUT,
+        ):
+            _log.warning(f"Unhandled event: {event}")
+
+    def _get_channel_info(self, channel_id: int):
+        _channel = self.getChannel(channel_id)
+        _channel_path = sdk.ttstr(self.getChannelPath(channel_id))
+        return _channel, _channel_path
+
+    def _get_my_permissions(self):
+        return self.super._GetMyUserRights()
+
+    def _get_my_user(self):
+        return self.get_user(self.super.getMyUserID())
+
+    def _do_cmd(self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkChannel, int], func) -> None:
+        if not self.has_permission(Permission.KICK_USERS):
+            raise PermissionError("You do not have permission to kick users")
+        if not isinstance(user, (TeamTalkUser, int)):
+            raise TypeError("User must be a pytalk.User or a user id")
+        if not isinstance(channel, (TeamTalkChannel, int)):
+            raise TypeError("Channel must be a pytalk.Channel or a channel id")
+        user_id = user
+        if isinstance(user, TeamTalkUser):
+            user_id = user.user_id
+        channel_id = channel
+        if isinstance(channel, TeamTalkChannel):
+            channel_id = channel.id
+        sdk_func = getattr(sdk, func)
+        return sdk_func(self._tt, user_id, channel_id)
+
+File: pytalk/message.py
+"""This module contains the Message class and its subclasses."""
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class Message:
+    """Represents a TeamTalk5 message. This class should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, msg):
+        """Initializes a Message instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            msg: The message.
+        """
+        self.teamtalk_instance = teamtalk_instance
+        self.type = msg.nMsgType
+        self.from_id = msg.nFromUserID
+        self.to_id = msg.nToUserID
+        self.content = msg.szMessage
+        # if content is a byte array, decode it
+        if isinstance(self.content, bytes):
+            self.content = self.content.decode("utf-8")
+        self.user = self.teamtalk_instance.get_user(self.from_id)
+
+    def reply(self, content, **kwargs):
+        """Replies to the message.
+
+        The reply will be sent to the place where the message was sent from.
+        Meaning that if the message was sent to a channel, the reply will be sent to the channel.
+        If the message was sent to a user, the reply will be sent to the user.
+        And if the message was a broadcast message, the reply will be sent to the server as a broadcast.
+
+        Args:
+            content: The content of the message.
+            **kwargs: Keyword arguments. See pytalk.TeamTalkInstance.send_message for more information.
+
+        Returns:
+            The message ID of the reply.
+
+        Raises:
+            PermissionError: If the sender doesn't have permission to send the message.
+        """
+        msg = sdk.TextMessage()
+        msg.nMsgType = self.type
+        msg.nFromUserID = self.teamtalk_instance.super.getMyUserID()
+        msg.szFromUsername = self.teamtalk_instance.super.getMyUserAccount().szUsername
+        # if self is channel message, then reply to channel
+        if isinstance(self, ChannelMessage):
+            if self.teamtalk_instance.super.getMyChannelID() != self.to_id:
+                if not self.teamtalk_instance.is_admin():
+                    raise PermissionError("You don't have permission to send messages across channels.")
+            msg.nChannelID = self.to_id
+        if isinstance(self, BroadcastMessage):
+            # if we aren ot admin we cant do this
+            if not self.teamtalk_instance.is_admin():
+                raise PermissionError("You don't have permission to send broadcast messages.")
+            msg.nToUserID = 0
+            msg.nChannelID = 0
+        else:
+            msg.nToUserID = self.from_id
+        msg.szMessage = sdk.ttstr(content)
+        msg.bMore = False
+        return self.teamtalk_instance._send_message(msg, **kwargs)
+
+    def is_me(self) -> bool:
+        """Checks if the message was sent by the bot.
+
+        Returns:
+            True if the message was sent by the bot, False otherwise.
+        """
+        return self.from_id == self.teamtalk_instance.super.getMyUserID()
+
+    def __str__(self) -> str:
+        """Returns a string representation of the message.
+
+        Returns:
+            A string representation of the message.
+        """
+        return f"pytalk.{type(self).__name__}(from_id={self.from_id}, to_id={self.to_id}, content={self.content})"
+
+
+# make a channel message subclass
+class ChannelMessage(Message):
+    """Represents a message sent to a channel. This class should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, msg):
+        """Initializes a ChannelMessage instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            msg: The message payload.
+        """
+        super().__init__(teamtalk_instance, msg)
+        self.to_id = msg.nChannelID
+        self.channel_id = msg.nChannelID
+        self.channel = self.teamtalk_instance.get_channel(self.channel_id)
+
+
+class DirectMessage(Message):
+    """Represents a message sent to a user. This class should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, msg):
+        """Initializes a DirectMessage instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            msg: The message payload.
+        """
+        super().__init__(teamtalk_instance, msg)
+        self.to_id = msg.nToUserID
+        # if the id is still 0, then it's a private message to the bot
+        if self.to_id == 0:
+            self.to_id = teamtalk_instance.getMyUserID()
+
+
+class BroadcastMessage(Message):
+    """Represents a message sent to a server. This class should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, msg):
+        """Initializes a BroadcastMessage instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            msg: The message payload.
+        """
+        super().__init__(teamtalk_instance, msg)
+
+
+class CustomMessage(Message):
+    """Represents a custom message. This class should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, msg):
+        """Initializes a CustomMessage instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            msg: The message payload.
+        """
+        super().__init__(teamtalk_instance, msg)
+
+File: pytalk/permission.py
+"""A module for managing user permissions and some shorthands for checking permissions."""
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class _PermissionMeta(type):
+    def __getattr__(cls, name: str) -> sdk.UserRight:
+        name = f"USERRIGHT_{name}"
+        return getattr(sdk.UserRight, name, None)
+
+    def __dir__(cls) -> list[str]:
+        return [name[10:] for name in dir(sdk.UserRight) if name.startswith("USERRIGHT_")]
+
+
+class Permission(metaclass=_PermissionMeta):
+    """A class representing user permissions in TeamTalk."""
+
+File: pytalk/server.py
+"""Provides the Server class for interacting with a TeamTalk5 server."""
+
+import ctypes
+from typing import Union
+
+from ._utils import _get_tt_obj_attribute, _set_tt_obj_attribute, _tt_attr_to_py_attr
+from .permission import Permission
+from .channel import Channel as TeamTalkChannel
+from .exceptions import PermissionError
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+from .user import User as TeamTalkUser
+
+
+class Server:
+    """Represents a TeamTalk5 server.
+
+    Attributes:
+        teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+        info: The server information.
+    """
+
+    def __init__(self, teamtalk_instance, server_info):
+        """Initializes a Server instance.
+
+        Args:
+            teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+            server_info: The server information.
+        """
+        self.teamtalk_instance = teamtalk_instance
+        self.info = server_info
+
+    def send_message(self, content: str, **kwargs):
+        """Sends a message to all users on the server, using a broadcast message.
+
+        Args:
+            content: The content of the message.
+            **kwargs: Keyword arguments. See pytalk.TeamTalkInstance.send_message for more information.
+
+        Returns:
+            The result of the doTextMessage call.
+
+        Raises:
+            PermissionError: If the user is not an admin.
+        """
+        if not self.teamtalk_instance.is_admin():
+            raise PermissionError("You must be an admin to send messages to the server")
+        msg = sdk.TextMessage()
+        msg.nMsgType = sdk.TextMsgType.MSGTYPE_BROADCAST
+        msg.nFromUserID = self.teamtalk_instance.getMyUserID()
+        msg.szFromUsername = self.teamtalk_instance.getMyUserAccount().szUsername
+        msg.nToUserID = 0
+        msg.szMessage = content
+        msg.bMore = False
+        # get a pointer to our message
+        return self.teamtalk_instance._send_message(msg, **kwargs)
+
+    def ping(self) -> bool:
+        """Pings the server.
+
+        Returns:
+            True if the ping is successful, False otherwise.
+        """
+        return self.teamtalk_instance.super._DoPing(self.info.nServerPort)
+
+    def get_users(self) -> list:
+        """Gets a list of users on the server.
+
+        Returns:
+            A list of pytalk.User instances representing the users on the server.
+        """
+        users = self.teamtalk_instance.super.getServerUsers()
+        return [TeamTalkUser(self.teamtalk_instance, user) for user in users]
+
+    def get_channels(self) -> list:
+        """Gets a list of channels on the server.
+
+        Returns:
+            A list of pytalk.Channel instances representing the channels on the server.
+        """
+        channels = self.teamtalk_instance.super.getServerChannels()
+        return [TeamTalkChannel(self.teamtalk_instance, channel) for channel in channels]
+
+    def get_channel(self, channel_id):
+        """Gets the channel with the specified ID.
+
+        Args:
+            channel_id: The ID of the channel.
+
+        Returns:
+            The pytalk.Channel instance representing the channel with the specified ID.
+        """
+        channel = self.teamtalk_instance.super.getChannel(channel_id)
+        return TeamTalkChannel(self.teamtalk_instance, channel)
+
+    def get_user(self, user_id):
+        """Gets the user with the specified ID.
+
+        Args:
+            user_id: The ID of the user.
+
+        Returns:
+            The pytalk.User instance representing the user with the specified ID.
+        """
+        user = self.teamtalk_instance.super.getUser(user_id)
+        return TeamTalkUser(self.teamtalk_instance, user)
+
+    def join_channel(self, channel: Union[TeamTalkChannel, str, int], password=""):
+        """Joins the specified channel.
+
+        Args:
+            channel: The channel to join.
+            password: The password for the channel, if required.
+
+        Returns:
+            True if the channel was joined successfully, False otherwise.
+        """
+        _channel = None
+        if isinstance(channel, str):
+            if not channel.strip():
+                return False
+            if not channel.endswith("/"):
+                channel += "/"
+            _channel = self.teamtalk_instance.get_channel_from_path(channel)
+        elif isinstance(channel, int):
+            _channel = self.get_channel(channel)
+        elif isinstance(channel, TeamTalkChannel):
+            _channel = channel
+        if _channel is None:
+            return False
+        return self.teamtalk_instance.join_channel(_channel, password)
+
+    def get_statistics(self, timeout: int = 2):
+        """Gets the servers statistics.
+
+        Args:
+            timeout: The time to wait before assuming that getting the servers statistics failed.
+
+        Returns:
+            The pytalk.Statistics instance representing the servers statistics.
+        """
+        return self.teamtalk_instance.get_server_statistics(timeout)
+
+    def move_user(self, user: Union[TeamTalkUser, int], channel: Union[TeamTalkChannel, int]):
+        """Moves the specified user to the specified channel.
+
+        Args:
+            user: The user to move.
+            channel: The channel to move the user to.
+
+        Raises:
+            PermissionError: If the user is not an admin.
+        """
+        if not self.teamtalk_instance.is_admin():
+            raise PermissionError("You must be an admin to move users")
+        if isinstance(user, TeamTalkUser):
+            user = user.id
+        if isinstance(channel, TeamTalkChannel):
+            channel = channel.id
+        self.teamtalk_instance.move_user(user, channel)
+
+    def kick(self, user: Union[TeamTalkUser, int]):
+        """Kicks the specified user from the specified channel.
+
+        Args:
+            user: The user to kick.
+
+        Raises:
+            PermissionError: If the user is not an admin.
+        """
+        self.teamtalk_instance.kick_user(user, 0)
+
+    def ban(self, user: Union[TeamTalkUser, int]):
+        """Bans the specified user from the specified channel.
+
+        Args:
+            user: The user to ban.
+
+        Raises:
+            PermissionError: If the user is not an admin.
+        """
+        self.teamtalk_instance.ban_user(user, 0)
+
+    def unban(self, user: Union[TeamTalkUser, int]):
+        """Unbans the specified user from the specified channel.
+
+        Args:
+            user: The user to unban.
+
+        Raises:
+            PermissionError: If the user is not an admin.
+        """
+        self.teamtalk_instance.unban_user(user, 0)
+
+    def subscribe(self, subscription):
+        """Subscribes to the specified subscription for all users on the server.
+
+        Args:
+            subscription: The subscription to subscribe to.
+
+        """
+        users = self.get_users()
+        for user in users:
+            user.subscribe(subscription)
+
+    def unsubscribe(self, subscription):
+        """Unsubscribes to the specified subscription for all users on the server.
+
+        Args:
+            subscription: The subscription to unsubscribe to.
+
+        """
+        users = self.get_users()
+        for user in users:
+            user.unsubscribe(subscription)
+
+    def get_properties(self) -> "ServerProperties":
+        """Gets the properties of the server.
+
+        Returns:
+            A pytalk.ServerProperties instance representing the properties of the server.
+        """
+        props = self.teamtalk_instance.super.getServerProperties()
+        return ServerProperties(self.teamtalk_instance, props)
+
+    def update_properties(self, properties: "ServerProperties"):
+        """Updates the properties of the server.
+
+        Args:
+            properties: The updated properties. See pytalk.ServerProperties for more information.
+
+        Raises:
+            PermissionError: If the bot does not have the permission to update the properties.
+        """
+        if not self.teamtalk_instance.has_permission(Permission.UPDATE_SERVERPROPERTIES):
+            raise PermissionError("The bot does not have permission to update the server properties")
+        # get the underlying properties object
+        properties = properties.properties
+        sdk._DoUpdateServer(self.teamtalk_instance._tt, ctypes.byref(properties))
+
+    def __getattr__(self, name: str):
+        """Try to get the specified attribute on server.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return getattr(self.info, name)
+
+
+class _ServerPropertiesMeta(type):
+    def __dir__(self) -> list[str]:
+        """Gets the list of attributes on properties.
+
+        Returns:
+            A list of attributes on properties.
+        """
+        attrs = []
+        for attr in dir(sdk.ServerProperties):
+            if not attr.startswith("_"):
+                attrs.append(_tt_attr_to_py_attr(attr))
+        return attrs
+
+
+class ServerProperties(metaclass=_ServerPropertiesMeta):
+    """Represents the properties of a server.
+
+    This class should not be instantiated directly. Instead, use the pytalk.Server.get_properties() method. # noqa
+
+    Example:
+        >>> server = teamtalk server
+        >>> properties = server.get_properties()
+        >>> properties.max_users
+        1000
+        >>> properties.max_users = 500
+        >>> server.update_properties(properties)
+        >>> properties = server.get_properties()
+        >>> properties.max_users
+        500
+    """
+
+    def __init__(self, teamtalk_instance, properties):
+        """Initializes a new instance of the ServerProperties class.
+
+        Args:
+            teamtalk_instance: The pytalk.TeamTalk instance.
+            properties: The underlying properties object.
+        """
+        self.teamtalk_instance = teamtalk_instance
+        self.properties = properties
+
+    def __getattr__(self, name: str):
+        """Try to get the specified attribute on server.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self.properties, name)
+
+    def __setattr__(self, name: str, value):
+        """Try to set the specified attribute on properties.
+
+        Args:
+            name: The name of the attribute.
+            value: The value to set the attribute to.
+
+            Raises:
+                AttributeError: If the specified attribute is not found.
+        """
+        if name in dir(self):
+            self.__dict__[name] = value
+        else:
+            # if name is either teamtalk_instance or properties, just set it on self
+            if name in ["teamtalk_instance", "properties"]:
+                self.__dict__[name] = value
+            else:
+                _get_tt_obj_attribute(self.properties, name)
+                # if we have gotten here, we can set the attribute
+                _set_tt_obj_attribute(self.properties, name, value)
+
+File: pytalk/statistics.py
+"""Server statistics module for Teamtalk."""
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+from ._utils import _get_tt_obj_attribute
+
+
+class Statistics:
+    """represents the statistics of a TeamTalk server."""
+
+    def __init__(self, teamtalk, statistics: sdk.ServerStatistics) -> None:
+        """
+        Initialize a statistics object.
+
+        Args:
+            teamtalk: The pytalk.TeamTalkInstance instance.
+            statistics (sdk.ServerStatistics): The sdk.ServerStatistics object.
+        """
+        self.teamtalk = teamtalk
+        self.server = teamtalk.server
+        self._statistics = statistics
+
+    def __getattr__(self, name: str):
+        """Try to get the attribute from the ServerStatistics object.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self._statistics, name)
+
+    def refresh(self):
+        """Refreshes The servers statistics."""
+        self = self.teamtalk.get_server_statistics()
+
+File: pytalk/streamer.py
+"""A module containing the Streamer class.
+
+This module contains the Streamer class, which is used to stream audio data to a TeamTalk channel.
+
+.. warning::
+   To use other files than .wav files, you need to have ffmpeg installed on your system.
+
+.. warning::
+   To stream urls, you need to have yt-dlp installed on your system.
+
+Example:
+    >>> import teamtalk
+    >>> # asuming we have a bot in the variable bot
+    >>> @bot.event
+    >>> async def on_message(message):
+    >>>     if message.content.lower() == "play":
+    >>>         streamer = teamtalk.Streamer.get_streamer_for_channel(message.channel)
+    >>>         streamer.stream("path/to/file.wav")
+    >>> # or for an url
+    >>> streamer.stream("https://www.example.com/youtube/or/other/stream")
+
+
+It's also possible to stream audio from an arbitrary data stream, such as a microphone.
+To do this, you need to set the correct sample rate and number of channels on initialization,
+and then feed the data to the streamer as it becomes available.
+The data needs to be in 16 bit PCM format (pcm_s16le).
+
+Example:
+    >>> import teamtalk
+    >>> # asuming we have a bot in the variable bot
+    >>> @bot.event
+    >>> async def on_message(message):
+    >>>     if message.content.lower() == "play":
+    >>>         streamer = teamtalk.Streamer.get_streamer_for_channel(message.channel, sample_rate=48000, channels=2)
+    >>>         # we could get the data from any source, so let's assume it's coming from a live microphone.
+    >>>         data_stream = # connect to microphone
+    >>>         while True:
+    >>>             # get the data from the stream
+    >>>             data = data_stream.read(streamer.block_size*16) # we are reading 16 chunks at a time to combat buffering
+    >>>             if data == 0:
+    >>>                 break
+    >>>             # add the data to the streamer
+    >>>             streamer.feed(data)
+    >>>         # close the connection to our microphone
+"""
+
+import ctypes
+import threading
+import random
+import subprocess
+import multiprocessing
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+from .channel import Channel as TeamTalkChannel
+
+_audio_streamers = {}
+
+
+class Streamer:
+    """A class representing a streamer for audio data to a TeamTalk channel."""
+
+    @staticmethod
+    def get_streamer_for_channel(
+        channel: TeamTalkChannel, sample_rate: int = 48000, channels: int = 2, block_size: int = 4 * 1024
+    ):
+        """Gets a streamer for a channel.
+
+        Args:
+            channel (TeamTalkChannel): The TeamTalk channel to get the streamer for.
+            sample_rate (int, optional): The sample rate of the audio data. Defaults to 48000.
+            channels (int, optional): The number of channels in the audio data. Defaults to 2.
+            block_size (int, optional): The block size of the audio data. Defaults to 4 * 1024 (4kb)
+
+        Returns:
+            Streamer: The streamer for the channel.
+        """
+        if channel not in _audio_streamers:
+            _audio_streamers[channel] = Streamer(channel, sample_rate, channels, block_size)
+        return _audio_streamers[channel]
+
+    def __init__(self, channel: TeamTalkChannel, sample_rate: int = 48000, channels: int = 2, block_size: int = 4 * 1024):
+        """Initializes a new instance of the TeamTalkStreamer class.
+
+        Args:
+            channel (TeamTalkChannel): The TeamTalk channel to which the streamer streams the audio data.
+            sample_rate (int, optional): The sample rate of the audio data. Defaults to 48000.
+            channels (int, optional): The number of channels in the audio data. Defaults to 2.
+            block_size (int, optional): The block size of the audio data. Defaults to 4 * 1024 (4kb)
+        """
+        self.channel = channel
+        self.sample_rate = sample_rate
+        self.channels = channels
+        self.block_size = block_size
+        # the list of blocks that will be streamed
+        self.blocks = []
+        self.current_data = b""
+        # streamer id
+        self.stream_id = random.randint(6000, 6999)
+        # capabilities for  ffmpeg and yt-dlp
+        self.ffmpeg_available = self._has_ffmpeg()
+        self.yt_dlp_available = self._has_yt_dlp()
+        # start the stream function on another thread
+        self.running = True
+        self._streamer_thread = threading.Thread(target=self._do_stream, daemon=True)
+        self._streamer_thread.start()
+        self._current_streamer_thread = None
+        self._current_streamer_running = False
+        self._stream_lock = threading.Lock()  # To ensure mutual exclusion when starting/stopping streams.
+
+    def __del__(self):
+        """Shuts down the streamer by adding a null-block to the blocks list and waiting for the blocks list to be empty."""
+        # add a block with 0 length to the blocks list to stop the streamer
+        self.blocks.append(b"")
+        # wait for the blocks list to be empty
+        while len(self.blocks) > 0:
+            pass
+        # stop the streamer
+        self.running = False
+
+    def search_and_stream(self, query: str) -> None:
+        """Searches for a song and streams it to the channel.
+
+        Args:
+            query (str): The query to search for.
+
+        Returns:
+            None
+        """
+        self.stop()
+        self.channel.send_message(f"Searching for {query}...")
+        yt_dlp_command = f"yt-dlp -f bestaudio --extract-audio --audio-format best --audio-quality 0 --quiet --get-url \"ytsearch:{query}\""  # noqa
+        result = subprocess.run(yt_dlp_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        song = result.stdout.decode("utf-8").strip()
+        if not song:
+            # send a message to the channel
+            self.channel.send_message("No results found.")
+            return
+        # stream the song
+        self.stream(song)
+
+    def stop(self) -> None:
+        """Stops the current stream."""
+        self.blocks.clear()
+        self._request_stop_stream()  # Gracefully request the current stream to stop.
+        self._wait_for_cleanup()  # Wait for the cleanup to complete.
+
+    def stream(self, path: str) -> int:
+        """Streams a file or an url to the channel.
+
+        Args:
+            path(str): The file or url to stream.
+
+        Raises:
+            RuntimeError: If the url could not be opened as a wav file or if the file could not be converted to a wav file.
+        """
+        with self._stream_lock:
+            self._request_stop_stream()  # Gracefully request the current stream to stop.
+            self._wait_for_cleanup()  # Wait for the cleanup to complete.
+            self._start_new_stream(path)  # Start the new stream.
+
+    def _request_stop_stream(self):
+        if self._current_streamer_thread is not None:
+            self._current_streamer_running = False
+
+    def _wait_for_cleanup(self):
+        if self._current_streamer_thread:
+            self._current_streamer_running = False
+            self.blocks.clear()  # Clear the blocks list, ensuring the streamer stops.
+            self.blocks.append(b"")
+
+    def _start_new_stream(self, path):
+        self._current_streamer_running = True
+        self._current_streamer_thread = threading.Thread(target=self._stream, args=(path,), daemon=True)
+        self._current_streamer_thread.start()
+
+    def _stream(self, path: str) -> int:
+        if not self.ffmpeg_available:
+            raise RuntimeError("Could not convert file to wav. ffmpeg is not installed.")
+        if path.startswith("http"):
+            if not self.yt_dlp_available:
+                raise RuntimeError("Could not download file. yt-dlp is not installed.")
+            ffmpeg_process, yt_dlp_process = self._get_url_data(path)
+        else:
+            ffmpeg_command = [
+                'ffmpeg',
+                '-i',
+                path,  # Input URL
+                '-f',
+                'wav',  # Output format
+                '-acodec',
+                'pcm_s16le',  # Audio codec
+                '-ar',
+                f"{str(self.sample_rate)}",  # Sample rate
+                '-ac',
+                str(self.channels),  # Number of audio channels
+                '-threads',
+                str(multiprocessing.cpu_count()),  # Number of threads
+                '-hide_banner',
+                '-loglevel',
+                'error',  # Suppress output
+                '-',  # Output to stdout
+            ]
+            ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
+        try:
+            while self._current_streamer_running:
+                block = ffmpeg_process.stdout.read(self.block_size)
+                if len(block) == 0:
+                    break
+                self.feed(block)
+        except KeyboardInterrupt:
+            raise
+        finally:
+            self._graceful_shutdown(ffmpeg_process)
+            if path.startswith("http"):
+                self._graceful_shutdown(yt_dlp_process)
+
+    @property
+    def volume(self) -> int:
+        """The volume of the streamer.
+
+        Returns:
+            int: The volume of the streamer.
+        """
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        result = pre_processor.u.ttpreprocessor.nGainLevel
+        return int(round(result.value // 10))
+
+    @volume.setter
+    def volume(self, value: int) -> None:
+        """Sets the volume of the streamer.
+
+        Args:
+            value (int): The volume to set, between 0 and 100.
+        """
+        tt_volume = ctypes.c_int(value * 10)
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        pre_processor.u.ttpreprocessor.nGainLevel = tt_volume
+        sdk._SetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+
+    @property
+    def mute_left(self) -> bool:
+        """If the left channel of the speaker is muted.
+
+        Returns:
+            bool: True if the left channel is muted, False otherwise.
+        """
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        return pre_processor.u.ttpreprocessor.bMuteLeft.value
+
+    @mute_left.setter
+    def mute_left(self, mute: bool) -> None:
+        """Sets the mute state of the left channel of the speaker.
+
+        Args:
+            mute (bool): True to mute the left channel, False to unmute it.
+        """
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        pre_processor.u.ttpreprocessor.bMuteLeft = ctypes.c_bool(mute)
+        sdk._SetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+
+    @property
+    def mute_right(self) -> bool:
+        """If the right channel of the speaker is muted.
+
+        Returns:
+            bool: True if the right channel is muted, False otherwise.
+        """
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        return pre_processor.u.ttpreprocessor.bMuteRight.value
+
+    @mute_right.setter
+    def mute_right(self, mute: bool) -> None:
+        """Sets the mute state of the right channel of the speaker.
+
+        Args:
+            mute (bool): True to mute the right channel, False to unmute it.
+        """
+        pre_processor = sdk.AudioPreprocessor()
+        sdk._GetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+        pre_processor.u.ttpreprocessor.bMuteRight = ctypes.c_bool(mute)
+        sdk._SetSoundInputPreprocessEx(self.channel.server.teamtalk_instance._tt, pre_processor)
+
+    def _get_url_data(self, url):
+        yt_dlp_command = [
+            'yt-dlp',
+            '-f',
+            'bestaudio',
+            '--extract-audio',
+            '--audio-format',
+            'best',
+            '--audio-quality',
+            '0',
+            '--quiet',
+            '-o',
+            '-',
+            url,
+        ]
+        ffmpeg_command = [
+            'ffmpeg',
+            '-i',
+            'pipe:0',
+            '-f',
+            'wav',
+            '-acodec',
+            'pcm_s16le',
+            '-ar',
+            str(self.sample_rate),
+            '-ac',
+            str(self.channels),
+            '-threads',
+            str(multiprocessing.cpu_count()),
+            '-hide_banner',
+            '-loglevel',
+            'error',
+            '-',
+        ]
+
+        yt_dlp_process = subprocess.Popen(yt_dlp_command, stdout=subprocess.PIPE)
+        return subprocess.Popen(ffmpeg_command, stdin=yt_dlp_process.stdout, stdout=subprocess.PIPE), yt_dlp_process
+
+    def _graceful_shutdown(self, process):
+        if process:
+            process.terminate()  # Send SIGTERM
+            try:
+                process.wait(timeout=2)  # Wait for up to 5 seconds for the process to exit
+            except subprocess.TimeoutExpired:
+                process.kill()  # Force kill if it doesn't terminate in time
+            finally:
+                if process.stdout:
+                    process.stdout.close()
+                if process.stderr:
+                    process.stderr.close()
+
+    def feed(self, data: bytes) -> int:
+        """Feeds data to the streamer.
+
+        Args:
+            data (bytes): The data to feed to the streamer.
+
+        Returns:
+            int: The stream id of the stream.
+        """
+        # first add the data to the current data
+        self.current_data += data
+        if len(self.current_data) >= self.block_size:
+            # if it is, then split it into 4*1024 byte chunks
+            chunks = [self.current_data[i : i + self.block_size] for i in range(0, len(self.current_data), self.block_size)]
+            # then add all but the last chunk to the blocks list
+            self.blocks.extend(chunks[:-1])
+            # then set the current data to the last chunk
+            self.current_data = chunks[-1]
+        else:
+            # if it is not, then just add the block to the blocks list
+            self.blocks.append(data)
+        return self.stream_id
+
+    def _do_stream(self):
+        while self.running:
+            # if there are blocks to stream
+            if len(self.blocks) > 0:
+                # get the first block
+                block = self.blocks[0]
+                # create a new audio block
+                audio_block = sdk.AudioBlock()
+                audio_block.nStreamID = self.stream_id
+                audio_block.nSampleRate = self.sample_rate
+                audio_block.nChannels = self.channels
+                audio_block.nSamples = len(block) // 4
+                audio_block.lpRawAudio = ctypes.cast((ctypes.c_char * len(block)).from_buffer_copy(block), ctypes.c_void_p)
+                audio_block.uStreamTypes = sdk.StreamType.STREAMTYPE_VOICE
+                # send the audio block
+                result = 0
+                while result == 0:
+                    result = sdk._InsertAudioBlock(self.channel.teamtalk._tt, audio_block)
+                # remove the block from the blocks list
+                self.blocks = self.blocks[1:]
+
+    def _has_ffmpeg(self):
+        # check if ffmpeg is installed
+        try:
+            result = subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                return False
+        except FileNotFoundError:
+            return False
+        return True
+
+    def _has_yt_dlp(self):
+        # check if yt-dlp is installed
+        try:
+            result = subprocess.run(["yt-dlp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                return False
+        except FileNotFoundError:
+            return False
+        return True
+
+File: pytalk/subscription.py
+"""Subscription class for TeamTalk."""
+
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class _SubscriptionMeta(type):
+    def __getattr__(cls, name: str) -> sdk.UserRight:
+        name = f"SUBSCRIBE_{name}"
+        return getattr(sdk.Subscription, name, None)
+
+    def __dir__(cls) -> list[str]:
+        return [name[10:] for name in dir(sdk.Subscription) if name.startswith("SUBSCRIBE_")]
+
+
+class Subscription(metaclass=_SubscriptionMeta):
+    """A class representing subscriptions in TeamTalk."""
+
+File: pytalk/tools/__init__.py
+
+
+File: pytalk/tools/downloader.py
+# Modified from https://github.com/gumerov-amir/TTMediaBot
+
+
+import shutil
+
+import requests
+
+
+def download_file(url: str, file_path: str) -> None:
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
+    }
+    with requests.get(url, headers=headers, stream=True) as r:
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(r.raw, f)
+
+File: pytalk/tools/ttsdk_downloader.py
+#!/usr/bin/env python3
+
+# Modified from https://github.com/gumerov-amir/TTMediaBot
+
+import os
+import platform
+import shutil
+import sys
+
+import bs4
+import patoolib
+import requests
+
+from . import downloader
+
+url = "https://bearware.dk/teamtalksdk"
+VERSION_IDENTIFIER = "5.15"
+
+cd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def get_url_suffix_from_platform() -> str:
+    machine = platform.machine()
+    if sys.platform == "win32":
+        architecture = platform.architecture()
+        if machine == "AMD64" or machine == "x86":
+            if architecture[0] == "64bit":
+                return "win64"
+            else:
+                return "win32"
+        else:
+            sys.exit("Native Windows on ARM is not supported")
+    elif sys.platform == "darwin":
+        sys.exit("Darwin is not supported")
+    else:
+        if machine == "AMD64" or machine == "x86_64":
+            return "ubuntu22_x86_64"
+        elif "arm" in machine:
+            return "raspbian_armhf"
+        else:
+            sys.exit("Your architecture is not supported")
+
+
+def download() -> None:
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
+    }
+    r = requests.get(url, headers=headers)
+    # check status code
+    r.raise_for_status()
+    page = bs4.BeautifulSoup(r.text, features="html.parser")
+    # The last tested version series is v5.15x
+    versions = page.find_all("li")
+    version = [i for i in versions if VERSION_IDENTIFIER in i.text][-1].a.get("href")[0:-1]
+    download_url = url + "/" + version + "/" + "tt5sdk_{v}_{p}.7z".format(v=version, p=get_url_suffix_from_platform())
+    print("Downloading from " + download_url)
+    downloader.download_file(download_url, os.path.join(cd, "ttsdk.7z"))
+
+
+def extract() -> None:
+    try:
+        os.mkdir(os.path.join(cd, "ttsdk"))
+    except FileExistsError:
+        shutil.rmtree(os.path.join(cd, "ttsdk"))
+        os.mkdir(os.path.join(cd, "ttsdk"))
+    patoolib.extract_archive(os.path.join(cd, "ttsdk.7z"), outdir=os.path.join(cd, "ttsdk"))
+
+
+def move() -> None:
+    path = os.path.join(cd, "ttsdk", os.listdir(os.path.join(cd, "ttsdk"))[0])
+    libraries = ["TeamTalk_DLL", "TeamTalkPy"]
+    try:
+        os.makedirs(os.path.join(cd, "implementation"))
+    except FileExistsError:
+        shutil.rmtree(os.path.join(cd, "implementation"))
+        os.makedirs(os.path.join(cd, "implementation"))
+    for library in libraries:
+        try:
+            os.rename(
+                os.path.join(path, "Library", library),
+                os.path.join(cd, "implementation", library),
+            )
+        except OSError:
+            shutil.rmtree(os.path.join(cd, "implementation", library))
+            os.rename(
+                os.path.join(path, "Library", library),
+                os.path.join(cd, "implementation", library),
+            )
+        # if a __init__ file already exists in our implementation folder, delete it and make anew one
+        try:
+            os.remove(os.path.join(cd, "implementation", "__init__.py"))
+        except OSError:
+            pass
+        finally:
+            with open(os.path.join(cd, "implementation", "__init__.py"), "w") as f:
+                f.write("")
+
+
+def clean() -> None:
+    os.remove(os.path.join(cd, "ttsdk.7z"))
+    shutil.rmtree(os.path.join(cd, "ttsdk"))
+    shutil.rmtree(os.path.join(cd, "implementation", "TeamTalkPy", "test"))
+
+
+def install() -> None:
+    print("Installing TeamTalk sdk components")
+    try:
+        print("Downloading latest sdk version")
+        download()
+    except Exception as e:
+        print("Failed to download sdk. Error: ", e)
+        sys.exit(1)
+    try:
+        print("Downloaded. extracting")
+        extract()
+    except patoolib.util.PatoolError as e:
+        print("Failed to extract sdk. Error: ", e)
+        print("This can typically happen, if you do not have 7zip or equivalent installed on your system.")
+        print("On debian based systems, you can install 7zip by running 'sudo apt install p7zip'")
+        print("On Windows, you need to have 7zip installed and added to your PATH")
+        sys.exit(1)
+    print("Extracted. moving")
+    move()
+    # check if the move was successful
+    if not os.path.exists(os.path.join(cd, "implementation", "TeamTalk_DLL")):
+        print("Failed to move TeamTalk_DLL")
+        sys.exit(1)
+    if not os.path.exists(os.path.join(cd, "implementation", "TeamTalkPy")):
+        print("Failed to move TeamTalkPy")
+        sys.exit(1)
+    print("moved. cleaning")
+    clean()
+    print("cleaned.")
+    print("Installed")
+    sys.exit(0)
+
+File: pytalk/tt_file.py
+"""Teamtalk file object."""
+
+from ._utils import _get_tt_obj_attribute
+
+
+class RemoteFile:
+    """Represents a file on a TeamTalk server. Should not be instantiated directly."""
+
+    def __init__(self, teamtalk_instance, payload):
+        """Initializes the RemoteFile instance.
+
+        Args:
+            teamtalk_instance: The pytalk.TeamTalkInstance instance.
+            payload: An instance of sdk.RemoteFile.
+        """
+        self.teamtalk = teamtalk_instance
+        self.channel = lambda self: self.teamtalk.get_channel(payload.nChannelID)
+        self.server = lambda self: self.teamtalk.server
+        self.payload = payload
+
+    def __str__(self) -> str:
+        """Returns a string representation of the RemoteFile instance.
+
+        Returns:
+            A string representation of the RemoteFile instance.
+        """
+        return f"Pytalk.RemoteFile(file_name={self.file_name}, file_id={self.file_id}, file_size={self.file_size}, username={self.username}, upload_time={self.upload_time})"  # noqa: E501
+
+    def __getattr__(self, name: str):
+        """Returns the value of the specified attribute of the remote file.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self.payload, name)
+
+File: pytalk/user.py
+"""This module defines a User class that represents a user on a TeamTalk server."""
+
+# Union type
+from typing import Union
+
+from ._utils import _get_tt_obj_attribute
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class User:
+    """Represents a user on a TeamTalk server.
+
+    Attributes:
+        teamtalk_instance: An instance of pytalk.TeamTalkInstance.
+        user: Either a string (username) or an int (user_id) or an instance of sdk.User.
+    """
+
+    def __init__(self, teamtalk_instance, user: Union[str, int, sdk.User]):
+        """Initializes the User instance.
+
+        Args:
+            teamtalk_instance: An instance of TeamTalk5.
+            user: Either a string (username) or an int (user_id) or an instance of sdk.User.
+
+        Raises:
+            TypeError: If the user argument is not of the expected type.
+        """
+        self.teamtalk_instance = teamtalk_instance
+        # if user is str, assume it's a username
+        if isinstance(user, str):
+            self._user = self.teamtalk_instance.super.getUserByUsername(user)
+        # if user is int, assume it's a user_id
+        elif isinstance(user, int):
+            self._user = self.teamtalk_instance.super.getUser(user)
+        # if the user argument is already of type sdk.User, just set it to self._user
+        elif isinstance(user, sdk.User):
+            self._user = user
+        else:
+            raise TypeError(f"user must be either a string or an int. Argument has type: {str(type(user))}.")
+        self.id = self.user_id
+        self.channel = self.teamtalk_instance.get_channel(self._user.nChannelID)
+        self.server = self.channel.server
+
+    def is_me(self) -> bool:
+        """Checks if this user is the bot itself.
+
+        Returns:
+            True if this user is the bot itself, False otherwise.
+        """
+        return self.user_id == self.teamtalk_instance.getMyUserID()
+
+    def send_message(self, content: str, **kwargs) -> int:
+        """Sends a text message to this user.
+
+        Args:
+            content: The content of the message.
+            **kwargs: Keyword arguments. See pytalk.TeamTalkInstance.send_message for more information.
+
+        Returns:
+            The ID of the message if successful, or a negative value if unsuccessful.
+        """
+        msg = sdk.TextMessage()
+        msg.nMsgType = sdk.TextMsgType.MSGTYPE_USER
+        msg.nFromUserID = self.teamtalk_instance.getMyUserID()
+        msg.szFromUsername = self.teamtalk_instance.getMyUserAccount().szUsername
+        msg.nToUserID = self.user_id
+        msg.szMessage = content
+        msg.bMore = False
+        # get a pointer to our message
+        return self.teamtalk_instance._send_message(msg, **kwargs)
+
+    def move(self, channel) -> bool:
+        """Moves this user to the specified channel.
+
+        Args:
+            channel: The channel to move this user to.
+
+        Returns:
+            True if the user was moved successfully, False otherwise.
+        """
+        return self.server.move_user(self, channel)
+
+    def kick(self, from_server: bool) -> None:
+        """Kicks this user from the server.
+
+        Args:
+            from_server: If True, the user will be kicked from the server. If False, the user will be kicked from the channel. # noqa
+        """
+        channel_id = 0
+        if not from_server:
+            channel_id = self.channel.id
+        self.teamtalk_instance.kick_user(self, channel_id)
+
+    def ban(self, from_server: bool) -> None:
+        """Bans this user from the server.
+
+        Args:
+            from_server: If True, the user will be banned from the server. If False, the user will be banned from the channel. # noqa
+        """
+        channel_id = 0
+        if not from_server:
+            channel_id = self.channel.id
+        self.teamtalk_instance.ban_user(self, channel_id)
+
+    def subscribe(self, subscription) -> None:
+        """Subscribes to the specified subscription.
+
+        Args:
+            subscription: The subscription to subscribe to.
+        """
+        self.teamtalk_instance.subscribe(self, subscription)
+
+    def unsubscribe(self, subscription) -> None:
+        """Unsubscribes from the specified subscription.
+
+        Args:
+            subscription: The subscription to unsubscribe from.
+        """
+        self.teamtalk_instance.unsubscribe(self, subscription)
+
+    def is_subscribed(self, subscription) -> bool:
+        """Checks if this user is subscribed to the specified subscription.
+
+        Args:
+            subscription: The subscription to check.
+
+        Returns:
+            True if the bot is subscribed to the specified subscription from this user, False otherwise.
+        """
+        return self.teamtalk_instance.is_subscribed(self, subscription)
+
+    def __getattr__(self, name: str):
+        """Try to get the specified attribute from self._user if it is not found in self.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self._user, name)
+
+File: pytalk/user_account.py
+"""This module defines a class for a User Account on a TeamTalk server.
+
+The difference between this class and the User class is that this class represents a user account,
+while the User class represents a user that is currently connected to the server.
+"""
+
+from ._utils import _get_tt_obj_attribute
+from .implementation.TeamTalkPy import TeamTalk5 as sdk
+
+
+class UserAccount:
+    """A class for a user account on a TeamTalk server. This class is not meant to be instantiated directly. Instead, use the TeamTalkBot.list_user_accounts() method to get a list of UserAccount objects. # noqa"""
+
+    def __init__(self, teamtalk_instance, account: sdk.UserAccount) -> None:
+        """Initialize a UserAccount object.
+
+        Args:
+            teamtalk_instance: The TeamTalk instance.
+            account: The user account.
+        """
+        self.teamtalk_instance = teamtalk_instance
+        self._account = account
+
+    def __getattr__(self, name: str):
+        """Try to get the specified attribute from self._user if it is not found in self.
+
+        Args:
+            name: The name of the attribute.
+
+        Returns:
+            The value of the specified attribute.
+
+        Raises:
+            AttributeError: If the specified attribute is not found. This is the default behavior. # noqa
+        """
+        if name in dir(self):
+            return self.__dict__[name]
+        else:
+            return _get_tt_obj_attribute(self._account, name)
+
+
+# make a subclass of UserAccount for a banned user
+class BannedUserAccount(UserAccount):
+    """Represents a banned user account on a TeamTalk server. This class is not meant to be instantiated directly. Instead, use the TeamTalkBot.list_banned_users() method to get a list of BannedUserAccount objects. # noqa"""
+
+    # shouldn't do anything extra
+    pass
+
+File: README.md
+# Pytalk
+
+py-talk is a simple but powerful pythonic library for making bots for the [TeamTalk5 Conferencing System](https://bearware.dk/)
+
+
+### Installing
+
+Python 3.8 or higher is required
+
+#### From PyPI
+
+```bash
+pip install py-talk-ex
+```
+
+#### From source
+
+```bash
+git clone https://github.com/BlindMaster24/pytalk
+cd pytalk
+uv sync
+```
+
+
+### Usage
+
+```python
+import teamtalk
+
+bot = pytalk.TeamTalkBot()
+
+@bot.event
+async def on_ready():
+    test_server = pytalk.TeamTalkServerInfo("localhost", 10335, 10335, "user", "pass")
+    await bot.add_server(test_server)
+
+@bot.event
+async def on_message(message):
+    if message.content.lower() == "ping":
+        message.reply("pong")
+
+bot.run()
+```
+
+
+## Documentation
+
+You can find the full documentation [here](http://pytalk.readthedocs.io/en/latest)
+
+
+
+## Troubleshooting
+
+#### Erro when downloading the teamtalk sdk
+
+
+```
+Error: patoolib.util.PatoolError: could not find an executable program to extract format 7z; candidates are (7z,7za,7zr,unar),
+```
+
+Solution:
+
+```
+$ sudo apt install p7zip-full
+```
+
+Explanation:
+
+The error is caused by the fact that the `patool` library requires a program to extract 7z files. The error message lists the programs it tried to use, and the solution is to install one of them. In this case, `p7zip-full` is a good choice.
+
+
+## Contributing
+
+So you want to contribute to teamtalk.py? Great! There are many ways to contribute to this project, and all contributions are welcome.
+If you have found a bug, have a feature request or want to help improve documentation please [open an issue](https://github.com/BlindMaster24/pytalk/issues/new)_
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+File: tea.yaml
+# https://tea.xyz/what-is-this-file
+---
+version: 1.0.0
+codeOwners:
+  - '0xa59BcDA45A60dACA0Ee6FD893B03C2C9B27a6a95'
+quorum: 1
+
+File: uv.lock
+[BINARY FILE SKIPPED]
+
+
+--- END OF FILE ---
