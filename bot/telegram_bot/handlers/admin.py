@@ -12,6 +12,7 @@ from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_su
 # from bot.database.crud import get_all_subscribers_ids
 import pytalk # For TeamTalkUser used in _show_user_buttons
 
+from bot.constants.enums import AdminAction
 from bot.telegram_bot.filters import IsAdminFilter
 from pytalk.instance import TeamTalkInstance # For type hint
 # Import the helper function
@@ -30,7 +31,7 @@ admin_router.callback_query.filter(IsAdminFilter())
 
 async def _show_user_buttons(
     message: Message,
-    command_type: str,
+    command_type: AdminAction,
     _: callable,
     tt_instance: TeamTalkInstance | None
 ):
@@ -71,8 +72,8 @@ async def _show_user_buttons(
     builder = create_user_selection_keyboard(_, sorted_users, command_type)
 
     command_text_map = {
-        "kick": _("Select a user to kick:"), # SHOW_USERS_SELECT_KICK
-        "ban": _("Select a user to ban:")  # SHOW_USERS_SELECT_BAN
+        AdminAction.KICK: _("Select a user to kick:"), # SHOW_USERS_SELECT_KICK
+        AdminAction.BAN: _("Select a user to ban:")  # SHOW_USERS_SELECT_BAN
     }
     reply_text = command_text_map.get(command_type, _("Select a user:")) # SHOW_USERS_SELECT_DEFAULT
 
@@ -86,7 +87,7 @@ async def kick_command_handler(
     tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level
-    await _show_user_buttons(message, "kick", _, tt_instance)
+    await _show_user_buttons(message, AdminAction.KICK, _, tt_instance)
 
 
 @admin_router.message(Command("ban"))
@@ -96,7 +97,7 @@ async def ban_command_handler(
     tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
 ):
     # IsAdminFilter already applied at router level
-    await _show_user_buttons(message, "ban", _, tt_instance)
+    await _show_user_buttons(message, AdminAction.BAN, _, tt_instance)
 
 
 @admin_router.message(Command("subscribers"))

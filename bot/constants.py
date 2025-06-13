@@ -1,10 +1,6 @@
-# Deeplink actions
-ACTION_SUBSCRIBE = "subscribe"
-ACTION_UNSUBSCRIBE = "unsubscribe"
-ACTION_SUBSCRIBE_AND_LINK_NOON = "subscribe_link_noon"
-
-CALLBACK_ACTION_KICK = "kick"
-CALLBACK_ACTION_BAN = "ban"
+# Note: Action strings formerly defined here (e.g., for deeplinks, admin actions)
+# have been migrated to Enum definitions in bot.constants.enums.
+# Please import and use the Enum members directly from there.
 
 # Mute actions
 MUTE_ACTION_MUTE = "mute"

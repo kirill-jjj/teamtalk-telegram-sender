@@ -7,12 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.core.user_settings import UserSpecificSettings
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
+from bot.constants.enums import SettingsNavAction, NotificationAction
 from ._helpers import process_setting_update
 
 logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
 
-@notifications_router.callback_query(SettingsCallback.filter(F.action == "notifications"))
+@notifications_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS))
 async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
     _: callable,
@@ -35,7 +36,7 @@ async def cq_show_notifications_menu(
     except TelegramAPIError as e:
         logger.error(f"TelegramAPIError editing message for notification settings menu: {e}")
 
-@notifications_router.callback_query(NotificationActionCallback.filter(F.action == "toggle_noon"))
+@notifications_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.TOGGLE_NOON))
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
     session: AsyncSession,

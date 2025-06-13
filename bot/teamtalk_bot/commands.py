@@ -16,9 +16,8 @@ from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
-from bot.constants import (
-    ACTION_UNSUBSCRIBE, ACTION_SUBSCRIBE_AND_LINK_NOON,
-)
+# ACTION_UNSUBSCRIBE and ACTION_SUBSCRIBE_AND_LINK_NOON removed as they are now in DeeplinkAction Enum
+from bot.constants.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr # Convenience variable
@@ -173,7 +172,7 @@ async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     _: callable,
-    action: str,
+    action: DeeplinkAction,
     success_log_message: str,
     reply_text_source: str, # English source string
     error_reply_source: str,  # English source string
@@ -224,7 +223,7 @@ async def handle_tt_subscribe_command(
         tt_message=tt_message,
         session=session,
         _=_,
-        action=ACTION_SUBSCRIBE_AND_LINK_NOON,
+        action=DeeplinkAction.SUBSCRIBE_AND_LINK_NOON,
         payload=sender_tt_username,
         success_log_message="Generated subscribe and link NOON deeplink {token} for TT user {sender_username}",
         reply_text_source="Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}",
@@ -242,7 +241,7 @@ async def handle_tt_unsubscribe_command(
         tt_message=tt_message,
         session=session,
         _=_,
-        action=ACTION_UNSUBSCRIBE,
+        action=DeeplinkAction.UNSUBSCRIBE,
         payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
         reply_text_source="Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}",

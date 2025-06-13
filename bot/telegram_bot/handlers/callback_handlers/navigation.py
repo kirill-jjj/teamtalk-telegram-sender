@@ -5,11 +5,12 @@ from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback # For "back_to_main"
+from bot.constants.enums import SettingsNavAction
 
 logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")
 
-@navigation_router.callback_query(SettingsCallback.filter(F.action == "back_to_main"))
+@navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
 async def cq_back_to_main_settings_menu(
     callback_query: CallbackQuery,
     _: callable, # Translator

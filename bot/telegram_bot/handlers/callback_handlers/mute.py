@@ -24,6 +24,13 @@ from bot.telegram_bot.callback_data import (
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
 )
+from bot.constants.enums import (
+    NotificationAction,
+    MuteAllAction,
+    UserListAction,
+    # PaginateUsersAction, # Not directly used for filtering here, list_type is UserListAction
+    ToggleMuteSpecificAction
+)
 from bot.constants import USERS_PER_PAGE
 from bot.state import USER_ACCOUNTS_CACHE
 from ._helpers import process_setting_update
@@ -86,7 +93,7 @@ async def _display_internal_user_list(
     callback_query: CallbackQuery,
     _: callable,
     user_specific_settings: UserSpecificSettings,
-    list_type: str,
+    list_type: UserListAction,
     page: int = 0,
 ):
     if not callback_query.message:
@@ -97,14 +104,14 @@ async def _display_internal_user_list(
     # is_mute_all_active = user_specific_settings.mute_all_flag # Not directly used here, but influences list_type meaning
 
     header_key, empty_key = "", ""
-    if list_type == "muted":
+    if list_type == UserListAction.LIST_MUTED:
         header_key = "MUTED_USERS_HEADER"
         empty_key = "NO_MUTED_USERS_TEXT"
-    elif list_type == "allowed":
+    elif list_type == UserListAction.LIST_ALLOWED:
         header_key = "ALLOWED_USERS_HEADER"
         empty_key = "NO_ALLOWED_USERS_TEXT"
-    else:
-        logger.error(f"Unknown list_type '{list_type}' in _display_internal_user_list")
+    else: # Should not happen if called with UserListAction members
+        logger.error(f"Unknown list_type '{list_type.value if isinstance(list_type, UserListAction) else list_type}' in _display_internal_user_list")
         await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
         return
 
@@ -158,9 +165,9 @@ def _get_username_to_toggle_from_callback(
     """Extracts the username to be toggled from the callback data based on the list type."""
     user_idx = callback_data.user_idx
     current_page = callback_data.current_page
-    list_type = callback_data.list_type
+    list_type = callback_data.list_type # This is already UserListAction
 
-    if list_type == "all_accounts":
+    if list_type == UserListAction.LIST_ALL_ACCOUNTS:
         if not USER_ACCOUNTS_CACHE:
             logger.warning("Attempted to get username from 'all_accounts' list, but USER_ACCOUNTS_CACHE is empty.")
             return None
@@ -168,7 +175,7 @@ def _get_username_to_toggle_from_callback(
         page_items, _, _ = _paginate_list_util(all_accounts, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return ttstr(page_items[user_idx].username)
-    elif list_type in ["muted", "allowed"]:
+    elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         # This list always comes from muted_users_set, regardless of mute_all_flag
         # The interpretation of what this list means (muted or allowed) happens at a higher level
         relevant_usernames = sorted(list(user_specific_settings.muted_users_set))
@@ -176,11 +183,11 @@ def _get_username_to_toggle_from_callback(
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]
 
-    logger.warning(f"Could not find username for toggle. Idx: {user_idx}, List: {list_type}, Page: {current_page}")
+    logger.warning(f"Could not find username for toggle. Idx: {user_idx}, List: {list_type.value if isinstance(list_type, UserListAction) else list_type}, Page: {current_page}")
     return None
 
 
-@mute_router.callback_query(NotificationActionCallback.filter(F.action == "manage_muted"))
+@mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
 async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     _: callable,
@@ -201,7 +208,7 @@ async def cq_show_manage_muted_menu(
         logger.error(f"TelegramAPIError editing message for manage_muted_users menu: {e}")
 
 
-@mute_router.callback_query(MuteAllCallback.filter(F.action == "toggle_mute_all"))
+@mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))
 async def cq_toggle_mute_all_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_specific_settings: UserSpecificSettings, callback_data: MuteAllCallback # This argument is not used by the function body
 ):
@@ -238,39 +245,38 @@ async def cq_toggle_mute_all_action(
     )
 
 
-@mute_router.callback_query(UserListCallback.filter(F.action.in_(["list_muted", "list_allowed"])))
+@mute_router.callback_query(UserListCallback.filter(F.action.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_list_internal_users_action(
     callback_query: CallbackQuery, _: callable, user_specific_settings: UserSpecificSettings, callback_data: UserListCallback
 ):
     await callback_query.answer()
-    requested_list_type = callback_data.action.split("_")[1]
+    requested_list_type = callback_data.action # This is now a UserListAction member
     is_mute_all_active = user_specific_settings.mute_all_flag
 
     # Determine the actual list type to display based on mute_all_flag
-    # If mute_all is ON, the 'muted' list effectively becomes an 'allowed' list, and vice-versa.
     effective_list_type = requested_list_type
     if is_mute_all_active:
-        if requested_list_type == "muted": # User wants to see who is muted, but mute_all is on
-            effective_list_type = "allowed" # So we show them the allowed list (exceptions to mute_all)
-        # if requested_list_type == "allowed", it remains "allowed"
+        if requested_list_type == UserListAction.LIST_MUTED:
+            effective_list_type = UserListAction.LIST_ALLOWED
+        # if requested_list_type == UserListAction.LIST_ALLOWED, it remains UserListAction.LIST_ALLOWED
     else: # mute_all is OFF
-        if requested_list_type == "allowed": # User wants to see allowed list, but mute_all is off
-            effective_list_type = "muted" # So we show them the muted list (specific mutes)
-        # if requested_list_type == "muted", it remains "muted"
+        if requested_list_type == UserListAction.LIST_ALLOWED:
+            effective_list_type = UserListAction.LIST_MUTED
+        # if requested_list_type == UserListAction.LIST_MUTED, it remains UserListAction.LIST_MUTED
 
     await _display_internal_user_list(callback_query, _, user_specific_settings, effective_list_type, 0)
 
 
-@mute_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_(["muted", "allowed"])))
+@mute_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery, _: callable, user_specific_settings: UserSpecificSettings, callback_data: PaginateUsersCallback
 ):
     await callback_query.answer()
-    # The list_type in callback_data for pagination should already be the effective list type
+    # callback_data.list_type is already UserListAction from CallbackData definition
     await _display_internal_user_list(callback_query, _, user_specific_settings, callback_data.list_type, callback_data.page)
 
 
-@mute_router.callback_query(UserListCallback.filter(F.action == "list_all_accounts"))
+@mute_router.callback_query(UserListCallback.filter(F.action == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_show_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
@@ -291,7 +297,7 @@ async def cq_show_all_accounts_list_action(
     await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, 0)
 
 
-@mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == "all_accounts"))
+@mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_paginate_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
@@ -311,7 +317,7 @@ async def cq_paginate_all_accounts_list_action(
     await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, callback_data.page)
 
 
-@mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == "toggle_user"))
+@mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
 async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
@@ -379,17 +385,19 @@ async def cq_toggle_specific_user_mute_action(
         return
 
     # --- Refresh UI ---
-    list_type_user_was_on = callback_data.list_type # e.g., "all_accounts", "muted", "allowed"
+    list_type_user_was_on = callback_data.list_type # This is already UserListAction
     current_page_for_refresh = callback_data.current_page
 
-    if list_type_user_was_on == "all_accounts":
+    if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_instance and tt_instance.connected and tt_instance.logged_in:
             await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, current_page_for_refresh)
         else:
             await callback_query.answer(_("TT_BOT_DISCONNECTED_REFRESH_FAILED_TOAST"), show_alert=True)
-            manage_muted_cb_data = NotificationActionCallback(action="manage_muted", id=str(callback_query.from_user.id)) # Pass user ID if needed by menu
+            # Pass user ID if needed by menu; NotificationActionCallback does not have an 'id' field by default.
+            # Assuming MANAGE_MUTED does not require an ID in its callback_data for this context.
+            manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
             await cq_show_manage_muted_menu(callback_query, _, user_specific_settings, manage_muted_cb_data)
-    else: # "muted" or "allowed"
+    else: # "muted" or "allowed" (UserListAction.LIST_MUTED or UserListAction.LIST_ALLOWED)
         # The list_type_user_was_on is the list the user *clicked* on.
         # We need to refresh that same semantic list.
         # The _display_internal_user_list will internally derive the correct effective list based on current mute_all state.
