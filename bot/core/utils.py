@@ -54,20 +54,20 @@ def pluralize(number: int, one: str, few: str, many: str) -> str:
 
 def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount]) -> str:
     """Safely gets the username from a Pytalk User or UserAccount object as a string."""
-    username_val = None
+    username = None
     if hasattr(user_or_account, 'username'): # Standard for pytalk.user.User
-        username_val = user_or_account.username
+        username = user_or_account.username
     elif hasattr(user_or_account, '_account') and hasattr(user_or_account._account, 'szUsername'): # For pytalk.UserAccount
         # This case handles the structure seen in cq_toggle_specific_user_mute_action for UserAccount
-        username_val = user_or_account._account.szUsername
+        username = user_or_account._account.szUsername
     elif hasattr(user_or_account, 'szUsername'): # Direct access if szUsername is an attribute
-         username_val = user_or_account.szUsername
+         username = user_or_account.szUsername
 
 
-    if isinstance(username_val, bytes):
-        return ttstr(username_val)
+    if isinstance(username, bytes):
+        return ttstr(username)
 
-    return str(username_val) if username_val is not None else ""
+    return str(username) if username is not None else ""
 
 def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin: bool) -> str:
     """Builds a contextual help message based on platform and user rights."""

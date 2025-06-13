@@ -96,13 +96,13 @@ async def create_deeplink(
     expiry_minutes: int = DEEPLINK_EXPIRY_MINUTES
 ) -> str:
     token_str = str(uuid.uuid4())
-    expiry_time_val = datetime.utcnow() + timedelta(minutes=expiry_minutes)
+    expiry_time = datetime.utcnow() + timedelta(minutes=expiry_minutes)
     deeplink_obj = Deeplink(
         token=token_str,
         action=action,
         payload=payload,
         expected_telegram_id=expected_telegram_id,
-        expiry_time=expiry_time_val
+        expiry_time=expiry_time
     )
     if await db_add_generic(session, deeplink_obj):
         logger.debug(f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}")

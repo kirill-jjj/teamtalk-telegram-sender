@@ -141,31 +141,31 @@ async def send_telegram_messages_to_list(
 
     online_tt_usernames = {ttstr(user.username) for user in ONLINE_USERS_CACHE.values()}
     tasks_list = []
-    for chat_id_val in chat_ids:
-        user_settings_val = USER_SETTINGS_CACHE.get(chat_id_val)
-        language_val = user_settings_val.language if user_settings_val else DEFAULT_LANGUAGE
-        text_val = text_generator(language_val)
+    for chat_id in chat_ids:
+        user_settings = USER_SETTINGS_CACHE.get(chat_id)
+        language = user_settings.language if user_settings else DEFAULT_LANGUAGE
+        text = text_generator(language)
 
-        current_reply_markup_val = None
+        current_reply_markup = None
         if reply_markup_generator and tt_user_username_for_markup and tt_user_nickname_for_markup:
-            current_reply_markup_val = reply_markup_generator(
+            current_reply_markup = reply_markup_generator(
                 tt_user_username_for_markup,
                 tt_user_nickname_for_markup,
-                language_val,
-                chat_id_val
+                language,
+                chat_id
             )
 
         individual_tt_user_is_online = False
-        if user_settings_val and user_settings_val.teamtalk_username:
-            if user_settings_val.teamtalk_username in online_tt_usernames:
+        if user_settings and user_settings.teamtalk_username:
+            if user_settings.teamtalk_username in online_tt_usernames:
                 individual_tt_user_is_online = True
 
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_to_use,
-            chat_id=chat_id_val,
-            text=text_val,
-            language=language_val,
-            reply_markup=current_reply_markup_val,
+            chat_id=chat_id,
+            text=text,
+            language=language,
+            reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online
         ))
     await asyncio.gather(*tasks_list)

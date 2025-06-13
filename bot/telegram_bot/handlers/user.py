@@ -40,10 +40,10 @@ async def start_command_handler(
 ):
     if not message.from_user: return
 
-    token_val = command.args
-    if token_val:
+    token = command.args
+    if token:
         # Assuming handle_deeplink_payload is refactored to take `_`
-        await handle_deeplink_payload(message, token_val, session, _, user_specific_settings)
+        await handle_deeplink_payload(message, token, session, _, user_specific_settings)
     else:
         await message.reply(_("Hello! Use /help to see available commands.")) # START_HELLO
 
@@ -54,15 +54,15 @@ def _get_user_display_channel_name(
     translator: "gettext.GNUTranslations"
 ) -> str:
     channel_obj = user_obj.channel
-    user_display_channel_name_val = ""
-    is_channel_hidden_val = False
+    user_display_channel_name = ""
+    is_channel_hidden = False
 
     if channel_obj:
         try:
             # Check if channel is hidden (requires pytalk.instance.sdk.ChannelType)
             if hasattr(pytalk.instance.sdk, "ChannelType") and \
                (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0:
-                is_channel_hidden_val = True
+                is_channel_hidden = True
         except AttributeError:
             logger.warning(f"SDK or ChannelType attribute missing, cannot determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden.")
         except Exception as e_chan:
@@ -70,18 +70,18 @@ def _get_user_display_channel_name(
 
     # Determine display name based on admin status and channel visibility/type
     if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # Regular channel
-        if is_caller_admin or not is_channel_hidden_val:
-            user_display_channel_name_val = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name)) # WHO_CHANNEL_IN
+        if is_caller_admin or not is_channel_hidden:
+            user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name)) # WHO_CHANNEL_IN
         else: # Hidden channel, non-admin caller
-            user_display_channel_name_val = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
+            user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
     elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT: # Root channel
-        user_display_channel_name_val = translator.gettext("in root channel") # WHO_CHANNEL_ROOT
+        user_display_channel_name = translator.gettext("in root channel") # WHO_CHANNEL_ROOT
     elif not channel_obj or channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # No specific channel / under server
-        user_display_channel_name_val = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
+        user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
     else: # Fallback for any other case
-        user_display_channel_name_val = translator.gettext("in unknown location") # WHO_CHANNEL_UNKNOWN_LOCATION
+        user_display_channel_name = translator.gettext("in unknown location") # WHO_CHANNEL_UNKNOWN_LOCATION
 
-    return user_display_channel_name_val
+    return user_display_channel_name
 
 
 def _group_users_for_who_command(
@@ -174,7 +174,7 @@ async def who_command_handler(
         await message.reply(translator.gettext("Error getting users from TeamTalk.")) # TT_ERROR_GETTING_USERS
         return
 
-    is_caller_admin_val = await IsAdminFilter()(message, session)
+    is_caller_admin = await IsAdminFilter()(message, session)
     bot_user_id = tt_instance.getMyUserID()
     if bot_user_id is None:
         logger.error("Could not get bot's own user ID from TeamTalk instance.")
@@ -185,7 +185,7 @@ async def who_command_handler(
         _group_users_for_who_command,
         all_users_list,
         bot_user_id,
-        is_caller_admin_val,
+        is_caller_admin,
         translator # Pass translator
     )
 
