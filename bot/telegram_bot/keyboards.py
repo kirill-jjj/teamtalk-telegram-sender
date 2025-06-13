@@ -7,7 +7,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import html
 import pytalk # For UserAccount type hint
-from typing import Callable
+from typing import Callable, List # Added List
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -283,7 +283,7 @@ def create_account_list_keyboard(
 
 def create_subscriber_list_keyboard(
     _: Callable,
-    subscriber_ids: list[int],
+    subscribers_info: List[dict], # Changed from subscriber_ids: list[int]
     current_page: int,
     total_pages: int
 ) -> InlineKeyboardMarkup:
@@ -291,17 +291,22 @@ def create_subscriber_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     # Subscriber buttons (one per row)
-    for telegram_id in subscriber_ids:
+    for subscriber in subscribers_info: # Changed loop variable and iteration
+        # Using display_name for text and telegram_id for callback
+        button_text = _("Delete {user_info}").format(user_info=subscriber['display_name'])
         builder.row(
             InlineKeyboardButton(
-                text=_("Delete {telegram_id}").format(telegram_id=telegram_id),
+                text=button_text,
                 callback_data=SubscriberListCallback(
                     action="delete_subscriber",
-                    telegram_id=telegram_id,
+                    telegram_id=subscriber['telegram_id'], # Using telegram_id from dict
                     page=current_page  # Keep track of current page for refresh
                 ).pack()
             )
         )
+
+    # No specific builder.adjust(1) needed here as builder.row() already creates one row per button.
+    # If subscribers_info is empty, no subscriber buttons will be added.
 
     # Pagination buttons row
     pagination_buttons = []

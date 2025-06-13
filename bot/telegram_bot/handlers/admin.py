@@ -1,8 +1,9 @@
 import logging
-from aiogram import Router
+from aiogram import Router, Bot
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.exceptions import TelegramAPIError
 
 from bot.state import ONLINE_USERS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name # get_tt_user_display_name now expects `_`
@@ -95,10 +96,10 @@ async def ban_command_handler(
 
 
 @admin_router.message(Command("subscribers"))
-async def subscribers_command_handler(message: Message, session: AsyncSession, _: callable):
+async def subscribers_command_handler(message: Message, session: AsyncSession, bot: Bot, _: callable):
     """
-    Handles the /subscribers command to display a paginated list of subscribed users.
-    Admins only.
+    Handles the /subscribers command to display a paginated list of subscribed users
+    with their names and usernames if available. Admins only.
     """
     all_subscriber_ids = await get_all_subscribers_ids(session)
 
@@ -106,16 +107,40 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, _
         await message.reply(_("No subscribers found.")) # SUBSCRIBERS_NONE_FOUND
         return
 
+    all_subscribers_info = []
+    for telegram_id in all_subscriber_ids:
+        display_name = str(telegram_id) # Default display name
+        try:
+            chat_info = await bot.get_chat(telegram_id)
+            full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
+            username_part = f" (@{chat_info.username})" if chat_info.username else ""
+
+            if full_name:
+                display_name = f"{full_name}{username_part}"
+            elif chat_info.username: # No full name, but username exists
+                display_name = f"@{chat_info.username}"
+            # If neither full_name nor username, display_name remains str(telegram_id)
+        except TelegramAPIError as e:
+            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id}: {e}")
+        except Exception as e: # Catch any other unexpected errors
+            logger.error(f"Unexpected error fetching chat info for Telegram ID {telegram_id}: {e}")
+
+        all_subscribers_info.append({'telegram_id': telegram_id, 'display_name': display_name})
+
+    if not all_subscribers_info: # Should not happen if all_subscriber_ids was not empty, but as a safeguard
+        await message.reply(_("No subscriber information could be fetched."))
+        return
+
     current_page = 0  # Initial page
-    total_pages = (len(all_subscriber_ids) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
+    total_pages = (len(all_subscribers_info) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
 
     start_index = current_page * SUBSCRIBERS_PER_PAGE
     end_index = start_index + SUBSCRIBERS_PER_PAGE
-    page_subscriber_ids = all_subscriber_ids[start_index:end_index]
+    page_subscribers_info_data = all_subscribers_info[start_index:end_index]
 
     keyboard = create_subscriber_list_keyboard(
         _,
-        subscriber_ids=page_subscriber_ids,
+        subscribers_info=page_subscribers_info_data, # Pass the list of dicts
         current_page=current_page,
         total_pages=total_pages
     )
