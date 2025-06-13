@@ -1,4 +1,5 @@
 import logging
+import asyncio # Added asyncio
 from aiogram import Router, Bot
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,51 +30,55 @@ async def _get_paginated_subscribers_info(
     if not all_subscriber_ids:
         return [], 0, 0
 
-    all_subscribers_info = []
-    for telegram_id in all_subscriber_ids:
-        display_name = str(telegram_id)  # Default display name
-        try:
-            chat_info = await bot.get_chat(telegram_id)
+    total_pages = (len(all_subscriber_ids) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
+
+    current_page_num = requested_page
+    if current_page_num < 0:
+        current_page_num = 0
+
+    # Adjust if requested_page is too high
+    if current_page_num >= total_pages and total_pages > 0:
+        current_page_num = total_pages - 1
+    elif total_pages == 0: # No pages, so page 0
+        current_page_num = 0
+        return [], 0, 0 # No subscribers, no pages
+
+    # Initial slice for page_ids
+    start_idx = current_page_num * SUBSCRIBERS_PER_PAGE
+    end_idx = start_idx + SUBSCRIBERS_PER_PAGE
+    page_ids_to_fetch = all_subscriber_ids[start_idx:end_idx]
+
+    # If current page is empty (e.g. after deletions) and it's not page 0, try previous page
+    if not page_ids_to_fetch and current_page_num > 0:
+        current_page_num -= 1
+        start_idx = current_page_num * SUBSCRIBERS_PER_PAGE
+        end_idx = start_idx + SUBSCRIBERS_PER_PAGE
+        page_ids_to_fetch = all_subscriber_ids[start_idx:end_idx]
+
+    if not page_ids_to_fetch: # If still no IDs for any valid page
+        return [], current_page_num, total_pages
+
+    # Fetch chat info concurrently for the current page's IDs
+    tasks = [bot.get_chat(tg_id) for tg_id in page_ids_to_fetch]
+    chat_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    page_subscribers_info = []
+    for telegram_id, result in zip(page_ids_to_fetch, chat_results):
+        display_name = str(telegram_id) # Default
+        if isinstance(result, Exception):
+            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id} via asyncio.gather: {result}")
+        else: # Successfully fetched chat_info
+            chat_info = result
             full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
             username_part = f" (@{chat_info.username})" if chat_info.username else ""
-
             if full_name:
                 display_name = f"{full_name}{username_part}"
             elif chat_info.username:
                 display_name = f"@{chat_info.username}"
-        except TelegramAPIError as e:
-            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id} in callback: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error fetching chat info for Telegram ID {telegram_id} in callback: {e}")
 
-        all_subscribers_info.append({'telegram_id': telegram_id, 'display_name': display_name})
+        page_subscribers_info.append({'telegram_id': telegram_id, 'display_name': display_name})
 
-    if not all_subscribers_info: # Should technically be caught by all_subscriber_ids check
-        return [], 0, 0
-
-    total_pages = (len(all_subscribers_info) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
-
-    current_page = requested_page
-    if current_page < 0:
-        current_page = 0
-    if current_page >= total_pages and total_pages > 0:
-        current_page = total_pages - 1
-
-    if total_pages == 0: # No subscribers left after potential filtering/errors
-        return [], 0, 0
-
-    start_index = current_page * SUBSCRIBERS_PER_PAGE
-    end_index = start_index + SUBSCRIBERS_PER_PAGE
-    page_data_slice = all_subscribers_info[start_index:end_index]
-
-    # If the current page is now empty due to deletions and it's not page 0, try to go to the previous page.
-    if not page_data_slice and current_page > 0:
-        current_page -= 1
-        start_index = current_page * SUBSCRIBERS_PER_PAGE
-        end_index = start_index + SUBSCRIBERS_PER_PAGE
-        page_data_slice = all_subscribers_info[start_index:end_index]
-
-    return page_data_slice, current_page, total_pages
+    return page_subscribers_info, current_page_num, total_pages
 
 
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
