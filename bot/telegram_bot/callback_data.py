@@ -42,3 +42,9 @@ class ToggleMuteSpecificCallback(CallbackData, prefix="toggle_user_mute"):
 class AdminActionCallback(CallbackData, prefix="admin_action"):
     action: str  # e.g., "kick", "ban"
     user_id: int # TeamTalk user ID
+
+# For subscriber list actions
+class SubscriberListCallback(CallbackData, prefix="sub_list"):
+    action: str  # e.g., "view", "page", "delete_subscriber"
+    telegram_id: int | None = None  # Present for "delete_subscriber"
+    page: int | None = None  # For pagination

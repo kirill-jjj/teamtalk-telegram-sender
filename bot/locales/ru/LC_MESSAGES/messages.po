@@ -567,3 +567,18 @@ msgstr "Настройка подписок обновлена на: {setting_na
 
 #~ msgid "ALL_SERVER_ACCOUNTS_HEADER"
 #~ msgstr "Аккаунты сервера (для блокировки)"
+
+msgid "Delete User {user_id}"
+msgstr "Удалить пользователя {user_id}"
+
+msgid "No subscribers found."
+msgstr "Подписчики не найдены."
+
+msgid "Here is the list of subscribers. Page {current_page_display}/{total_pages}"
+msgstr "Список подписчиков. Страница {current_page_display}/{total_pages}"
+
+msgid "Subscriber {telegram_id} deleted successfully."
+msgstr "Подписчик {telegram_id} успешно удален."
+
+msgid "Error deleting subscriber {telegram_id}."
+msgstr "Ошибка при удалении подписчика {telegram_id}."

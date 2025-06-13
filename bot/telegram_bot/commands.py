@@ -16,6 +16,7 @@ USER_COMMANDS: List[BotCommand] = [
 ADMIN_COMMANDS: List[BotCommand] = USER_COMMANDS + [
     BotCommand(command="kick", description="Kick TT user (admin, via buttons)"),
     BotCommand(command="ban", description="Ban TT user (admin, via buttons)"),
+    BotCommand(command="subscribers", description="View and manage subscribed users"),
 ]
 
 
