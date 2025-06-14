@@ -1,5 +1,5 @@
 from aiogram.filters.callback_data import CallbackData
-from bot.constants.enums import (
+from bot.core.enums import (
     AdminAction,
     SettingsNavAction,
     LanguageAction,

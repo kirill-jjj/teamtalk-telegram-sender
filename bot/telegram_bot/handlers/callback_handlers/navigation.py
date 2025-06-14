@@ -5,7 +5,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback # For "back_to_main"
-from bot.constants.enums import SettingsNavAction
+from bot.core.enums import SettingsNavAction
 
 logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")

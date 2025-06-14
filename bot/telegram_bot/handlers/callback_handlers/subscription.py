@@ -8,7 +8,7 @@ from bot.core.user_settings import UserSpecificSettings
 from bot.database.models import NotificationSetting
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
-from bot.constants.enums import SettingsNavAction, SubscriptionAction
+from bot.core.enums import SettingsNavAction, SubscriptionAction
 from ._helpers import process_setting_update
 
 logger = logging.getLogger(__name__)
