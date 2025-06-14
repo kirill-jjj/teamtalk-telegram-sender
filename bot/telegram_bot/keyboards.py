@@ -11,7 +11,7 @@ from typing import Callable, List # Added List
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from bot.constants.enums import (
+from bot.core.enums import (
     AdminAction,
     SettingsNavAction,
     LanguageAction,

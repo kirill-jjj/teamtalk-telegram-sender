@@ -11,7 +11,7 @@ from pytalk.exceptions import PermissionError as PytalkPermissionError
 
 from bot.telegram_bot.filters import IsAdminFilter
 from bot.telegram_bot.callback_data import AdminActionCallback
-from bot.constants.enums import AdminAction
+from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
 
 logger = logging.getLogger(__name__)

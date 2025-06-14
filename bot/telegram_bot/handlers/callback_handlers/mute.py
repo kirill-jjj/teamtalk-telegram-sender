@@ -24,7 +24,7 @@ from bot.telegram_bot.callback_data import (
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
 )
-from bot.constants.enums import (
+from bot.core.enums import (
     NotificationAction,
     MuteAllAction,
     UserListAction,

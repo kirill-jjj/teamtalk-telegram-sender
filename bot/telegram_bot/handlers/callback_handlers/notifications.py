@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.core.user_settings import UserSpecificSettings
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
-from bot.constants.enums import SettingsNavAction, NotificationAction
+from bot.core.enums import SettingsNavAction, NotificationAction
 from ._helpers import process_setting_update
 
 logger = logging.getLogger(__name__)

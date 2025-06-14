@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
-from bot.constants.enums import SubscriberListAction
+from bot.core.enums import SubscriberListAction
 from bot.telegram_bot.filters import IsAdminFilter
 
 logger = logging.getLogger(__name__)

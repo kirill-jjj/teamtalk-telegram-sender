@@ -17,7 +17,7 @@ from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
 # ACTION_UNSUBSCRIBE and ACTION_SUBSCRIBE_AND_LINK_NOON removed as they are now in DeeplinkAction Enum
-from bot.constants.enums import DeeplinkAction
+from bot.core.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr # Convenience variable

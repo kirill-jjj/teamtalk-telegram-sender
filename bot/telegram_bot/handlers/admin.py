@@ -12,7 +12,7 @@ from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_su
 # from bot.database.crud import get_all_subscribers_ids
 import pytalk # For TeamTalkUser used in _show_user_buttons
 
-from bot.constants.enums import AdminAction
+from bot.core.enums import AdminAction
 from bot.telegram_bot.filters import IsAdminFilter
 from pytalk.instance import TeamTalkInstance # For type hint
 # Import the helper function

@@ -15,7 +15,7 @@ from bot.core.user_settings import (
     get_or_create_user_settings,
     update_user_settings_in_db
 )
-from bot.constants.enums import DeeplinkAction
+from bot.core.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
 

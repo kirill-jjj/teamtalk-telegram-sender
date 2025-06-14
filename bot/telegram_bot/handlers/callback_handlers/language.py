@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.core.user_settings import UserSpecificSettings
 from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_language_selection_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
-from bot.constants.enums import SettingsNavAction, LanguageAction
+from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
 from ._helpers import process_setting_update # Import from local _helpers
 
