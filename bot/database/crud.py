@@ -38,51 +38,83 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: Base | None
             return False
     return False
 
+async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[Base], telegram_id: int) -> bool:
+    """
+    Adds an entity to the database if it does not already exist.
+
+    Args:
+        session: The SQLAlchemy AsyncSession.
+        model_class: The ORM model class (e.g., SubscribedUser, Admin).
+        telegram_id: The Telegram ID of the entity.
+
+    Returns:
+        True if the entity was added, False if it already existed or an error occurred.
+    """
+    table_name = model_class.__tablename__
+    existing_entity = await session.get(model_class, telegram_id)
+    if existing_entity:
+        logger.debug(f"User {telegram_id} already exists in {table_name}.")
+        return False
+
+    entity = model_class(telegram_id=telegram_id)
+    return await db_add_generic(session, entity)
+
+async def _remove_entity(session: AsyncSession, model_class: type[Base], telegram_id: int) -> bool:
+    """
+    Removes an entity from the database by its Telegram ID.
+
+    Args:
+        session: The SQLAlchemy AsyncSession.
+        model_class: The ORM model class (e.g., SubscribedUser, Admin).
+        telegram_id: The Telegram ID of the entity to remove.
+
+    Returns:
+        True if the entity was removed, False if it was not found or an error occurred.
+    """
+    table_name = model_class.__tablename__
+    entity = await session.get(model_class, telegram_id)
+    if not entity:
+        logger.debug(f"Entity with ID {telegram_id} not found in {table_name} for removal.")
+        return False
+    return await db_remove_generic(session, entity)
+
+async def _get_all_entity_ids(session: AsyncSession, model_class: type[Base]) -> list[int]:
+    """
+    Retrieves all Telegram IDs for a given entity type.
+
+    Args:
+        session: The SQLAlchemy AsyncSession.
+        model_class: The ORM model class (e.g., SubscribedUser, Admin).
+
+    Returns:
+        A list of Telegram IDs, or an empty list if an error occurs or no IDs are found.
+    """
+    table_name = model_class.__tablename__
+    try:
+        query = select(model_class.telegram_id)
+        result = await session.execute(query)
+        return result.scalars().all()
+    except Exception as e:
+        logger.error(f"Error getting all IDs from {table_name}: {e}")
+        return []
+
 async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    existing_subscriber = await session.get(SubscribedUser, telegram_id)
-    if existing_subscriber:
-        logger.debug(f"User {telegram_id} is already a subscriber.")
-        return False # Indicate already exists, not an error
-    subscriber = SubscribedUser(telegram_id=telegram_id)
-    return await db_add_generic(session, subscriber)
+    return await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
 
 async def remove_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    subscriber = await session.get(SubscribedUser, telegram_id)
-    if not subscriber:
-        logger.debug(f"Subscriber with ID {telegram_id} not found for removal.")
-        return False # Indicate not found
-    return await db_remove_generic(session, subscriber)
+    return await _remove_entity(session, SubscribedUser, telegram_id)
 
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
-    try:
-        result = await session.execute(select(SubscribedUser.telegram_id))
-        return result.scalars().all()
-    except Exception as e:
-        logger.error(f"Error getting all subscriber IDs: {e}")
-        return []
+    return await _get_all_entity_ids(session, SubscribedUser)
 
 async def add_admin(session: AsyncSession, telegram_id: int) -> bool:
-    existing_admin = await session.get(Admin, telegram_id)
-    if existing_admin:
-        logger.debug(f"User {telegram_id} is already an admin.")
-        return False
-    admin = Admin(telegram_id=telegram_id)
-    return await db_add_generic(session, admin)
+    return await _add_entity_if_not_exists(session, Admin, telegram_id)
 
 async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
-    admin = await session.get(Admin, telegram_id)
-    if not admin:
-        logger.debug(f"Admin with ID {telegram_id} not found for removal.")
-        return False
-    return await db_remove_generic(session, admin)
+    return await _remove_entity(session, Admin, telegram_id)
 
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
-    try:
-        result = await session.execute(select(Admin.telegram_id))
-        return result.scalars().all()
-    except Exception as e:
-        logger.error(f"Error getting all admin IDs: {e}")
-        return []
+    return await _get_all_entity_ids(session, Admin)
 
 async def is_admin(session: AsyncSession, telegram_id: int) -> bool:
     admin_record = await session.get(Admin, telegram_id)
