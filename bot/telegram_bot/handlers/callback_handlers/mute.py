@@ -187,6 +187,131 @@ def _get_username_to_toggle_from_callback(
     return None
 
 
+def _parse_mute_toggle_callback_data(
+    callback_data: ToggleMuteSpecificCallback, user_specific_settings: UserSpecificSettings
+) -> Optional[str]:
+    """
+    Parses the callback data to get the username to toggle.
+    This is a wrapper around _get_username_to_toggle_from_callback.
+    """
+    return _get_username_to_toggle_from_callback(callback_data, user_specific_settings)
+
+
+def _determine_mute_action_and_update_settings(
+    username_to_toggle: str, user_specific_settings: UserSpecificSettings
+) -> tuple[str, bool, set[str]]:
+    """
+    Determines the mute action, updates settings in-memory, and returns original settings.
+    """
+    original_muted_users_set = set(user_specific_settings.muted_users_set)
+    action_taken: str
+    current_status_is_muted: bool  # Is the user considered muted *before* this toggle action
+
+    if user_specific_settings.mute_all_flag:
+        # Mute all ON: muted_users_set = allowed users
+        if username_to_toggle in user_specific_settings.muted_users_set:  # Was allowed
+            user_specific_settings.muted_users_set.discard(username_to_toggle)  # Now not allowed
+            action_taken = "removed_from_allowed_list"
+            current_status_is_muted = False  # Was allowed (so, not muted)
+        else:
+            user_specific_settings.muted_users_set.add(username_to_toggle)  # Now allowed
+            action_taken = "added_to_allowed_list"
+            current_status_is_muted = True  # Was not in allowed list (so, effectively muted by mute_all)
+    else:
+        # Mute all OFF: muted_users_set = muted users
+        if username_to_toggle in user_specific_settings.muted_users_set:  # Was muted
+            user_specific_settings.muted_users_set.discard(username_to_toggle)  # Now not muted
+            action_taken = "removed_from_muted_list"
+            current_status_is_muted = True  # Was muted
+        else:
+            user_specific_settings.muted_users_set.add(username_to_toggle)  # Now muted
+            action_taken = "added_to_muted_list"
+            current_status_is_muted = False  # Was not muted
+
+    return action_taken, current_status_is_muted, original_muted_users_set
+
+
+def _generate_mute_toggle_toast_message(
+    username_to_toggle: str,
+    new_status_is_muted: bool, # True if muted AFTER toggle, False if unmuted AFTER toggle
+    mute_all_flag: bool, # Current state of user_specific_settings.mute_all_flag
+    _: callable
+) -> str:
+    """Generates the toast message for the mute toggle action."""
+    quoted_username = html.quote(username_to_toggle)
+    status_text_key: str
+
+    if new_status_is_muted:
+        # If mute_all_flag is True, it means the user is now effectively muted because they are NOT in the allowed list (for mute_all scenario)
+        # OR they are explicitly in the muted list (for not mute_all scenario)
+        status_text_key = "USER_STATUS_NOW_MUTED_BY_MUTE_ALL" if mute_all_flag else "USER_STATUS_NOW_MUTED"
+    else: # New status is unmuted
+        # If mute_all_flag is True, it means the user is now unmuted because they ARE in the allowed list
+        # If mute_all_flag is False, it means the user is now unmuted because they are NOT in the muted list
+        status_text_key = "USER_STATUS_NOW_ALLOWED" if mute_all_flag else "USER_STATUS_NOW_UNMUTED"
+
+    return _("USER_MUTE_STATUS_UPDATED_TOAST").format(username=quoted_username, status=_(status_text_key))
+
+
+async def _save_mute_settings_and_notify(
+    session: AsyncSession,
+    callback_query: CallbackQuery,
+    user_settings: UserSpecificSettings, # This is user_specific_settings in the main handler
+    toast_message: str,
+    username_to_toggle: str, # For logging
+    action_taken: str, # For logging
+    original_muted_users_set: set[str],
+    _: callable
+) -> bool:
+    """
+    Saves mute settings to DB, sends toast notification, and handles errors/reverts.
+    Returns True if successful, False otherwise.
+    """
+    if not callback_query.from_user: # Should be checked by caller, but as a safeguard
+        logger.error("Cannot save settings: callback_query.from_user is None.")
+        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        return False
+
+    try:
+        await update_user_settings_in_db(session, callback_query.from_user.id, user_settings)
+        await callback_query.answer(toast_message, show_alert=False)
+        return True
+    except Exception as e:
+        logger.error(f"DB/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
+        user_settings.muted_users_set = original_muted_users_set  # Revert in-memory change
+        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        return False
+
+
+async def _refresh_mute_related_ui(
+    callback_query: CallbackQuery,
+    _: callable,
+    user_specific_settings: UserSpecificSettings,
+    tt_instance: Optional[TeamTalkInstance],
+    callback_data: ToggleMuteSpecificCallback # Contains list_type and current_page
+) -> None:
+    """Refreshes the mute-related UI list after a toggle action."""
+    list_type_user_was_on = callback_data.list_type
+    current_page_for_refresh = callback_data.current_page
+
+    if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
+        if tt_instance and tt_instance.connected and tt_instance.logged_in:
+            await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, current_page_for_refresh)
+        else:
+            # This toast might be overridden by the one in _save_mute_settings_and_notify if that one fails
+            # However, if saving succeeds but TT is disconnected for UI refresh, this is important.
+            await callback_query.answer(_("TT_BOT_DISCONNECTED_REFRESH_FAILED_TOAST"), show_alert=True)
+            # Fallback to the main mute menu
+            manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
+            # We don't need to pass specific callback_data for MANAGE_MUTED action itself,
+            # as cq_show_manage_muted_menu doesn't use specific fields from it for its core logic.
+            await cq_show_manage_muted_menu(callback_query, _, user_specific_settings, manage_muted_cb_data)
+    else:  # LIST_MUTED or LIST_ALLOWED
+        # _display_internal_user_list correctly derives the effective list to show
+        # based on user_specific_settings.mute_all_flag and the list_type_user_was_on.
+        await _display_internal_user_list(callback_query, _, user_specific_settings, list_type_user_was_on, current_page_for_refresh)
+
+
 @mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
 async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
@@ -326,79 +451,49 @@ async def cq_toggle_specific_user_mute_action(
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
-    if not callback_query.message or not callback_query.from_user: return
+    if not callback_query.message or not callback_query.from_user:
+        # If no message or user, cannot proceed. Answer silently or log if needed.
+        # Consider await callback_query.answer() if appropriate, but often not needed if no user interaction.
+        return
 
-    username_to_toggle = _get_username_to_toggle_from_callback(callback_data, user_specific_settings)
+    username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_specific_settings)
 
     if not username_to_toggle:
         await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
         return
 
-    # --- Toggle mute status in memory & determine action ---
-    original_muted_users_set = set(user_specific_settings.muted_users_set) # For revert on error
-    action_taken: str
-    current_status_is_muted: bool # Is the user considered muted *before* this toggle action
+    action_taken, current_status_is_muted, original_muted_users_set = \
+        _determine_mute_action_and_update_settings(username_to_toggle, user_specific_settings)
 
-    # If mute_all is ON, muted_users_set contains ALLOWED users.
-    # If mute_all is OFF, muted_users_set contains MUTED users.
-    if user_specific_settings.mute_all_flag:
-        # Mute all ON: muted_users_set = allowed users
-        if username_to_toggle in user_specific_settings.muted_users_set: # Was allowed
-            user_specific_settings.muted_users_set.discard(username_to_toggle) # Now not allowed (effectively muted by mute_all)
-            action_taken = "removed_from_allowed_list" # (becomes muted by mute_all)
-            current_status_is_muted = False # Was allowed
-        else:
-            user_specific_settings.muted_users_set.add(username_to_toggle) # Now allowed
-            action_taken = "added_to_allowed_list" # (becomes unmuted, exception to mute_all)
-            current_status_is_muted = True # Was muted by mute_all
-    else:
-        # Mute all OFF: muted_users_set = muted users
-        if username_to_toggle in user_specific_settings.muted_users_set: # Was muted
-            user_specific_settings.muted_users_set.discard(username_to_toggle) # Now not muted
-            action_taken = "removed_from_muted_list" # (becomes unmuted)
-            current_status_is_muted = True # Was muted
-        else:
-            user_specific_settings.muted_users_set.add(username_to_toggle) # Now muted
-            action_taken = "added_to_muted_list" # (becomes muted)
-            current_status_is_muted = False # Was unmuted
+    new_status_is_muted = not current_status_is_muted # Status *after* the toggle
 
-    # --- Create toast message ---
-    quoted_username = html.quote(username_to_toggle)
-    new_status_is_muted = not current_status_is_muted # This is the status *after* the toggle
+    toast_message = _generate_mute_toggle_toast_message(
+        username_to_toggle,
+        new_status_is_muted,
+        user_specific_settings.mute_all_flag,
+        _
+    )
 
-    status_text_key = ""
-    if new_status_is_muted:
-        status_text_key = "USER_STATUS_NOW_MUTED" if not user_specific_settings.mute_all_flag else "USER_STATUS_NOW_MUTED_BY_MUTE_ALL"
-    else: # New status is unmuted
-        status_text_key = "USER_STATUS_NOW_UNMUTED" if not user_specific_settings.mute_all_flag else "USER_STATUS_NOW_ALLOWED"
+    save_successful = await _save_mute_settings_and_notify(
+        session,
+        callback_query,
+        user_specific_settings,
+        toast_message,
+        username_to_toggle,
+        action_taken,
+        original_muted_users_set,
+        _
+    )
 
-    toast_message = _("USER_MUTE_STATUS_UPDATED_TOAST").format(username=quoted_username, status=_(status_text_key))
-
-    # --- Save to DB and show toast ---
-    try:
-        await update_user_settings_in_db(session, callback_query.from_user.id, user_specific_settings)
-        await callback_query.answer(toast_message, show_alert=False)
-    except Exception as e:
-        logger.error(f"DB/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
-        user_specific_settings.muted_users_set = original_muted_users_set # Revert in-memory change
-        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+    if not save_successful:
+        # Error handling (toast, revert) already done in _save_mute_settings_and_notify
         return
 
-    # --- Refresh UI ---
-    list_type_user_was_on = callback_data.list_type # This is already UserListAction
-    current_page_for_refresh = callback_data.current_page
-
-    if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
-        if tt_instance and tt_instance.connected and tt_instance.logged_in:
-            await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, current_page_for_refresh)
-        else:
-            await callback_query.answer(_("TT_BOT_DISCONNECTED_REFRESH_FAILED_TOAST"), show_alert=True)
-            # Pass user ID if needed by menu; NotificationActionCallback does not have an 'id' field by default.
-            # Assuming MANAGE_MUTED does not require an ID in its callback_data for this context.
-            manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
-            await cq_show_manage_muted_menu(callback_query, _, user_specific_settings, manage_muted_cb_data)
-    else: # "muted" or "allowed" (UserListAction.LIST_MUTED or UserListAction.LIST_ALLOWED)
-        # The list_type_user_was_on is the list the user *clicked* on.
-        # We need to refresh that same semantic list.
-        # The _display_internal_user_list will internally derive the correct effective list based on current mute_all state.
-        await _display_internal_user_list(callback_query, _, user_specific_settings, list_type_user_was_on, current_page_for_refresh)
+    # If save was successful, proceed to refresh UI
+    await _refresh_mute_related_ui(
+        callback_query,
+        _,
+        user_specific_settings,
+        tt_instance,
+        callback_data
+    )
