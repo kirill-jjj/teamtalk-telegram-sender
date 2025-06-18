@@ -49,7 +49,7 @@ async def load_user_settings_to_cache(session_factory) -> None: # session_factor
             USER_SETTINGS_CACHE[settings_row.telegram_id] = UserSpecificSettings.from_db_row(settings_row)
     logger.debug(f"{len(USER_SETTINGS_CACHE)} user settings loaded into cache.")
 
-async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -> UserSpecificSettings:
+async def get_or_create_user_settings(telegram_id: int, session_factory) -> UserSpecificSettings:
     """
     Retrieves user settings from cache or DB. If not found, creates default settings in DB and cache.
     This function is intended to be the primary way to get user settings.
@@ -57,41 +57,42 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
     if telegram_id in USER_SETTINGS_CACHE:
         return USER_SETTINGS_CACHE[telegram_id]
 
-    user_settings_row = await session.get(UserSettings, telegram_id)
-    if user_settings_row:
-        specific_settings = UserSpecificSettings.from_db_row(user_settings_row)
-        USER_SETTINGS_CACHE[telegram_id] = specific_settings
-        return specific_settings
-    else:
-        default_settings = UserSpecificSettings()
-        new_settings_row = UserSettings(
-            telegram_id=telegram_id,
-            language=default_settings.language,
-            notification_settings=default_settings.notification_settings,
-            muted_users=await asyncio.to_thread(_prepare_muted_users_string, default_settings.muted_users_set), # Ensure consistent string format
-            mute_all=default_settings.mute_all_flag,
-            teamtalk_username=default_settings.teamtalk_username,
-            not_on_online_enabled=default_settings.not_on_online_enabled,
-            not_on_online_confirmed=default_settings.not_on_online_confirmed,
-        )
-        session.add(new_settings_row)
-        try:
-            await session.commit()
-            logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
-            USER_SETTINGS_CACHE[telegram_id] = default_settings # Cache the in-memory representation
+    async with session_factory() as session:
+        user_settings_row = await session.get(UserSettings, telegram_id)
+        if user_settings_row:
+            specific_settings = UserSpecificSettings.from_db_row(user_settings_row)
+            USER_SETTINGS_CACHE[telegram_id] = specific_settings
+            return specific_settings
+        else:
+            default_settings = UserSpecificSettings()
+            new_settings_row = UserSettings(
+                telegram_id=telegram_id,
+                language=default_settings.language,
+                notification_settings=default_settings.notification_settings,
+                muted_users=await asyncio.to_thread(_prepare_muted_users_string, default_settings.muted_users_set), # Ensure consistent string format
+                mute_all=default_settings.mute_all_flag,
+                teamtalk_username=default_settings.teamtalk_username,
+                not_on_online_enabled=default_settings.not_on_online_enabled,
+                not_on_online_confirmed=default_settings.not_on_online_confirmed,
+            )
+            session.add(new_settings_row)
+            try:
+                await session.commit()
+                logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
+                USER_SETTINGS_CACHE[telegram_id] = default_settings # Cache the in-memory representation
 
-            # If notifications are not NONE by default, add user to subscribers list
-            if default_settings.notification_settings != NotificationSetting.NONE:
-                if await add_subscriber(session, telegram_id):
-                    logger.info(f"User {telegram_id} automatically subscribed due to default notification settings.")
-                else:
-                    logger.warning(f"Failed to automatically subscribe user {telegram_id} on settings creation, though default was not NONE.")
-            return default_settings
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
-            # Return a default instance even if DB save fails, to avoid breaking logic relying on settings object
-            return UserSpecificSettings()
+                # If notifications are not NONE by default, add user to subscribers list
+                if default_settings.notification_settings != NotificationSetting.NONE:
+                    if await add_subscriber(session, telegram_id):
+                        logger.info(f"User {telegram_id} automatically subscribed due to default notification settings.")
+                    else:
+                        logger.warning(f"Failed to automatically subscribe user {telegram_id} on settings creation, though default was not NONE.")
+                return default_settings
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
+                # Return a default instance even if DB save fails, to avoid breaking logic relying on settings object
+                return UserSpecificSettings()
 
 
 async def update_user_settings_in_db(session: AsyncSession, telegram_id: int, settings: UserSpecificSettings):

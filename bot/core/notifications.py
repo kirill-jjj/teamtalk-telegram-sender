@@ -58,11 +58,11 @@ async def _get_recipients_for_notification(username: str, event_type: str) -> li
     # Iterate over a copy of the cache in case it's modified concurrently
     cached_subscriber_ids = list(SUBSCRIBED_USERS_CACHE)
 
-    # The session is still needed for should_notify_user, which fetches user-specific settings.
-    async with SessionFactory() as session:
-        for chat_id in cached_subscriber_ids:
-            if await should_notify_user(chat_id, username, event_type, session):
-                recipients.append(chat_id)
+    # should_notify_user now expects a session_factory and handles session creation internally.
+    # So we pass SessionFactory (the imported name for our factory instance) directly.
+    for chat_id in cached_subscriber_ids:
+        if await should_notify_user(chat_id, username, event_type, SessionFactory): # Pass SessionFactory
+            recipients.append(chat_id)
     return recipients
 
 
@@ -70,9 +70,9 @@ async def should_notify_user(
     telegram_id: int,
     tt_user_username: str, 
     event_type: str, 
-    session 
+    session_factory
 ) -> bool:
-    user_specific_settings = await get_or_create_user_settings(telegram_id, session)
+    user_specific_settings = await get_or_create_user_settings(telegram_id, session_factory)
 
     notification_pref = user_specific_settings.notification_settings
     mute_all_flag = user_specific_settings.mute_all_flag
