@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.user_settings import UserSpecificSettings
 from bot.database.models import NotificationSetting
+from bot.database.crud import add_subscriber, remove_subscriber # Added
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.core.enums import SettingsNavAction, SubscriptionAction
@@ -101,3 +102,25 @@ async def cq_set_subscription_setting(
         success_toast_text=success_toast_text,
         ui_refresh_callable=refresh_ui_callable
     )
+
+    # After UserSettings have been successfully updated by process_setting_update
+    # Manage SubscribedUser table and cache based on the change
+    # No explicit success check for process_setting_update needed here, as it handles its own rollback.
+    # If it failed, the original_setting and new_setting_enum would effectively be the same or reverted.
+
+    user_id = callback_query.from_user.id # Already checked for None earlier
+
+    if new_setting_enum == NotificationSetting.NONE and original_setting != NotificationSetting.NONE:
+        # User is turning notifications OFF
+        if await remove_subscriber(session, user_id):
+            logger.info(f"User {user_id} unsubscribed and removed from cache via settings change to NONE.")
+        else:
+            # This could happen if they were already unsubscribed for some reason, or DB error.
+            logger.warning(f"User {user_id} set notifications to NONE, but failed to remove from SubscribedUser table (or already removed).")
+    elif new_setting_enum != NotificationSetting.NONE and original_setting == NotificationSetting.NONE:
+        # User is turning notifications ON (from a NONE state)
+        if await add_subscriber(session, user_id):
+            logger.info(f"User {user_id} subscribed and added to cache via settings change from NONE to {new_setting_enum.value}.")
+        else:
+            # This could happen if they were already subscribed for some reason, or DB error.
+            logger.warning(f"User {user_id} set notifications from NONE to {new_setting_enum.value}, but failed to add to SubscribedUser table (or already added).")

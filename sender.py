@@ -51,6 +51,8 @@ async def main_async():
     from bot.database.engine import init_db, SessionFactory
     from bot.core.user_settings import load_user_settings_to_cache
     from bot.database import crud
+    from bot.database.crud import get_all_subscribers_ids # Added import
+    from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Added imports
     from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
     from bot.telegram_bot.commands import set_telegram_commands
     from bot.telegram_bot.middlewares import (
@@ -73,6 +75,12 @@ async def main_async():
     logger.info("Initializing TeamTalk components...")
     await init_db()
     logger.info("Database initialization complete.")
+
+    # Populate SUBSCRIBED_USERS_CACHE
+    async with SessionFactory() as session:
+        db_subscriber_ids = await get_all_subscribers_ids(session)
+        SUBSCRIBED_USERS_CACHE.update(db_subscriber_ids)
+        logger.info(f"Loaded {len(db_subscriber_ids)} subscriber IDs into SUBSCRIBED_USERS_CACHE.")
 
     asyncio.create_task(load_user_settings_to_cache(SessionFactory))
     logger.info("User settings cache loading initiated.")
@@ -102,9 +110,10 @@ async def main_async():
     try:
         async with SessionFactory() as session:
             db_admin_ids = await crud.get_all_admins_ids(session)
-        logger.debug(f"Fetched {len(db_admin_ids)} admin IDs: {db_admin_ids}")
+        ADMIN_IDS_CACHE.update(db_admin_ids) # Populate cache
+        logger.info(f"Loaded {len(db_admin_ids)} admin IDs into ADMIN_IDS_CACHE: {db_admin_ids}")
     except Exception as e:
-        logger.error(f"Failed to fetch admin IDs: {e}", exc_info=True)
+        logger.error(f"Failed to fetch admin IDs and populate cache: {e}", exc_info=True)
 
     asyncio.create_task(set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids))
     logger.debug("Telegram command setup initiated.")

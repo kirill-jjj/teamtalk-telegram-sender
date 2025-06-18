@@ -8,8 +8,9 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 from bot.language import get_translator
-from bot.database.crud import get_all_subscribers_ids
+# Removed: from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
+from bot.state import SUBSCRIBED_USERS_CACHE # Added
 from bot.core.user_settings import get_or_create_user_settings
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
@@ -54,9 +55,12 @@ async def _get_recipients_for_notification(username: str, event_type: str) -> li
     Gets a list of Telegram user IDs who should receive a notification for a given event.
     """
     recipients = []
+    # Iterate over a copy of the cache in case it's modified concurrently
+    cached_subscriber_ids = list(SUBSCRIBED_USERS_CACHE)
+
+    # The session is still needed for should_notify_user, which fetches user-specific settings.
     async with SessionFactory() as session:
-        all_subscriber_ids = await get_all_subscribers_ids(session)
-        for chat_id in all_subscriber_ids:
+        for chat_id in cached_subscriber_ids:
             if await should_notify_user(chat_id, username, event_type, session):
                 recipients.append(chat_id)
     return recipients
