@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.core.user_settings import USER_SETTINGS_CACHE
+# from bot.core.user_settings import USER_SETTINGS_CACHE # Removed top-level import
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base # For type hinting model
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
@@ -180,6 +180,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
     Deletes all data associated with a given telegram_id in a single transaction.
     Also removes the user from the in-memory cache upon successful deletion.
     """
+    from bot.core.user_settings import USER_SETTINGS_CACHE # Moved import here
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
     try:
         # Fetch both records first to see what needs to be deleted.
@@ -189,7 +190,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
         if not user_settings_record and not subscribed_user_record:
             logger.info(f"No data found for Telegram ID {telegram_id}. Nothing to delete.")
             # Also ensure cache is clear for this ID, just in case.
-            USER_SETTINGS_CACHE.pop(telegram_id, None)
+            USER_SETTINGS_CACHE.pop(telegram_id, None) # USER_SETTINGS_CACHE is available due to deferred import
             return True
 
         if user_settings_record:
