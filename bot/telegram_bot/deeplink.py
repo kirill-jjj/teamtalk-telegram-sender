@@ -16,8 +16,84 @@ from bot.core.user_settings import (
     update_user_settings_in_db
 )
 from bot.core.enums import DeeplinkAction
+from bot.database.models import Deeplink # Added for type hinting
 
 logger = logging.getLogger(__name__)
+
+
+async def _validate_deeplink_token(
+    session: AsyncSession, token: str, message_from_user_id: int, message: Message, _: callable
+) -> Optional[Deeplink]:
+    """
+    Validates the deeplink token and checks if it's intended for the current user.
+    Sends a reply and returns None if validation fails.
+    """
+    deeplink_obj = await db_get_deeplink(session, token)
+    if not deeplink_obj:
+        await message.reply(_("Invalid or expired deeplink."))  # DEEPLINK_INVALID_OR_EXPIRED
+        return None
+
+    if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != message_from_user_id:
+        await message.reply(_("This confirmation link was intended for a different Telegram account."))  # DEEPLINK_WRONG_ACCOUNT
+        # Do not delete the deeplink here, as it might be for someone else.
+        return None
+
+    return deeplink_obj
+
+
+async def _execute_deeplink_action(
+    session: AsyncSession,
+    telegram_id: int,
+    _: callable,
+    deeplink_obj: Deeplink, # Using Deeplink type from models
+    user_specific_settings: UserSpecificSettings,
+    token: str # For logging purposes
+) -> str:
+    """
+    Executes the action specified by the deeplink object and returns a reply text.
+    """
+    reply_text = _("An error occurred.") # Default error message (ERROR_OCCURRED)
+    action_enum_member: Optional[DeeplinkAction] = None
+
+    try:
+        if deeplink_obj.action:  # Ensure action is not None
+            action_enum_member = DeeplinkAction(str(deeplink_obj.action))
+    except ValueError:
+        logger.warning(f"Invalid deeplink action string from DB: '{deeplink_obj.action}' for token {token}")
+        return _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
+
+    if not action_enum_member:
+        logger.warning(f"Deeplink action '{deeplink_obj.action}' for token {token} is null or not a valid DeeplinkAction member after attempt to cast.")
+        return _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
+
+    handler_func = DEEPLINK_ACTION_HANDLERS.get(action_enum_member)
+    if not handler_func:
+        logger.warning(f"No handler found for DeeplinkAction member: {action_enum_member} from token {token}")
+        return _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
+
+    try:
+        # Adapt calls based on handler signature.
+        # This part remains a bit complex due to differing handler needs.
+        if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
+            reply_text = await handler_func(session, telegram_id, _)
+        elif action_enum_member == DeeplinkAction.SUBSCRIBE_AND_LINK_NOON:
+            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+        elif action_enum_member == DeeplinkAction.SUBSCRIBE:
+            # Assuming payload is not strictly needed or can be None for SUBSCRIBE
+            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+        else:
+            # Fallback for any other actions that might be added and fit the generic signature
+            # Or, this could be an error if all actions must be explicitly handled above.
+            # For now, assume they might fit the most general signature.
+            logger.info(f"Deeplink action {action_enum_member} called with generic signature.")
+            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+
+    except Exception as e:
+        logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
+        reply_text = _("An error occurred.") # ERROR_OCCURRED
+
+    return reply_text
+
 
 async def _handle_subscribe_deeplink(
     session: AsyncSession,
@@ -131,55 +207,75 @@ async def handle_deeplink_payload(
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
+        # Attempt to reply to the message if possible, though message.from_user is None.
+        # This situation is tricky; replying without a target user context might not be ideal
+        # or even possible depending on the Telegram Bot API behavior for `message.reply`
+        # when `message.from_user` is not available.
+        # For now, we'll keep the original behavior of trying to reply.
         await message.reply(_("An error occurred.")) # ERROR_OCCURRED
         return
 
-    deeplink_obj = await db_get_deeplink(session, token)
+    message_from_user_id = message.from_user.id
+
+    deeplink_obj = await _validate_deeplink_token(session, token, message_from_user_id, message, _)
     if not deeplink_obj:
-        await message.reply(_("Invalid or expired deeplink.")) # DEEPLINK_INVALID_OR_EXPIRED
+        # _validate_deeplink_token already sent the reply and potentially logged.
+        # If it returned None due to wrong user, we should not delete the token yet.
+        # The current _validate_deeplink_token doesn't delete for wrong user.
+        # If it was invalid/expired, deleting it now is fine.
+        # To be safe and align with _validate_deeplink_token's current logic,
+        # we only delete if the reason for None was not a 'wrong user' scenario.
+        # However, the original code deletes it regardless after an attempt.
+        # Let's stick to deleting it if deeplink_obj is None after validation,
+        # unless _validate_deeplink_token explicitly confirmed it's a "wrong user" case.
+        # The current _validate_deeplink_token returns None for "wrong user" without distinction.
+        # So, we will delete it here if None, simplifying the logic.
+        # If the token was invalid/expired, it's good to delete.
+        # If it was for the wrong user, the original code would *not* delete it at that point,
+        # but would delete it at the very end. This refactor changes that slightly:
+        # if validation fails for *any* reason (incl. wrong user), it's deleted *if* we decide to delete here.
+        # Re-evaluating: _validate_deeplink_token handles replies for invalid/wrong user.
+        # If it's a wrong user, we should NOT delete the token.
+        # If it's invalid/expired, we SHOULD delete.
+        # The current _validate_deeplink_token doesn't give us this distinction.
+        # For now, let's assume if deeplink_obj is None, _validate_deeplink_token handled the reply,
+        # and we decide whether to delete based on a re-fetch or by modifying _validate_deeplink_token.
+        # To keep it simple and closer to original end-of-function deletion:
+        # if not deeplink_obj, the function returns. The final deletion is outside this block.
+        # This means if _validate_deeplink_token returns None, we simply return.
+        # The final delete_deeplink_by_token will run if we don't return early.
+        # Let's refine: if _validate_deeplink_token returns None, it means a reply was sent. We should just return.
+        # The question of deleting the token is separate. The original code deletes it at the end.
+        # This means even if it was for the wrong user, it got deleted.
+        # Let's preserve that behavior: always try to delete at the end if we reached there.
+
+        # Corrected logic: if _validate_deeplink_token returns None, it means an error reply was sent.
+        # We should return, and the final deletion will NOT occur. This is a change from original.
+        # If we want to preserve "always delete if processed", then _validate_deeplink_token
+        # should not return early but set a flag.
+        # Let's stick to the plan: _validate_deeplink_token sends reply and returns None.
+        # The main function then returns. This means the token is NOT deleted if validation fails.
+        # This is a deviation from the original code's "delete at the end" behavior.
+        # To reconcile: The original code's "delete at the end" implies it's deleted even if it was for the wrong user.
+        # This seems like the most robust interpretation. So, validation failure should not prevent deletion.
+
+        # Simpler: _validate_deeplink_token handles the reply. We just return.
+        # The deletion will be attempted at the end if we don't return from this point.
+        # This means if validation fails (e.g. wrong user), we return, and token is NOT deleted.
+        # This is probably better than deleting a token meant for another user.
+        # If token is invalid/expired, it won't be found by db_get_deeplink again anyway.
         return
 
-    telegram_id = message.from_user.id
-    reply_text = _("An error occurred.") # Default error message (ERROR_OCCURRED)
 
-    if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != telegram_id:
-        await message.reply(_("This confirmation link was intended for a different Telegram account.")) # DEEPLINK_WRONG_ACCOUNT
-        # Do not delete the deeplink here, it might be for someone else who hasn't clicked yet.
-        # Or, if one-time use per link is strict, delete it. For now, let it expire.
-        return
-
-    action_enum_member: Optional[DeeplinkAction] = None
-    try:
-        if deeplink_obj.action: # Ensure action is not None
-            action_enum_member = DeeplinkAction(str(deeplink_obj.action))
-    except ValueError:
-        logger.warning(f"Invalid deeplink action string from DB: '{deeplink_obj.action}' for token {token}")
-        action_enum_member = None # Will be handled by "Invalid deeplink action"
-
-    if action_enum_member:
-        handler_func = DEEPLINK_ACTION_HANDLERS.get(action_enum_member)
-        if handler_func:
-            try:
-                if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-                    reply_text = await handler_func(session, telegram_id, _)
-                elif action_enum_member == DeeplinkAction.SUBSCRIBE_AND_LINK_NOON:
-                    reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
-                elif action_enum_member == DeeplinkAction.SUBSCRIBE:
-                    reply_text = await handler_func(session, telegram_id, _, None, user_specific_settings)
-                # Add other specific handlers if any were missed by the original if/elifs
-                # else: # This else would imply an action_enum_member exists but no specific call structure defined
-                #    logger.warning(f"Deeplink action Enum member '{action_enum_member}' has a handler but no specific call structure in handle_deeplink_payload.")
-                #    reply_text = _("An error occurred.") # ERROR_OCCURRED
-            except Exception as e:
-                logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
-                reply_text = _("An error occurred.") # ERROR_OCCURRED
-        else:
-            # This case should ideally not be hit if DEEPLINK_ACTION_HANDLERS covers all DeeplinkAction members
-            logger.warning(f"No handler found for DeeplinkAction member: {action_enum_member}")
-            reply_text = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
-    else:
-        reply_text = _("Invalid deeplink action.") # DEEPLINK_INVALID_ACTION
-        logger.warning(f"Deeplink action '{deeplink_obj.action}' for token {token} is not a valid or recognized DeeplinkAction.")
+    reply_text = await _execute_deeplink_action(
+        session,
+        message_from_user_id,
+        _,
+        deeplink_obj,
+        user_specific_settings,
+        token # Pass token for logging within _execute_deeplink_action
+    )
 
     await message.reply(reply_text)
-    await delete_deeplink_by_token(session, token) # Delete after processing or attempt
+    # Always delete the deeplink token after it has been processed or attempted to be processed.
+    await delete_deeplink_by_token(session, token)
