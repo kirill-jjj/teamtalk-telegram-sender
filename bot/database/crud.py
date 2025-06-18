@@ -1,5 +1,5 @@
 import logging
-import uuid
+import secrets
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,7 +127,7 @@ async def create_deeplink(
     expected_telegram_id: int | None = None,
     expiry_minutes: int = DEEPLINK_EXPIRY_MINUTES
 ) -> str:
-    token_str = str(uuid.uuid4())
+    token_str = secrets.token_urlsafe(16)
     expiry_time = datetime.utcnow() + timedelta(minutes=expiry_minutes)
     deeplink_obj = Deeplink(
         token=token_str,
