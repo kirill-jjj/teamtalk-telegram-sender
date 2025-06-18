@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from bot.database.models import UserSettings, NotificationSetting
 from bot.config import app_config
+from bot.database.crud import add_subscriber # Added
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +77,19 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
         session.add(new_settings_row)
         try:
             await session.commit()
-            USER_SETTINGS_CACHE[telegram_id] = default_settings
-            logger.debug(f"Created default settings for user {telegram_id} in DB and cache.")
+            logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
+            USER_SETTINGS_CACHE[telegram_id] = default_settings # Cache the in-memory representation
+
+            # If notifications are not NONE by default, add user to subscribers list
+            if default_settings.notification_settings != NotificationSetting.NONE:
+                if await add_subscriber(session, telegram_id):
+                    logger.info(f"User {telegram_id} automatically subscribed due to default notification settings.")
+                else:
+                    logger.warning(f"Failed to automatically subscribe user {telegram_id} on settings creation, though default was not NONE.")
             return default_settings
         except Exception as e:
             await session.rollback()
-            logger.error(f"Error creating default settings for user {telegram_id}: {e}")
+            logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
             # Return a default instance even if DB save fails, to avoid breaking logic relying on settings object
             return UserSpecificSettings()
 

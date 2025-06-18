@@ -7,6 +7,7 @@ from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base # For type hinting model
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
+from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Added/Updated
 
 logger = logging.getLogger(__name__)
 
@@ -108,10 +109,18 @@ async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, SubscribedUser)
 
 async def add_admin(session: AsyncSession, telegram_id: int) -> bool:
-    return await _add_entity_if_not_exists(session, Admin, telegram_id)
+    added = await _add_entity_if_not_exists(session, Admin, telegram_id)
+    if added:
+        ADMIN_IDS_CACHE.add(telegram_id)
+        logger.info(f"Admin {telegram_id} added to ADMIN_IDS_CACHE.")
+    return added
 
 async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
-    return await _remove_entity(session, Admin, telegram_id)
+    removed = await _remove_entity(session, Admin, telegram_id)
+    if removed:
+        ADMIN_IDS_CACHE.discard(telegram_id)
+        logger.info(f"Admin {telegram_id} removed from ADMIN_IDS_CACHE.")
+    return removed
 
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, Admin)
@@ -196,7 +205,9 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
 
         # Clear from cache only after the transaction is successfully committed.
         USER_SETTINGS_CACHE.pop(telegram_id, None)
-        logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from cache.")
+        SUBSCRIBED_USERS_CACHE.discard(telegram_id) # Remove from subscriber cache
+        logger.debug(f"Removed user {telegram_id} from SUBSCRIBED_USERS_CACHE after full data deletion.")
+        logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from relevant caches.")
         return True
 
     except Exception as e:

@@ -15,5 +15,11 @@ USER_ACCOUNTS_CACHE: dict[str, 'pytalk.UserAccount'] = {}
 
 # Cache to store admin rights of users.
 # Key - int(user_id), value - Tuple[bool(is_admin), float(timestamp)]
-ADMIN_RIGHTS_CACHE: dict[int, Tuple[bool, float]] = {}
-ADMIN_CACHE_TTL_SECONDS = 60
+# ADMIN_RIGHTS_CACHE: dict[int, Tuple[bool, float]] = {} # Removed
+# ADMIN_CACHE_TTL_SECONDS = 60 # Removed
+
+# Cache for subscribed user IDs
+SUBSCRIBED_USERS_CACHE: set[int] = set()
+
+# Cache for admin user IDs
+ADMIN_IDS_CACHE: set[int] = set()
