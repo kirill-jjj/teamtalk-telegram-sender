@@ -100,10 +100,18 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[Base]) ->
         return []
 
 async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    return await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
+    added = await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
+    if added:
+        SUBSCRIBED_USERS_CACHE.add(telegram_id)
+        logger.info(f"User {telegram_id} added to SUBSCRIBED_USERS_CACHE.")
+    return added
 
 async def remove_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    return await _remove_entity(session, SubscribedUser, telegram_id)
+    removed = await _remove_entity(session, SubscribedUser, telegram_id)
+    if removed:
+        SUBSCRIBED_USERS_CACHE.discard(telegram_id)
+        logger.info(f"User {telegram_id} removed from SUBSCRIBED_USERS_CACHE.")
+    return removed
 
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, SubscribedUser)
