@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
-from bot.database.engine import Base # For type hinting model
+from bot.database.engine import Base
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
-from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Added/Updated
+from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
 
@@ -162,12 +162,11 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
     if deeplink_obj:
         if deeplink_obj.expiry_time < datetime.utcnow():
             logger.warning(f"Deeplink {token} expired. Deleting.")
-            await db_remove_generic(session, deeplink_obj) # Use generic remove
+            await db_remove_generic(session, deeplink_obj)
             return None
     return deeplink_obj
 
 async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
-    # Fetch first to use db_remove_generic which logs nicely
     deeplink_obj = await session.get(Deeplink, token)
     if deeplink_obj:
         return await db_remove_generic(session, deeplink_obj)
@@ -175,7 +174,6 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
     return False
 
 # Note: UserSettings CRUD is mostly handled by core.user_settings for cache coherency.
-# If direct UserSettings CRUD is needed outside that scope, it can be added here.
 async def get_user_settings_row(session: AsyncSession, telegram_id: int) -> UserSettings | None:
     return await session.get(UserSettings, telegram_id)
 
@@ -192,7 +190,6 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
 
         if not user_settings_record and not subscribed_user_record:
             logger.info(f"No data found for Telegram ID {telegram_id}. Nothing to delete.")
-            # Also ensure cache is clear for this ID, just in case.
             USER_SETTINGS_CACHE.pop(telegram_id, None) # USER_SETTINGS_CACHE is available due to deferred import
             return True
 
