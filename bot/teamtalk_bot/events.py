@@ -118,9 +118,6 @@ async def _initiate_reconnect(reason: str):
 
     if tt_bot_module.current_tt_instance is not None:
         logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
-        # Stop existing periodic sync task if any? This needs careful handling
-        # to avoid multiple tasks or tasks with stale instances.
-        # For now, assume a new task is created on successful reconnect and login finalization.
         tt_bot_module.current_tt_instance = None
         tt_bot_module.login_complete_time = None
     else:
@@ -181,9 +178,6 @@ async def on_ready():
     )
     try:
         tt_bot_module.login_complete_time = None
-        # Reset periodic sync task flag if instance is being added
-        # This is a bit tricky as tt_instance isn't available yet here.
-        # We'll rely on _finalize_bot_login_sequence to manage it for now.
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}.")
     except Exception as e:
@@ -233,7 +227,6 @@ async def on_my_login(server: PytalkServer):
             logger.warning(
                 f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel."
             )
-            # If not joining a specific channel, _finalize_bot_login_sequence might not be called via on_user_join.
             current_channel_id = tt_instance_val.getMyCurrentChannelID()
             current_channel_obj = tt_instance_val.get_channel(current_channel_id)
             if current_channel_obj:
@@ -248,7 +241,6 @@ async def on_my_login(server: PytalkServer):
 
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
-    # Consider stopping the periodic sync task associated with the lost instance
     if tt_bot_module.current_tt_instance and hasattr(tt_bot_module.current_tt_instance, '_periodic_sync_task_running'):
         tt_bot_module.current_tt_instance._periodic_sync_task_running = False # Allow new task on reconnect
     await _initiate_reconnect("Connection lost to TeamTalk server. Attempting to reconnect...")

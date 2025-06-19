@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
 
 from bot.state import ONLINE_USERS_CACHE
-from bot.core.utils import get_username_as_str, get_tt_user_display_name # get_tt_user_display_name now expects `_`
+from bot.core.utils import get_username_as_str, get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
 import pytalk # For TeamTalkUser used in _show_user_buttons
 
@@ -64,7 +64,6 @@ async def _show_user_buttons(
     # The `_` here is the admin's translator.
     sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, _).lower())
 
-    # Assuming create_user_selection_keyboard is refactored to take `_` instead of language string
     builder = create_user_selection_keyboard(_, sorted_users, command_type)
 
     command_text_map = {

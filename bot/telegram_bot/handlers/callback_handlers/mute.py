@@ -101,7 +101,6 @@ async def _display_internal_user_list(
 
     users_to_process = user_specific_settings.muted_users_set
     sorted_items = sorted(list(users_to_process))
-    # is_mute_all_active = user_specific_settings.mute_all_flag # Not directly used here, but influences list_type meaning
 
     header_key, empty_key = "", ""
     if list_type == UserListAction.LIST_MUTED:

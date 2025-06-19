@@ -41,7 +41,6 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # l
             except Exception as db_err:
                 logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
-            # For other Forbidden errors, just log. reply_tt_method was removed.
             logger.error(f"Telegram API Forbidden error for chat_id {chat_id}: {error}")
 
     elif isinstance(error, TelegramBadRequest):
@@ -62,7 +61,6 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int): # l
             except Exception as db_cleanup_err:
                 logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
         else:
-            # For other BadRequest errors, just log. reply_tt_method was removed.
             logger.error(f"Telegram API BadRequest (non 'chat not found') for chat_id {chat_id}: {error}")
 
     elif isinstance(error, TelegramAPIError): # Catch-all for other TelegramAPIError types

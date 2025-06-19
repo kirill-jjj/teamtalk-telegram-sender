@@ -46,7 +46,7 @@ class PaginateUsersCallback(CallbackData, prefix="paginate_list"):
 # For muting/unmuting a specific user from a list
 class ToggleMuteSpecificCallback(CallbackData, prefix="toggle_user_mute"):
     action: ToggleMuteSpecificAction
-    user_idx: int  # Changed from username/nickname
+    user_idx: int
     current_page: int
     list_type: UserListAction
 

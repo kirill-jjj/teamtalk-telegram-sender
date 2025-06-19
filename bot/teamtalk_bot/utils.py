@@ -147,9 +147,6 @@ async def forward_tt_message_to_telegram_admin(
         chat_id=admin_chat_id,
         text=text_to_send,
         language=admin_language
-        # reply_tt_method is no longer passed as send_telegram_message_individual doesn't use it for error/success reporting to TT.
-        # Feedback to TT is now handled directly in this function.
-        # tt_instance_for_check was removed here
     )
 
     if was_sent:

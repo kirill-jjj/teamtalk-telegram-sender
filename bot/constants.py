@@ -1,7 +1,3 @@
-# Note: Action strings formerly defined here (e.g., for deeplinks, admin actions)
-# have been migrated to Enum definitions in bot.constants.enums.
-# Please import and use the Enum members directly from there.
-
 # Mute actions
 MUTE_ACTION_MUTE = "mute"
 MUTE_ACTION_UNMUTE = "unmute"
