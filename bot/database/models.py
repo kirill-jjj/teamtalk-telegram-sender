@@ -1,6 +1,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy import Enum as SQLAEnum
+from bot.core.enums import DeeplinkAction
 from bot.database.engine import Base
 from bot.constants import DEFAULT_LANGUAGE
 
@@ -15,7 +16,7 @@ class Admin(Base):
 class Deeplink(Base):
     __tablename__ = "deeplinks"
     token = Column(String, primary_key=True, index=True)
-    action = Column(String, nullable=False)
+    action = Column(SQLAEnum(DeeplinkAction), nullable=False)
     payload = Column(String, nullable=True)
     expected_telegram_id = Column(Integer, nullable=True)
     expiry_time = Column(DateTime, nullable=False)

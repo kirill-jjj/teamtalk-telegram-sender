@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from bot.core.enums import DeeplinkAction
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
@@ -136,7 +137,7 @@ async def is_admin(session: AsyncSession, telegram_id: int) -> bool:
 
 async def create_deeplink(
     session: AsyncSession,
-    action: str,
+    action: DeeplinkAction,
     payload: str | None = None,
     expected_telegram_id: int | None = None,
     expiry_minutes: int = DEEPLINK_EXPIRY_MINUTES
