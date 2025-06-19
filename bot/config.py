@@ -37,7 +37,7 @@ def load_app_config(env_path: str | None = None) -> dict[str, Any]:
     }
 
     # Validate and set effective default language
-    raw_default_lang = config_data.get("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE) # Use .get for safety, though it should be set by getenv
+    raw_default_lang = config_data.get("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE)
     if isinstance(raw_default_lang, str) and raw_default_lang.lower() in ["en", "ru"]:
         config_data["EFFECTIVE_DEFAULT_LANG"] = raw_default_lang.lower()
     else:

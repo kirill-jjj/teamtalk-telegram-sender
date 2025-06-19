@@ -7,7 +7,7 @@ from bot.core.enums import (
     NotificationAction,
     MuteAllAction,
     UserListAction,
-    PaginateUsersAction, # Assuming this will be used for list_type
+    PaginateUsersAction,
     ToggleMuteSpecificAction,
     SubscriberListAction
 )
@@ -53,10 +53,10 @@ class ToggleMuteSpecificCallback(CallbackData, prefix="toggle_user_mute"):
 # For Admin actions like kick/ban
 class AdminActionCallback(CallbackData, prefix="admin_action"):
     action: AdminAction
-    user_id: int # TeamTalk user ID
+    user_id: int
 
 # For subscriber list actions
 class SubscriberListCallback(CallbackData, prefix="sub_list"):
     action: SubscriberListAction
     telegram_id: int | None = None  # Present for "delete_subscriber"
-    page: int | None = None  # For pagination
+    page: int | None = None

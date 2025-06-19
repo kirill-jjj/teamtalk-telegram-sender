@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
-from bot.telegram_bot.callback_data import SettingsCallback # For "back_to_main"
+from bot.telegram_bot.callback_data import SettingsCallback
 from bot.core.enums import SettingsNavAction
 
 logger = logging.getLogger(__name__)

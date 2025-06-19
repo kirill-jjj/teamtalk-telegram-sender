@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from bot.database.models import UserSettings, NotificationSetting
 from bot.config import app_config
-from bot.database.crud import add_subscriber # Added
+from bot.database.crud import add_subscriber
 
 logger = logging.getLogger(__name__)
 

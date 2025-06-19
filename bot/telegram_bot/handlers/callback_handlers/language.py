@@ -9,7 +9,7 @@ from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_lan
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
-from ._helpers import process_setting_update # Import from local _helpers
+from ._helpers import process_setting_update
 
 logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
@@ -71,7 +71,7 @@ async def cq_set_language(
     elif new_lang_code == "ru":
         lang_name_display = _new("Russian")
     else:
-        lang_name_display = new_lang_code # Fallback
+        lang_name_display = new_lang_code
     success_toast_text = _new("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:

@@ -1,5 +1,4 @@
 
-# Import routers from individual handler files
 from .user import user_commands_router
 from .admin import admin_router
 from .callbacks import callback_router

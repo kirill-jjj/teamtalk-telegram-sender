@@ -8,7 +8,7 @@ class SettingsNavAction(Enum):
     LANGUAGE = "language"
     SUBSCRIPTIONS = "subscriptions"
     NOTIFICATIONS = "notifications"
-    BACK_TO_MAIN = "back_to_main" # Used in keyboards to go back to main settings
+    BACK_TO_MAIN = "back_to_main"
 
 class LanguageAction(Enum):
     SET_LANG = "set_lang"
@@ -29,19 +29,14 @@ class UserListAction(Enum):
     LIST_ALL_ACCOUNTS = "list_all_accounts" # For listing all server accounts to mute/unmute
 
 class PaginateUsersAction(Enum):
-    # Assuming pagination might have generic "prev", "next" if not specific to list_type
-    # For now, specific pagination is handled within callbacks like SubscriberListCallback's "page"
-    # If a generic one emerges, add it here. For now, this might be empty or not used directly
-    # if specific list_types (like 'subscriber_page') handle their own.
-    # Let's check SubscriberListCallback, it uses "page".
-    PAGE = "page" # Generic enough if used by multiple pagination scenarios
+    PAGE = "page"
 
 class ToggleMuteSpecificAction(Enum):
-    TOGGLE_USER = "toggle_user" # Toggles mute status for a specific user from a list
+    TOGGLE_USER = "toggle_user"
 
 class SubscriberListAction(Enum):
     DELETE_SUBSCRIBER = "delete_subscriber"
-    PAGE = "page" # Pagination specific to subscriber list
+    PAGE = "page"
 
 class DeeplinkAction(Enum):
     SUBSCRIBE = "subscribe"

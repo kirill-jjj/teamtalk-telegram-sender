@@ -12,9 +12,9 @@ import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
-from bot.telegram_bot.deeplink import handle_deeplink_payload # Will take `_`
-from bot.core.user_settings import UserSpecificSettings # For type hint
-from bot.telegram_bot.filters import IsAdminFilter # For /who admin view
+from bot.telegram_bot.deeplink import handle_deeplink_payload
+from bot.core.user_settings import UserSpecificSettings
+from bot.telegram_bot.filters import IsAdminFilter
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
 from bot.state import ONLINE_USERS_CACHE
@@ -34,9 +34,9 @@ ttstr = pytalk.instance.sdk.ttstr
 async def start_command_handler(
     message: Message,
     command: CommandObject,
-    session: AsyncSession, # From DbSessionMiddleware
+    session: AsyncSession,
     _: callable,
-    user_specific_settings: UserSpecificSettings # From UserSettingsMiddleware
+    user_specific_settings: UserSpecificSettings
 ):
     if not message.from_user: return
 

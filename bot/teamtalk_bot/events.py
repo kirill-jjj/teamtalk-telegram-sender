@@ -1,5 +1,3 @@
-# bot/teamtalk_bot/events.py
-
 import logging
 import asyncio
 from datetime import datetime
@@ -47,7 +45,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
     """Periodically synchronizes the ONLINE_USERS_CACHE with the server's state."""
-    sync_interval_seconds = 300  # 5 minutes
+    sync_interval_seconds = 300
     while True:
         try:
             if tt_instance and tt_instance.connected and tt_instance.logged_in:

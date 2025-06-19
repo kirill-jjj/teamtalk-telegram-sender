@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.user_settings import UserSpecificSettings
 from bot.database.models import NotificationSetting
-from bot.database.crud import add_subscriber, remove_subscriber # Added
+from bot.database.crud import add_subscriber, remove_subscriber
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.core.enums import SettingsNavAction, SubscriptionAction

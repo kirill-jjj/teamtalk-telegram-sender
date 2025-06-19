@@ -1,5 +1,3 @@
-# bot/telegram_bot/handlers/callback_handlers/mute.py
-
 import logging
 import math
 from typing import Callable, Any, Optional
@@ -120,8 +118,8 @@ async def _display_internal_user_list(
         _=_, # _ is still needed by _display_paginated_list_ui for "Page x/y"
         items=sorted_items,
         page=page,
-        header_text_key=header_text, # Pass pre-translated string
-        empty_list_text_key=empty_list_text, # Pass pre-translated string
+        header_text_key=header_text,
+        empty_list_text_key=empty_list_text,
         keyboard_factory=create_paginated_user_list_keyboard,
         keyboard_factory_kwargs={"list_type": list_type, "user_specific_settings": user_specific_settings},
     )
@@ -153,8 +151,8 @@ async def _display_all_server_accounts_list(
         _=_, # _ is still needed by _display_paginated_list_ui for "Page x/y"
         items=sorted_items,
         page=page,
-        header_text_key=_("All Server Accounts"), # Pass pre-translated string
-        empty_list_text_key=_("No user accounts found on the server."), # Pass pre-translated string
+        header_text_key=_("All Server Accounts"),
+        empty_list_text_key=_("No user accounts found on the server."),
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_specific_settings": user_specific_settings},
     )
@@ -314,7 +312,7 @@ async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: NotificationActionCallback, # This argument is not used by the function body
+    callback_data: NotificationActionCallback,
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
@@ -332,7 +330,7 @@ async def cq_show_manage_muted_menu(
 
 @mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))
 async def cq_toggle_mute_all_action(
-    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_specific_settings: UserSpecificSettings, callback_data: MuteAllCallback # This argument is not used by the function body
+    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_specific_settings: UserSpecificSettings, callback_data: MuteAllCallback
 ):
     if not callback_query.message or not callback_query.from_user:
         await callback_query.answer(_("Error: Missing data for Mute All toggle."), show_alert=True)
@@ -402,7 +400,7 @@ async def cq_show_all_accounts_list_action(
     _: callable,
     user_specific_settings: UserSpecificSettings,
     tt_instance: Optional[TeamTalkInstance],
-    callback_data: UserListCallback, # This argument is not used by the function body
+    callback_data: UserListCallback,
 ):
     await callback_query.answer()
     if not callback_query.message: return

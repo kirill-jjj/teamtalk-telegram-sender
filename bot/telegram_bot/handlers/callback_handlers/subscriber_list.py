@@ -1,5 +1,5 @@
 import logging
-import asyncio # Added asyncio
+import asyncio
 from aiogram import Router, Bot
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,10 +65,10 @@ async def _get_paginated_subscribers_info(
 
     page_subscribers_info = []
     for telegram_id, result in zip(page_ids_to_fetch, chat_results):
-        display_name = str(telegram_id) # Default
+        display_name = str(telegram_id)
         if isinstance(result, Exception):
             logger.error(f"Could not fetch chat info for Telegram ID {telegram_id} via asyncio.gather: {result}")
-        else: # Successfully fetched chat_info
+        else:
             chat_info = result
             full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
             username_part = f" (@{chat_info.username})" if chat_info.username else ""
@@ -107,7 +107,6 @@ async def handle_subscriber_list_actions(
         else:
             await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True)
 
-        # Refresh the list using the helper
         page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
             session, bot, page_from_callback
         )

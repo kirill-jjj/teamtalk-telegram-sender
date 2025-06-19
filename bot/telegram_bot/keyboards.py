@@ -7,7 +7,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import html
 import pytalk # For UserAccount type hint
-from typing import Callable, List # Added List
+from typing import Callable, List
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -34,8 +34,8 @@ from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     SubscriberListCallback
 )
-from bot.database.models import NotificationSetting # For subscription settings
-from bot.core.user_settings import UserSpecificSettings # For notification and mute settings
+from bot.database.models import NotificationSetting
+from bot.core.user_settings import UserSpecificSettings
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
