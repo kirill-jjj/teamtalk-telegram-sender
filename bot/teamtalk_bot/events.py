@@ -346,10 +346,8 @@ async def on_user_login(user: TeamTalkUser):
     if tt_instance:
         ONLINE_USERS_CACHE[user.id] = user
         logger.debug(f"User session {user.id} ({ttstr(user.username)}) added to online cache. Cache size: {len(ONLINE_USERS_CACHE)}")
-        default_translator = get_translator(app_config.get("DEFAULT_LANG", "en"))
-        _default = default_translator.gettext
         await send_join_leave_notification_logic(
-            NOTIFICATION_EVENT_JOIN, user, tt_instance, tt_bot_module.login_complete_time, _default
+            NOTIFICATION_EVENT_JOIN, user, tt_instance, tt_bot_module.login_complete_time
         )
     else:
         logger.warning(f"on_user_login: Could not get TeamTalkInstance from user {ttstr(user.username)}. Skipping notification.")
@@ -393,10 +391,8 @@ async def on_user_logout(user: TeamTalkUser):
         else:
             logger.warning(f"User ({ttstr(user.username) if hasattr(user, 'username') else 'UnknownUserWithoutID'}) logged out but has no ID. Cache not modified.")
 
-        default_translator = get_translator(app_config.get("DEFAULT_LANG", "en"))
-        _default = default_translator.gettext
         await send_join_leave_notification_logic(
-            NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time, _default
+            NOTIFICATION_EVENT_LEAVE, user, tt_instance, tt_bot_module.login_complete_time
         )
     else:
         logger.warning(f"on_user_logout: Could not get TeamTalkInstance from user {ttstr(user.username) if hasattr(user, 'username') else 'UnknownUser'}. Skipping notification.")
