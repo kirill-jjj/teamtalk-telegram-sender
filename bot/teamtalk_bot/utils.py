@@ -23,17 +23,15 @@ from bot.constants import (
 )
 # Import teamtalk_bot.bot_instance carefully to avoid circular dependencies if it needs utils
 # For now, we pass tt_bot and current_tt_instance as arguments or access them via a getter if needed.
-from bot.telegram_bot.utils import send_telegram_message_individual # For forwarding
-from bot.telegram_bot.bot_instances import tg_bot_message # For forwarding
-from bot.core.user_settings import USER_SETTINGS_CACHE # For admin language
+from bot.telegram_bot.utils import send_telegram_message_individual
+from bot.telegram_bot.bot_instances import tg_bot_message
+from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
-
-# --- Existing Utility Functions ---
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     parts_to_send_list = []
@@ -42,7 +40,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     while remaining_text:
         if len(remaining_text.encode("utf-8", errors="ignore")) <= max_len_bytes:
             parts_to_send_list.append(remaining_text)
-            break # Last part
+            break
 
         current_chunk_str = ""
         current_chunk_bytes_len = 0
@@ -139,7 +137,7 @@ async def forward_tt_message_to_telegram_admin(
         server_name=html.quote(server_name),
         sender_display=html.quote(sender_display),
         message_text=html.quote(message_content)
-    ) # TT_FORWARD_MESSAGE_TEXT
+    )
 
     # Use the individual message sending utility
     was_sent: bool = await send_telegram_message_individual(
@@ -150,16 +148,16 @@ async def forward_tt_message_to_telegram_admin(
     )
 
     if was_sent:
-        message.reply(_("Message sent to Telegram successfully.")) # tt_reply_success
+        message.reply(_("Message sent to Telegram successfully."))
     else:
-        message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram"))) # tt_reply_fail_generic_error
+        message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram")))
 
 
 async def _tt_reconnect():
     """Handles the TeamTalk reconnection logic."""
     # Use global tt_bot, current_tt_instance, login_complete_time from teamtalk_bot.bot_instance
     from bot.teamtalk_bot import bot_instance as tt_bot_module
-    from bot.teamtalk_bot.events import on_ready as tt_on_ready # Import on_ready
+    from bot.teamtalk_bot.events import on_ready as tt_on_ready
 
     if tt_bot_module.current_tt_instance: # Check if already connected or reconnecting
         logger.info("Reconnect already in progress or instance exists, skipping new task.")
@@ -174,8 +172,8 @@ async def _tt_reconnect():
         try:
             logger.info("Attempting to re-add server via on_ready logic...")
             # on_ready is expected to set current_tt_instance and login_complete_time on success
-            await tt_on_ready() # Call the on_ready event handler
-            await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS) # Wait for connection to establish
+            await tt_on_ready()
+            await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
 
             if tt_bot_module.current_tt_instance and \
                tt_bot_module.current_tt_instance.connected and \
@@ -219,14 +217,14 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
         try:
             channel_id_or_path = app_config["CHANNEL"]
             channel_id = -1
-            channel_name = "" # For logging
+            channel_name = ""
 
             if channel_id_or_path.isdigit():
                 channel_id = int(channel_id_or_path)
-                channel_obj = tt_instance.get_channel(channel_id) # PyTalk method
+                channel_obj = tt_instance.get_channel(channel_id)
                 channel_name = ttstr(channel_obj.name) if channel_obj else f"ID {channel_id}"
             else: # Assume it's a path
-                channel_obj = tt_instance.get_channel_from_path(channel_id_or_path) # PyTalk method
+                channel_obj = tt_instance.get_channel_from_path(channel_id_or_path)
                 if channel_obj:
                     channel_id = channel_obj.id
                     channel_name = ttstr(channel_obj.name)

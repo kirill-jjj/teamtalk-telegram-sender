@@ -1,5 +1,3 @@
-# bot/telegram_bot/handlers/callback_handlers/admin.py
-
 import logging
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery
@@ -70,7 +68,7 @@ async def process_user_action_selection(
          return
 
     # Admin check should be here, before trying to get user from tt_instance
-    is_admin_caller = await IsAdminFilter()(callback_query, session) # Assuming IsAdminFilter is async or can be awaited
+    is_admin_caller = await IsAdminFilter()(callback_query, session)
     if not is_admin_caller:
         await callback_query.answer(_("You do not have permission to execute this action."), show_alert=True)
         return

@@ -1,7 +1,7 @@
 from aiogram.filters import BaseFilter
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession # Keep for type hint, may not be used
-from bot.state import ADMIN_IDS_CACHE # Import new cache
+from sqlalchemy.ext.asyncio import AsyncSession
+from bot.state import ADMIN_IDS_CACHE
 
 class IsAdminFilter(BaseFilter):
     async def __call__(self, event: Message | CallbackQuery, session: AsyncSession) -> bool:

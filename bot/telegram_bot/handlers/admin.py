@@ -8,13 +8,12 @@ from aiogram.exceptions import TelegramAPIError
 from bot.state import ONLINE_USERS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
-import pytalk # For TeamTalkUser used in _show_user_buttons
+import pytalk
 
 from bot.core.enums import AdminAction
 from bot.telegram_bot.filters import IsAdminFilter
-from pytalk.instance import TeamTalkInstance # For type hint
-# Import the helper function
-from .callback_handlers.subscriber_list import _get_paginated_subscribers_info, SUBSCRIBERS_PER_PAGE # Also import SUBSCRIBERS_PER_PAGE or ensure it's not needed. Helper uses it.
+from pytalk.instance import TeamTalkInstance
+from .callback_handlers.subscriber_list import _get_paginated_subscribers_info, SUBSCRIBERS_PER_PAGE
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ async def _show_user_buttons(
 async def kick_command_handler(
     message: Message,
     _: callable,
-    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
+    tt_instance: TeamTalkInstance | None
 ):
     # IsAdminFilter already applied at router level
     await _show_user_buttons(message, AdminAction.KICK, _, tt_instance)
@@ -89,7 +88,7 @@ async def kick_command_handler(
 async def ban_command_handler(
     message: Message,
     _: callable,
-    tt_instance: TeamTalkInstance | None # From TeamTalkInstanceMiddleware
+    tt_instance: TeamTalkInstance | None
 ):
     # IsAdminFilter already applied at router level
     await _show_user_buttons(message, AdminAction.BAN, _, tt_instance)
@@ -112,7 +111,7 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     keyboard = create_subscriber_list_keyboard(
         _,
         subscribers_info=page_subscribers_info_data,
-        current_page=current_page, # Should be 0 from helper for initial call
+        current_page=current_page,
         total_pages=total_pages
     )
 

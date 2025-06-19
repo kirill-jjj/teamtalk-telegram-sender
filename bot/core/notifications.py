@@ -9,7 +9,7 @@ from pytalk.user import User as TeamTalkUser
 from bot.config import app_config
 from bot.language import get_translator
 from bot.database.engine import SessionFactory
-from bot.state import SUBSCRIBED_USERS_CACHE # Added
+from bot.state import SUBSCRIBED_USERS_CACHE
 from bot.core.user_settings import get_or_create_user_settings
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
@@ -32,11 +32,11 @@ def _should_ignore_initial_event(event_type: str, username: str, user_id: int, l
     elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
         reason_for_ignore = "bot login too recent"
     else:
-        return False # Not ignoring
+        return False
 
     if event_type == NOTIFICATION_EVENT_JOIN: # Log only for join events to reduce noise for leave events during init
         logger.debug(f"Ignoring potential initial sync {event_type} for {username} ({user_id}). Reason: {reason_for_ignore}.")
-    return True # Ignoring the event
+    return True
 
 
 def _is_user_globally_ignored(username: str) -> bool:

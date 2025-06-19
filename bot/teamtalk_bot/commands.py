@@ -1,7 +1,6 @@
 import logging
-import functools # For functools.wraps
+import functools
 from typing import Optional, Callable, List
-# from bot.state import ADMIN_RIGHTS_CACHE # Removed
 from aiogram.filters import CommandObject
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,16 +10,15 @@ from pytalk.message import Message as TeamTalkMessage
 
 from bot.config import app_config
 from bot.language import get_translator
-from bot.core.utils import build_help_message # Already refactored to take `_`
+from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
-from bot.teamtalk_bot.utils import send_long_tt_reply # For help message
-# ACTION_UNSUBSCRIBE and ACTION_SUBSCRIBE_AND_LINK_NOON removed as they are now in DeeplinkAction Enum
+from bot.teamtalk_bot.utils import send_long_tt_reply
 from bot.core.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr # Convenience variable
+ttstr = pytalk.instance.sdk.ttstr
 
 
 # Decorator for TeamTalk admin commands
@@ -41,7 +39,7 @@ def is_tt_admin(func):
             logger.warning(
                 f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}."
             )
-            tt_message.reply(_("You do not have permission to use this command.")) # TT_ADMIN_CMD_NO_PERMISSION
+            tt_message.reply(_("You do not have permission to use this command."))
             return None
 
         return await func(tt_message, *args, **kwargs)
@@ -89,10 +87,10 @@ def _create_admin_action_report(
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
-    success_msg_source: str, # English source string
-    error_msg_source: str,   # English source string
-    invalid_id_msg_source: str, # English source string
-    header_source: str        # English source string
+    success_msg_source: str,
+    error_msg_source: str,
+    invalid_id_msg_source: str,
+    header_source: str
 ) -> str:
     """Creates a final report message for the admin action."""
     reply_parts = []
@@ -110,7 +108,7 @@ def _create_admin_action_report(
         reply_parts.append(f"{_(header_source)}\n{error_messages_formatted}")
 
     if not reply_parts:
-        return _("No action was performed. Please check the IDs provided.") # TT_NO_ACTION_PERFORMED
+        return _("No action was performed. Please check the IDs provided.")
 
     return "\n\n".join(reply_parts)
 
@@ -168,8 +166,8 @@ async def _generate_and_reply_deeplink(
     _: callable,
     action: DeeplinkAction,
     success_log_message: str,
-    reply_text_source: str, # English source string
-    error_reply_source: str,  # English source string
+    reply_text_source: str,
+    error_reply_source: str,
     payload: Optional[str] = None,
 ):
     """
@@ -181,7 +179,7 @@ async def _generate_and_reply_deeplink(
         token = await create_deeplink(
             session, action, payload=payload, expected_telegram_id=None
         )
-        bot_info = await tg_bot_event.get_me() # Bot username for the deeplink
+        bot_info = await tg_bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
 
         logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
@@ -299,6 +297,6 @@ async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
     _: callable
 ):
-    reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.") # TT_UNKNOWN_COMMAND
+    reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")
     tt_message.reply(reply_text)
     logger.warning(f"Received unknown TT command from {ttstr(tt_message.user.username)}: {tt_message.content[:100]}")

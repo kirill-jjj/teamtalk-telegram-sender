@@ -18,7 +18,7 @@ async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
     _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: SettingsCallback # Consumed by filter
+    callback_data: SettingsCallback
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
@@ -42,7 +42,7 @@ async def cq_toggle_noon_setting_action(
     session: AsyncSession,
     _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: NotificationActionCallback # Consumed by filter
+    callback_data: NotificationActionCallback
 ):
     if not callback_query.message or not callback_query.from_user:
         await callback_query.answer(_("Error: Missing data for NOON toggle."), show_alert=True)

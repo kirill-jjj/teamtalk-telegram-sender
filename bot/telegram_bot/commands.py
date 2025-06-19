@@ -1,5 +1,5 @@
 import logging
-from typing import List # For Python < 3.9, otherwise list is fine
+from typing import List
 from aiogram import Bot
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from aiogram.exceptions import TelegramAPIError

@@ -5,7 +5,7 @@ from aiogram.types import TelegramObject, Message, CallbackQuery, User
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import pytalk # For TeamTalkInstance type hint
+import pytalk
 from bot.core.user_settings import (
     UserSpecificSettings,
     get_or_create_user_settings
@@ -67,7 +67,6 @@ class TeamTalkInstanceMiddleware(BaseMiddleware):
         data["tt_instance"] = actual_tt_instance
         return await handler(event, data)
 
-# --- SubscriptionCheckMiddleware Class Definition ---
 class SubscriptionCheckMiddleware(BaseMiddleware):
     async def __call__(
         self,
@@ -107,7 +106,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         if not subscriber:
             logger.info(f"SubscriptionCheckMiddleware: User {telegram_id} is not subscribed. Blocking further processing.")
-            # English source for PLEASE_SUBSCRIBE_FIRST: "You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe."
             message_text = _("You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe.")
             try:
                 if isinstance(event, Message):
