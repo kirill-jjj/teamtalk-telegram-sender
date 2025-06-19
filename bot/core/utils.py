@@ -2,7 +2,7 @@ import logging
 import gettext
 from typing import Optional, Union
 
-import pytalk # Required for TeamTalkInstance, TeamTalkUser, ttstr
+import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
@@ -18,7 +18,7 @@ def get_effective_server_name(tt_instance: Optional[TeamTalkInstance], _: callab
         if tt_instance and tt_instance.connected:
             try:
                 server_name = ttstr(tt_instance.server.get_properties().server_name)
-                if not server_name:  # Ensure empty string from ttstr is also treated as not found
+                if not server_name:
                     server_name = _("Unknown Server")
             except Exception as e:
                 logger.error(f"Error getting server name from TT instance: {e}")
@@ -55,12 +55,11 @@ def pluralize(number: int, one: str, few: str, many: str) -> str:
 def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount]) -> str:
     """Safely gets the username from a Pytalk User or UserAccount object as a string."""
     username = None
-    if hasattr(user_or_account, 'username'): # Standard for pytalk.user.User
+    if hasattr(user_or_account, 'username'):
         username = user_or_account.username
-    elif hasattr(user_or_account, '_account') and hasattr(user_or_account._account, 'szUsername'): # For pytalk.UserAccount
-        # This case handles the structure seen in cq_toggle_specific_user_mute_action for UserAccount
+    elif hasattr(user_or_account, '_account') and hasattr(user_or_account._account, 'szUsername'):
         username = user_or_account._account.szUsername
-    elif hasattr(user_or_account, 'szUsername'): # Direct access if szUsername is an attribute
+    elif hasattr(user_or_account, 'szUsername'):
          username = user_or_account.szUsername
 
 
@@ -78,7 +77,7 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
                        "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
                        "/help - Show this help message.\n"
                        "(Note: `/start` is used to initiate the bot and process deeplinks.)"))
-        if is_admin: # This is_admin likely refers to general admin privileges on Telegram side
+        if is_admin:
             parts.append(_("\n<b>Admin Commands:</b>"))
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
                            "/ban - Ban a user from the server (via buttons)."))
@@ -87,8 +86,7 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
         parts.append(_("/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
                        "/unsub - Get a link to unsubscribe from notifications.\n"
                        "/help - Show help."))
-        # For TeamTalk, is_admin might mean TT server admin, and is_bot_admin for specific bot management commands
-        if is_bot_admin: # Assuming MAIN_ADMIN check maps to is_bot_admin
+        if is_bot_admin:
             parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):"))
             parts.append(_("/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
                            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
