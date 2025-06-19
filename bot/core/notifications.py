@@ -57,8 +57,6 @@ async def _get_recipients_for_notification(username: str, event_type: str) -> li
     # Iterate over a copy of the cache in case it's modified concurrently
     cached_subscriber_ids = list(SUBSCRIBED_USERS_CACHE)
 
-    # should_notify_user now expects a session_factory and handles session creation internally.
-    # So we pass SessionFactory (the imported name for our factory instance) directly.
     for chat_id in cached_subscriber_ids:
         if await should_notify_user(chat_id, username, event_type, SessionFactory):
             recipients.append(chat_id)
@@ -113,19 +111,8 @@ async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,
-    login_complete_time: datetime | None,
-    _: callable
+    login_complete_time: datetime | None
 ):
-    # user_nickname for logging and potentially for tt_user_nickname_for_markup (using a default lang)
-    # This line is to be removed as per subtask, nickname generation moves into text_generator for per-recipient lang.
-    # However, tt_user_nickname_for_markup needs a single value. So, we keep a default one here.
-    # To strictly follow "Remove Old Nickname Generation", the line below would be removed.
-    # But then tt_user_nickname_for_markup would be undefined.
-    # Let's keep it for now, as its usage for markup is outside text_generator.
-    # The subtask is focused on the text_generator's localization.
-    # If this user_nickname was ONLY for the text_generator, it would be removed.
-    # Since it's also for logging and markup, let's assume a default lang nickname here is fine.
-    # To reconcile, I will get a default translator for this specific default nickname.
     default_lang_for_markup_and_log = app_config.get("DEFAULT_LANG", "en")
     _log_markup_translator = get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator) # For logging and markup
@@ -153,11 +140,6 @@ async def send_join_leave_notification_logic(
     logger.info(f"Notifications for {event_type} of {user_username} will be sent to {len(recipients)} users.")
 
     server_name = get_effective_server_name(tt_instance)
-
-    # The `_` callable passed into send_join_leave_notification_logic is not used directly anymore
-    # for generating the per-recipient message, as _generate_join_leave_notification_text handles
-    # getting the correct translator based on lang_code.
-    # The `user_nickname` used for tt_user_nickname_for_markup (default lang) is still generated above.
 
     await send_telegram_messages_to_list(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"],
