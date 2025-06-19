@@ -32,7 +32,7 @@ def get_tt_user_display_name(user: TeamTalkUser, translator: "gettext.GNUTransla
     if not display_name:
         display_name = ttstr(user.username)
     if not display_name:
-        display_name = translator.gettext("unknown user") # Was WHO_USER_UNKNOWN
+        display_name = translator.gettext("unknown user")
     return display_name
 
 def pluralize(number: int, one: str, few: str, many: str) -> str:

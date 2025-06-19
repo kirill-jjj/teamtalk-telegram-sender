@@ -184,7 +184,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
     Deletes all data associated with a given telegram_id in a single transaction.
     Also removes the user from the in-memory cache upon successful deletion.
     """
-    from bot.core.user_settings import USER_SETTINGS_CACHE # Moved import here
+    from bot.core.user_settings import USER_SETTINGS_CACHE
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
     try:
         user_settings_record = await session.get(UserSettings, telegram_id)

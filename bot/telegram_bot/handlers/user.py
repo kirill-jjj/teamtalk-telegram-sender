@@ -42,7 +42,6 @@ async def start_command_handler(
 
     token = command.args
     if token:
-        # Assuming handle_deeplink_payload is refactored to take `_`
         await handle_deeplink_payload(message, token, session, _, user_specific_settings)
     else:
         await message.reply(_("Hello! Use /help to see available commands.")) # START_HELLO
@@ -118,16 +117,9 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, tr
     for name in sorted_channel_names:
         sorted_users_in_channels[name] = sorted(grouped_data[name])
 
-    # Using simple English pluralization, or rely on gettext providing correct plural form for "users"
-    # The `pluralize` function is language-specific in its current form.
-    # For gettext, you'd typically use `ngettext`. Here, we simplify.
+    # For gettext, ngettext is typically used for pluralization.
     users_word_total = translator.ngettext("user", "users", total_users)
-    # For Russian, the keys were:
-    # "WHO_USERS_COUNT_SINGULAR": "пользователь"
-    # "WHO_USERS_COUNT_PLURAL_2_4": "пользователя"
-    # "WHO_USERS_COUNT_PLURAL_5_MORE": "пользователей"
-    # If using ngettext, it would be: ngettext("user", "users", total_users) which then needs .po entries.
-    # For now, this will use the singular/plural of the current language based on `_("user")` and `_("users")` keys.
+    # This will use the singular/plural forms defined in .po files for the current language.
 
     text_reply = translator.gettext("There are {user_count} {users_word} on the server:\n").format(user_count=total_users, users_word=users_word_total) # WHO_HEADER
 
@@ -153,7 +145,7 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, tr
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
-    _: callable, # Keep _ for other direct uses if any, or remove if translator replaces all its uses
+    _: callable,
     tt_instance: TeamTalkInstance | None,
     session: AsyncSession,
     translator: "gettext.GNUTranslations"
@@ -221,7 +213,6 @@ async def settings_command_handler(
     except Exception as e:
         logger.warning(f"Could not delete user settings command: {e}")
 
-    # Assuming create_main_settings_keyboard is refactored to take `_`
     settings_builder = create_main_settings_keyboard(_)
 
     try:

@@ -186,11 +186,6 @@ async def _generate_and_reply_deeplink(
 
         logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
 
-        # The original TT_SUBSCRIBE_DEEPLINK_TEXT included {deeplink_url} but also mentioned {bot_username} and {tt_user_id}
-        # The prompt's example for /sub is:
-        # _("To subscribe to Telegram notifications and link your TeamTalk account for NOON, please use the following command with the bot @{bot_username} on Telegram:\n\n/start {token}\n\nYour TeamTalk User ID is: {tt_user_id}")
-        # This is more complex than a simple reply_text_source.format(deeplink_url=...).
-        # For now, I'll use the simpler source strings that match the old keys' direct purpose.
         if "{deeplink_url}" in reply_text_source: # Check if placeholder exists
              reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
         else: # If not, the source string is static (e.g. error message)
@@ -211,8 +206,6 @@ async def handle_tt_subscribe_command(
     _: callable
 ):
     sender_tt_username = ttstr(tt_message.user.username)
-    # English Source for TT_SUBSCRIBE_DEEPLINK_TEXT: "Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}"
-    # The prompt example is more detailed, but this matches the old key.
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
@@ -230,7 +223,6 @@ async def handle_tt_unsubscribe_command(
     session: AsyncSession,
     _: callable
 ):
-    # English Source for TT_UNSUBSCRIBE_DEEPLINK_TEXT: "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
