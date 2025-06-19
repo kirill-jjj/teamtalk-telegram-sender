@@ -51,8 +51,8 @@ async def main_async():
     from bot.database.engine import init_db, SessionFactory
     from bot.core.user_settings import load_user_settings_to_cache
     from bot.database import crud
-    from bot.database.crud import get_all_subscribers_ids # Added import
-    from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Added imports
+    from bot.database.crud import get_all_subscribers_ids
+    from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
     from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
     from bot.telegram_bot.commands import set_telegram_commands
     from bot.telegram_bot.middlewares import (
