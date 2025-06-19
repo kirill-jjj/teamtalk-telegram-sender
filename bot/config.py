@@ -1,14 +1,12 @@
 # bot/config.py
 from typing import Any, Literal, Optional
 
-from pydantic import Field, model_validator, field_validator, AliasChoices
+from pydantic import Field, model_validator, field_validator # AliasChoices removed
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Допустимые значения для поля GENDER
+# Допустимые значения для полей
 GenderType = Literal["male", "female", "neutral"]
-# Допустимые языки
 LangType = Literal["en", "ru"]
-
 
 class Settings(BaseSettings):
     """
@@ -17,15 +15,14 @@ class Settings(BaseSettings):
     """
 
     # --- Telegram ---
-    TG_BOT_TOKEN: str
-    # Используем AliasChoices, чтобы pydantic-settings искал сначала
-    # переменную TELEGRAM_BOT_EVENT_TOKEN, а потом TG_EVENT_TOKEN.
-    TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias=AliasChoices('TELEGRAM_BOT_EVENT_TOKEN', 'TG_EVENT_TOKEN'))
+    # ИЗМЕНЕНИЕ 1: Оба токена теперь опциональны на уровне полей.
+    # Обязательность мы проверим в @model_validator.
+    TG_BOT_TOKEN: Optional[str] = None
+    TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias='TELEGRAM_BOT_EVENT_TOKEN')
     TG_BOT_MESSAGE_TOKEN: Optional[str] = None
     TG_ADMIN_CHAT_ID: Optional[int] = None
 
     # --- TeamTalk Connection ---
-    # Используем алиасы для соответствия переменным из старого .env.example
     HOSTNAME: str = Field(validation_alias='HOST_NAME')
     PORT: int = 10333
     ENCRYPTED: bool = False
@@ -50,8 +47,6 @@ class Settings(BaseSettings):
     GENDER: GenderType = "neutral"
 
     # --- Производные поля (не из .env) ---
-    # Эти поля не считываются из окружения, а вычисляются после валидации.
-    # Мы добавляем им значение по умолчанию, чтобы они были в модели.
     EFFECTIVE_DEFAULT_LANG: LangType = "en"
 
     # Конфигурация модели: читать из .env файла
@@ -60,21 +55,17 @@ class Settings(BaseSettings):
     @model_validator(mode='after')
     def process_settings(self) -> 'Settings':
         """
-        Валидатор, который запускается после обработки всех полей.
-        Идеально подходит для логики, зависящей от нескольких полей.
+        Валидатор для проверки взаимозависимых полей.
         """
-        # 1. Логика для TG_EVENT_TOKEN: если он не задан напрямую,
-        #    используем значение из TG_BOT_TOKEN.
-        if not self.TG_EVENT_TOKEN:
+        # ИЗМЕНЕНИЕ 2: Обновленная, более надежная логика валидации токенов.
+        # Сначала пытаемся заполнить TG_EVENT_TOKEN из TG_BOT_TOKEN, если первый не задан.
+        if not self.TG_EVENT_TOKEN and self.TG_BOT_TOKEN:
             self.TG_EVENT_TOKEN = self.TG_BOT_TOKEN
 
-        # 2. Финальная проверка: у нас должен быть токен для событий.
+        # Теперь проверяем, что в итоге у нас есть токен для событий.
         if not self.TG_EVENT_TOKEN:
             raise ValueError("Необходимо установить переменную окружения TG_BOT_TOKEN или TELEGRAM_BOT_EVENT_TOKEN.")
 
-        # 3. Устанавливаем производное поле EFFECTIVE_DEFAULT_LANG
-        #    Это заменяет сложную логику, которая была в старом коде.
-        #    Валидатор для DEFAULT_LANG уже гарантирует, что значение корректно.
         self.EFFECTIVE_DEFAULT_LANG = self.DEFAULT_LANG
 
         return self
