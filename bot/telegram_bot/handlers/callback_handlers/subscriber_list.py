@@ -132,7 +132,7 @@ async def handle_subscriber_list_actions(
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
         if requested_page is None:
-            await query.answer("Error: Page number missing.", show_alert=True)
+            await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
         page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
