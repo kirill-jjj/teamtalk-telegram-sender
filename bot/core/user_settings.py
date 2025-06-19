@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class UserSpecificSettings:
-    language: str = field(default_factory=lambda: app_config["EFFECTIVE_DEFAULT_LANG"])
+    language: str = field(default_factory=lambda: app_config.EFFECTIVE_DEFAULT_LANG)
     notification_settings: NotificationSetting = NotificationSetting.ALL
     muted_users_set: set[str] = field(default_factory=set)
     mute_all_flag: bool = False

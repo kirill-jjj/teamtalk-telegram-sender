@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 def get_effective_server_name(tt_instance: Optional[TeamTalkInstance], _: callable) -> str:
-    server_name = app_config.get("SERVER_NAME")
+    server_name = app_config.SERVER_NAME
     if not server_name:
         if tt_instance and tt_instance.connected:
             try:

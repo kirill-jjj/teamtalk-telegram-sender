@@ -80,7 +80,7 @@ TT_COMMAND_HANDLERS = {
 
 def get_configured_status():
     """Helper function to get the combined status object based on GENDER config."""
-    gender = app_config.get("GENDER", "neutral")
+    gender = app_config.GENDER
     if gender == "male":
         return Status.online.male
     elif gender == "female":
@@ -155,9 +155,9 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
 
     try:
         configured_status = get_configured_status()
-        tt_instance.change_status(configured_status, app_config["STATUS_TEXT"])
+        tt_instance.change_status(configured_status, app_config.STATUS_TEXT)
         tt_bot_module.login_complete_time = datetime.utcnow()
-        logger.debug(f"TeamTalk status set to: '{app_config['STATUS_TEXT']}'")
+        logger.debug(f"TeamTalk status set to: '{app_config.STATUS_TEXT}'")
         logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
     except Exception as e:
         logger.error(f"Error setting status or login_complete_time for bot: {e}", exc_info=True)
@@ -166,18 +166,18 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
 @tt_bot_module.tt_bot.event
 async def on_ready():
     server_info_obj = pytalk.TeamTalkServerInfo(
-        host=app_config["HOSTNAME"],
-        tcp_port=app_config["PORT"],
-        udp_port=app_config["PORT"],
-        username=app_config["USERNAME"],
-        password=app_config["PASSWORD"],
-        encrypted=app_config["ENCRYPTED"],
-        nickname=app_config["NICKNAME"],
+        host=app_config.HOSTNAME,
+        tcp_port=app_config.PORT,
+        udp_port=app_config.PORT,
+        username=app_config.USERNAME,
+        password=app_config.PASSWORD,
+        encrypted=app_config.ENCRYPTED,
+        nickname=app_config.NICKNAME,
     )
     try:
         tt_bot_module.login_complete_time = None
         await tt_bot_module.tt_bot.add_server(server_info_obj)
-        logger.info(f"Connection process initiated by Pytalk for server: {app_config['HOSTNAME']}.")
+        logger.info(f"Connection process initiated by Pytalk for server: {app_config.HOSTNAME}.")
     except Exception as e:
         logger.error(f"Error initiating TeamTalk server connection in on_ready: {e}", exc_info=True)
         asyncio.create_task(_tt_reconnect())
@@ -201,7 +201,7 @@ async def on_my_login(server: PytalkServer):
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({server.info.host})")
 
     try:
-        channel_id_or_path = app_config["CHANNEL"]
+        channel_id_or_path = app_config.CHANNEL
         channel_id = -1
         target_channel_name_log = channel_id_or_path
 
@@ -220,10 +220,10 @@ async def on_my_login(server: PytalkServer):
 
         if channel_id != -1:
             logger.info(f"Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {channel_id})")
-            tt_instance.join_channel_by_id(channel_id, password=app_config.get("CHANNEL_PASSWORD"))
+            tt_instance.join_channel_by_id(channel_id, password=app_config.CHANNEL_PASSWORD)
         else:
             logger.warning(
-                f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel."
+                f"Could not resolve channel '{app_config.CHANNEL}' or no channel configured. Bot remains in current/root channel."
             )
             current_channel_id = tt_instance_val.getMyCurrentChannelID()
             current_channel_obj = tt_instance_val.get_channel(current_channel_id)
@@ -294,18 +294,13 @@ async def on_message(message: TeamTalkMessage):
     logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'" )
 
     bot_reply_language = DEFAULT_LANGUAGE
-    if app_config.get("TG_ADMIN_CHAT_ID"):
-        admin_chat_id_str = app_config.get("TG_ADMIN_CHAT_ID")
-        # Ensure admin_chat_id_str is converted to int if USER_SETTINGS_CACHE uses int keys
-        try: admin_chat_id_int = int(admin_chat_id_str)
-        except ValueError:
-            logger.warning(f"TG_ADMIN_CHAT_ID '{admin_chat_id_str}' is not a valid integer.")
-            admin_chat_id_int = None
+    if app_config.TG_ADMIN_CHAT_ID is not None:
+        admin_chat_id_int = app_config.TG_ADMIN_CHAT_ID
+        # admin_chat_id_int is already an int, no need for try-except ValueError
 
-        if admin_chat_id_int:
-            admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
-            if admin_settings:
-                bot_reply_language = admin_settings.language
+        admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
+        if admin_settings:
+            bot_reply_language = admin_settings.language
 
     translator = get_translator(bot_reply_language)
     _ = translator.gettext
