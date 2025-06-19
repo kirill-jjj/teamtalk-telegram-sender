@@ -62,7 +62,7 @@ async def process_user_action_selection(
     tt_instance: TeamTalkInstance | None
 ):
     if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer() # Answer silently if essential parts of callback are missing
+        await callback_query.answer()
         return
 
     if not tt_instance or not tt_instance.connected:
@@ -79,29 +79,24 @@ async def process_user_action_selection(
     if not user_to_act_on:
         await callback_query.answer(_("User not found on server anymore."), show_alert=True)
         try:
-            # Убираем кнопки, так как они больше не актуальны
             await callback_query.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError:
             logger.debug(f"Failed to remove reply markup when user {callback_data.user_id} was not found.")
-            pass # Не страшно, если не получилось
+            pass
         return
 
-    # Выполняем действие
     success, message_text = await _execute_tt_user_action(
         action=callback_data.action,
         user_to_act_on=user_to_act_on,
-        _=_, # Pass the translator function
+        _=_,
         admin_tg_id=callback_query.from_user.id
     )
 
     if success:
-        # При успехе показываем короткое уведомление и редактируем сообщение
         await callback_query.answer("Success!", show_alert=False)
         try:
             await callback_query.message.edit_text(message_text, reply_markup=None)
         except TelegramAPIError as e:
             logger.error(f"Error editing message after successful user action: {e}")
     else:
-        # При ошибке показываем модальное окно с текстом ошибки
-        # (не редактируем исходное сообщение с кнопками)
         await callback_query.answer(message_text, show_alert=True)

@@ -45,7 +45,6 @@ from bot.teamtalk_bot.commands import (
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
-# Новая функция для периодической синхронизации
 async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
     """Periodically synchronizes the ONLINE_USERS_CACHE with the server's state."""
     sync_interval_seconds = 300  # 5 minutes
@@ -56,21 +55,17 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
                 server_users = tt_instance.server.get_users()
                 new_cache = {user.id: user for user in server_users if hasattr(user, 'id')}
 
-                # Атомарное обновление кэша
                 ONLINE_USERS_CACHE.clear()
                 ONLINE_USERS_CACHE.update(new_cache)
 
                 logger.debug(f"Cache synchronized. Users online: {len(ONLINE_USERS_CACHE)}")
             else:
                 logger.warning("Skipping periodic cache sync: TT instance not ready.")
-                # Если инстанс отвалился, можно увеличить интервал ожидания
                 await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
                 continue
 
         except Exception as e:
             logger.error(f"Error during periodic cache synchronization: {e}", exc_info=True)
-            # Avoid busy-looping on persistent errors not related to TT connection state
-            # Add a small delay if the error is not about the instance being disconnected
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
                  await asyncio.sleep(60) # Wait 1 minute before retrying if error is with a connected instance
 
@@ -139,7 +134,6 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
     channel_name_display = ttstr(channel.name) if hasattr(channel, "name") and isinstance(channel.name, bytes) else str(channel.name)
     logger.info(f"Bot successfully joined channel: {channel_name_display}")
 
-    # Шаг 1: Первичная синхронизация кэша
     logger.info("Performing initial population of the online users cache...")
     try:
         initial_online_users = tt_instance.server.get_users()
@@ -157,14 +151,9 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
 
     asyncio.create_task(populate_user_accounts_cache(tt_instance))
 
-    # Шаг 2: Запуск фоновой задачи периодической синхронизации
-    # Ensure only one periodic sync task runs for a given tt_instance.
-    # This might require storing the task and cancelling it if _finalize_bot_login_sequence
-    # is somehow called again for an already active instance (e.g. manual rejoin command).
-    # For now, we assume this is the primary point of task creation after a fresh login.
     if not hasattr(tt_instance, '_periodic_sync_task_running') or not tt_instance._periodic_sync_task_running:
         asyncio.create_task(_periodic_cache_sync(tt_instance))
-        tt_instance._periodic_sync_task_running = True # Mark that task is started
+        tt_instance._periodic_sync_task_running = True
         logger.info("Periodic cache synchronization task started.")
     else:
         logger.info("Periodic cache synchronization task already running for this instance.")
@@ -245,20 +234,11 @@ async def on_my_login(server: PytalkServer):
                 f"Could not resolve channel '{app_config.get('CHANNEL', 'N/A')}' or no channel configured. Bot remains in current/root channel."
             )
             # If not joining a specific channel, _finalize_bot_login_sequence might not be called via on_user_join.
-            # We might need to call parts of it here, or ensure on_user_join is triggered for root.
-            # For now, assuming on_user_join for the bot will be triggered by Pytalk even for root channel.
-            # The user's provided code calls _finalize_bot_login_sequence only from on_user_join.
-            # Let's simulate the bot joining its current channel to trigger on_user_join if needed.
-            # This is a bit of a workaround if Pytalk doesn't trigger on_user_join for the bot in root.
             current_channel_id = tt_instance_val.getMyCurrentChannelID()
             current_channel_obj = tt_instance_val.get_channel(current_channel_id)
-            if current_channel_obj: # Trigger finalization if already in a channel (e.g. root)
+            if current_channel_obj:
                  logger.info(f"Bot already in channel '{ttstr(current_channel_obj.name)}' on login, ensuring finalization.")
-                 # Manually call finalize or parts of it if on_user_join is not guaranteed for root logins.
-                 # Based on user's code, on_user_join is the sole entry point for _finalize_bot_login_sequence.
-                 # This area might need refinement based on Pytalk's behavior for root channel joins.
-                 # For now, adhering to user's structure which relies on on_user_join.
-                 pass # Relying on on_user_join to be called.
+                 pass
 
     except Exception as e:
         logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)

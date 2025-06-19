@@ -8,8 +8,6 @@ from aiogram.exceptions import TelegramAPIError
 from bot.state import ONLINE_USERS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name # get_tt_user_display_name now expects `_`
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
-# get_all_subscribers_ids is likely not needed directly anymore if helper handles it.
-# from bot.database.crud import get_all_subscribers_ids
 import pytalk # For TeamTalkUser used in _show_user_buttons
 
 from bot.core.enums import AdminAction
@@ -20,8 +18,6 @@ from .callback_handlers.subscriber_list import _get_paginated_subscribers_info, 
 
 logger = logging.getLogger(__name__)
 
-# SUBSCRIBERS_PER_PAGE might not be needed here anymore if helper handles all pagination logic
-# SUBSCRIBERS_PER_PAGE = 10
 admin_router = Router(name="admin_router")
 
 # Apply the IsAdminFilter to all message and callback_query handlers in this router
@@ -106,7 +102,6 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     Handles the /subscribers command to display a paginated list of subscribed users
     with their names and usernames if available. Admins only.
     """
-    # Fetch initial page (page 0) data using the helper function
     page_subscribers_info_data, current_page, total_pages = await _get_paginated_subscribers_info(
         session, bot, requested_page=0
     )

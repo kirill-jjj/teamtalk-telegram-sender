@@ -65,7 +65,7 @@ async def _display_paginated_list_ui(
 
     page_slice, total_pages, current_page_idx = _paginate_list_util(items, page, USERS_PER_PAGE)
 
-    message_parts = [_(header_text_key)] # Apply translation to header key
+    message_parts = [_(header_text_key)]
     if not items:
         message_parts.append(_(empty_list_text_key))
 
@@ -120,7 +120,7 @@ async def _display_internal_user_list(
         _=_,
         items=sorted_items,
         page=page,
-        header_text_key=header_key, # _display_paginated_list_ui will call _() on this key
+        header_text_key=header_key,
         empty_list_text_key=empty_key,
         keyboard_factory=create_paginated_user_list_keyboard,
         keyboard_factory_kwargs={"list_type": list_type, "user_specific_settings": user_specific_settings},
@@ -152,7 +152,7 @@ async def _display_all_server_accounts_list(
         _=_,
         items=sorted_items,
         page=page,
-        header_text_key="ALL_SERVER_ACCOUNTS_HEADER", # _display_paginated_list_ui will call _() on this key
+        header_text_key="ALL_SERVER_ACCOUNTS_HEADER",
         empty_list_text_key="NO_SERVER_ACCOUNTS_TEXT",
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_specific_settings": user_specific_settings},
@@ -165,7 +165,7 @@ def _get_username_to_toggle_from_callback(
     """Extracts the username to be toggled from the callback data based on the list type."""
     user_idx = callback_data.user_idx
     current_page = callback_data.current_page
-    list_type = callback_data.list_type # This is already UserListAction
+    list_type = callback_data.list_type
 
     if list_type == UserListAction.LIST_ALL_ACCOUNTS:
         if not USER_ACCOUNTS_CACHE:
@@ -209,24 +209,24 @@ def _determine_mute_action_and_update_settings(
 
     if user_specific_settings.mute_all_flag:
         # Mute all ON: muted_users_set = allowed users
-        if username_to_toggle in user_specific_settings.muted_users_set:  # Was allowed
-            user_specific_settings.muted_users_set.discard(username_to_toggle)  # Now not allowed
+        if username_to_toggle in user_specific_settings.muted_users_set:
+            user_specific_settings.muted_users_set.discard(username_to_toggle)
             action_taken = "removed_from_allowed_list"
-            current_status_is_muted = False  # Was allowed (so, not muted)
+            current_status_is_muted = False
         else:
-            user_specific_settings.muted_users_set.add(username_to_toggle)  # Now allowed
+            user_specific_settings.muted_users_set.add(username_to_toggle)
             action_taken = "added_to_allowed_list"
-            current_status_is_muted = True  # Was not in allowed list (so, effectively muted by mute_all)
+            current_status_is_muted = True
     else:
         # Mute all OFF: muted_users_set = muted users
-        if username_to_toggle in user_specific_settings.muted_users_set:  # Was muted
-            user_specific_settings.muted_users_set.discard(username_to_toggle)  # Now not muted
+        if username_to_toggle in user_specific_settings.muted_users_set:
+            user_specific_settings.muted_users_set.discard(username_to_toggle)
             action_taken = "removed_from_muted_list"
-            current_status_is_muted = True  # Was muted
+            current_status_is_muted = True
         else:
-            user_specific_settings.muted_users_set.add(username_to_toggle)  # Now muted
+            user_specific_settings.muted_users_set.add(username_to_toggle)
             action_taken = "added_to_muted_list"
-            current_status_is_muted = False  # Was not muted
+            current_status_is_muted = False
 
     return action_taken, current_status_is_muted, original_muted_users_set
 
@@ -245,7 +245,7 @@ def _generate_mute_toggle_toast_message(
         # If mute_all_flag is True, it means the user is now effectively muted because they are NOT in the allowed list (for mute_all scenario)
         # OR they are explicitly in the muted list (for not mute_all scenario)
         status_text_key = "USER_STATUS_NOW_MUTED_BY_MUTE_ALL" if mute_all_flag else "USER_STATUS_NOW_MUTED"
-    else: # New status is unmuted
+    else:
         # If mute_all_flag is True, it means the user is now unmuted because they ARE in the allowed list
         # If mute_all_flag is False, it means the user is now unmuted because they are NOT in the muted list
         status_text_key = "USER_STATUS_NOW_ALLOWED" if mute_all_flag else "USER_STATUS_NOW_UNMUTED"
@@ -378,7 +378,6 @@ async def cq_list_internal_users_action(
     requested_list_type = callback_data.action # This is now a UserListAction member
     is_mute_all_active = user_specific_settings.mute_all_flag
 
-    # Determine the actual list type to display based on mute_all_flag
     effective_list_type = requested_list_type
     if is_mute_all_active:
         if requested_list_type == UserListAction.LIST_MUTED:
@@ -465,7 +464,7 @@ async def cq_toggle_specific_user_mute_action(
     action_taken, current_status_is_muted, original_muted_users_set = \
         _determine_mute_action_and_update_settings(username_to_toggle, user_specific_settings)
 
-    new_status_is_muted = not current_status_is_muted # Status *after* the toggle
+    new_status_is_muted = not current_status_is_muted
 
     toast_message = _generate_mute_toggle_toast_message(
         username_to_toggle,
@@ -486,10 +485,8 @@ async def cq_toggle_specific_user_mute_action(
     )
 
     if not save_successful:
-        # Error handling (toast, revert) already done in _save_mute_settings_and_notify
         return
 
-    # If save was successful, proceed to refresh UI
     await _refresh_mute_related_ui(
         callback_query,
         _,

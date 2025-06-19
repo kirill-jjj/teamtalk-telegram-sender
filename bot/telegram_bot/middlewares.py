@@ -52,7 +52,6 @@ class UserSettingsMiddleware(BaseMiddleware):
         data["_"] = translator.gettext
         data["translator"] = translator
 
-        # Оставляем старые данные для совместимости, если где-то еще используются
         data["user_specific_settings"] = user_specific_settings
 
         return await handler(event, data)
@@ -104,7 +103,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
                 logger.debug(f"SubscriptionCheckMiddleware: Allowing /start command with token for user {telegram_id}.")
                 return await handler(event, data)
 
-        # Check subscription status
         subscriber = await session.get(SubscribedUser, telegram_id)
 
         if not subscriber:

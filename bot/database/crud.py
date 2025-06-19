@@ -3,7 +3,6 @@ import secrets
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-# from bot.core.user_settings import USER_SETTINGS_CACHE # Removed top-level import
 from bot.database.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.database.engine import Base # For type hinting model
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
@@ -12,7 +11,6 @@ from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Added/Updated
 logger = logging.getLogger(__name__)
 
 async def db_add_generic(session: AsyncSession, model_instance: Base) -> bool:
-    """Generic add to DB, assumes instance is already created."""
     try:
         session.add(model_instance)
         await session.commit()
@@ -24,7 +22,6 @@ async def db_add_generic(session: AsyncSession, model_instance: Base) -> bool:
         return False
 
 async def db_remove_generic(session: AsyncSession, record_to_remove: Base | None) -> bool:
-    """Generic remove from DB if record exists."""
     if record_to_remove:
         try:
             table_name = record_to_remove.__tablename__
@@ -180,7 +177,6 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
 # Note: UserSettings CRUD is mostly handled by core.user_settings for cache coherency.
 # If direct UserSettings CRUD is needed outside that scope, it can be added here.
 async def get_user_settings_row(session: AsyncSession, telegram_id: int) -> UserSettings | None:
-    """Directly fetches UserSettings row from DB, bypassing cache."""
     return await session.get(UserSettings, telegram_id)
 
 async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> bool:
@@ -191,7 +187,6 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
     from bot.core.user_settings import USER_SETTINGS_CACHE # Moved import here
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
     try:
-        # Fetch both records first to see what needs to be deleted.
         user_settings_record = await session.get(UserSettings, telegram_id)
         subscribed_user_record = await session.get(SubscribedUser, telegram_id)
 
@@ -209,12 +204,11 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
             await session.delete(subscribed_user_record)
             logger.debug(f"Marked SubscribedUser for deletion for user {telegram_id}.")
 
-        # Commit both deletions (or one of them) in a single transaction.
         await session.commit()
 
         # Clear from cache only after the transaction is successfully committed.
         USER_SETTINGS_CACHE.pop(telegram_id, None)
-        SUBSCRIBED_USERS_CACHE.discard(telegram_id) # Remove from subscriber cache
+        SUBSCRIBED_USERS_CACHE.discard(telegram_id)
         logger.debug(f"Removed user {telegram_id} from SUBSCRIBED_USERS_CACHE after full data deletion.")
         logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from relevant caches.")
         return True

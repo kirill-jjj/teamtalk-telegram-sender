@@ -68,17 +68,11 @@ def _parse_telegram_ids(command_args: str | None) -> tuple[list[int], list[str]]
 async def _execute_admin_action_for_id(
     session: AsyncSession,
     telegram_id: int,
-    crud_function: Callable[[AsyncSession, int], bool], # Assuming crud_function returns bool
+    crud_function: Callable[[AsyncSession, int], bool],
     commands_to_set: list[BotCommand]
 ) -> bool:
     """Executes a CRUD function for a single ID and sets Telegram commands on success."""
-    # crud_function is async as per typical DB ops with AsyncSession
     if await crud_function(session, telegram_id):
-        # The __name__ check is kept as per prompt, requires remove_admin_db to be in scope
-        # if crud_function.__name__ == 'remove_admin_db': # Removed block
-            # ADMIN_RIGHTS_CACHE.pop(telegram_id, None) # Removed
-            # logger.info(f"Admin rights cache invalidated for user {telegram_id}.") # Removed
-
         try:
             await tg_bot_event.set_my_commands(
                 commands=commands_to_set,

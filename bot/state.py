@@ -13,11 +13,6 @@ ONLINE_USERS_CACHE: dict[int, 'pytalk.user.User'] = {}
 # This avoids the slow list_user_accounts() call in menus.
 USER_ACCOUNTS_CACHE: dict[str, 'pytalk.UserAccount'] = {}
 
-# Cache to store admin rights of users.
-# Key - int(user_id), value - Tuple[bool(is_admin), float(timestamp)]
-# ADMIN_RIGHTS_CACHE: dict[int, Tuple[bool, float]] = {} # Removed
-# ADMIN_CACHE_TTL_SECONDS = 60 # Removed
-
 # Cache for subscribed user IDs
 SUBSCRIBED_USERS_CACHE: set[int] = set()
 

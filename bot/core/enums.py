@@ -47,14 +47,3 @@ class DeeplinkAction(Enum):
     SUBSCRIBE = "subscribe"
     UNSUBSCRIBE = "unsubscribe"
     SUBSCRIBE_AND_LINK_NOON = "subscribe_link_noon"
-
-# Add other Enums as they are identified.
-# Example: Potentially for notification settings values if they are strings
-# class NotificationSettingValue(str, Enum):
-#     ALL = "all"
-#     LEAVE_OFF = "leave_off"
-#     JOIN_OFF = "join_off"
-#     NONE = "none"
-# This one (NotificationSettingValue) is already handled by database.models.NotificationSetting,
-# which is an IntEnum. So, no string enum needed here unless direct string comparison is preferred over IntEnum.value.
-# The current plan refers to database.models.NotificationSetting for subscription settings, so this string version is not needed.
