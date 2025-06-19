@@ -87,11 +87,11 @@ async def handle_subscriber_list_actions(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
     session: AsyncSession,
-    bot: Bot, # Added Bot
+    bot: Bot,
     _: callable
 ):
     """Handles actions from the subscriber list keyboard (delete, paginate)."""
-    action = callback_data.action # This is now a SubscriberListAction member
+    action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
 
     if action == SubscriberListAction.DELETE_SUBSCRIBER:

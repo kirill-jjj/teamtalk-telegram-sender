@@ -18,7 +18,7 @@ language_router = Router(name="callback_handlers.language")
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
     _: callable,
-    callback_data: SettingsCallback # Consumed but not directly used, could be removed if not needed by filter
+    callback_data: SettingsCallback
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
@@ -43,7 +43,7 @@ async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,
     user_specific_settings: UserSpecificSettings,
-    _: callable, # Translator for current language, used by process_setting_update for potential error messages
+    _: callable,
     callback_data: LanguageCallback
 ):
     if not callback_query.message or not callback_query.from_user or not callback_data.lang_code:
@@ -54,7 +54,7 @@ async def cq_set_language(
     original_lang_code = user_specific_settings.language
 
     if new_lang_code == original_lang_code:
-        await callback_query.answer() # Already this language, do nothing
+        await callback_query.answer()
         return
 
     new_lang_translator_obj = get_translator(new_lang_code)
@@ -71,7 +71,6 @@ async def cq_set_language(
     success_toast_text = _new("Language updated to {lang_name}.").format(lang_name=lang_name_display) # LANGUAGE_UPDATED_TO
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        # UI should be in the new language
         main_settings_builder = create_main_settings_keyboard(_new)
         main_settings_text = _new("⚙️ Settings") # SETTINGS_MENU_HEADER
         return main_settings_text, main_settings_builder.as_markup()
@@ -80,9 +79,9 @@ async def cq_set_language(
         callback_query=callback_query,
         session=session,
         user_settings=user_specific_settings,
-        _=_, # Pass original language translator for generic error messages from process_setting_update
+        _=_,
         update_action=update_logic,
         revert_action=revert_logic,
-        success_toast_text=success_toast_text, # This will be in the new language
-        ui_refresh_callable=refresh_ui_callable # This will generate UI in the new language
+        success_toast_text=success_toast_text,
+        ui_refresh_callable=refresh_ui_callable
     )

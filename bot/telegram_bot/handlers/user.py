@@ -59,7 +59,6 @@ def _get_user_display_channel_name(
 
     if channel_obj:
         try:
-            # Check if channel is hidden (requires pytalk.instance.sdk.ChannelType)
             if hasattr(pytalk.instance.sdk, "ChannelType") and \
                (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0:
                 is_channel_hidden = True
@@ -68,17 +67,16 @@ def _get_user_display_channel_name(
         except Exception as e_chan:
             logger.error(f"Error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}")
 
-    # Determine display name based on admin status and channel visibility/type
-    if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # Regular channel
+    if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
         if is_caller_admin or not is_channel_hidden:
             user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name)) # WHO_CHANNEL_IN
-        else: # Hidden channel, non-admin caller
+        else:
             user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
-    elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT: # Root channel
+    elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT:
         user_display_channel_name = translator.gettext("in root channel") # WHO_CHANNEL_ROOT
-    elif not channel_obj or channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]: # No specific channel / under server
+    elif not channel_obj or channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
         user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
-    else: # Fallback for any other case
+    else:
         user_display_channel_name = translator.gettext("in unknown location") # WHO_CHANNEL_UNKNOWN_LOCATION
 
     return user_display_channel_name
@@ -98,12 +96,12 @@ def _group_users_for_who_command(
         if user_obj.id == bot_user_id and not is_caller_admin:
             continue
 
-        user_display_channel_name = _get_user_display_channel_name(user_obj, is_caller_admin, translator) # Pass translator
+        user_display_channel_name = _get_user_display_channel_name(user_obj, is_caller_admin, translator)
 
         if user_display_channel_name not in channels_display_data:
             channels_display_data[user_display_channel_name] = []
 
-        user_nickname = get_tt_user_display_name(user_obj, translator) # Pass translator
+        user_nickname = get_tt_user_display_name(user_obj, translator)
         channels_display_data[user_display_channel_name].append(html.quote(user_nickname))
         users_added_to_groups_count += 1
 
@@ -186,11 +184,11 @@ async def who_command_handler(
         all_users_list,
         bot_user_id,
         is_caller_admin,
-        translator # Pass translator
+        translator
     )
 
     formatted_message = await asyncio.to_thread(
-        _format_who_message, grouped_data, total_users_to_display, translator # Pass translator
+        _format_who_message, grouped_data, total_users_to_display, translator
     )
 
     await message.reply(formatted_message, parse_mode="HTML")

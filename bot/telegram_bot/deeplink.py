@@ -45,18 +45,18 @@ async def _execute_deeplink_action(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    deeplink_obj: Deeplink, # Using Deeplink type from models
+    deeplink_obj: Deeplink,
     user_specific_settings: UserSpecificSettings,
-    token: str # For logging purposes
+    token: str
 ) -> str:
     """
     Executes the action specified by the deeplink object and returns a reply text.
     """
-    reply_text = _("An error occurred.") # Default error message (ERROR_OCCURRED)
+    reply_text = _("An error occurred.")
     action_enum_member: Optional[DeeplinkAction] = None
 
     try:
-        if deeplink_obj.action:  # Ensure action is not None
+        if deeplink_obj.action:
             action_enum_member = DeeplinkAction(str(deeplink_obj.action))
     except ValueError:
         logger.warning(f"Invalid deeplink action string from DB: '{deeplink_obj.action}' for token {token}")
@@ -99,12 +99,11 @@ async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    payload: Any, # Kept for signature consistency if needed by other actions
-    user_specific_settings: UserSpecificSettings # To update cache if needed
+    payload: Any,
+    user_specific_settings: UserSpecificSettings
 ) -> str:
     if await add_subscriber(session, telegram_id):
         logger.info(f"User {telegram_id} subscribed via deeplink.")
-        # Ensure settings are loaded/created for the new subscriber
         await get_or_create_user_settings(telegram_id, session)
         return _("You have successfully subscribed to notifications.") # DEEPLINK_SUBSCRIBED
     return _("You are already subscribed to notifications.") # DEEPLINK_ALREADY_SUBSCRIBED
@@ -130,16 +129,13 @@ async def _handle_subscribe_and_link_noon_deeplink(
     payload: str | None,
     user_specific_settings: UserSpecificSettings
 ) -> str:
-    # Subscription Logic
     if await add_subscriber(session, telegram_id):
         logger.info(f"User {telegram_id} subscribed via combined deeplink.")
-        # Ensure settings are loaded/created for the new subscriber, happens outside or implicitly by user_specific_settings presence
     else:
         logger.info(f"User {telegram_id} was already subscribed, proceeding to link NOON via combined deeplink.")
 
     current_settings = await get_or_create_user_settings(telegram_id, session)
 
-    # Account Linking Logic
     tt_username_from_payload = payload
     if not tt_username_from_payload:
         logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
@@ -203,7 +199,7 @@ async def handle_deeplink_payload(
     token: str,
     session: AsyncSession,
     _: callable,
-    user_specific_settings: UserSpecificSettings # User's current settings object
+    user_specific_settings: UserSpecificSettings
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
@@ -273,7 +269,7 @@ async def handle_deeplink_payload(
         _,
         deeplink_obj,
         user_specific_settings,
-        token # Pass token for logging within _execute_deeplink_action
+        token
     )
 
     await message.reply(reply_text)

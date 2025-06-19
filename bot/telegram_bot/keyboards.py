@@ -21,7 +21,6 @@ from bot.core.enums import (
     UserListAction,
     ToggleMuteSpecificAction,
     SubscriberListAction
-    # PaginateUsersAction might not be directly used here if pagination is implicit
 )
 from bot.telegram_bot.callback_data import (
     SettingsCallback,
@@ -40,7 +39,7 @@ from bot.core.user_settings import UserSpecificSettings # For notification and m
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
-ttstr = pytalk.instance.sdk.ttstr # For convenience if dealing with pytalk strings
+ttstr = pytalk.instance.sdk.ttstr
 
 # --- Settings Keyboards ---
 
@@ -88,7 +87,6 @@ def create_subscription_settings_keyboard(
     builder = InlineKeyboardBuilder()
     active_marker = _("✅ ") # ACTIVE_CHOICE_MARKER
 
-    # English source strings for button texts
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", "all"),
         NotificationSetting.LEAVE_OFF: ("Join Only", "leave_off"),
@@ -287,12 +285,6 @@ def create_account_list_keyboard(
     ))
     return builder.as_markup()
 
-# Note: The original show_user_buttons for kick/ban in callbacks.py was dynamic based on users online.
-# Replicating that as a static factory here might be less useful unless generalized.
-# For now, focusing on the settings-related keyboards as per the main structure of the request.
-# The kick/ban buttons were also simpler and directly constructed in the handler.
-# If a generic "select user from list" keyboard factory is needed, it would be a new addition.
-
 def create_subscriber_list_keyboard(
     _: Callable,
     subscribers_info: List[dict], # Changed from subscriber_ids: list[int]
@@ -302,9 +294,7 @@ def create_subscriber_list_keyboard(
     """Creates the keyboard for managing the subscriber list."""
     builder = InlineKeyboardBuilder()
 
-    # Subscriber buttons (one per row)
     for subscriber in subscribers_info: # Changed loop variable and iteration
-        # Using display_name for text and telegram_id for callback
         button_text = _("Delete {user_info}").format(user_info=subscriber['display_name'])
         builder.row(
             InlineKeyboardButton(
@@ -317,10 +307,6 @@ def create_subscriber_list_keyboard(
             )
         )
 
-    # No specific builder.adjust(1) needed here as builder.row() already creates one row per button.
-    # If subscribers_info is empty, no subscriber buttons will be added.
-
-    # Pagination buttons row
     pagination_buttons = []
     if current_page > 0:
         pagination_buttons.append(
@@ -344,14 +330,9 @@ def create_subscriber_list_keyboard(
         )
 
     if pagination_buttons:
-        builder.row(*pagination_buttons) # Add them in a single row
-
-    # Optionally, add a back button if needed, e.g., back to main menu or settings
-    # builder.row(InlineKeyboardButton(text=_("⬅️ Back"), callback_data=SomeOtherCallback().pack()))
+        builder.row(*pagination_buttons)
 
     return builder.as_markup()
-
-# End of bot/telegram_bot/keyboards.py
 
 def create_user_selection_keyboard(
     _: callable,
@@ -369,12 +350,10 @@ def create_user_selection_keyboard(
 
         user_nickname = get_tt_user_display_name(user_obj, _)
 
-        # Убедимся, что user_id существует и является валидным
         if not hasattr(user_obj, 'id'):
             continue
         user_id = user_obj.id
 
-        # Используем AdminActionCallback вместо "магической строки"
         callback_data = AdminActionCallback(
             action=command_type,
             user_id=user_id

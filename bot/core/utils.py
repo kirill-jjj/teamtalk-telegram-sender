@@ -25,7 +25,7 @@ def get_effective_server_name(tt_instance: Optional[TeamTalkInstance]) -> str:
                 server_name = "Unknown Server"
         else:
             server_name = "Unknown Server"
-    return server_name if server_name else "Unknown Server" # Final fallback
+    return server_name if server_name else "Unknown Server"
 
 def get_tt_user_display_name(user: TeamTalkUser, translator: "gettext.GNUTranslations") -> str:
     display_name = ttstr(user.nickname)
@@ -83,13 +83,13 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
                            "/ban - Ban a user from the server (via buttons)."))
     elif platform == "teamtalk":
-        parts.append(_("Available commands:")) # Keep as plain text for TeamTalk
+        parts.append(_("Available commands:"))
         parts.append(_("/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
                        "/unsub - Get a link to unsubscribe from notifications.\n"
                        "/help - Show help."))
         # For TeamTalk, is_admin might mean TT server admin, and is_bot_admin for specific bot management commands
         if is_bot_admin: # Assuming MAIN_ADMIN check maps to is_bot_admin
-            parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):")) # Keep as plain text
+            parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):"))
             parts.append(_("/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
                            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
 

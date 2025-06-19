@@ -13,13 +13,13 @@ navigation_router = Router(name="callback_handlers.navigation")
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
 async def cq_back_to_main_settings_menu(
     callback_query: CallbackQuery,
-    _: callable, # Translator
-    callback_data: SettingsCallback # Consumed by filter
+    _: callable,
+    callback_data: SettingsCallback
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback.")) # GENERIC_NO_MESSAGE_CALLBACK_ERROR
         return
-    await callback_query.answer() # Acknowledge the button press
+    await callback_query.answer()
 
     main_settings_builder = create_main_settings_keyboard(_)
     main_settings_text = _("⚙️ Settings") # SETTINGS_MENU_HEADER (Localized)
@@ -35,16 +35,3 @@ async def cq_back_to_main_settings_menu(
             logger.error(f"TelegramBadRequest editing message for back_to_main_settings_menu: {e}")
     except TelegramAPIError as e:
         logger.error(f"TelegramAPIError editing message for back_to_main_settings_menu: {e}")
-
-# Add other general navigation handlers here if any, e.g.:
-# @navigation_router.callback_query(F.data == "close_menu")
-# async def process_close_menu(callback_query: CallbackQuery, _: callable):
-#     await callback_query.answer(_("MENU_CLOSED_TOAST"))
-#     try:
-#         await callback_query.message.delete()
-#     except TelegramAPIError as e:
-#         logger.error(f"Error deleting message on close_menu: {e}")
-
-# @navigation_router.callback_query(F.data == "dummy_action")
-# async def process_dummy_tap(callback_query: CallbackQuery, _: callable):
-#     await callback_query.answer(_("DUMMY_BUTTON_TOAST"))

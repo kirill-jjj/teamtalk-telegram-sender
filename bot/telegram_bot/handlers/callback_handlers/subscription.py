@@ -20,7 +20,7 @@ async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     _: callable,
     user_specific_settings: UserSpecificSettings,
-    callback_data: SettingsCallback # Consumed by filter
+    callback_data: SettingsCallback
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: No message associated with callback."))
@@ -69,7 +69,7 @@ async def cq_set_subscription_setting(
     original_setting = user_specific_settings.notification_settings
 
     if new_setting_enum == original_setting:
-        await callback_query.answer() # No change
+        await callback_query.answer()
         return
 
     def update_logic():
@@ -88,7 +88,7 @@ async def cq_set_subscription_setting(
     success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name) # SUBS_SETTING_UPDATED_TO
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        updated_builder = create_subscription_settings_keyboard(_, new_setting_enum) # Pass current settings
+        updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
         menu_text = _("Subscription Settings") # SUBS_SETTINGS_MENU_HEADER
         return menu_text, updated_builder.as_markup()
 
@@ -108,17 +108,15 @@ async def cq_set_subscription_setting(
     # No explicit success check for process_setting_update needed here, as it handles its own rollback.
     # If it failed, the original_setting and new_setting_enum would effectively be the same or reverted.
 
-    user_id = callback_query.from_user.id # Already checked for None earlier
+    user_id = callback_query.from_user.id
 
     if new_setting_enum == NotificationSetting.NONE and original_setting != NotificationSetting.NONE:
-        # User is turning notifications OFF
         if await remove_subscriber(session, user_id):
             logger.info(f"User {user_id} unsubscribed and removed from cache via settings change to NONE.")
         else:
             # This could happen if they were already unsubscribed for some reason, or DB error.
             logger.warning(f"User {user_id} set notifications to NONE, but failed to remove from SubscribedUser table (or already removed).")
     elif new_setting_enum != NotificationSetting.NONE and original_setting == NotificationSetting.NONE:
-        # User is turning notifications ON (from a NONE state)
         if await add_subscriber(session, user_id):
             logger.info(f"User {user_id} subscribed and added to cache via settings change from NONE to {new_setting_enum.value}.")
         else:

@@ -79,7 +79,7 @@ async def get_or_create_user_settings(telegram_id: int, session_factory) -> User
             try:
                 await session.commit()
                 logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
-                USER_SETTINGS_CACHE[telegram_id] = default_settings # Cache the in-memory representation
+                USER_SETTINGS_CACHE[telegram_id] = default_settings
 
                 # If notifications are not NONE by default, add user to subscribers list
                 if default_settings.notification_settings != NotificationSetting.NONE:
@@ -112,7 +112,7 @@ async def update_user_settings_in_db(session: AsyncSession, telegram_id: int, se
 
     try:
         await session.commit()
-        USER_SETTINGS_CACHE[telegram_id] = settings # Update cache
+        USER_SETTINGS_CACHE[telegram_id] = settings
         logger.debug(f"Updated settings for user {telegram_id} in DB and cache.")
     except Exception as e:
         await session.rollback()

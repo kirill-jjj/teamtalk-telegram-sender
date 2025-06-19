@@ -8,7 +8,6 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.config import app_config
 from bot.language import get_translator
-# Removed: from bot.database.crud import get_all_subscribers_ids
 from bot.database.engine import SessionFactory
 from bot.state import SUBSCRIBED_USERS_CACHE # Added
 from bot.core.user_settings import get_or_create_user_settings
@@ -61,7 +60,7 @@ async def _get_recipients_for_notification(username: str, event_type: str) -> li
     # should_notify_user now expects a session_factory and handles session creation internally.
     # So we pass SessionFactory (the imported name for our factory instance) directly.
     for chat_id in cached_subscriber_ids:
-        if await should_notify_user(chat_id, username, event_type, SessionFactory): # Pass SessionFactory
+        if await should_notify_user(chat_id, username, event_type, SessionFactory):
             recipients.append(chat_id)
     return recipients
 
@@ -97,16 +96,13 @@ def _generate_join_leave_notification_text(
     """
     recipient_translator_func = get_translator(lang_code).gettext
 
-    # Get display_name using the correct translator for this recipient
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
 
-    # Determine the notification template string using the recipient's language
     if event_type == NOTIFICATION_EVENT_JOIN:
         notification_template = recipient_translator_func("User {user_nickname} joined server {server_name}")
     else:  # Assuming only JOIN and LEAVE types
         notification_template = recipient_translator_func("User {user_nickname} left server {server_name}")
 
-    # Format the string, ensuring HTML safety for names
     return notification_template.format(
         user_nickname=html.quote(localized_user_nickname),
         server_name=html.quote(server_name)
@@ -137,11 +133,10 @@ async def send_join_leave_notification_logic(
     user_username = ttstr(tt_user.username)
     user_id = tt_user.id
 
-    if not user_username: # Check if username is empty or None
+    if not user_username:
         logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname}, ID: {user_id}). Skipping.")
         return
 
-    # Call the new helper functions
     if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
         return
 
