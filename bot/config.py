@@ -1,64 +1,92 @@
-import os
-import sys
-from typing import Any
-from dotenv import load_dotenv
-from bot.constants import (
-    DEFAULT_TT_PORT,
-    DEFAULT_TT_STATUS_TEXT,
-    DEFAULT_TT_CLIENT_NAME,
-    DEFAULT_DATABASE_FILE,
-    MIN_ARGS_FOR_ENV_PATH,
-    DEFAULT_LANGUAGE as FALLBACK_DEFAULT_LANGUAGE
-)
+# bot/config.py
+from typing import Any, Literal, Optional
 
-def load_app_config(env_path: str | None = None) -> dict[str, Any]:
-    load_dotenv(dotenv_path=env_path)
-    config_data = {
-        "TG_BOT_TOKEN": os.getenv("TG_BOT_TOKEN"),
-        "TG_EVENT_TOKEN": os.getenv("TELEGRAM_BOT_EVENT_TOKEN") or os.getenv("TG_BOT_TOKEN"),
-        "TG_BOT_MESSAGE_TOKEN": os.getenv("TG_BOT_MESSAGE_TOKEN"),
-        "TG_ADMIN_CHAT_ID": os.getenv("TG_ADMIN_CHAT_ID"),
-        "HOSTNAME": os.getenv("HOST_NAME"),
-        "PORT": int(os.getenv("PORT", str(DEFAULT_TT_PORT))),
-        "ENCRYPTED": os.getenv("ENCRYPTED") == "1",
-        "USERNAME": os.getenv("USER_NAME"),
-        "PASSWORD": os.getenv("PASSWORD"),
-        "CHANNEL": os.getenv("CHANNEL"),
-        "CHANNEL_PASSWORD": os.getenv("CHANNEL_PASSWORD"),
-        "NICKNAME": os.getenv("NICK_NAME"),
-        "STATUS_TEXT": os.getenv("STATUS_TEXT", DEFAULT_TT_STATUS_TEXT),
-        "CLIENT_NAME": os.getenv("CLIENT_NAME") or DEFAULT_TT_CLIENT_NAME,
-        "SERVER_NAME": os.getenv("SERVER_NAME"),
-        "ADMIN_USERNAME": os.getenv("ADMIN"),
-        "GLOBAL_IGNORE_USERNAMES": os.getenv("GLOBAL_IGNORE_USERNAMES"),
-        "DATABASE_FILE": os.getenv("DATABASE_FILE", DEFAULT_DATABASE_FILE),
-        "DEFAULT_LANG": os.getenv("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE),
-        "GENDER": os.getenv("GENDER", "neutral").lower(),
-    }
+from pydantic import Field, model_validator, field_validator, AliasChoices
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-    # Validate and set effective default language
-    raw_default_lang = config_data.get("DEFAULT_LANG", FALLBACK_DEFAULT_LANGUAGE)
-    if isinstance(raw_default_lang, str) and raw_default_lang.lower() in ["en", "ru"]:
-        config_data["EFFECTIVE_DEFAULT_LANG"] = raw_default_lang.lower()
-    else:
-        print(f"WARNING: Invalid DEFAULT_LANG value '{raw_default_lang}'. Defaulting to '{FALLBACK_DEFAULT_LANGUAGE}'.", file=sys.stderr)
-        config_data["EFFECTIVE_DEFAULT_LANG"] = FALLBACK_DEFAULT_LANGUAGE
+# Допустимые значения для поля GENDER
+GenderType = Literal["male", "female", "neutral"]
+# Допустимые языки
+LangType = Literal["en", "ru"]
 
-    # Validate GENDER
-    allowed_genders = ["male", "female", "neutral"]
-    if config_data["GENDER"] not in allowed_genders:
-        print(f"WARNING: Invalid GENDER value '{config_data['GENDER']}'. Must be one of {allowed_genders}. Defaulting to 'neutral'.", file=sys.stderr)
-        config_data["GENDER"] = "neutral"
 
-    if not config_data["TG_EVENT_TOKEN"] and not config_data["TG_BOT_TOKEN"]:
-        raise ValueError("Missing required environment variable: TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN. Check .env file.")
-    if not config_data["HOSTNAME"] or not config_data["USERNAME"] or not config_data["PASSWORD"] or not config_data["CHANNEL"] or not config_data["NICKNAME"]:
-        raise ValueError("Missing other required TeamTalk environment variables (HOST_NAME, USER_NAME, PASSWORD, CHANNEL, NICK_NAME). Check .env file.")
-    if config_data["TG_ADMIN_CHAT_ID"]:
-        try:
-            config_data["TG_ADMIN_CHAT_ID"] = int(config_data["TG_ADMIN_CHAT_ID"])
-        except ValueError:
-            raise ValueError("TG_ADMIN_CHAT_ID must be a valid integer.")
-    return config_data
+class Settings(BaseSettings):
+    """
+    Класс для управления настройками приложения.
+    Загружает переменные из .env файла и проводит их валидацию.
+    """
 
-app_config = load_app_config(sys.argv[1] if len(sys.argv) >= MIN_ARGS_FOR_ENV_PATH else None)
+    # --- Telegram ---
+    TG_BOT_TOKEN: str
+    # Используем AliasChoices, чтобы pydantic-settings искал сначала
+    # переменную TELEGRAM_BOT_EVENT_TOKEN, а потом TG_EVENT_TOKEN.
+    TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias=AliasChoices('TELEGRAM_BOT_EVENT_TOKEN', 'TG_EVENT_TOKEN'))
+    TG_BOT_MESSAGE_TOKEN: Optional[str] = None
+    TG_ADMIN_CHAT_ID: Optional[int] = None
+
+    # --- TeamTalk Connection ---
+    # Используем алиасы для соответствия переменным из старого .env.example
+    HOSTNAME: str = Field(validation_alias='HOST_NAME')
+    PORT: int = 10333
+    ENCRYPTED: bool = False
+    USERNAME: str = Field(validation_alias='USER_NAME')
+    PASSWORD: str
+    CHANNEL: str
+    CHANNEL_PASSWORD: Optional[str] = None
+
+    # --- Bot Identity ---
+    NICKNAME: str = Field(validation_alias='NICK_NAME')
+    STATUS_TEXT: str = ""
+    CLIENT_NAME: str = "TTTM"
+    SERVER_NAME: Optional[str] = None
+
+    # --- Bot Admin ---
+    ADMIN_USERNAME: Optional[str] = None
+
+    # --- Functionality ---
+    GLOBAL_IGNORE_USERNAMES: Optional[str] = None
+    DATABASE_FILE: str = "bot_data.db"
+    DEFAULT_LANG: LangType = "en"
+    GENDER: GenderType = "neutral"
+
+    # --- Производные поля (не из .env) ---
+    # Эти поля не считываются из окружения, а вычисляются после валидации.
+    # Мы добавляем им значение по умолчанию, чтобы они были в модели.
+    EFFECTIVE_DEFAULT_LANG: LangType = "en"
+
+    # Конфигурация модели: читать из .env файла
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
+
+    @model_validator(mode='after')
+    def process_settings(self) -> 'Settings':
+        """
+        Валидатор, который запускается после обработки всех полей.
+        Идеально подходит для логики, зависящей от нескольких полей.
+        """
+        # 1. Логика для TG_EVENT_TOKEN: если он не задан напрямую,
+        #    используем значение из TG_BOT_TOKEN.
+        if not self.TG_EVENT_TOKEN:
+            self.TG_EVENT_TOKEN = self.TG_BOT_TOKEN
+
+        # 2. Финальная проверка: у нас должен быть токен для событий.
+        if not self.TG_EVENT_TOKEN:
+            raise ValueError("Необходимо установить переменную окружения TG_BOT_TOKEN или TELEGRAM_BOT_EVENT_TOKEN.")
+
+        # 3. Устанавливаем производное поле EFFECTIVE_DEFAULT_LANG
+        #    Это заменяет сложную логику, которая была в старом коде.
+        #    Валидатор для DEFAULT_LANG уже гарантирует, что значение корректно.
+        self.EFFECTIVE_DEFAULT_LANG = self.DEFAULT_LANG
+
+        return self
+
+    @field_validator('GENDER', mode='before')
+    @classmethod
+    def gender_to_lower(cls, v: Any) -> str:
+        """Приводит GENDER к нижнему регистру перед валидацией."""
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
+
+# Создаем единственный экземпляр настроек для всего приложения
+app_config = Settings()
