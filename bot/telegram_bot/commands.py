@@ -6,7 +6,6 @@ from aiogram.exceptions import TelegramAPIError
 
 logger = logging.getLogger(__name__)
 
-# Define global command lists
 USER_COMMANDS: List[BotCommand] = [
     BotCommand(command="who", description="Show online users in TeamTalk"),
     BotCommand(command="help", description="Show this help message"),
