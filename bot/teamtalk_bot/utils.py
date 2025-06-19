@@ -113,7 +113,7 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 
 async def forward_tt_message_to_telegram_admin(
-    message: TeamTalkMessage # The TT message object
+    message: TeamTalkMessage
 ):
     if not app_config.TG_ADMIN_CHAT_ID or not tg_bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
