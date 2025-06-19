@@ -6,7 +6,7 @@ from bot.constants import DB_MAIN_NAME
 
 logger = logging.getLogger(__name__)
 
-DATABASE_FILES = {DB_MAIN_NAME: app_config["DATABASE_FILE"]}
+DATABASE_FILES = {DB_MAIN_NAME: app_config.DATABASE_FILE}
 async_engines = {
     db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
     for db_name, db_file in DATABASE_FILES.items()

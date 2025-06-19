@@ -93,15 +93,11 @@ async def main_async():
     logger.info("TeamTalk task started.")
 
     logger.info("Initializing Telegram components...")
-    tg_admin_chat_id_str = app_config.get("TG_ADMIN_CHAT_ID")
-    if tg_admin_chat_id_str:
-        try:
-            tg_admin_chat_id = int(tg_admin_chat_id_str)
-            logger.debug(f"Ensuring TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is admin...")
-            async with SessionFactory() as session:
-                await crud.add_admin(session, tg_admin_chat_id)
-        except ValueError:
-            logger.error(f"TG_ADMIN_CHAT_ID '{tg_admin_chat_id_str}' is not valid. Cannot add as admin.")
+    tg_admin_chat_id = app_config.TG_ADMIN_CHAT_ID
+    if tg_admin_chat_id is not None:
+        logger.debug(f"Ensuring TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is admin...")
+        async with SessionFactory() as session:
+            await crud.add_admin(session, tg_admin_chat_id)
     else:
         logger.info("TG_ADMIN_CHAT_ID not set. Skipping auto-admin registration.")
 

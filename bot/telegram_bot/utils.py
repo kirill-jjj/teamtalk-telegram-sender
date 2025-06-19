@@ -130,7 +130,7 @@ async def send_telegram_messages_to_list(
     Sends messages to a list of chat_ids.
     Uses the appropriate bot instance based on bot_token_to_use.
     """
-    bot_to_use = tg_bot_event if bot_token_to_use == app_config["TG_EVENT_TOKEN"] else tg_bot_message
+    bot_to_use = tg_bot_event if bot_token_to_use == app_config.TG_EVENT_TOKEN else tg_bot_message
     if not bot_to_use:
         logger.error(f"No Telegram bot instance available for token: {bot_token_to_use}")
         return

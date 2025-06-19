@@ -41,7 +41,7 @@ def _should_ignore_initial_event(event_type: str, username: str, user_id: int, l
 
 def _is_user_globally_ignored(username: str) -> bool:
     """Checks if the user is in the global ignore list from the config."""
-    global_ignore_str = app_config.get("GLOBAL_IGNORE_USERNAMES", "")
+    global_ignore_str = app_config.GLOBAL_IGNORE_USERNAMES or ""
     if not global_ignore_str:
         return False
 
@@ -113,7 +113,7 @@ async def send_join_leave_notification_logic(
     tt_instance: TeamTalkInstance,
     login_complete_time: datetime | None
 ):
-    default_lang_for_markup_and_log = app_config.get("DEFAULT_LANG", "en")
+    default_lang_for_markup_and_log = app_config.DEFAULT_LANG
     _log_markup_translator = get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator) # For logging and markup
 
@@ -142,7 +142,7 @@ async def send_join_leave_notification_logic(
     server_name = get_effective_server_name(tt_instance, _log_markup_translator)
 
     await send_telegram_messages_to_list(
-        bot_token_to_use=app_config["TG_EVENT_TOKEN"],
+        bot_token_to_use=app_config.TG_EVENT_TOKEN,
         chat_ids=recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code

@@ -29,11 +29,11 @@ def is_tt_admin(func):
         _ = kwargs.get("_")
         if not _: # Fallback if _ is not provided
             # If this fallback is hit often, it means `_` is not being passed correctly by the caller of decorated functions
-            _ = get_translator(app_config.get("DEFAULT_LANG", "en")).gettext
+            _ = get_translator(app_config.DEFAULT_LANG).gettext
             kwargs["_"] = _ # Ensure _ is in kwargs for the wrapped function if it was missing
 
         username = ttstr(tt_message.user.username)
-        admin_username = app_config.get("ADMIN_USERNAME")
+        admin_username = app_config.ADMIN_USERNAME
 
         if not admin_username or username != admin_username:
             logger.warning(
@@ -283,7 +283,7 @@ async def handle_tt_help_command(
 ):
     is_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
-    admin_username_from_config = app_config.get("ADMIN_USERNAME")
+    admin_username_from_config = app_config.ADMIN_USERNAME
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_admin = True # This user is the main TeamTalk admin specified in config

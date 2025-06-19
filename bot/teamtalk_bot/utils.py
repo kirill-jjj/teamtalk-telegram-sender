@@ -115,12 +115,12 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage # The TT message object
 ):
-    if not app_config.get("TG_ADMIN_CHAT_ID") or not tg_bot_message:
+    if not app_config.TG_ADMIN_CHAT_ID or not tg_bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = app_config["TG_ADMIN_CHAT_ID"]
-    admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id)
+    admin_chat_id = app_config.TG_ADMIN_CHAT_ID
+    admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id) # type: ignore
     admin_language = admin_settings.language if admin_settings else DEFAULT_LANGUAGE
 
     translator = get_translator(admin_language)
@@ -215,7 +215,7 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
 
         attempts += 1
         try:
-            channel_id_or_path = app_config["CHANNEL"]
+            channel_id_or_path = app_config.CHANNEL
             channel_id = -1
             channel_name = ""
 
@@ -239,14 +239,14 @@ async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
                 continue
 
             logger.info(f"Attempting to rejoin channel: {channel_name} (ID: {channel_id}) (Attempt {attempts})")
-            tt_instance.join_channel_by_id(channel_id, password=app_config.get("CHANNEL_PASSWORD"))
+            tt_instance.join_channel_by_id(channel_id, password=app_config.CHANNEL_PASSWORD)
             await asyncio.sleep(1) # Give time for action to complete
 
             current_channel_id = tt_instance.getMyChannelID()
             if current_channel_id == channel_id:
                 logger.info(f"Successfully rejoined channel {channel_name}.")
                 # Update status text again in case it was lost
-                tt_instance.change_status(UserStatusMode.ONLINE, app_config["STATUS_TEXT"])
+                tt_instance.change_status(UserStatusMode.ONLINE, app_config.STATUS_TEXT)
                 break # Exit rejoin loop
             else:
                 logger.warning(f"Failed to rejoin channel {channel_name}. Current channel ID: {current_channel_id}. Retrying...")
