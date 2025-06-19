@@ -139,7 +139,7 @@ async def send_join_leave_notification_logic(
 
     logger.info(f"Notifications for {event_type} of {user_username} will be sent to {len(recipients)} users.")
 
-    server_name = get_effective_server_name(tt_instance)
+    server_name = get_effective_server_name(tt_instance, _log_markup_translator)
 
     await send_telegram_messages_to_list(
         bot_token_to_use=app_config["TG_EVENT_TOKEN"],

@@ -130,7 +130,7 @@ async def forward_tt_message_to_telegram_admin(
 
     tt_instance = message.teamtalk_instance
 
-    server_name = get_effective_server_name(tt_instance)
+    server_name = get_effective_server_name(tt_instance, _)
     # get_tt_user_display_name now expects `_` (translator func) as its second argument
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
@@ -152,7 +152,7 @@ async def forward_tt_message_to_telegram_admin(
     if was_sent:
         message.reply(_("Message sent to Telegram successfully.")) # tt_reply_success
     else:
-        message.reply(_("Failed to send message: {error}").format(error="Failed to deliver message to Telegram")) # tt_reply_fail_generic_error
+        message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram"))) # tt_reply_fail_generic_error
 
 
 async def _tt_reconnect():
