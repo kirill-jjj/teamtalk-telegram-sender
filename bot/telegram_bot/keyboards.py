@@ -47,15 +47,15 @@ def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=_("Language"), # SETTINGS_BTN_LANGUAGE
+        text=_("Language"),
         callback_data=SettingsCallback(action=SettingsNavAction.LANGUAGE).pack()
     )
     builder.button(
-        text=_("Subscription Settings"), # SETTINGS_BTN_SUBSCRIPTIONS
+        text=_("Subscription Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.SUBSCRIPTIONS).pack()
     )
     builder.button(
-        text=_("Notification Settings"), # SETTINGS_BTN_NOTIFICATIONS
+        text=_("Notification Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack()
     )
     builder.adjust(1)
@@ -65,15 +65,15 @@ def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard."""
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=_("English"), # language_btn_en (English source string)
+        text=_("English"),
         callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code="en").pack()
     )
     builder.button(
-        text=_("Русский"), # language_btn_ru (English source string)
+        text=_("Russian"),
         callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code="ru").pack()
     )
     builder.button(
-        text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
+        text=_("⬅️ Back to Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
@@ -85,7 +85,7 @@ def create_subscription_settings_keyboard(
 ) -> InlineKeyboardBuilder:
     """Creates the subscription settings keyboard."""
     builder = InlineKeyboardBuilder()
-    active_marker = _("✅ ") # ACTIVE_CHOICE_MARKER
+    active_marker = _("✅ ")
 
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", "all"),
@@ -103,7 +103,7 @@ def create_subscription_settings_keyboard(
         )
 
     builder.button(
-        text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
+        text=_("⬅️ Back to Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
@@ -117,19 +117,19 @@ def create_notification_settings_keyboard(
     builder = InlineKeyboardBuilder()
 
     is_noon_enabled = user_specific_settings.not_on_online_enabled
-    status_text = _("Enabled") if is_noon_enabled else _("Disabled") # ENABLED_STATUS, DISABLED_STATUS
-    noon_button_text = _("NOON (Not on Online): {status}").format(status=status_text) # NOTIF_SETTING_NOON_BTN_TOGGLE
+    status_text = _("Enabled") if is_noon_enabled else _("Disabled")
+    noon_button_text = _("NOON (Not on Online): {status}").format(status=status_text)
 
     builder.button(
         text=noon_button_text,
         callback_data=NotificationActionCallback(action=NotificationAction.TOGGLE_NOON).pack()
     )
     builder.button(
-        text=_("Manage Muted/Allowed Users"), # NOTIF_SETTING_MANAGE_MUTED_BTN
+        text=_("Manage Muted/Allowed Users"),
         callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     )
     builder.button(
-        text=_("⬅️ Back to Settings"), # BACK_TO_SETTINGS_BTN
+        text=_("⬅️ Back to Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
     builder.adjust(1)
@@ -143,27 +143,27 @@ def create_manage_muted_users_keyboard(
     builder = InlineKeyboardBuilder()
 
     is_mute_all_enabled = user_specific_settings.mute_all_flag
-    mute_all_status_text = _("Enabled") if is_mute_all_enabled else _("Disabled") # ENABLED_STATUS, DISABLED_STATUS
-    mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text) # MUTE_ALL_BTN_TOGGLE
+    mute_all_status_text = _("Enabled") if is_mute_all_enabled else _("Disabled")
+    mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text)
     builder.button(
         text=mute_all_button_text,
         callback_data=MuteAllCallback(action=MuteAllAction.TOGGLE_MUTE_ALL).pack()
     )
 
     if is_mute_all_enabled:
-        list_users_button_text = _("View Allowed Users (Allow List)") # LIST_ALLOWED_USERS_BTN
+        list_users_button_text = _("View Allowed Users (Allow List)")
         list_users_cb_data = UserListCallback(action=UserListAction.LIST_ALLOWED).pack()
     else:
-        list_users_button_text = _("View Muted Users (Block List)") # LIST_MUTED_USERS_BTN
+        list_users_button_text = _("View Muted Users (Block List)")
         list_users_cb_data = UserListCallback(action=UserListAction.LIST_MUTED).pack()
     builder.button(text=list_users_button_text, callback_data=list_users_cb_data)
 
     builder.button(
-        text=_("Mute/Unmute from Server List"), # MUTE_FROM_SERVER_LIST_BTN
+        text=_("Mute/Unmute from Server List"),
         callback_data=UserListCallback(action=UserListAction.LIST_ALL_ACCOUNTS).pack()
     )
     builder.button(
-        text=_("⬅️ Back to Notification Settings"), # BACK_TO_NOTIF_SETTINGS_BTN
+        text=_("⬅️ Back to Notification Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack()
     )
     builder.adjust(1)
@@ -184,14 +184,14 @@ def _add_pagination_controls(
     if current_page > 0:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("⬅️ Prev"), # PAGINATION_PREV_BTN
+                text=_("⬅️ Prev"),
                 callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack()
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("Next ➡️"), # PAGINATION_NEXT_BTN
+                text=_("Next ➡️"),
                 callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack()
             )
         )
@@ -218,8 +218,7 @@ def create_paginated_user_list_keyboard(
         else:
             effectively_muted = is_in_set
 
-        button_text_src = "Unmute {username}" if effectively_muted else "Mute {username}" # UNMUTE_USER_BTN, MUTE_USER_BTN
-        button_text = _(button_text_src).format(username=username)
+        button_text = _("Unmute {username}").format(username=username) if effectively_muted else _("Mute {username}").format(username=username)
 
         callback_d = ToggleMuteSpecificCallback(
             action=ToggleMuteSpecificAction.TOGGLE_USER,
@@ -235,7 +234,7 @@ def create_paginated_user_list_keyboard(
     _add_pagination_controls(builder, _, current_page, total_pages, list_type, PaginateUsersCallback)
 
     builder.row(InlineKeyboardButton(
-        text=_("⬅️ Back to Mute Management"), # BACK_TO_MANAGE_MUTED_BTN
+        text=_("⬅️ Back to Mute Management"),
         callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     ))
     return builder.as_markup()
@@ -261,10 +260,9 @@ def create_account_list_keyboard(
         else:
             effectively_muted = is_in_set
 
-        current_status_text_src = "Muted" if effectively_muted else "Not Muted" # MUTED_STATUS, NOT_MUTED_STATUS
-        current_status_text = _(current_status_text_src)
+        current_status_text = _("Muted") if effectively_muted else _("Not Muted")
 
-        button_text = _("{username} (Status: {current_status})").format(username=display_name, current_status=current_status_text) # TOGGLE_MUTE_STATUS_BTN
+        button_text = _("{username} (Status: {current_status})").format(username=display_name, current_status=current_status_text)
 
         callback_d = ToggleMuteSpecificCallback(
         action=ToggleMuteSpecificAction.TOGGLE_USER,
@@ -280,7 +278,7 @@ def create_account_list_keyboard(
     _add_pagination_controls(builder, _, current_page, total_pages, UserListAction.LIST_ALL_ACCOUNTS, PaginateUsersCallback)
 
     builder.row(InlineKeyboardButton(
-        text=_("⬅️ Back to Mute Management"), # BACK_TO_MANAGE_MUTED_BTN
+        text=_("⬅️ Back to Mute Management"),
         callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     ))
     return builder.as_markup()

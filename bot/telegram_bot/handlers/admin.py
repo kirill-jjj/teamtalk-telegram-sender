@@ -32,19 +32,19 @@ async def _show_user_buttons(
     tt_instance: TeamTalkInstance | None
 ):
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(_("TeamTalk bot is not connected.")) # TT_BOT_NOT_CONNECTED
+        await message.reply(_("TeamTalk bot is not connected."))
         return
 
     my_user_id = tt_instance.getMyUserID()
     if my_user_id is None:
         logger.error("Could not get own user ID in _show_user_buttons.")
-        await message.reply(_("An error occurred.")) # error_occurred
+        await message.reply(_("An error occurred."))
         return
 
     my_user_account = tt_instance.get_user(my_user_id)
     if not my_user_account:
         logger.error(f"Could not get own user account object for ID {my_user_id}.")
-        await message.reply(_("An error occurred.")) # error_occurred
+        await message.reply(_("An error occurred."))
         return
 
     my_username_str = get_username_as_str(my_user_account)
@@ -57,7 +57,7 @@ async def _show_user_buttons(
     online_users = [user for user in online_users_temp if user]
 
     if not online_users:
-        await message.reply(_("No other users online to select.")) # SHOW_USERS_NO_OTHER_USERS_ONLINE
+        await message.reply(_("No other users online to select."))
         return
 
     # get_tt_user_display_name now expects `_` (translator) as its second argument.
@@ -67,10 +67,10 @@ async def _show_user_buttons(
     builder = create_user_selection_keyboard(_, sorted_users, command_type)
 
     command_text_map = {
-        AdminAction.KICK: _("Select a user to kick:"), # SHOW_USERS_SELECT_KICK
-        AdminAction.BAN: _("Select a user to ban:")  # SHOW_USERS_SELECT_BAN
+        AdminAction.KICK: _("Select a user to kick:"),
+        AdminAction.BAN: _("Select a user to ban:")
     }
-    reply_text = command_text_map.get(command_type, _("Select a user:")) # SHOW_USERS_SELECT_DEFAULT
+    reply_text = command_text_map.get(command_type, _("Select a user:"))
 
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
@@ -106,7 +106,7 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     )
 
     if total_pages == 0 or not page_subscribers_info_data:
-        await message.reply(_("No subscribers found.")) # SUBSCRIBERS_NONE_FOUND
+        await message.reply(_("No subscribers found."))
         return
 
     keyboard = create_subscriber_list_keyboard(
@@ -120,6 +120,6 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
         _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
             current_page_display=current_page + 1,
             total_pages=total_pages
-        ), # SUBSCRIBERS_LIST_HEADER
+        ),
         reply_markup=keyboard
     )

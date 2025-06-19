@@ -17,12 +17,12 @@ async def cq_back_to_main_settings_menu(
     callback_data: SettingsCallback
 ):
     if not callback_query.message:
-        await callback_query.answer(_("Error: No message associated with callback.")) # GENERIC_NO_MESSAGE_CALLBACK_ERROR
+        await callback_query.answer(_("Error: No message associated with this callback."))
         return
     await callback_query.answer()
 
     main_settings_builder = create_main_settings_keyboard(_)
-    main_settings_text = _("⚙️ Settings") # SETTINGS_MENU_HEADER (Localized)
+    main_settings_text = _("Settings")
 
     try:
         await callback_query.message.edit_text(

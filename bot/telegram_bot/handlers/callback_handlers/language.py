@@ -29,7 +29,7 @@ async def cq_show_language_menu(
 
     try:
         await callback_query.message.edit_text(
-            text=_("Please choose your language:"), # CHOOSE_LANGUAGE_PROMPT
+            text=_("Please choose your language:"),
             reply_markup=language_menu_builder.as_markup()
         )
     except TelegramBadRequest as e:
@@ -66,13 +66,17 @@ async def cq_set_language(
     def revert_logic():
         user_specific_settings.language = original_lang_code
 
-    # Assuming keys like "LANGUAGE_BTN_EN" exist and give "English" when _new is for "en"
-    lang_name_display = _new(f"LANGUAGE_BTN_{new_lang_code.upper()}")
-    success_toast_text = _new("Language updated to {lang_name}.").format(lang_name=lang_name_display) # LANGUAGE_UPDATED_TO
+    if new_lang_code == "en":
+        lang_name_display = _new("English")
+    elif new_lang_code == "ru":
+        lang_name_display = _new("Russian")
+    else:
+        lang_name_display = new_lang_code # Fallback
+    success_toast_text = _new("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
         main_settings_builder = create_main_settings_keyboard(_new)
-        main_settings_text = _new("⚙️ Settings") # SETTINGS_MENU_HEADER
+        main_settings_text = _new("Settings")
         return main_settings_text, main_settings_builder.as_markup()
 
     await process_setting_update(

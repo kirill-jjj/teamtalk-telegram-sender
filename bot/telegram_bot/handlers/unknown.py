@@ -18,6 +18,6 @@ async def handle_unknown_command_or_message(
     logger.debug(f"Received unknown message/command from user {message.from_user.id}: '{message.text[:50]}...'")
 
     if message.text.startswith("/"):
-        await message.reply(_("Unknown command. Use /help to see available commands.")) # UNKNOWN_COMMAND
+        await message.reply(_("Unknown command. Use /help to see available commands."))
     else:
         pass
