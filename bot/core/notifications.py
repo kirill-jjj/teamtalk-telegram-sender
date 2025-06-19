@@ -92,14 +92,14 @@ def _generate_join_leave_notification_text(
     """
     Generates the localized notification text for a join/leave event.
     """
-    recipient_translator_func = get_translator(lang_code).gettext
+    _ = recipient_translator_func = get_translator(lang_code).gettext
 
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
 
     if event_type == NOTIFICATION_EVENT_JOIN:
-        notification_template = recipient_translator_func("User {user_nickname} joined server {server_name}")
+        notification_template = _("User {user_nickname} joined server {server_name}")
     else:  # Assuming only JOIN and LEAVE types
-        notification_template = recipient_translator_func("User {user_nickname} left server {server_name}")
+        notification_template = _("User {user_nickname} left server {server_name}")
 
     return notification_template.format(
         user_nickname=html.quote(localized_user_nickname),

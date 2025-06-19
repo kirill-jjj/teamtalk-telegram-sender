@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-06-19 13:31+0500\n"
+"POT-Creation-Date: 2025-06-19 08:45+0000\n"
 "PO-Revision-Date: 2025-06-19 13:30+0500\n"
 "Last-Translator: kirill-jjj <kirillkolovi@gmail.com>\n"
 "Language: ru\n"
@@ -19,6 +19,16 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
+
+#: bot/core/notifications.py:100
+#, python-brace-format
+msgid "User {user_nickname} joined server {server_name}"
+msgstr "Пользователь {user_nickname} присоединился к серверу {server_name}"
+
+#: bot/core/notifications.py:102
+#, python-brace-format
+msgid "User {user_nickname} left server {server_name}"
+msgstr "Пользователь {user_nickname} покинул сервер {server_name}"
 
 #: bot/core/utils.py:22 bot/core/utils.py:25 bot/core/utils.py:27
 #: bot/core/utils.py:28
@@ -238,7 +248,7 @@ msgstr "Управление блокировками пользователей
 #: bot/telegram_bot/keyboards.py:147
 #, python-brace-format
 msgid "Mute All Mode: {status}"
-msgstr "Режим "Блокировать всех": {status}"
+msgstr "Режим \"Блокировать всех\": {status}"
 
 #: bot/telegram_bot/keyboards.py:154
 msgid "View Allowed Users (Allow List)"
@@ -492,7 +502,7 @@ msgstr "Учетные записи на сервере не найдены."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:246
 msgid "muted (due to Mute All mode)"
-msgstr "заблокирован (режим "Блокировать всех")"
+msgstr "заблокирован (режим \"Блокировать всех\")"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:246
 msgid "muted"
@@ -500,7 +510,7 @@ msgstr "заблокирован"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:248
 msgid "allowed (in Mute All mode)"
-msgstr "разрешен (режим "Блокировать всех")"
+msgstr "разрешен (режим \"Блокировать всех\")"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:248
 msgid "unmuted"
@@ -517,12 +527,12 @@ msgstr "Бот TeamTalk отключен. Интерфейс не может б�
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:338
 msgid "Error: Missing data for Mute All toggle."
-msgstr "Ошибка: Отсутствуют данные для переключения режима "Блокировать всех"."
+msgstr "Ошибка: Отсутствуют данные для переключения режима \"Блокировать всех\"."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:350
 #, python-brace-format
 msgid "Mute All mode is now {status}."
-msgstr "Режим "Блокировать всех" теперь {status}."
+msgstr "Режим \"Блокировать всех\" теперь {status}."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:410
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:431
