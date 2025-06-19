@@ -102,25 +102,26 @@ async def _display_internal_user_list(
     users_to_process = user_specific_settings.muted_users_set
     sorted_items = sorted(list(users_to_process))
 
-    header_key, empty_key = "", ""
+    header_text, empty_list_text = "", ""
     if list_type == UserListAction.LIST_MUTED:
-        header_key = "MUTED_USERS_HEADER"
-        empty_key = "NO_MUTED_USERS_TEXT"
+        header_text = _("Muted Users (Block List)")
+        empty_list_text = _("You haven't muted anyone yet.")
     elif list_type == UserListAction.LIST_ALLOWED:
-        header_key = "ALLOWED_USERS_HEADER"
-        empty_key = "NO_ALLOWED_USERS_TEXT"
+        header_text = _("Allowed Users (Allow List)")
+        empty_list_text = _("No users are currently on the allow list.")
     else: # Should not happen if called with UserListAction members
         logger.error(f"Unknown list_type '{list_type.value if isinstance(list_type, UserListAction) else list_type}' in _display_internal_user_list")
-        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
+    # Note: _display_paginated_list_ui expects keys, so we pass the translated strings directly
     await _display_paginated_list_ui(
         callback_query=callback_query,
-        _=_,
+        _=_, # _ is still needed by _display_paginated_list_ui for "Page x/y"
         items=sorted_items,
         page=page,
-        header_text_key=header_key,
-        empty_list_text_key=empty_key,
+        header_text_key=header_text, # Pass pre-translated string
+        empty_list_text_key=empty_list_text, # Pass pre-translated string
         keyboard_factory=create_paginated_user_list_keyboard,
         keyboard_factory_kwargs={"list_type": list_type, "user_specific_settings": user_specific_settings},
     )
@@ -138,7 +139,7 @@ async def _display_all_server_accounts_list(
 
     if not USER_ACCOUNTS_CACHE:
         try:
-            await callback_query.message.edit_text(_("SERVER_ACCOUNTS_NOT_LOADED_TEXT"))
+            await callback_query.message.edit_text(_("Server user accounts are not loaded yet. Please try again in a moment."))
         except TelegramAPIError as e:
             logger.error(f"Error informing user about empty USER_ACCOUNTS_CACHE: {e}")
         return
@@ -146,13 +147,14 @@ async def _display_all_server_accounts_list(
     all_accounts_tt = list(USER_ACCOUNTS_CACHE.values())
     sorted_items = sorted(all_accounts_tt, key=lambda acc: ttstr(acc.username).lower())
 
+    # Note: _display_paginated_list_ui expects keys, so we pass the translated strings directly
     await _display_paginated_list_ui(
         callback_query=callback_query,
-        _=_,
+        _=_, # _ is still needed by _display_paginated_list_ui for "Page x/y"
         items=sorted_items,
         page=page,
-        header_text_key="ALL_SERVER_ACCOUNTS_HEADER",
-        empty_list_text_key="NO_SERVER_ACCOUNTS_TEXT",
+        header_text_key=_("All Server Accounts"), # Pass pre-translated string
+        empty_list_text_key=_("No user accounts found on the server."), # Pass pre-translated string
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_specific_settings": user_specific_settings},
     )
@@ -238,18 +240,14 @@ def _generate_mute_toggle_toast_message(
 ) -> str:
     """Generates the toast message for the mute toggle action."""
     quoted_username = html.quote(username_to_toggle)
-    status_text_key: str
+    status_text: str
 
     if new_status_is_muted:
-        # If mute_all_flag is True, it means the user is now effectively muted because they are NOT in the allowed list (for mute_all scenario)
-        # OR they are explicitly in the muted list (for not mute_all scenario)
-        status_text_key = "USER_STATUS_NOW_MUTED_BY_MUTE_ALL" if mute_all_flag else "USER_STATUS_NOW_MUTED"
+        status_text = _("muted (due to Mute All mode)") if mute_all_flag else _("muted")
     else:
-        # If mute_all_flag is True, it means the user is now unmuted because they ARE in the allowed list
-        # If mute_all_flag is False, it means the user is now unmuted because they are NOT in the muted list
-        status_text_key = "USER_STATUS_NOW_ALLOWED" if mute_all_flag else "USER_STATUS_NOW_UNMUTED"
+        status_text = _("allowed (in Mute All mode)") if mute_all_flag else _("unmuted")
 
-    return _("USER_MUTE_STATUS_UPDATED_TOAST").format(username=quoted_username, status=_(status_text_key))
+    return _("{username} is now {status}.").format(username=quoted_username, status=status_text)
 
 
 async def _save_mute_settings_and_notify(
@@ -268,7 +266,7 @@ async def _save_mute_settings_and_notify(
     """
     if not callback_query.from_user: # Should be checked by caller, but as a safeguard
         logger.error("Cannot save settings: callback_query.from_user is None.")
-        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
 
     try:
@@ -278,7 +276,7 @@ async def _save_mute_settings_and_notify(
     except Exception as e:
         logger.error(f"DB/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
         user_settings.muted_users_set = original_muted_users_set  # Revert in-memory change
-        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
 
 
@@ -299,7 +297,7 @@ async def _refresh_mute_related_ui(
         else:
             # This toast might be overridden by the one in _save_mute_settings_and_notify if that one fails
             # However, if saving succeeds but TT is disconnected for UI refresh, this is important.
-            await callback_query.answer(_("TT_BOT_DISCONNECTED_REFRESH_FAILED_TOAST"), show_alert=True)
+            await callback_query.answer(_("TeamTalk bot is disconnected. UI could not be refreshed."), show_alert=True)
             # Fallback to the main mute menu
             manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
             # We don't need to pass specific callback_data for MANAGE_MUTED action itself,
@@ -324,7 +322,7 @@ async def cq_show_manage_muted_menu(
     await callback_query.answer()
     manage_muted_builder = create_manage_muted_users_keyboard(_, user_specific_settings)
     try:
-        await callback_query.message.edit_text(text=_("MANAGE_MUTED_MENU_HEADER"), reply_markup=manage_muted_builder.as_markup())
+        await callback_query.message.edit_text(text=_("Manage Muted/Allowed Users"), reply_markup=manage_muted_builder.as_markup())
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
             logger.error(f"TelegramBadRequest editing message for manage_muted_users menu: {e}")
@@ -348,13 +346,12 @@ async def cq_toggle_mute_all_action(
     def revert_logic():
         user_specific_settings.mute_all_flag = original_flag
 
-    new_status_text_key = "ENABLED_STATUS" if not original_flag else "DISABLED_STATUS"
-    new_status_display_text = _(new_status_text_key)
-    success_toast_text = _("MUTE_ALL_UPDATED_TO").format(status=new_status_display_text)
+    new_status_display_text = _("Enabled") if not original_flag else _("Disabled")
+    success_toast_text = _("Mute All mode is now {status}.").format(status=new_status_display_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
         updated_builder = create_manage_muted_users_keyboard(_, user_specific_settings)
-        menu_text = _("MANAGE_MUTED_MENU_HEADER")
+        menu_text = _("Manage Muted/Allowed Users")
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(
@@ -410,11 +407,11 @@ async def cq_show_all_accounts_list_action(
     await callback_query.answer()
     if not callback_query.message: return
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await callback_query.message.edit_text(_("TT_BOT_NOT_CONNECTED_FOR_USERS_TEXT"))
+        await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
     if not USER_ACCOUNTS_CACHE:
         # Try to edit, but if it fails (e.g. message deleted), it's okay, just log.
-        try: await callback_query.message.edit_text(_("NO_SERVER_ACCOUNTS_LOADED_TEXT"))
+        try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
         except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT: {e}")
         return
     await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, 0)
@@ -431,10 +428,10 @@ async def cq_paginate_all_accounts_list_action(
     await callback_query.answer()
     if not callback_query.message: return
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await callback_query.message.edit_text(_("TT_BOT_NOT_CONNECTED_FOR_USERS_TEXT"))
+        await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
     if not USER_ACCOUNTS_CACHE:
-        try: await callback_query.message.edit_text(_("NO_SERVER_ACCOUNTS_LOADED_TEXT"))
+        try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
         except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT on paginate: {e}")
         return
     await _display_all_server_accounts_list(callback_query, _, user_specific_settings, tt_instance, callback_data.page)
@@ -457,7 +454,7 @@ async def cq_toggle_specific_user_mute_action(
     username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_specific_settings)
 
     if not username_to_toggle:
-        await callback_query.answer(_("GENERIC_ERROR_TEXT"), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     action_taken, current_status_is_muted, original_muted_users_set = \

@@ -93,7 +93,7 @@ async def process_user_action_selection(
     )
 
     if success:
-        await callback_query.answer("Success!", show_alert=False)
+        await callback_query.answer(_("Success!"), show_alert=False)
         try:
             await callback_query.message.edit_text(message_text, reply_markup=None)
         except TelegramAPIError as e:

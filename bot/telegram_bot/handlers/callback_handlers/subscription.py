@@ -32,7 +32,7 @@ async def cq_show_subscriptions_menu(
 
     try:
         await callback_query.message.edit_text(
-            text=_("Subscription Settings"), # SUBS_SETTINGS_MENU_HEADER
+            text=_("Subscription Settings"),
             reply_markup=subscription_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
@@ -63,7 +63,7 @@ async def cq_set_subscription_setting(
 
     if new_setting_enum is None:
         logger.error(f"Invalid subscription setting value: {callback_data.setting_value} for user {callback_query.from_user.id}")
-        await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True) # INVALID_SETTING_VALUE
+        await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
         return
 
     original_setting = user_specific_settings.notification_settings
@@ -79,17 +79,17 @@ async def cq_set_subscription_setting(
         user_specific_settings.notification_settings = original_setting
 
     setting_to_text_map = {
-        NotificationSetting.ALL: _("All (Join & Leave)"), # SUBS_SETTING_ALL_BTN_TEXT
-        NotificationSetting.LEAVE_OFF: _("Join Only"),      # SUBS_SETTING_JOIN_ONLY_BTN_TEXT
-        NotificationSetting.JOIN_OFF: _("Leave Only"),     # SUBS_SETTING_LEAVE_ONLY_BTN_TEXT
-        NotificationSetting.NONE: _("None"),              # SUBS_SETTING_NONE_BTN_TEXT
+        NotificationSetting.ALL: _("All (Join & Leave)"),
+        NotificationSetting.LEAVE_OFF: _("Join Only"),
+        NotificationSetting.JOIN_OFF: _("Leave Only"),
+        NotificationSetting.NONE: _("None"),
     }
-    setting_display_name = setting_to_text_map.get(new_setting_enum, _("unknown setting")) # UNKNOWN_SETTING_DISPLAY
-    success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name) # SUBS_SETTING_UPDATED_TO
+    setting_display_name = setting_to_text_map.get(new_setting_enum, _("unknown setting"))
+    success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
         updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
-        menu_text = _("Subscription Settings") # SUBS_SETTINGS_MENU_HEADER
+        menu_text = _("Subscription Settings")
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(

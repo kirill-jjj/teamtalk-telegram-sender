@@ -27,7 +27,7 @@ async def cq_show_notifications_menu(
     notification_settings_builder = create_notification_settings_keyboard(_, user_specific_settings)
     try:
         await callback_query.message.edit_text(
-            text=_("Notification Settings"), # NOTIF_SETTINGS_MENU_HEADER
+            text=_("Notification Settings"),
             reply_markup=notification_settings_builder.as_markup()
         )
     except TelegramBadRequest as e:
@@ -57,13 +57,13 @@ async def cq_toggle_noon_setting_action(
         user_specific_settings.not_on_online_enabled = original_noon_status
 
     # Status text is for *after* the toggle
-    new_status_display_text = _("Enabled") if not original_noon_status else _("Disabled") # ENABLED_STATUS, DISABLED_STATUS
-    success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text) # NOTIF_SETTING_NOON_UPDATED_TO
+    new_status_display_text = _("Enabled") if not original_noon_status else _("Disabled")
+    success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
         # user_specific_settings will have the updated value due to update_logic already being called
         updated_builder = create_notification_settings_keyboard(_, user_specific_settings)
-        menu_text = _("Notification Settings") # NOTIF_SETTINGS_MENU_HEADER
+        menu_text = _("Notification Settings")
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(

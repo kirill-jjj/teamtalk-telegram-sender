@@ -103,9 +103,9 @@ async def handle_subscriber_list_actions(
         success = await delete_user_data_fully(session, telegram_id_to_delete)
 
         if success:
-            await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=telegram_id_to_delete)) # SUBSCRIBER_DELETED_SUCCESS
+            await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=telegram_id_to_delete))
         else:
-            await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True) # SUBSCRIBER_DELETE_ERROR
+            await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True)
 
         # Refresh the list using the helper
         page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
@@ -113,7 +113,7 @@ async def handle_subscriber_list_actions(
         )
 
         if total_pages == 0 or not page_subscribers_info:
-            await query.message.edit_text(_("No subscribers found.")) # SUBSCRIBERS_NONE_FOUND
+            await query.message.edit_text(_("No subscribers found."))
         else:
             new_keyboard = create_subscriber_list_keyboard(
                 _,
@@ -125,7 +125,7 @@ async def handle_subscriber_list_actions(
                 _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
                     current_page_display=current_page + 1,
                     total_pages=total_pages
-                ), # SUBSCRIBERS_LIST_HEADER
+                ),
                 reply_markup=new_keyboard
             )
 
@@ -140,7 +140,7 @@ async def handle_subscriber_list_actions(
         )
 
         if total_pages == 0 or not page_subscribers_info:
-            await query.message.edit_text(_("No subscribers found.")) # SUBSCRIBERS_NONE_FOUND
+            await query.message.edit_text(_("No subscribers found."))
         else:
             keyboard = create_subscriber_list_keyboard(
                 _,
@@ -152,9 +152,9 @@ async def handle_subscriber_list_actions(
                 _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
                     current_page_display=current_page + 1,
                     total_pages=total_pages
-                ), # SUBSCRIBERS_LIST_HEADER
+                ),
                 reply_markup=keyboard
             )
         await query.answer()
     else: # Should ideally not be hit if callback_data.action is always a valid SubscriberListAction
-        await query.answer(_("Unknown action."), show_alert=True) # UNKNOWN_ACTION
+        await query.answer(_("Unknown action."), show_alert=True)

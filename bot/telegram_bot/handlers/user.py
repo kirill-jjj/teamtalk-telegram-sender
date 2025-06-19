@@ -44,7 +44,7 @@ async def start_command_handler(
     if token:
         await handle_deeplink_payload(message, token, session, _, user_specific_settings)
     else:
-        await message.reply(_("Hello! Use /help to see available commands.")) # START_HELLO
+        await message.reply(_("Hello! Use /help to see available commands."))
 
 
 def _get_user_display_channel_name(
@@ -68,15 +68,15 @@ def _get_user_display_channel_name(
 
     if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
         if is_caller_admin or not is_channel_hidden:
-            user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name)) # WHO_CHANNEL_IN
+            user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name))
         else:
-            user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
+            user_display_channel_name = translator.gettext("under server")
     elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT:
-        user_display_channel_name = translator.gettext("in root channel") # WHO_CHANNEL_ROOT
+        user_display_channel_name = translator.gettext("in root channel")
     elif not channel_obj or channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
-        user_display_channel_name = translator.gettext("under server") # WHO_CHANNEL_UNDER_SERVER
+        user_display_channel_name = translator.gettext("under server")
     else:
-        user_display_channel_name = translator.gettext("in unknown location") # WHO_CHANNEL_UNKNOWN_LOCATION
+        user_display_channel_name = translator.gettext("in unknown location")
 
     return user_display_channel_name
 
@@ -110,7 +110,7 @@ def _group_users_for_who_command(
 def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, translator: "gettext.GNUTranslations") -> str:
     """Formats the /who command's reply message."""
     if total_users == 0:
-        return translator.gettext("No users found online.") # WHO_NO_USERS_ONLINE
+        return translator.gettext("No users found online.")
 
     sorted_channel_names = sorted(grouped_data.keys())
     sorted_users_in_channels: dict[str, list[str]] = {}
@@ -121,7 +121,7 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, tr
     users_word_total = translator.ngettext("user", "users", total_users)
     # This will use the singular/plural forms defined in .po files for the current language.
 
-    text_reply = translator.gettext("There are {user_count} {users_word} on the server:\n").format(user_count=total_users, users_word=users_word_total) # WHO_HEADER
+    text_reply = translator.gettext("There are {user_count} {users_word} on the server:\n").format(user_count=total_users, users_word=users_word_total)
 
     channel_info_parts: list[str] = []
     for display_channel_name in sorted_channel_names:
@@ -129,7 +129,7 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, tr
         user_text_segment = ""
         if users_in_channel_list:
             if len(users_in_channel_list) > 1:
-                user_separator = translator.gettext(" and ") # WHO_AND_SEPARATOR
+                user_separator = translator.gettext(" and ")
                 user_list_except_last_segment = ", ".join(users_in_channel_list[:-1])
                 user_text_segment = f"<b>{user_list_except_last_segment}{user_separator}{users_in_channel_list[-1]}</b>"
             else:
@@ -154,21 +154,21 @@ async def who_command_handler(
         return
 
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(translator.gettext("TeamTalk bot is not connected.")) # TT_BOT_NOT_CONNECTED
+        await message.reply(translator.gettext("TeamTalk bot is not connected."))
         return
 
     try:
         all_users_list = list(ONLINE_USERS_CACHE.values())
     except Exception as e:
         logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
-        await message.reply(translator.gettext("Error getting users from TeamTalk.")) # TT_ERROR_GETTING_USERS
+        await message.reply(translator.gettext("Error getting users from TeamTalk."))
         return
 
     is_caller_admin = await IsAdminFilter()(message, session)
     bot_user_id = tt_instance.getMyUserID()
     if bot_user_id is None:
         logger.error("Could not get bot's own user ID from TeamTalk instance.")
-        await message.reply(translator.gettext("An error occurred.")) # error_occurred
+        await message.reply(translator.gettext("An error occurred."))
         return
 
     grouped_data, total_users_to_display = await asyncio.to_thread(
@@ -217,7 +217,7 @@ async def settings_command_handler(
 
     try:
         await message.answer(
-            text=_("⚙️ Settings"), # SETTINGS_MENU_HEADER
+            text=_("Settings"),
             reply_markup=settings_builder.as_markup()
         )
     except Exception as e:
