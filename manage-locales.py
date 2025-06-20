@@ -14,6 +14,7 @@ all three actions are performed sequentially.
 
 import sys
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import List
 
@@ -75,14 +76,37 @@ def run_command(command: List[str]) -> None:
         )
         sys.exit(1)
 
+def get_project_version() -> str:
+    """Reads the project version from pyproject.toml."""
+    try:
+        pyproject_path = BASE_DIR / "pyproject.toml"
+        with open(pyproject_path, "rb") as f: # tomllib expects bytes
+            data = tomllib.load(f)
+        # Assuming version is under [project][version] based on typical structure
+        version = data.get("project", {}).get("version")
+        if version:
+            return str(version)
+        # Fallback or error if not found, adjust as needed
+        print("⚠️ Warning: Version not found in pyproject.toml under project.version.", file=sys.stderr)
+        return "UNKNOWN"
+    except FileNotFoundError:
+        print("⚠️ Warning: pyproject.toml not found. Cannot determine project version.", file=sys.stderr)
+        return "UNKNOWN"
+    except Exception as e:
+        print(f"⚠️ Warning: Error reading version from pyproject.toml: {e}", file=sys.stderr)
+        return "UNKNOWN"
+
 def extract_messages() -> None:
     """Extracts translatable strings into a .pot file."""
+    project_version = get_project_version()
     command = [
         "pybabel", "extract",
         "-F", BABEL_CONFIG,
         "-o", str(POT_FILE),
         f"--project={PROJECT_NAME}",
+        f"--version={project_version}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
+        "--msgid-bugs-to=kirillkolovi@gmail.com",
         "."
     ]
     run_command(command)
