@@ -93,7 +93,7 @@ source $HOME/.local/bin/env
     ```
 6.  **Run the bot**:
     ```bash
-    uv run python -m bot
+    uv run sender.py
     ```
 
 ## Usage
