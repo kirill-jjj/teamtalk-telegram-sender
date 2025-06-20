@@ -4,7 +4,7 @@ import sys
 from bot.logging_setup import setup_logging
 logger = setup_logging()
 
-from aiogram import Bot, Dispatcher # Modified to include Bot
+from aiogram import Bot, Dispatcher
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
@@ -37,14 +37,12 @@ try:
 except ImportError:
     logger.info("uvloop not found, using default asyncio event loop.")
 
-# Global task references are removed. Tasks will be managed via local variables and parameters.
 
-async def on_startup(bot: Bot, dispatcher: Dispatcher): # Modified signature
+async def on_startup(bot: Bot, dispatcher: Dispatcher):
     """Выполняется при запуске бота."""
     logger.info("Initializing TeamTalk components for on_startup...")
-    # Removed: await tt_bot_module.tt_bot._async_setup_hook() # This call is now only in main()
     teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
-    dispatcher["teamtalk_task"] = teamtalk_task # Store task in dispatcher context
+    dispatcher["teamtalk_task"] = teamtalk_task
     logger.info("TeamTalk task started via on_startup.")
 
     logger.debug("Fetching admin IDs for Telegram command setup (on_startup)...")
@@ -52,7 +50,7 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher): # Modified signature
     async with SessionFactory() as session:
         db_admin_ids = await crud.get_all_admins_ids(session)
     ADMIN_IDS_CACHE.update(db_admin_ids)
-    await set_telegram_commands(bot, admin_ids=db_admin_ids) # Modified to use bot parameter
+    await set_telegram_commands(bot, admin_ids=db_admin_ids)
     logger.debug("Telegram command setup complete (on_startup).")
 
 
@@ -70,9 +68,9 @@ async def on_shutdown(dispatcher: Dispatcher):
             logger.info("TeamTalk task cancelled successfully (on_shutdown).")
         except Exception as e:
             logger.error(f"Error awaiting cancelled TeamTalk task (on_shutdown): {e}", exc_info=True)
-    elif teamtalk_task: # Task exists but is already done
+    elif teamtalk_task:
         logger.info("TeamTalk task was already done (on_shutdown).")
-    else: # No task found
+    else:
         logger.info("No TeamTalk task found in dispatcher context to cancel (on_shutdown).")
 
     # Close Telegram bot sessions
@@ -104,12 +102,12 @@ async def on_shutdown(dispatcher: Dispatcher):
     logger.info("Application shutdown sequence complete (on_shutdown).")
 
 
-async def shutdown_teamtalk_bot(task_to_shutdown): # Modified to accept task
+async def shutdown_teamtalk_bot(task_to_shutdown):
     """Gracefully shuts down the TeamTalk bot, including task cancellation and instance disconnection."""
     logger.info("Attempting to shutdown TeamTalk bot gracefully...")
 
     # Part 1: Cancel the running TeamTalk task
-    if task_to_shutdown and not task_to_shutdown.done(): # Modified to use parameter
+    if task_to_shutdown and not task_to_shutdown.done():
         logger.info("Cancelling TeamTalk task for shutdown...")
         task_to_shutdown.cancel()
         try:
@@ -163,9 +161,6 @@ async def main():
         db_subscriber_ids = await get_all_subscribers_ids(session)
         SUBSCRIBED_USERS_CACHE.update(db_subscriber_ids)
     await load_user_settings_to_cache(SessionFactory)
-    # Note: tt_bot_module.tt_bot._async_setup_hook() is called in on_startup.
-    # The line below might be redundant if on_startup is always used.
-    # However, including it as per provided code for main().
     await tt_bot_module.tt_bot._async_setup_hook()
 
     tg_admin_chat_id = app_config.TG_ADMIN_CHAT_ID
