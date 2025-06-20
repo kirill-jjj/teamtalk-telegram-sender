@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
 
 from bot.state import ONLINE_USERS_CACHE
-from bot.core.utils import get_username_as_str, get_tt_user_display_name
+from bot.core.utils import get_username_as_str, get_tt_user_display_name, get_online_teamtalk_users # Added import
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
 import pytalk
 
@@ -46,17 +46,13 @@ async def _show_user_buttons(
         await message.reply(_("An error occurred."))
         return
 
-    my_username_str = get_username_as_str(my_user_account)
+    # my_username_str = get_username_as_str(my_user_account) # This line was for old filtering, can be kept commented or removed if truly unused.
 
-    online_users_temp = [
-        tt_instance.get_user(username)
-        for username in ONLINE_USERS_CACHE.keys()
-        if username and username != my_username_str
-    ]
-    online_users = [user for user in online_users_temp if user]
+    online_users = await get_online_teamtalk_users(tt_instance)
+    # Self-filtering by user_id has been removed.
 
     if not online_users:
-        await message.reply(_("No other users online to select."))
+        await message.reply(_("No users online.")) # Adjusted message for generality
         return
 
     # get_tt_user_display_name now expects `_` (translator) as its second argument.
