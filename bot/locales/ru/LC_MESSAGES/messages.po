@@ -70,14 +70,14 @@ msgstr ""
 # Ban
 # | a user from the server (via buttons)."
 #: bot/core/utils.py:87
-#, fuzzy
 msgid ""
 "/kick - Kick a user from the server (via buttons).\n"
 "/ban - Ban a user from the server (via buttons).\n"
 "/subscribers - View and manage subscribed users."
 msgstr ""
 "/kick - Кикнуть пользователя с сервера (через кнопки).\n"
-"/ban - Забанить пользователя на сервере (через кнопки)."
+"/ban - Забанить пользователя на сервере (через кнопки).\n"
+"/subscribers - Просмотр и управление подписчиками."
 
 #: bot/core/utils.py:91
 msgid "Available commands:"
@@ -469,7 +469,7 @@ msgstr "Ошибка: Отсутствуют данные для обновле�
 #: bot/telegram_bot/handlers/callback_handlers/language.py:74
 #, python-brace-format
 msgid "Language updated to {lang_name}."
-msgstr ""
+msgstr "Язык изменён на {lang_name}."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:70
 #, python-brace-format
