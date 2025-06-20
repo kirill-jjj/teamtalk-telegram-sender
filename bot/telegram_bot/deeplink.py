@@ -1,21 +1,21 @@
 import logging
-from typing import Callable, Coroutine, Any, Optional
-from aiogram import html
+from typing import Any, Callable, Coroutine, Optional
+
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.database.crud import (
-    add_subscriber,
-    delete_user_data_fully,
-    get_deeplink as db_get_deeplink,
-    delete_deeplink_by_token
-)
+from bot.core.enums import DeeplinkAction
 from bot.core.user_settings import (
     UserSpecificSettings,
     get_or_create_user_settings,
-    update_user_settings_in_db
+    update_user_settings_in_db,
 )
-from bot.core.enums import DeeplinkAction
+from bot.database.crud import (
+    add_subscriber,
+    delete_deeplink_by_token,
+    delete_user_data_fully,
+)
+from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.database.models import Deeplink
 
 logger = logging.getLogger(__name__)
@@ -52,18 +52,12 @@ async def _execute_deeplink_action(
     """
     Executes the action specified by the deeplink object and returns a reply text.
     """
-    reply_text = _("An error occurred.")
-    action_enum_member: Optional[DeeplinkAction] = None
+    # SQLAlchemy уже преобразовал значение из БД в нужный нам enum.
+    # Просто используем его, убедившись, что это действительно член нашего enum.
+    action_enum_member = deeplink_obj.action
 
-    try:
-        if deeplink_obj.action:
-            action_enum_member = DeeplinkAction(str(deeplink_obj.action))
-    except ValueError:
-        logger.warning(f"Invalid deeplink action string from DB: '{deeplink_obj.action}' for token {token}")
-        return _("Invalid deeplink action.")
-
-    if not action_enum_member:
-        logger.warning(f"Deeplink action '{deeplink_obj.action}' for token {token} is null or not a valid DeeplinkAction member after attempt to cast.")
+    if not isinstance(action_enum_member, DeeplinkAction):
+        logger.warning(f"Action '{action_enum_member}' from token {token} is not a valid DeeplinkAction member.")
         return _("Invalid deeplink action.")
 
     handler_func = DEEPLINK_ACTION_HANDLERS.get(action_enum_member)
@@ -72,27 +66,17 @@ async def _execute_deeplink_action(
         return _("Invalid deeplink action.")
 
     try:
-        # Adapt calls based on handler signature.
-        # This part remains a bit complex due to differing handler needs.
+        # Учитываем, что у разных обработчиков разные сигнатуры.
         if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-            reply_text = await handler_func(session, telegram_id, _)
-        elif action_enum_member == DeeplinkAction.SUBSCRIBE_AND_LINK_NOON:
-            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
-        elif action_enum_member == DeeplinkAction.SUBSCRIBE:
-            # Assuming payload is not strictly needed or can be None for SUBSCRIBE
-            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+            # Обработчик для отписки не требует payload и user_specific_settings
+            return await handler_func(session, telegram_id, _)
         else:
-            # Fallback for any other actions that might be added and fit the generic signature
-            # Or, this could be an error if all actions must be explicitly handled above.
-            # For now, assume they might fit the most general signature.
-            logger.info(f"Deeplink action {action_enum_member} called with generic signature.")
-            reply_text = await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+            # Обработчики для подписки и связывания аккаунта требуют больше аргументов
+            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
 
     except Exception as e:
         logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
-        reply_text = _("An error occurred.")
-
-    return reply_text
+        return _("An error occurred.")
 
 
 async def _handle_subscribe_deeplink(
