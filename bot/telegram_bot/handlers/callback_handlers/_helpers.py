@@ -18,7 +18,7 @@ async def process_setting_update(
     ui_refresh_callable: Callable[[], tuple[str, InlineKeyboardMarkup]]
 ) -> None:
     if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer("Error: Callback query is missing essential data.", show_alert=True)
+        await callback_query.answer(_("Error: Callback query is missing essential data."), show_alert=True)
         return
 
     update_action()

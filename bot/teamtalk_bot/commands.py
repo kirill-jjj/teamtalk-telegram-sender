@@ -214,8 +214,8 @@ async def handle_tt_subscribe_command(
         action=DeeplinkAction.SUBSCRIBE_AND_LINK_NOON,
         payload=sender_tt_username,
         success_log_message="Generated subscribe and link NOON deeplink {token} for TT user {sender_username}",
-        reply_text_source="Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}",
-        error_reply_source="An error occurred while processing the subscription request.",
+        reply_text_source=_("Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n{deeplink_url}"),
+        error_reply_source=_("An error occurred while processing the subscription request."),
     )
 
 
@@ -231,8 +231,8 @@ async def handle_tt_unsubscribe_command(
         action=DeeplinkAction.UNSUBSCRIBE,
         payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
-        reply_text_source="Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}",
-        error_reply_source="An error occurred while processing the unsubscription request.",
+        reply_text_source=_("Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"),
+        error_reply_source=_("An error occurred while processing the unsubscription request."),
     )
 
 
@@ -250,11 +250,11 @@ async def handle_tt_add_admin_command(
         _=_,
         crud_function=add_admin,
         commands_to_set=ADMIN_COMMANDS,
-        prompt_msg_key="Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432",
-        success_msg_key="Successfully added {count} admin(s).",
-        error_msg_key="ID {telegram_id} is already an admin or failed to add.",
-        invalid_id_msg_key="'{telegram_id_str}' is not a valid numeric Telegram ID.",
-        header_msg_key="Errors:\n- "
+        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
+        success_msg_key=_("Successfully added {count} admin(s)."),
+        error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
+        invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
+        header_msg_key=_("Errors:\n- ")
     )
 
 
@@ -272,11 +272,11 @@ async def handle_tt_remove_admin_command(
         _=_,
         crud_function=remove_admin_db,
         commands_to_set=USER_COMMANDS,
-        prompt_msg_key="Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432",
-        success_msg_key="Successfully removed {count} admin(s).",
-        error_msg_key="Admin with ID {telegram_id} not found.",
-        invalid_id_msg_key="'{telegram_id_str}' is not a valid numeric Telegram ID.",
-        header_msg_key="Info/Errors:\n- "
+        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
+        success_msg_key=_("Successfully removed {count} admin(s)."),
+        error_msg_key=_("Admin with ID {telegram_id} not found."),
+        invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
+        header_msg_key=_("Info/Errors:\n- ")
     )
 
 
