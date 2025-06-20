@@ -1,8 +1,7 @@
 import gettext
 import logging
 from typing import Optional, Union, List
-# Removed: from pytalk import TeamTalkPy
-from pytalk.implementation.TeamTalkPy import TeamTalk5 # Added correct import for TeamTalk5
+from pytalk.implementation.TeamTalkPy import TeamTalk5
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -10,7 +9,7 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.config import app_config
-from bot.state import ONLINE_USERS_CACHE # Added ONLINE_USERS_CACHE
+from bot.state import ONLINE_USERS_CACHE
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -80,7 +79,7 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
 
     return "\n".join(parts)
 
-async def get_online_teamtalk_users(tt_instance: TeamTalk5) -> List[TeamTalkUser]: # Changed type hint
+async def get_online_teamtalk_users(tt_instance: TeamTalk5) -> List[TeamTalkUser]:
     """
     Retrieves a list of online users from the ONLINE_USERS_CACHE.
 

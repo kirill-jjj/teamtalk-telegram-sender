@@ -236,7 +236,7 @@ async def handle_tt_unsubscribe_command(
     )
 
 
-@is_tt_admin # Comment needs update, but not part of this task
+@is_tt_admin
 async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
     _: callable, *,
@@ -262,7 +262,7 @@ async def handle_tt_add_admin_command(
     )
 
 
-@is_tt_admin # Comment needs update, but not part of this task
+@is_tt_admin
 async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
     _: callable, *,

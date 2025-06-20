@@ -46,8 +46,6 @@ async def _show_user_buttons(
         await message.reply(_("An error occurred."))
         return
 
-    # my_username_str = get_username_as_str(my_user_account) # This line was for old filtering, can be kept commented or removed if truly unused.
-
     online_users = await get_online_teamtalk_users(tt_instance)
     # Self-filtering by user_id has been removed.
 

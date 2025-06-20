@@ -172,8 +172,6 @@ async def main():
 
     # Register middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
-    # TeamTalkInstanceMiddleware was here, but TeamTalk is now managed by on_startup/on_shutdown
-    # If TeamTalkInstanceMiddleware is still needed, it should be reviewed. For now, removing it.
     dp.message.middleware(SubscriptionCheckMiddleware())
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
     dp.message.middleware(UserSettingsMiddleware())
