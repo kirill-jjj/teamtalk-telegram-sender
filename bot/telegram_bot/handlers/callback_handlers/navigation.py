@@ -16,9 +16,7 @@ async def cq_back_to_main_settings_menu(
     _: callable,
     callback_data: SettingsCallback
 ):
-    if not callback_query.message:
-        await callback_query.answer(_("Error: No message associated with this callback."))
-        return
+    # Removed: if not callback_query.message: check
     await callback_query.answer()
 
     main_settings_builder = create_main_settings_keyboard(_)

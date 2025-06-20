@@ -59,9 +59,7 @@ async def process_user_action_selection(
     _: callable,
     tt_instance: TeamTalkInstance | None
 ):
-    if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer()
-        return
+    # Removed: if not callback_query.message or not callback_query.from_user: check
 
     if not tt_instance or not tt_instance.connected:
          await callback_query.answer(_("TeamTalk bot is not connected."), show_alert=True)

@@ -20,9 +20,7 @@ async def cq_show_notifications_menu(
     user_specific_settings: UserSpecificSettings,
     callback_data: SettingsCallback
 ):
-    if not callback_query.message:
-        await callback_query.answer(_("Error: No message associated with callback."))
-        return
+    # Removed: if not callback_query.message: check
     await callback_query.answer()
     notification_settings_builder = create_notification_settings_keyboard(_, user_specific_settings)
     try:
@@ -44,9 +42,7 @@ async def cq_toggle_noon_setting_action(
     user_specific_settings: UserSpecificSettings,
     callback_data: NotificationActionCallback
 ):
-    if not callback_query.message or not callback_query.from_user:
-        await callback_query.answer(_("Error: Missing data for NOON toggle."), show_alert=True)
-        return
+    # Removed: if not callback_query.message or not callback_query.from_user: check
 
     original_noon_status = user_specific_settings.not_on_online_enabled
 
