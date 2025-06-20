@@ -4,7 +4,7 @@ import sys
 from bot.logging_setup import setup_logging
 logger = setup_logging()
 
-from aiogram import Dispatcher
+from aiogram import Bot, Dispatcher # Modified to include Bot
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
@@ -39,7 +39,7 @@ except ImportError:
 
 # Global task references are removed. Tasks will be managed via local variables and parameters.
 
-async def on_startup(dispatcher: Dispatcher):
+async def on_startup(bot: Bot, dispatcher: Dispatcher): # Modified signature
     """Выполняется при запуске бота."""
     logger.info("Initializing TeamTalk components for on_startup...")
     # Removed: await tt_bot_module.tt_bot._async_setup_hook() # This call is now only in main()
@@ -52,7 +52,7 @@ async def on_startup(dispatcher: Dispatcher):
     async with SessionFactory() as session:
         db_admin_ids = await crud.get_all_admins_ids(session)
     ADMIN_IDS_CACHE.update(db_admin_ids)
-    await set_telegram_commands(dispatcher.bot, admin_ids=db_admin_ids)
+    await set_telegram_commands(bot, admin_ids=db_admin_ids) # Modified to use bot parameter
     logger.debug("Telegram command setup complete (on_startup).")
 
 
