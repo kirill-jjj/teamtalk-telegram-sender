@@ -22,7 +22,6 @@ async def cq_show_subscriptions_menu(
     user_specific_settings: UserSpecificSettings,
     callback_data: SettingsCallback
 ):
-    # Removed: if not callback_query.message: check
     await callback_query.answer()
 
     current_notification_setting = user_specific_settings.notification_settings
@@ -47,8 +46,6 @@ async def cq_set_subscription_setting(
     user_specific_settings: UserSpecificSettings,
     callback_data: SubscriptionCallback
 ):
-    # Removed: if not callback_query.message or not callback_query.from_user or not callback_data.setting_value: check
-
     value_to_enum_map = {
         "all": NotificationSetting.ALL,
         "leave_off": NotificationSetting.LEAVE_OFF,

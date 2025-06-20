@@ -58,8 +58,6 @@ async def _display_paginated_list_ui(
     keyboard_factory: Callable[..., InlineKeyboardMarkup],
     keyboard_factory_kwargs: dict,
 ) -> None:
-    # Removed: if not callback_query.message: check
-
     page_slice, total_pages, current_page_idx = _paginate_list_util(items, page, USERS_PER_PAGE)
 
     message_parts = [_(header_text_key)]
@@ -93,8 +91,6 @@ async def _display_internal_user_list(
     list_type: UserListAction,
     page: int = 0,
 ):
-    # Removed: if not callback_query.message: check
-
     users_to_process = user_specific_settings.muted_users_set
     sorted_items = sorted(list(users_to_process))
 
@@ -130,8 +126,6 @@ async def _display_all_server_accounts_list(
     tt_instance: TeamTalkInstance, # Optionality handled by caller
     page: int = 0,
 ):
-    # Removed: if not callback_query.message: check
-
     if not USER_ACCOUNTS_CACHE:
         try:
             await callback_query.message.edit_text(_("Server user accounts are not loaded yet. Please try again in a moment."))
@@ -311,7 +305,6 @@ async def cq_show_manage_muted_menu(
     user_specific_settings: UserSpecificSettings,
     callback_data: NotificationActionCallback,
 ):
-    # Removed: if not callback_query.message: check
     await callback_query.answer()
     manage_muted_builder = create_manage_muted_users_keyboard(_, user_specific_settings)
     try:
@@ -327,8 +320,6 @@ async def cq_show_manage_muted_menu(
 async def cq_toggle_mute_all_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_specific_settings: UserSpecificSettings, callback_data: MuteAllCallback
 ):
-    # Removed: if not callback_query.message or not callback_query.from_user: check
-
     original_flag = user_specific_settings.mute_all_flag
 
     def update_logic():
@@ -396,7 +387,6 @@ async def cq_show_all_accounts_list_action(
     callback_data: UserListCallback,
 ):
     await callback_query.answer()
-    # Removed: if not callback_query.message: return
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
@@ -417,7 +407,6 @@ async def cq_paginate_all_accounts_list_action(
     callback_data: PaginateUsersCallback,
 ):
     await callback_query.answer()
-    # Removed: if not callback_query.message: return
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
         await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
@@ -437,8 +426,6 @@ async def cq_toggle_specific_user_mute_action(
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
-    # Removed: if not callback_query.message or not callback_query.from_user: check
-
     username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_specific_settings)
 
     if not username_to_toggle:

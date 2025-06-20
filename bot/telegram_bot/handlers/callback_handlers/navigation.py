@@ -16,7 +16,6 @@ async def cq_back_to_main_settings_menu(
     _: callable,
     callback_data: SettingsCallback
 ):
-    # Removed: if not callback_query.message: check
     await callback_query.answer()
 
     main_settings_builder = create_main_settings_keyboard(_)
