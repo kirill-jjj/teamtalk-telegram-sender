@@ -4,6 +4,7 @@ from typing import Optional, Callable, List
 from aiogram.filters import CommandObject
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.exceptions import TelegramAPIError # Added
 
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -187,23 +188,39 @@ async def _generate_and_reply_deeplink(
         token = await create_deeplink(
             session, action, payload=payload, expected_telegram_id=None
         )
-        bot_info = await tg_bot_event.get_me()
+        bot_info = await tg_bot_event.get_me() # This can raise TelegramAPIError
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
 
         logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
 
-        if "{deeplink_url}" in reply_text_source: # Check if placeholder exists
+        if "{deeplink_url}" in reply_text_source:
              reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
-        else: # If not, the source string is static (e.g. error message)
+        else:
              reply_text = _(reply_text_source)
 
-        tt_message.reply(reply_text)
-    except Exception as e:
+        tt_message.reply(reply_text) # Pytalk call
+
+    except TelegramAPIError as e_tg:
         logger.error(
-            f"Error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
+            f"Telegram API error processing deeplink action {action} for TT user {sender_tt_username}: {e_tg}",
             exc_info=True
         )
-        tt_message.reply(_(error_reply_source))
+        # Try to reply with a specific Telegram error if possible, else generic.
+        # Note: If tt_message.reply fails here, it will go to the outer generic Exception.
+        try:
+            tt_message.reply(_("Error communicating with Telegram. Please try again later."))
+        except Exception as e_reply_tg:
+            logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username}: {e_reply_tg}")
+
+    except Exception as e: # General fallback for other errors (deeplink creation, tt_message.reply, etc.)
+        logger.error(
+            f"Generic error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
+            exc_info=True
+        )
+        try:
+            tt_message.reply(_(error_reply_source)) # Use the provided generic error source
+        except Exception as e_reply_generic:
+            logger.error(f"Failed to send generic error reply to TT user {sender_tt_username}: {e_reply_generic}")
 
 
 async def handle_tt_subscribe_command(

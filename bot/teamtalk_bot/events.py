@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 
 import pytalk
+from pytalk.exceptions import PermissionError as PytalkPermissionError, ValueError as PytalkValueError, TimeoutError as PytalkTimeoutError # Added
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.channel import Channel as PytalkChannel
@@ -27,8 +28,9 @@ from aiogram.filters import CommandObject
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
-    _tt_reconnect,
-    _tt_rejoin_channel,
+    # _tt_reconnect, # Removed old import
+    # _tt_rejoin_channel, # Removed old import
+    initiate_reconnect_task, # Added new import
     forward_tt_message_to_telegram_admin,
 )
 from bot.teamtalk_bot.commands import (
@@ -59,15 +61,20 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
                 logger.debug(f"Cache synchronized. Users online: {len(ONLINE_USERS_CACHE)}")
             else:
                 logger.warning("Skipping periodic cache sync: TT instance not ready.")
-                await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
-                continue
+                await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS) # Check sooner if not ready
+                continue # Continue to the start of the loop to re-check readiness
 
+        except PytalkTimeoutError as e_timeout:
+            logger.error(f"Pytalk TimeoutError during periodic cache synchronization: {e_timeout}", exc_info=True)
+            # For timeout, we might want to wait a bit longer or rely on main reconnect logic if instance becomes invalid
+            await asyncio.sleep(sync_interval_seconds // 2) # Wait half the sync interval before retrying
         except Exception as e:
             logger.error(f"Error during periodic cache synchronization: {e}", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
-                 await asyncio.sleep(60) # Wait 1 minute before retrying if error is with a connected instance
+                 await asyncio.sleep(60) # Wait 1 minute before retrying if other error with a connected instance
+            # If not connected/logged_in, the loop will handle it by sleeping RECONNECT_CHECK_INTERVAL_SECONDS
 
-        await asyncio.sleep(sync_interval_seconds)
+        await asyncio.sleep(sync_interval_seconds) # Regular wait after successful sync or handled error
 
 TT_COMMAND_HANDLERS = {
     "/sub": handle_tt_subscribe_command,
@@ -104,24 +111,27 @@ async def populate_user_accounts_cache(tt_instance):
             if username_str:
                 USER_ACCOUNTS_CACHE[username_str] = acc
         logger.debug(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.")
-    except Exception as e:
+    except PytalkTimeoutError as e_timeout:
+        logger.error(f"Pytalk TimeoutError populating user accounts cache: {e_timeout}", exc_info=True)
+    except Exception as e: # General fallback for other errors
         logger.error(f"Failed to populate user accounts cache: {e}", exc_info=True)
 
 
-async def _initiate_reconnect(reason: str):
-    logger.warning(reason)
-    ONLINE_USERS_CACHE.clear()
-    USER_ACCOUNTS_CACHE.clear()
-    logger.info("Online users and user accounts caches have been cleared due to reconnection.")
-
-    if tt_bot_module.current_tt_instance is not None:
-        logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
-        tt_bot_module.current_tt_instance = None
-        tt_bot_module.login_complete_time = None
-    else:
-        logger.debug(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}")
-
-    asyncio.create_task(_tt_reconnect())
+# Removed old _initiate_reconnect function:
+# async def _initiate_reconnect(reason: str):
+#     logger.warning(reason)
+#     ONLINE_USERS_CACHE.clear()
+#     USER_ACCOUNTS_CACHE.clear()
+#     logger.info("Online users and user accounts caches have been cleared due to reconnection.")
+#
+#     if tt_bot_module.current_tt_instance is not None:
+#         logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
+#         tt_bot_module.current_tt_instance = None
+#         tt_bot_module.login_complete_time = None
+#     else:
+#         logger.debug(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}")
+#
+#     asyncio.create_task(_tt_reconnect())
 
 
 async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInstance, channel: PytalkChannel):
@@ -137,11 +147,12 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
             if hasattr(u, "id"):
                 ONLINE_USERS_CACHE[u.id] = u
             else:
-                # Log if a user object from server.get_users() doesn't have an ID.
                 username_str = ttstr(u.username) if hasattr(u, 'username') else 'UnknownUserWithoutID'
                 logger.warning(f"User object '{username_str}' missing 'id' attribute during initial cache population. Skipping.")
         logger.info(f"ONLINE_USERS_CACHE initialized with {len(ONLINE_USERS_CACHE)} users.")
-    except Exception as e:
+    except PytalkTimeoutError as e_timeout:
+        logger.error(f"Pytalk TimeoutError during initial population of online users cache: {e_timeout}", exc_info=True)
+    except Exception as e: # General fallback
         logger.error(f"Error during initial population of online users cache: {e}", exc_info=True)
 
     asyncio.create_task(populate_user_accounts_cache(tt_instance))
@@ -159,7 +170,10 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         tt_bot_module.login_complete_time = datetime.utcnow()
         logger.debug(f"TeamTalk status set to: '{app_config.STATUS_TEXT}'")
         logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
-    except Exception as e:
+    except PytalkPermissionError as e_perm:
+        logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}", exc_info=True)
+        # This might indicate an issue with bot's own permissions, potentially critical.
+    except Exception as e: # General fallback
         logger.error(f"Error setting status or login_complete_time for bot: {e}", exc_info=True)
 
 
@@ -178,9 +192,18 @@ async def on_ready():
         tt_bot_module.login_complete_time = None
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated by Pytalk for server: {app_config.HOSTNAME}.")
-    except Exception as e:
+    except PytalkPermissionError as e_perm: # e.g., bad credentials
+        logger.critical(f"Pytalk PermissionError during add_server in on_ready: {e_perm}", exc_info=True)
+        # No automatic reconnect here; implies config issue. Needs manual intervention.
+    except PytalkValueError as e_val: # e.g., invalid server_info
+        logger.critical(f"Pytalk ValueError during add_server in on_ready: {e_val}", exc_info=True)
+        # No automatic reconnect here; implies config issue.
+    except PytalkTimeoutError as e_timeout: # e.g., server not responding
+        logger.error(f"Pytalk TimeoutError during add_server in on_ready: {e_timeout}", exc_info=True)
+        initiate_reconnect_task(None) # Use new reconnect task, passing None as instance might not exist
+    except Exception as e: # General fallback
         logger.error(f"Error initiating TeamTalk server connection in on_ready: {e}", exc_info=True)
-        asyncio.create_task(_tt_reconnect())
+        initiate_reconnect_task(None) # Use new reconnect task
 
 
 @tt_bot_module.tt_bot.event
@@ -195,7 +218,10 @@ async def on_my_login(server: PytalkServer):
         server_props = tt_instance.server.get_properties()
         if server_props:
             server_name = ttstr(server_props.server_name)
-    except Exception as e_prop:
+    except PytalkTimeoutError as e_timeout_prop:
+        logger.warning(f"Pytalk TimeoutError getting server name on login: {e_timeout_prop}")
+        # Server name is desirable but not critical for bot function; proceed with "Unknown Server".
+    except Exception as e_prop: # Fallback for other issues with get_properties
         logger.warning(f"Could not get server name on login: {e_prop}")
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} ({server.info.host})")
@@ -229,54 +255,61 @@ async def on_my_login(server: PytalkServer):
             current_channel_obj = tt_instance_val.get_channel(current_channel_id)
             if current_channel_obj:
                  logger.info(f"Bot already in channel '{ttstr(current_channel_obj.name)}' on login, ensuring finalization.")
-                 pass
+                 # If already in a channel (e.g. root after login), and it's not the target,
+                 # _finalize_bot_login_sequence might not be called if join_channel_by_id is skipped.
+                 # However, on_user_join for self should trigger _finalize_bot_login_sequence.
+                 # For now, this path assumes the bot is where it needs to be or will be moved by on_user_join.
+                 pass # Proceed to on_user_join logic which calls _finalize_bot_login_sequence
 
-    except Exception as e:
-        logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)
+    except PytalkPermissionError as e_perm_join:
+        logger.error(f"Pytalk PermissionError joining channel: {e_perm_join}", exc_info=True)
+        # This could be due to incorrect channel password or bot lacking rights.
+        # May need manual intervention or different rejoin strategy if it's persistent.
         if tt_instance:
-            asyncio.create_task(_tt_rejoin_channel(tt_instance))
+            asyncio.create_task(_tt_rejoin_channel(tt_instance)) # Attempt rejoin as per original logic
+    except PytalkValueError as e_val_join:
+        logger.error(f"Pytalk ValueError joining channel: {e_val_join}", exc_info=True)
+        # This might be due to invalid channel_id or path.
+        # Rejoin might not help if config is wrong.
+        if tt_instance:
+            # asyncio.create_task(_tt_rejoin_channel(tt_instance)) # Old rejoin logic
+            logger.warning("PytalkValueError joining channel. Rejoin logic via _tt_rejoin_channel is removed. Full reconnect will be handled if necessary by other events.")
+            # If channel config is wrong, a full reconnect might be attempted if connection drops or is manually triggered.
+            # For now, just log. If this error leads to non-functionality, connection_lost or manual action will trigger full reconnect.
+    except PytalkTimeoutError as e_timeout_join:
+         logger.error(f"Pytalk TimeoutError during channel operations: {e_timeout_join}", exc_info=True)
+         if tt_instance:
+            # asyncio.create_task(_tt_rejoin_channel(tt_instance)) # Old rejoin logic
+            logger.warning("PytalkTimeoutError during channel join. Rejoin logic via _tt_rejoin_channel is removed. Full reconnect will be handled by other events.")
+    except Exception as e: # General fallback for other errors
+        logger.error(f"Error during on_my_login (joining channel/setting status): {e}", exc_info=True)
+        if tt_instance: # Keep existing rejoin logic for general errors
+            # asyncio.create_task(_tt_rejoin_channel(tt_instance)) # Old rejoin logic
+            logger.warning("Generic error during on_my_login channel phase. Rejoin logic via _tt_rejoin_channel is removed. Full reconnect will be handled by other events.")
 
 
 @tt_bot_module.tt_bot.event
 async def on_my_connection_lost(server: PytalkServer):
+    server_host_display = server.info.host if server and server.info and hasattr(server.info, 'host') else 'Unknown Server'
+    logger.warning(f"Потеряно соединение с сервером {server_host_display}. Запуск переподключения...")
     if tt_bot_module.current_tt_instance and hasattr(tt_bot_module.current_tt_instance, '_periodic_sync_task_running'):
-        tt_bot_module.current_tt_instance._periodic_sync_task_running = False # Allow new task on reconnect
-    await _initiate_reconnect("Connection lost to TeamTalk server. Attempting to reconnect...")
+         tt_bot_module.current_tt_instance._periodic_sync_task_running = False # Allow new task on reconnect
+    initiate_reconnect_task(tt_bot_module.current_tt_instance)
 
 
 @tt_bot_module.tt_bot.event
 async def on_my_kicked_from_channel(channel_obj: PytalkChannel):
-    tt_instance = channel_obj.teamtalk
+    tt_instance = channel_obj.teamtalk # This is the instance from which the kick occurred.
+    channel_name = ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown Channel"
+    channel_id_log = channel_obj.id if channel_obj else "N/A"
+    server_host = ttstr(tt_instance.server_info.host) if tt_instance and tt_instance.server_info and hasattr(tt_instance.server_info, 'host') else "Unknown Server"
+
+    logger.warning(f"Кикнут из канала '{channel_name}' (ID: {channel_id_log}) на сервере {server_host}. Запуск полного переподключения...")
+
     if hasattr(tt_instance, '_periodic_sync_task_running'):
-        tt_instance._periodic_sync_task_running = False # Allow new task if we rejoin and finalize
+        tt_instance._periodic_sync_task_running = False # Allow new task on reconnect
 
-    if not tt_instance:
-        await _initiate_reconnect(
-            "Kicked from channel/server, but PytalkChannel has no TeamTalkInstance. Cannot process reliably. Initiating full reconnect."
-        )
-        return
-
-    try:
-        channel_id = channel_obj.id
-        channel_name = ttstr(channel_obj.name) if channel_obj.name else "Unknown Channel"
-        server_host = ttstr(tt_instance.server_info.host)
-
-        if channel_id == 0: # Kicked from server
-            await _initiate_reconnect(f"Kicked from TeamTalk server {server_host} (received channel ID 0). Attempting to reconnect...")
-        elif channel_id > 0: # Kicked from a specific channel
-            logger.warning(
-                f"Kicked from TeamTalk channel '{channel_name}' (ID: {channel_id}) on server {server_host}. Attempting to rejoin configured channel..."
-            )
-            asyncio.create_task(_tt_rejoin_channel(tt_instance))
-        else: # Unexpected
-            await _initiate_reconnect(
-                f"Received unexpected kick event from server {server_host} with channel ID: {channel_id}. Attempting full reconnect."
-            )
-
-    except Exception as e:
-        channel_id_for_log = getattr(channel_obj, "id", "unknown_id")
-        logger.error(f"Error handling on_my_kicked_from_channel (channel ID: {channel_id_for_log}): {e}", exc_info=True)
-        await _initiate_reconnect(f"Error handling kick event for channel ID {channel_id_for_log}. Attempting full reconnect.")
+    initiate_reconnect_task(tt_instance) # Pass the instance associated with the event
 
 
 @tt_bot_module.tt_bot.event
