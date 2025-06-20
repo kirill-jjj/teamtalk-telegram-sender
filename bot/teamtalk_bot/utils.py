@@ -7,7 +7,7 @@ import pytalk
 from pytalk import TeamTalkServerInfo # Added for new _tt_reconnect
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
-from pytalk.backoff import Backoff # Added for new _tt_reconnect
+# from pytalk.backoff import Backoff # Removed
 from bot.teamtalk_bot import bot_instance as tt_bot_module # Added for new _tt_reconnect
 from pytalk.enums import UserStatusMode
 
@@ -241,12 +241,12 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
         RECONNECT_IN_PROGRESS = False
         return
 
-    backoff = Backoff(base=5, max_value=60) # Start with 5s, max 60s
+    # backoff = Backoff(base=5, max_value=60) # Removed
 
     while True:
-        delay = backoff.delay()
-        logger.info(f"Следующая попытка переподключения к {server_info_to_reconnect.host} через {delay:.2f} секунд...")
-        await asyncio.sleep(delay)
+        # delay = backoff.delay() # Removed
+        logger.info(f"Следующая попытка переподключения к {server_info_to_reconnect.host} через {RECONNECT_RETRY_SECONDS} секунд...")
+        await asyncio.sleep(RECONNECT_RETRY_SECONDS) # Use fixed delay
 
         try:
             logger.info(f"Попытка создания нового инстанса TeamTalk для {server_info_to_reconnect.host}...")
