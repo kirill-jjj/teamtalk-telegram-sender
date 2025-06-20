@@ -243,6 +243,10 @@ async def handle_tt_add_admin_command(
     command: CommandObject,
     session: AsyncSession
 ):
+    # Dummy call for pybabel extraction
+    if False:
+        _.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1)
+
     await _manage_admin_ids(
         tt_message=tt_message,
         command=command,
@@ -265,6 +269,10 @@ async def handle_tt_remove_admin_command(
     command: CommandObject,
     session: AsyncSession
 ):
+    # Dummy call for pybabel extraction
+    if False:
+        _.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
+
     await _manage_admin_ids(
         tt_message=tt_message,
         command=command,
