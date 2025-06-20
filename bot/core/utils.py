@@ -1,6 +1,7 @@
 import gettext
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, List # Added List
+from pytalk import TeamTalkPy # Added TeamTalkPy for type hinting
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -8,6 +9,7 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.config import app_config
+from bot.state import ONLINE_USERS_CACHE # Added ONLINE_USERS_CACHE
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -98,3 +100,17 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
                            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
 
     return "\n".join(parts)
+
+async def get_online_teamtalk_users(tt_instance: TeamTalkPy) -> List[TeamTalkUser]:
+    """
+    Retrieves a list of online users from the ONLINE_USERS_CACHE.
+
+    Args:
+        tt_instance: The TeamTalkPy instance (currently unused in this version but kept for signature consistency).
+
+    Returns:
+        A list of TeamTalkUser objects representing online users.
+    """
+    online_users = list(ONLINE_USERS_CACHE.values())
+    # No filtering of the bot itself, as per user request.
+    return online_users
