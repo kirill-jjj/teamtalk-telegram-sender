@@ -90,7 +90,7 @@ def _create_admin_action_report(
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
-    success_msg_source: str,
+    success_message_direct: str,
     error_msg_source: str,
     invalid_id_msg_source: str,
     header_source: str
@@ -98,7 +98,7 @@ def _create_admin_action_report(
     """Creates a final report message for the admin action."""
     reply_parts = []
     if success_count > 0:
-        reply_parts.append(_(success_msg_source).format(count=success_count))
+        reply_parts.append(success_message_direct)
 
     errors = []
     for failed_id in failed_ids:
@@ -124,7 +124,6 @@ async def _manage_admin_ids(
     crud_function: Callable[[AsyncSession, int], bool],
     commands_to_set: list[BotCommand],
     prompt_msg_key: str,
-    success_msg_key: str,
     error_msg_key: str,
     invalid_id_msg_key: str,
     header_msg_key: str,
@@ -150,15 +149,21 @@ async def _manage_admin_ids(
             failed_action_ids.append(telegram_id)
             logger.warning(f"Failed to process {crud_function.__name__} for TG ID {telegram_id} (e.g., already in state or DB error).")
 
+    success_message_formatted = ""
+    if crud_function is add_admin:
+        success_message_formatted = _.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", success_count).format(count=success_count)
+    elif crud_function is remove_admin_db:
+        success_message_formatted = _.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", success_count).format(count=success_count)
+
     report_message = _create_admin_action_report(
         _,
         success_count,
         failed_action_ids,
         invalid_entries,
-        success_msg_key,
-        error_msg_key,
-        invalid_id_msg_key,
-        header_msg_key
+        success_message_direct=success_message_formatted,
+        error_msg_source=error_msg_key,
+        invalid_id_msg_source=invalid_id_msg_key,
+        header_source=header_msg_key
     )
     tt_message.reply(report_message)
 
@@ -255,7 +260,6 @@ async def handle_tt_add_admin_command(
         crud_function=add_admin,
         commands_to_set=ADMIN_COMMANDS,
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
-        success_msg_key=_("Successfully added {count} admin(s)."),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Errors:\n- ")
@@ -281,7 +285,6 @@ async def handle_tt_remove_admin_command(
         crud_function=remove_admin_db,
         commands_to_set=USER_COMMANDS,
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
-        success_msg_key=_("Successfully removed {count} admin(s)."),
         error_msg_key=_("Admin with ID {telegram_id} not found."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Info/Errors:\n- ")
