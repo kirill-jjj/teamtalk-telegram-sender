@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from typing import Callable
-from aiogram import html
+from aiogram.utils.formatting import Text, Bold # Added
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -133,18 +133,24 @@ async def forward_tt_message_to_telegram_admin(
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
-    text_to_send = _("Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}").format(
-        server_name=html.quote(server_name),
-        sender_display=html.quote(sender_display),
-        message_text=html.quote(message_content)
+    # text_to_send = _("Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}").format(
+    #     server_name=html.quote(server_name),
+    #     sender_display=html.quote(sender_display),
+    #     message_text=html.quote(message_content)
+    # )
+    content = Text(
+        _("Message from server "), Bold(server_name), "\n",
+        _("From "), Bold(sender_display), ":\n\n",
+        message_content  # No html.quote needed here, Text handles escaping for supported entities.
     )
 
     # Use the individual message sending utility
     was_sent: bool = await send_telegram_message_individual(
         bot_instance=tg_bot_message, # Use the dedicated message bot
         chat_id=admin_chat_id,
-        text=text_to_send,
-        language=admin_language
+        # text=text_to_send, # Removed
+        language=admin_language,
+        **content.as_kwargs()
     )
 
     if was_sent:
@@ -157,13 +163,14 @@ async def _tt_reconnect():
     """Handles the TeamTalk reconnection logic."""
     # Use global tt_bot, current_tt_instance, login_complete_time from teamtalk_bot.bot_instance
     from bot.teamtalk_bot import bot_instance as tt_bot_module
-    from bot.teamtalk_bot.events import on_ready as tt_on_ready
+    # from bot.teamtalk_bot.events import on_ready as tt_on_ready # Moved to avoid potential partial import issues
 
     if tt_bot_module.current_tt_instance: # Check if already connected or reconnecting
         logger.info("Reconnect already in progress or instance exists, skipping new task.")
         return
 
     logger.info("Starting TeamTalk reconnection process...")
+    from bot.teamtalk_bot.events import on_ready as tt_on_ready # Moved here
     tt_bot_module.current_tt_instance = None
     tt_bot_module.login_complete_time = None
     await asyncio.sleep(RECONNECT_DELAY_SECONDS)

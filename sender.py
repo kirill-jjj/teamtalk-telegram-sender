@@ -5,6 +5,8 @@ from bot.logging_setup import setup_logging
 logger = setup_logging()
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import ErrorEvent, Message # Added for error handler
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware # Added for CallbackAnswerMiddleware
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
@@ -142,6 +144,39 @@ async def shutdown_teamtalk_bot(task_to_shutdown):
     logger.info("TeamTalk bot shutdown process complete.")
 
 
+# Removed decorator @dp.errors() as dp is defined later in main()
+async def global_error_handler(event: ErrorEvent, bot: Bot):
+    """
+    Global error handler for uncaught exceptions in handlers.
+    """
+    logger.critical(f"Необработанное исключение в хендлере: {event.exception}", exc_info=True)
+
+    if app_config.TG_ADMIN_CHAT_ID:
+        try:
+            error_text = (
+                f"<b>Критическая ошибка!</b>\n"
+                f"<b>Тип ошибки:</b> {type(event.exception).__name__}\n"
+                f"<b>Сообщение:</b> {event.exception}"
+            )
+            await bot.send_message(app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Could not send critical error message to admin chat: {e}", exc_info=True)
+
+    user_message = "Произошла непредвиденная ошибка. Администратор уже уведомлен. Пожалуйста, попробуйте позже."
+    update = event.update
+
+    try:
+        if update.message:
+            await update.message.answer(user_message)
+        elif update.callback_query and isinstance(update.callback_query.message, Message):
+            await update.callback_query.message.answer(user_message)
+        # If you need to acknowledge a callback query when its message cannot be edited or answered:
+        # elif update.callback_query:
+        #     await update.callback_query.answer(user_message, show_alert=True)
+    except Exception as e:
+        logger.error(f"Could not send error message to user: {e}", exc_info=True)
+
+
 async def initialize_and_start_teamtalk_bot():
     """Initializes and starts the TeamTalk bot."""
     # This function might become redundant if on_startup handles its responsibilities.
@@ -178,6 +213,7 @@ async def main():
     dp.callback_query.middleware(UserSettingsMiddleware())
     dp.message.middleware(TeamTalkInstanceMiddleware())
     dp.callback_query.middleware(TeamTalkInstanceMiddleware())
+    dp.callback_query.middleware(CallbackAnswerMiddleware()) # Added CallbackAnswerMiddleware
 
     # Include routers
     dp.include_router(user_commands_router)
@@ -188,6 +224,9 @@ async def main():
     # Register startup and shutdown handlers
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
+
+    # Register the global error handler
+    dp.errors.register(global_error_handler)
 
     logger.info("Starting Telegram polling...")
     try:
