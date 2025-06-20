@@ -79,13 +79,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         telegram_id = user.id
         session: AsyncSession | None = data.get("session") # From DbSessionMiddleware
 
-        # Retrieve the translator function, with a fallback
-        temp_translator_func = data.get("_")
-        if temp_translator_func is None:
-            logger.warning("SubscriptionCheckMiddleware: Translator '_' not found in data. Using default English translator for this message.")
-            temp_translator_func = get_translator("en").gettext
-        _ = temp_translator_func
-
         if not session:
             logger.error("SubscriptionCheckMiddleware: No database session found in event data. Ensure DbSessionMiddleware runs before.")
             # Potentially send an error message or just let it pass to hit an error later
