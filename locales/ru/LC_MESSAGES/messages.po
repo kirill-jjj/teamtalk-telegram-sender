@@ -8,17 +8,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-06-20 19:33+0500\n"
+"POT-Creation-Date: 2025-06-20 15:40+0000\n"
 "PO-Revision-Date: 2025-06-20 20:02+0500\n"
 "Last-Translator: kirill-jjj <kirillkolovi@gmail.com>\n"
-"Language-Team: Russian <ru@li.org>\n"
 "Language: ru\n"
+"Language-Team: Russian <ru@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Generated-By: Babel 2.17.0\n"
-"X-Generator: Poedit 3.6\n"
 
 #: bot/core/notifications.py:100
 #, python-brace-format
@@ -46,14 +46,17 @@ msgstr "<b>Доступные команды:</b>"
 #: bot/core/utils.py:84
 msgid ""
 "/who - Show online users.\n"
-"/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
+"/settings - Access the interactive settings menu (language, "
+"notifications, mute lists, NOON feature).\n"
 "/help - Show this help message.\n"
 "(Note: `/start` is used to initiate the bot and process deeplinks.)"
 msgstr ""
 "/who - Показать онлайн пользователей.\n"
-"/settings - Доступ к интерактивному меню настроек (язык, уведомления, списки мьютов, функция NOON).\n"
+"/settings - Доступ к интерактивному меню настроек (язык, уведомления, "
+"списки мьютов, функция NOON).\n"
 "/help - Показать это сообщение.\n"
-"(Примечание: `/start` используется для запуска бота и обработки deeplink-ссылок.)"
+"(Примечание: `/start` используется для запуска бота и обработки "
+"deeplink-ссылок.)"
 
 #: bot/core/utils.py:89
 msgid ""
@@ -82,11 +85,13 @@ msgstr "Доступные команды:"
 
 #: bot/core/utils.py:95
 msgid ""
-"/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
+"/sub - Get a link to subscribe to notifications and link your TeamTalk "
+"account for NOON.\n"
 "/unsub - Get a link to unsubscribe from notifications.\n"
 "/help - Show help."
 msgstr ""
-"/sub - Получить ссылку для подписки на уведомления и связать ваш аккаунт TeamTalk для NOON.\n"
+"/sub - Получить ссылку для подписки на уведомления и связать ваш аккаунт "
+"TeamTalk для NOON.\n"
 "/unsub - Получить ссылку для отписки от уведомлений.\n"
 "/help - Показать справку."
 
@@ -115,11 +120,14 @@ msgid "No action was performed. Please check the IDs provided."
 msgstr "Никаких действий не выполнено. Пожалуйста, проверьте предоставленные ID."
 
 #: bot/teamtalk_bot/commands.py:217
+#, python-brace-format
 msgid ""
-"Click this link to subscribe to notifications and link your TeamTalk account for NOON (link valid for 5 minutes):\n"
+"Click this link to subscribe to notifications and link your TeamTalk "
+"account for NOON (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
-"Нажмите на эту ссылку, чтобы подписаться на уведомления и привязать свой аккаунт TeamTalk для функции NOON (ссылка действительна 5 минут):\n"
+"Нажмите на эту ссылку, чтобы подписаться на уведомления и привязать свой "
+"аккаунт TeamTalk для функции NOON (ссылка действительна 5 минут):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:218
@@ -129,36 +137,47 @@ msgstr "Произошла ошибка при обработке запроса
 #: bot/teamtalk_bot/commands.py:234
 #, python-brace-format
 msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
+"Click this link to unsubscribe from notifications (link valid for 5 "
+"minutes):\n"
 "{deeplink_url}"
 msgstr ""
-"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка действительна 5 минут):\n"
+"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка "
+"действительна 5 минут):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:235
 msgid "An error occurred while processing the unsubscription request."
 msgstr "Произошла ошибка при обработке запроса на отписку."
 
-#: bot/teamtalk_bot/commands.py:253
-msgid "Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"
-msgstr "Пожалуйста, укажите ID Telegram после команды. Пример: /add_admin 12345678 98765432"
-
-#: bot/teamtalk_bot/commands.py:254
+#: bot/teamtalk_bot/commands.py:248
 #, python-brace-format
-msgid "Successfully added {count} admin(s)."
-msgstr "Успешно добавлено администраторов: {count}"
+msgid "Successfully added {count} admin."
+msgid_plural "Successfully added {count} admins."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
-#: bot/teamtalk_bot/commands.py:255
+#: bot/teamtalk_bot/commands.py:257
+msgid ""
+"Please provide Telegram IDs after the command. Example: /add_admin "
+"12345678 98765432"
+msgstr ""
+"Пожалуйста, укажите ID Telegram после команды. Пример: /add_admin "
+"12345678 98765432"
+
+#: bot/teamtalk_bot/commands.py:259
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
-msgstr "Пользователь с ID {telegram_id} уже является администратором или не удалось его добавить."
+msgstr ""
+"Пользователь с ID {telegram_id} уже является администратором или не "
+"удалось его добавить."
 
-#: bot/teamtalk_bot/commands.py:256 bot/teamtalk_bot/commands.py:278
+#: bot/teamtalk_bot/commands.py:260 bot/teamtalk_bot/commands.py:286
 #, python-brace-format
 msgid "'{telegram_id_str}' is not a valid numeric Telegram ID."
 msgstr "'{telegram_id_str}' не является допустимым числовым ID Telegram."
 
-#: bot/teamtalk_bot/commands.py:257
+#: bot/teamtalk_bot/commands.py:261
 msgid ""
 "Errors:\n"
 "- "
@@ -166,21 +185,28 @@ msgstr ""
 "Ошибки:\n"
 "- "
 
-#: bot/teamtalk_bot/commands.py:275
-msgid "Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"
-msgstr "Пожалуйста, укажите ID Telegram после команды. Пример: /remove_admin 12345678 98765432"
-
-#: bot/teamtalk_bot/commands.py:276
+#: bot/teamtalk_bot/commands.py:274
 #, python-brace-format
-msgid "Successfully removed {count} admin(s)."
-msgstr "Успешно удалено администраторов: {count}"
+msgid "Successfully removed {count} admin."
+msgid_plural "Successfully removed {count} admins."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
-#: bot/teamtalk_bot/commands.py:277
+#: bot/teamtalk_bot/commands.py:283
+msgid ""
+"Please provide Telegram IDs after the command. Example: /remove_admin "
+"12345678 98765432"
+msgstr ""
+"Пожалуйста, укажите ID Telegram после команды. Пример: /remove_admin "
+"12345678 98765432"
+
+#: bot/teamtalk_bot/commands.py:285
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found."
 msgstr "Администратор с ID {telegram_id} не найден."
 
-#: bot/teamtalk_bot/commands.py:279
+#: bot/teamtalk_bot/commands.py:287
 msgid ""
 "Info/Errors:\n"
 "- "
@@ -188,9 +214,13 @@ msgstr ""
 "Информация/Ошибки:\n"
 "- "
 
-#: bot/teamtalk_bot/commands.py:303
-msgid "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help."
-msgstr "Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, /remove_admin, /help."
+#: bot/teamtalk_bot/commands.py:311
+msgid ""
+"Unknown command. Available commands: /sub, /unsub, /add_admin, "
+"/remove_admin, /help."
+msgstr ""
+"Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, "
+"/remove_admin, /help."
 
 #: bot/teamtalk_bot/utils.py:136
 #, python-brace-format
@@ -487,7 +517,9 @@ msgstr "Неизвестное действие."
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:48
 msgid "The bot lacks permissions on the TeamTalk server to perform this action."
-msgstr "У бота недостаточно прав на сервере TeamTalk для выполнения этого действия."
+msgstr ""
+"У бота недостаточно прав на сервере TeamTalk для выполнения этого "
+"действия."
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:51
 #, python-brace-format
@@ -545,7 +577,9 @@ msgstr "Произошла ошибка. Пожалуйста, попробуй�
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:137
 msgid "Server user accounts are not loaded yet. Please try again in a moment."
-msgstr "Учетные записи пользователей сервера еще не загружены. Пожалуйста, попробуйте через мгновение."
+msgstr ""
+"Учетные записи пользователей сервера еще не загружены. Пожалуйста, "
+"попробуйте через мгновение."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:151
 msgid "All Server Accounts"
@@ -592,8 +626,12 @@ msgstr "Бот TeamTalk не подключен. Невозможно отобр
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:405
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:425
-msgid "Server user accounts have not been loaded yet. Please try again in a moment."
-msgstr "Учетные записи пользователей сервера еще не загружены. Пожалуйста, попробуйте через мгновение."
+msgid ""
+"Server user accounts have not been loaded yet. Please try again in a "
+"moment."
+msgstr ""
+"Учетные записи пользователей сервера еще не загружены. Пожалуйста, "
+"попробуйте через мгновение."
 
 #: bot/telegram_bot/handlers/callback_handlers/notifications.py:57
 #, python-brace-format
@@ -647,8 +685,17 @@ msgstr "неизвестная настройка"
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Настройка подписок обновлена на: {setting_name}"
 
-#~ msgid "You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe."
-#~ msgstr "Вы не подписаны. Пожалуйста, зайдите на сервер TeamTalk, отправьте боту команду /sub в личные сообщения и нажмите на полученную ссылку для подписки."
+#~ msgid ""
+#~ "You are not subscribed. Please go "
+#~ "to the TeamTalk server, send the "
+#~ "/sub command to the bot in a "
+#~ "private message, and click the link "
+#~ "you receive to subscribe."
+#~ msgstr ""
+#~ "Вы не подписаны. Пожалуйста, зайдите на"
+#~ " сервер TeamTalk, отправьте боту команду"
+#~ " /sub в личные сообщения и нажмите"
+#~ " на полученную ссылку для подписки."
 
 #~ msgid "No other users online to select."
 #~ msgstr "Нет других пользователей онлайн для выбора."
@@ -660,7 +707,9 @@ msgstr "Настройка подписок обновлена на: {setting_na
 #~ msgstr "Ошибка: Отсутствуют данные для обновления языка."
 
 #~ msgid "Error: Missing data for Mute All toggle."
-#~ msgstr "Ошибка: Отсутствуют данные для переключения режима \"Блокировать всех\"."
+#~ msgstr ""
+#~ "Ошибка: Отсутствуют данные для переключения"
+#~ " режима \"Блокировать всех\"."
 
 #~ msgid "Error: No message associated with this callback."
 #~ msgstr "Ошибка: С этим колбэком не связано сообщение."
@@ -670,3 +719,9 @@ msgstr "Настройка подписок обновлена на: {setting_na
 
 #~ msgid "Error: Missing data for subscription update."
 #~ msgstr "Ошибка: Отсутствуют данные для обновления подписки."
+
+#~ msgid "Successfully added {count} admin(s)."
+#~ msgstr "Успешно добавлено администраторов: {count}"
+
+#~ msgid "Successfully removed {count} admin(s)."
+#~ msgstr "Успешно удалено администраторов: {count}"
