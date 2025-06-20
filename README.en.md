@@ -71,21 +71,21 @@ source $HOME/.local/bin/env
     ```
     *(This command prepares the environment with all dependencies.)*
     (Activate the virtual environment: `source .venv/bin/activate` on Linux/macOS or `.venv\Scripts\activate` on Windows)
-4.  **Generate Localization Files**: The project uses a gettext-based localization system managed by SCons. These commands should be run from the root of the project.
+4.  **Generate Localization Files**: The project uses a gettext-based localization system managed by the `manage-locales.py` script. These commands should be run from the root of the project.
     *   To extract all translatable strings from the code into a template file (`bot/locales/messages.pot`):
         ```bash
-        uv run scons extract
+        uv run manage-locales.py extract
         ```
     *   To create or update language-specific `.po` files (e.g., for Russian `ru` located in `bot/locales/ru/LC_MESSAGES/messages.po`):
         ```bash
-        uv run scons update
+        uv run manage-locales.py update
         ```
-        (SCons will dynamically find languages based on subdirectories in `bot/locales/`. If adding a new language, e.g., 'de', first create `bot/locales/de/LC_MESSAGES/` then run this command.)
+        (The `manage-locales.py` script will dynamically find languages based on subdirectories in `bot/locales/`. If adding a new language, e.g., 'de', first create `bot/locales/de/LC_MESSAGES/` then run this command.)
     *   To compile `.po` files into binary `.mo` files used by the bot at runtime:
         ```bash
-        uv run scons
+        uv run manage-locales.py
         ```
-    (Typically, after initial setup, developers will run `uv run scons extract` when new text is added, then `uv run scons update`, then translate, then `uv run scons` to compile.)
+    (Typically, after initial setup, developers will run `uv run manage-locales.py extract` when new text is added, then `uv run manage-locales.py update`, then translate, then `uv run manage-locales.py` to compile.)
 5.  **Configure environment variables**: Copy the `.env.example` file to `.env` and fill in your actual configuration values (API tokens, admin IDs, etc.).
     ```bash
     cp .env.example .env
@@ -139,19 +139,19 @@ Suggestions for improvements and bug reports are welcome! Please create Issues o
 
 ### Working with Translations
 
-This project uses a gettext-based workflow for handling translations, orchestrated with SCons and Babel. The localization files are located in the `bot/locales` directory.
+This project uses a gettext-based workflow for handling translations, orchestrated with the `manage-locales.py` script and Babel. The localization files are located in the `bot/locales` directory.
 
 1.  **Extract Translatable Strings**:
     When you add or change any user-facing strings in the Python code that should be translatable (i.e., strings wrapped in `_()`), you need to update the message template file (`messages.pot`).
     ```bash
-    uv run scons extract
+    uv run manage-locales.py extract
     ```
     This command scans the codebase (as configured in `babel.cfg`) and updates `bot/locales/messages.pot`.
 
 2.  **Update Language Catalogs (.po files)**:
-    After the `.pot` template is updated, update the language-specific `.po` files for each supported language. SCons dynamically detects languages by looking for subdirectories in `bot/locales/`.
+    After the `.pot` template is updated, update the language-specific `.po` files for each supported language. The `manage-locales.py` script dynamically detects languages by looking for subdirectories in `bot/locales/`.
     ```bash
-    uv run scons update
+    uv run manage-locales.py update
     ```
     This merges new strings from `messages.pot` into each `<lang_code>/LC_MESSAGES/messages.po` file. New strings will be added, and changed strings will be marked as "fuzzy" for review. If you've created a new language directory (e.g., `bot/locales/de/LC_MESSAGES/`), this command will also initialize its `messages.po` file based on the template.
 
@@ -161,15 +161,15 @@ This project uses a gettext-based workflow for handling translations, orchestrat
 4.  **Compile Translations (.mo files)**:
     After translating, compile the `.po` files into binary `.mo` files, which are used by the application at runtime.
     ```bash
-    uv run scons
+    uv run manage-locales.py
     ```
-    This is the default SCons target and will place `.mo` files in the appropriate `LC_MESSAGES` directory for each language (e.g., `bot/locales/ru/LC_MESSAGES/messages.mo`). The bot will then be able to use these compiled translations based on user language preferences.
+    This command will place `.mo` files in the appropriate `LC_MESSAGES` directory for each language (e.g., `bot/locales/ru/LC_MESSAGES/messages.mo`). The bot will then be able to use these compiled translations based on user language preferences.
 
 **Adding a New Language (e.g., German 'de'):**
 1.  Create the directory structure: `mkdir -p bot/locales/de/LC_MESSAGES/`
-2.  Run `uv run scons update`. SCons (due to dynamic language detection in `SConstruct`) should find 'de' and initialize `bot/locales/de/LC_MESSAGES/messages.po`.
+2.  Run `uv run manage-locales.py update`. The `manage-locales.py` script should find 'de' and initialize `bot/locales/de/LC_MESSAGES/messages.po`.
 3.  Translate the new `.po` file.
-4.  Run `uv run scons` to compile it.
+4.  Run `uv run manage-locales.py` to compile it.
 5.  Ensure the language code 'de' is one that users can select in the bot's settings.
 
 ## License
