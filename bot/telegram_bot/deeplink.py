@@ -114,9 +114,9 @@ async def _handle_subscribe_and_link_noon_deeplink(
     user_specific_settings: UserSpecificSettings
 ) -> str:
     if await add_subscriber(session, telegram_id):
-        logger.info(f"User {telegram_id} subscribed via combined deeplink.")
+        logger.info(f"User {telegram_id} successfully subscribed via deeplink.")
     else:
-        logger.info(f"User {telegram_id} was already subscribed, proceeding to link NOON via combined deeplink.")
+        logger.info(f"User {telegram_id} was already in the subscribers list.")
 
     current_settings = await get_or_create_user_settings(telegram_id, session)
 
@@ -125,36 +125,13 @@ async def _handle_subscribe_and_link_noon_deeplink(
         logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
         return _("Error: Missing TeamTalk username in confirmation link.")
 
-    if current_settings.not_on_online_confirmed and \
-       current_settings.teamtalk_username == tt_username_from_payload:
-        # User is already confirmed with this same TeamTalk account.
-        # Preserve existing 'not_on_online_enabled' status.
-        # We still re-set username and confirmed status to ensure consistency,
-        # though username is unlikely to change if it matches.
-        current_settings.teamtalk_username = tt_username_from_payload
-        current_settings.not_on_online_confirmed = True
-        # NOT touching current_settings.not_on_online_enabled
-        logger.info(f"User {telegram_id} re-confirmed NOON for TT user {tt_username_from_payload}. 'not_on_online_enabled' status preserved as {current_settings.not_on_online_enabled}.")
-    else:
-        # New NOON linking, or linking a different TeamTalk account.
-        # Set 'not_on_online_enabled' to False by default.
-        current_settings.teamtalk_username = tt_username_from_payload
-        current_settings.not_on_online_confirmed = True
-        current_settings.not_on_online_enabled = False # Explicitly set to False for new/changed linking
-        logger.info(f"User {telegram_id} newly confirmed NOON for TT user {tt_username_from_payload}. 'not_on_online_enabled' set to False.")
+    current_settings.teamtalk_username = tt_username_from_payload
+    current_settings.not_on_online_confirmed = True
+    logger.info(f"User {telegram_id} linked NOON to TT user {tt_username_from_payload}.")
 
     await update_user_settings_in_db(session, telegram_id, current_settings)
 
-    final_tt_username = current_settings.teamtalk_username
-    # Fallback for final_tt_username, though current_settings.teamtalk_username should be set by the logic above.
-    if not final_tt_username: # Should ideally not be hit if previous logic is correct
-        final_tt_username = tt_username_from_payload if tt_username_from_payload else "Unknown"
-
-    # Always use DEEPLINK_SUBSCRIBED key (English: "You have successfully subscribed to notifications.")
-    # This message is generic and doesn't include the username.
-    logger.info(f"User {telegram_id} subscribed and NOON linked for TT user {final_tt_username} via combined deeplink. Sending DEEPLINK_SUBSCRIBED message.")
-    reply_text = _("You have successfully subscribed to notifications.")
-    return reply_text
+    return _("You have successfully subscribed to notifications.")
 
 
 # Adjusted for _handle_unsubscribe_deeplink taking fewer params

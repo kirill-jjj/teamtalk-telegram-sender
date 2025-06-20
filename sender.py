@@ -118,10 +118,11 @@ async def main_async():
 
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
     dp.update.outer_middleware.register(TeamTalkInstanceMiddleware())
+dp.message.middleware(SubscriptionCheckMiddleware())
+dp.callback_query.middleware(SubscriptionCheckMiddleware())
+
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
-    dp.message.middleware(SubscriptionCheckMiddleware())
-    dp.callback_query.middleware(SubscriptionCheckMiddleware())
     logger.debug("Aiogram middlewares registered.")
 
     dp.include_router(user_commands_router)
