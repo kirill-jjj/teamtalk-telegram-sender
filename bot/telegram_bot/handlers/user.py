@@ -14,10 +14,10 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.core.user_settings import UserSpecificSettings
-from bot.telegram_bot.filters import IsAdminFilter
+# from bot.telegram_bot.filters import IsAdminFilter # Removed
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
-from bot.state import ONLINE_USERS_CACHE
+from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -147,7 +147,7 @@ async def who_command_handler(
     message: Message,
     _: callable,
     tt_instance: TeamTalkInstance | None,
-    session: AsyncSession,
+    # session: AsyncSession, # No longer used
     translator: "gettext.GNUTranslations"
 ):
     if not message.from_user:
@@ -164,7 +164,7 @@ async def who_command_handler(
         await message.reply(translator.gettext("Error getting users from TeamTalk."))
         return
 
-    is_caller_admin = await IsAdminFilter()(message, session)
+    is_caller_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False
     bot_user_id = tt_instance.getMyUserID()
     if bot_user_id is None:
         logger.error("Could not get bot's own user ID from TeamTalk instance.")
@@ -189,12 +189,12 @@ async def who_command_handler(
 @user_commands_router.message(Command("help"))
 async def help_command_handler(
     message: Message,
-    _: callable,
-    session: AsyncSession
+    _: callable
+    # session: AsyncSession # No longer used
 ):
-    is_admin = await IsAdminFilter()(message, session) # This checks if TG user is a bot admin
+    is_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False # This checks if TG user is a bot admin
     # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
-    # Assuming IsAdminFilter result means they are a bot admin.
+    # Assuming ADMIN_IDS_CACHE check result means they are a bot admin.
     # For is_admin (TT server admin status), we don't have that info here directly.
     # For Telegram platform, is_admin (TT) is likely not relevant.
     help_text = build_help_message(_, "telegram", is_admin, is_admin) # Passing is_admin for both admin flags
