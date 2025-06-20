@@ -176,6 +176,8 @@ async def main():
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
+    dp.message.middleware(TeamTalkInstanceMiddleware())
+    dp.callback_query.middleware(TeamTalkInstanceMiddleware())
 
     # Include routers
     dp.include_router(user_commands_router)
