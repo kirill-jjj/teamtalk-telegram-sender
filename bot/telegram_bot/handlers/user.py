@@ -7,7 +7,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.utils import pluralize, build_help_message, get_online_teamtalk_users # Added import
+from bot.core.utils import build_help_message, get_online_teamtalk_users # Added import
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
