@@ -83,7 +83,6 @@ def extract_messages() -> None:
         "-o", str(POT_FILE),
         f"--project={PROJECT_NAME}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
-        "--keywords=_",
         "."
     ]
     run_command(command)
