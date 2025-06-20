@@ -5,8 +5,8 @@ from bot.logging_setup import setup_logging
 logger = setup_logging()
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import ErrorEvent, Message # Added for error handler
-from aiogram.utils.callback_answer import CallbackAnswerMiddleware # Added for CallbackAnswerMiddleware
+from aiogram.types import ErrorEvent, Message
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
@@ -41,7 +41,7 @@ except ImportError:
 
 
 async def on_startup(bot: Bot, dispatcher: Dispatcher):
-    """Выполняется при запуске бота."""
+    """Executed when the bot starts up."""
     logger.info("Initializing TeamTalk components for on_startup...")
     teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
     dispatcher["teamtalk_task"] = teamtalk_task
@@ -57,7 +57,7 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher):
 
 
 async def on_shutdown(dispatcher: Dispatcher):
-    """Выполняется при остановке бота."""
+    """Executed when the bot stops."""
     logger.warning('Stopping bot (on_shutdown)...')
 
     teamtalk_task = dispatcher.get("teamtalk_task")
@@ -124,8 +124,7 @@ async def shutdown_teamtalk_bot(task_to_shutdown):
     # Part 2: Disconnect TeamTalk instances
     logger.info("Disconnecting TeamTalk instances during shutdown...")
     if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
-        # Ensure ttstr is available if not already global from main_async context
-        ttstr = sdk.ttstr
+    ttstr = sdk.ttstr # Ensure ttstr is available
         for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
             try:
                 if tt_instance_item.logged_in:
@@ -144,12 +143,12 @@ async def shutdown_teamtalk_bot(task_to_shutdown):
     logger.info("TeamTalk bot shutdown process complete.")
 
 
-# Removed decorator @dp.errors() as dp is defined later in main()
+# dp.errors() decorator was removed as dp is defined later in main(); handler registered explicitly.
 async def global_error_handler(event: ErrorEvent, bot: Bot):
     """
     Global error handler for uncaught exceptions in handlers.
     """
-    logger.critical(f"Необработанное исключение в хендлере: {event.exception}", exc_info=True)
+    logger.critical(f"Unhandled exception in handler: {event.exception}", exc_info=True)
 
     if app_config.TG_ADMIN_CHAT_ID:
         try:
@@ -170,18 +169,17 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
             await update.message.answer(user_message)
         elif update.callback_query and isinstance(update.callback_query.message, Message):
             await update.callback_query.message.answer(user_message)
-        # If you need to acknowledge a callback query when its message cannot be edited or answered:
+        # Example of how to acknowledge a callback if message sending fails or is not applicable:
         # elif update.callback_query:
-        #     await update.callback_query.answer(user_message, show_alert=True)
+        #     await update.callback_query.answer("Error processed.", show_alert=False) # Generic ack
     except Exception as e:
         logger.error(f"Could not send error message to user: {e}", exc_info=True)
 
 
 async def initialize_and_start_teamtalk_bot():
     """Initializes and starts the TeamTalk bot."""
-    # This function might become redundant if on_startup handles its responsibilities.
-    # For now, it's kept if other parts of the module might call it,
-    # but main() below does not use it directly.
+    # This function might become redundant if on_startup handles all its responsibilities.
+    # Kept for now if other parts of the module might call it, though main() does not use it directly.
     logger.info("Initializing TeamTalk bot (via initialize_and_start_teamtalk_bot)...")
     await tt_bot_module.tt_bot._async_setup_hook()
     task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")
@@ -213,7 +211,7 @@ async def main():
     dp.callback_query.middleware(UserSettingsMiddleware())
     dp.message.middleware(TeamTalkInstanceMiddleware())
     dp.callback_query.middleware(TeamTalkInstanceMiddleware())
-    dp.callback_query.middleware(CallbackAnswerMiddleware()) # Added CallbackAnswerMiddleware
+    dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     # Include routers
     dp.include_router(user_commands_router)
