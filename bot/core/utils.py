@@ -1,5 +1,5 @@
-import logging
 import gettext
+import logging
 from typing import Optional, Union
 
 import pytalk
@@ -85,7 +85,8 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
         if is_admin:
             parts.append(_("\n<b>Admin Commands:</b>"))
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
-                           "/ban - Ban a user from the server (via buttons)."))
+                           "/ban - Ban a user from the server (via buttons).\n"
+                           "/subscribers - View and manage subscribed users."))
     elif platform == "teamtalk":
         parts.append(_("Available commands:"))
         parts.append(_("/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
