@@ -25,12 +25,11 @@ ttstr = pytalk.instance.sdk.ttstr
 def is_tt_admin(func):
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
-        # Expect `_` (translator) in kwargs instead of bot_language
-        _ = kwargs.get("_")
-        if not _: # Fallback if _ is not provided
-            # If this fallback is hit often, it means `_` is not being passed correctly by the caller of decorated functions
-            _ = get_translator(app_config.DEFAULT_LANG).gettext
-            kwargs["_"] = _ # Ensure _ is in kwargs for the wrapped function if it was missing
+        # The translator `_` is expected as the first positional argument after `tt_message`,
+        # so it will be in `args[0]`.
+        # If `args` is empty, an IndexError will occur, highlighting a programming error
+        # in how the decorated function is called, which is intended.
+        _ = args[0]
 
         username = ttstr(tt_message.user.username)
         admin_username = app_config.ADMIN_USERNAME
@@ -42,6 +41,10 @@ def is_tt_admin(func):
             tt_message.reply(_("You do not have permission to use this command."))
             return None
 
+        # The wrapped function's signature will be:
+        # async def some_func(tt_message: TeamTalkMessage, _: callable, *, kwarg1=val1, ...)
+        # `*args` here will correctly pass the translator as the second positional argument to `func`.
+        # `**kwargs` will pass any keyword arguments.
         return await func(tt_message, *args, **kwargs)
     return wrapper
 
@@ -233,12 +236,12 @@ async def handle_tt_unsubscribe_command(
     )
 
 
-@is_tt_admin # Passes `_` in kwargs
+@is_tt_admin # Comment needs update, but not part of this task
 async def handle_tt_add_admin_command(
-    tt_message: TeamTalkMessage, *,
+    tt_message: TeamTalkMessage,
+    _: callable, *,
     command: CommandObject,
-    session: AsyncSession,
-    _: callable
+    session: AsyncSession
 ):
     await _manage_admin_ids(
         tt_message=tt_message,
@@ -255,12 +258,12 @@ async def handle_tt_add_admin_command(
     )
 
 
-@is_tt_admin # Passes `_` in kwargs
+@is_tt_admin # Comment needs update, but not part of this task
 async def handle_tt_remove_admin_command(
-    tt_message: TeamTalkMessage, *,
+    tt_message: TeamTalkMessage,
+    _: callable, *,
     command: CommandObject,
-    session: AsyncSession,
-    _: callable
+    session: AsyncSession
 ):
     await _manage_admin_ids(
         tt_message=tt_message,
