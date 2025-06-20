@@ -1,6 +1,20 @@
+import sys
+
+
+def get_env_file_from_args():
+    """
+    Простая функция для поиска пути к .env файлу в аргументах командной строки.
+    Возвращает первый найденный аргумент, заканчивающийся на .env,
+    или '.env', если ничего не найдено.
+    """
+    for arg in sys.argv[1:]:
+        if arg.endswith('.env'):
+            return arg
+    return '.env'
+
 from typing import Any, Literal, Optional
 
-from pydantic import Field, model_validator, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 GenderType = Literal["male", "female", "neutral"]
@@ -45,7 +59,11 @@ class Settings(BaseSettings):
     # --- Производные поля (не из .env) ---
     EFFECTIVE_DEFAULT_LANG: LangType = "en"
 
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
+    model_config = SettingsConfigDict(
+            env_file=get_env_file_from_args(),
+            env_file_encoding='utf-8',
+            extra='ignore'
+        )
 
     @model_validator(mode='after')
     def process_settings(self) -> 'Settings':
