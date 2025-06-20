@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-06-20 08:10+0000\n"
+"POT-Creation-Date: 2025-06-20 08:39+0000\n"
 "PO-Revision-Date: 2025-06-19 13:51+0500\n"
 "Last-Translator: kirill-jjj <kirillkolovi@gmail.com>\n"
 "Language: ru\n"
@@ -210,10 +210,12 @@ msgstr "Настройки подписок"
 msgid "Notification Settings"
 msgstr "Настройки уведомлений"
 
+#: bot/telegram_bot/handlers/callback_handlers/language.py:69
 #: bot/telegram_bot/keyboards.py:68
 msgid "English"
 msgstr "English"
 
+#: bot/telegram_bot/handlers/callback_handlers/language.py:71
 #: bot/telegram_bot/keyboards.py:72
 msgid "Russian"
 msgstr "Русский"
@@ -405,6 +407,7 @@ msgstr " и "
 msgid "Error getting users from TeamTalk."
 msgstr "Ошибка получения пользователей из TeamTalk."
 
+#: bot/telegram_bot/handlers/callback_handlers/language.py:78
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:25
 #: bot/telegram_bot/handlers/user.py:220
 msgid "Settings"
@@ -462,6 +465,11 @@ msgstr "Пожалуйста, выберите ваш язык:"
 #: bot/telegram_bot/handlers/callback_handlers/language.py:50
 msgid "Error: Missing data for language update."
 msgstr "Ошибка: Отсутствуют данные для обновления языка."
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:74
+#, python-brace-format
+msgid "Language updated to {lang_name}."
+msgstr ""
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:70
 #, python-brace-format
