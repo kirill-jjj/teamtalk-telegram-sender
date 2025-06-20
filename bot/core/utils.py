@@ -1,7 +1,8 @@
 import gettext
 import logging
-from typing import Optional, Union, List # Added List
-from pytalk import TeamTalkPy # Added TeamTalkPy for type hinting
+from typing import Optional, Union, List
+# Removed: from pytalk import TeamTalkPy
+from pytalk.implementation.TeamTalkPy import TeamTalk5 # Added correct import for TeamTalk5
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -101,7 +102,7 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
 
     return "\n".join(parts)
 
-async def get_online_teamtalk_users(tt_instance: TeamTalkPy) -> List[TeamTalkUser]:
+async def get_online_teamtalk_users(tt_instance: TeamTalk5) -> List[TeamTalkUser]: # Changed type hint
     """
     Retrieves a list of online users from the ONLINE_USERS_CACHE.
 
