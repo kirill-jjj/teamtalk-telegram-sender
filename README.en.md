@@ -95,6 +95,10 @@ source $HOME/.local/bin/env
     ```bash
     uv run sender.py
     ```
+    You can also specify a particular configuration file (instead of the default `.env`) by passing it as an argument:
+    ```bash
+    uv run sender.py custom.env
+    ```
 
 ## Usage
 
