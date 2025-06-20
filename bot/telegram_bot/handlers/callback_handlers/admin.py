@@ -7,7 +7,8 @@ import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 
-from bot.telegram_bot.filters import IsAdminFilter
+# from bot.telegram_bot.filters import IsAdminFilter # Removed
+from bot.state import ADMIN_IDS_CACHE # Added
 from bot.telegram_bot.callback_data import AdminActionCallback
 from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
@@ -55,7 +56,7 @@ async def _execute_tt_user_action(
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
-    session: AsyncSession,
+    # session: AsyncSession, # Removed
     _: callable,
     tt_instance: TeamTalkInstance | None
 ):
@@ -64,7 +65,7 @@ async def process_user_action_selection(
          return
 
     # Admin check should be here, before trying to get user from tt_instance
-    is_admin_caller = await IsAdminFilter()(callback_query, session)
+    is_admin_caller = callback_query.from_user.id in ADMIN_IDS_CACHE
     if not is_admin_caller:
         await callback_query.answer(_("You do not have permission to execute this action."), show_alert=True)
         return
