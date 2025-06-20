@@ -1,27 +1,22 @@
 import logging
-from aiogram import Router, Bot
+from aiogram import Router, Bot, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
 
-from bot.state import ONLINE_USERS_CACHE
+from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
 from bot.core.utils import get_username_as_str, get_tt_user_display_name, get_online_teamtalk_users # Added import
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
 import pytalk
 
 from bot.core.enums import AdminAction
-from bot.telegram_bot.filters import IsAdminFilter
 from pytalk.instance import TeamTalkInstance
 from .callback_handlers.subscriber_list import _get_paginated_subscribers_info, SUBSCRIBERS_PER_PAGE
 
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-
-# Apply the IsAdminFilter to all message and callback_query handlers in this router
-admin_router.message.filter(IsAdminFilter())
-admin_router.callback_query.filter(IsAdminFilter())
 
 
 async def _show_user_buttons(
@@ -68,7 +63,7 @@ async def _show_user_buttons(
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
 
-@admin_router.message(Command("kick"))
+@admin_router.message(Command("kick"), F.from_user.id.in_(ADMIN_IDS_CACHE))
 async def kick_command_handler(
     message: Message,
     _: callable,
@@ -78,7 +73,7 @@ async def kick_command_handler(
     await _show_user_buttons(message, AdminAction.KICK, _, tt_instance)
 
 
-@admin_router.message(Command("ban"))
+@admin_router.message(Command("ban"), F.from_user.id.in_(ADMIN_IDS_CACHE))
 async def ban_command_handler(
     message: Message,
     _: callable,
@@ -88,7 +83,7 @@ async def ban_command_handler(
     await _show_user_buttons(message, AdminAction.BAN, _, tt_instance)
 
 
-@admin_router.message(Command("subscribers"))
+@admin_router.message(Command("subscribers"), F.from_user.id.in_(ADMIN_IDS_CACHE))
 async def subscribers_command_handler(message: Message, session: AsyncSession, bot: Bot, _: callable):
     """
     Handles the /subscribers command to display a paginated list of subscribed users

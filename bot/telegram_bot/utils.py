@@ -92,19 +92,21 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool) -> bool:
 async def send_telegram_message_individual(
     bot_instance: Bot,
     chat_id: int,
-    text: str,
+    # text: str, # Removed
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
-    tt_user_is_online: bool = False
+    tt_user_is_online: bool = False,
+    **kwargs
 ) -> bool:
     send_silently = _should_send_silently(chat_id, tt_user_is_online)
 
     try:
         await bot_instance.send_message(
             chat_id=chat_id,
-            text=text,
+            # text=text, # Removed
             reply_markup=reply_markup,
-            disable_notification=send_silently
+            disable_notification=send_silently,
+            **kwargs
         )
         logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}")
         return True
@@ -159,9 +161,10 @@ async def send_telegram_messages_to_list(
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_to_use,
             chat_id=chat_id,
-            text=text,
+            # text=text, # text is now passed via kwargs
             language=language,
             reply_markup=current_reply_markup,
-            tt_user_is_online=individual_tt_user_is_online
+            tt_user_is_online=individual_tt_user_is_online,
+            text=text # Pass text as a keyword argument
         ))
     await asyncio.gather(*tasks_list)
