@@ -85,7 +85,7 @@
     ```
 6.  **Запустите бота**:
     ```bash
-    uv run python -m bot
+    uv run sender.py
     ```
 
 ## Использование
