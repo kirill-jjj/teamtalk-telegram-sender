@@ -3,9 +3,8 @@ import sys
 
 def get_env_file_from_args():
     """
-    Простая функция для поиска пути к .env файлу в аргументах командной строки.
-    Возвращает первый найденный аргумент, заканчивающийся на .env,
-    или '.env', если ничего не найдено.
+    Simple function to find the path to a .env file in command line arguments.
+    Returns the first argument ending with .env, or '.env' if none is found.
     """
     for arg in sys.argv[1:]:
         if arg.endswith('.env'):
@@ -22,8 +21,8 @@ LangType = Literal["en", "ru"]
 
 class Settings(BaseSettings):
     """
-    Класс для управления настройками приложения.
-    Загружает переменные из .env файла и проводит их валидацию.
+    Application settings management class.
+    Loads variables from a .env file and validates them.
     """
 
     # --- Telegram ---
@@ -68,13 +67,13 @@ class Settings(BaseSettings):
     @model_validator(mode='after')
     def process_settings(self) -> 'Settings':
         """
-        Валидатор для проверки взаимозависимых полей.
+        Validator for checking interdependent fields.
         """
         if not self.TG_EVENT_TOKEN and self.TG_BOT_TOKEN:
             self.TG_EVENT_TOKEN = self.TG_BOT_TOKEN
 
         if not self.TG_EVENT_TOKEN:
-            raise ValueError("Необходимо установить переменную окружения TG_BOT_TOKEN или TELEGRAM_BOT_EVENT_TOKEN.")
+            raise ValueError("The TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN environment variable must be set.")
 
         self.EFFECTIVE_DEFAULT_LANG = self.DEFAULT_LANG
 
@@ -83,7 +82,7 @@ class Settings(BaseSettings):
     @field_validator('GENDER', mode='before')
     @classmethod
     def gender_to_lower(cls, v: Any) -> str:
-        """Приводит GENDER к нижнему регистру перед валидацией."""
+        """Converts GENDER to lowercase before validation."""
         if isinstance(v, str):
             return v.lower()
         return v

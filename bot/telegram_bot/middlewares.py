@@ -95,7 +95,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         if not subscriber:
             logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id}.")
-            return  # Просто прекращаем обработку, ничего не отвечая
+            return  # Simply stop processing, do not reply.
 
         logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
         return await handler(event, data)

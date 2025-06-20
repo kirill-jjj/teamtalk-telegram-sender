@@ -8,7 +8,7 @@ from pytalk import TeamTalkServerInfo # Added for new _tt_reconnect
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
 # from pytalk.backoff import Backoff # Removed
-from bot.teamtalk_bot import bot_instance as tt_bot_module # Added for new _tt_reconnect
+from bot.teamtalk_bot import bot_instance as tt_bot_module
 from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
@@ -24,8 +24,6 @@ from bot.constants import (
     REJOIN_CHANNEL_MAX_ATTEMPTS,
     REJOIN_CHANNEL_FAIL_WAIT_SECONDS
 )
-# Import teamtalk_bot.bot_instance carefully to avoid circular dependencies if it needs utils
-# For now, we pass tt_bot and current_tt_instance as arguments or access them via a getter if needed.
 from bot.telegram_bot.utils import send_telegram_message_individual
 from bot.telegram_bot.bot_instances import tg_bot_message
 from bot.core.user_settings import USER_SETTINGS_CACHE
@@ -35,18 +33,15 @@ from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
-RECONNECT_IN_PROGRESS = False # Added global flag
+RECONNECT_IN_PROGRESS = False
 
-# New function as per subtask
-def initiate_reconnect_task(failed_instance: TeamTalkInstance | None): # Allow None if called preemptively
+def initiate_reconnect_task(failed_instance: TeamTalkInstance | None):
     global RECONNECT_IN_PROGRESS
     if RECONNECT_IN_PROGRESS:
-        logger.info("Процесс переподключения уже запущен. Новая задача не создается.")
+        logger.info("Reconnection process already running. New task not created.")
         return
 
     RECONNECT_IN_PROGRESS = True
-    # Ensure this task is created correctly.
-    # The failed_instance might be None if called from a place where the instance is already gone.
     asyncio.create_task(_tt_reconnect(failed_instance))
 
 
@@ -61,55 +56,48 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
 
         current_chunk_str = ""
         current_chunk_bytes_len = 0
-        last_safe_split_index_in_chunk = -1 # Index within the current_chunk_str being built
-        last_safe_split_index_in_remaining = -1 # Corresponding index in remaining_text
+        last_safe_split_index_in_chunk = -1
+        last_safe_split_index_in_remaining = -1
 
-        # Iterate through characters of remaining_text to build a chunk
         for i, char_code in enumerate(remaining_text):
             char_bytes = char_code.encode("utf-8", errors="ignore")
             char_bytes_len = len(char_bytes)
 
             if current_chunk_bytes_len + char_bytes_len > max_len_bytes:
-                # Current char would make chunk too long
                 if last_safe_split_index_in_chunk != -1:
-                    # We have a preferred split point (newline or space)
                     parts_to_send_list.append(current_chunk_str[:last_safe_split_index_in_chunk])
                     remaining_text = remaining_text[last_safe_split_index_in_remaining:].lstrip()
                 else:
-                    # No preferred split point, must split at current_chunk_str (hard split)
                     parts_to_send_list.append(current_chunk_str)
                     remaining_text = remaining_text[i:].lstrip()
-                break # Break from inner loop to process next chunk
+                break
 
             current_chunk_str += char_code
             current_chunk_bytes_len += char_bytes_len
 
-            if char_code == '\n': # Preferred split
+            if char_code == '\n':
                 last_safe_split_index_in_chunk = len(current_chunk_str)
                 last_safe_split_index_in_remaining = i + 1
-            elif char_code == ' ': # Secondary preferred split
-                # Only update if newline hasn't been found or if it's closer
+            elif char_code == ' ':
                 last_safe_split_index_in_chunk = len(current_chunk_str)
                 last_safe_split_index_in_remaining = i + 1
 
-            if i == len(remaining_text) - 1: # Reached end of remaining_text
+            if i == len(remaining_text) - 1:
                 parts_to_send_list.append(current_chunk_str)
-                remaining_text = "" # Mark as fully processed
-                break # Break from inner loop
-        else: # Inner loop didn't break, means remaining_text was consumed or became empty
-            if current_chunk_str and not remaining_text: # Should have been caught by outer if
+                remaining_text = ""
+                break
+        else:
+            if current_chunk_str and not remaining_text:
                  logger.debug("_split_text_for_tt: Appending final chunk in else block, this might be redundant.")
                  parts_to_send_list.append(current_chunk_str)
-            remaining_text = "" # Ensure termination
+            remaining_text = ""
     return parts_to_send_list
 
 
 async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
     """
     Splits a long text message into parts suitable for TeamTalk and sends them.
-    Ensures that splitting doesn't break in the middle of a multi-byte character.
-    Prioritizes splitting at newlines, then spaces.
-    Uses asyncio.to_thread for the splitting logic.
+    Uses asyncio.to_thread for the potentially CPU-bound splitting logic.
     """
     if not text:
         return
@@ -117,7 +105,7 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
     parts_to_send_list = await asyncio.to_thread(_split_text_for_tt, text, max_len_bytes)
 
     for part_idx, part_to_send_str in enumerate(parts_to_send_list):
-        if part_to_send_str.strip(): # Don't send empty parts
+        if part_to_send_str.strip():
             try:
                 reply_method(part_to_send_str)
                 logger.debug(f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, length {len(part_to_send_str.encode('utf-8', errors='ignore'))} bytes.")
@@ -125,7 +113,6 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
             except Exception as e:
                 logger.error(f"Error sending part {part_idx + 1} of TT message: {e}")
-                # Decide if you want to stop or continue sending other parts
                 break
 
 
@@ -137,35 +124,26 @@ async def forward_tt_message_to_telegram_admin(
         return
 
     admin_chat_id = app_config.TG_ADMIN_CHAT_ID
-    admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id) # type: ignore
+    admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id)
     admin_language = admin_settings.language if admin_settings else DEFAULT_LANGUAGE
 
     translator = get_translator(admin_language)
     _ = translator.gettext
 
     tt_instance = message.teamtalk_instance
-
     server_name = get_effective_server_name(tt_instance, _)
-    # get_tt_user_display_name now expects `_` (translator func) as its second argument
-    sender_display = get_tt_user_display_name(message.user, _)
+    sender_display = get_tt_user_display_name(message.user, _) # Assumes _ is the correct translator for user's name context
     message_content = message.content
 
-    # text_to_send = _("Message from server {server_name}\nFrom {sender_display}:\n\n{message_text}").format(
-    #     server_name=html.quote(server_name),
-    #     sender_display=html.quote(sender_display),
-    #     message_text=html.quote(message_content)
-    # )
     content = Text(
         _("Message from server "), Bold(server_name), "\n",
         _("From "), Bold(sender_display), ":\n\n",
-        message_content  # No html.quote needed here, Text handles escaping for supported entities.
+        message_content
     )
 
-    # Use the individual message sending utility
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=tg_bot_message, # Use the dedicated message bot
+        bot_instance=tg_bot_message,
         chat_id=admin_chat_id,
-        # text=text_to_send, # Removed
         language=admin_language,
         **content.as_kwargs()
     )
@@ -179,48 +157,42 @@ async def forward_tt_message_to_telegram_admin(
 async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
     global RECONNECT_IN_PROGRESS
 
-    # 1. Correctly terminate the old instance
     if failed_instance:
         try:
             server_host_info = "unknown server"
             if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
                 server_host_info = failed_instance.server_info.host
-            logger.info(f"Закрытие старого инстанса для сервера {server_host_info}...")
+            logger.info(f"Closing old instance for server {server_host_info}...")
 
             if failed_instance.logged_in:
-                logger.debug(f"Attempting logout for instance {failed_instance.server_info.host}")
+                logger.debug(f"Attempting logout for instance {server_host_info}")
                 failed_instance.logout()
             if failed_instance.connected:
-                logger.debug(f"Attempting disconnect for instance {failed_instance.server_info.host}")
+                logger.debug(f"Attempting disconnect for instance {server_host_info}")
                 failed_instance.disconnect()
 
-            logger.debug(f"Attempting closeTeamTalk for instance {failed_instance.server_info.host}")
-            failed_instance.closeTeamTalk() # This should release SDK resources
+            logger.debug(f"Attempting closeTeamTalk for instance {server_host_info}")
+            failed_instance.closeTeamTalk()
 
-            # Critical: Remove from pytalk's list of instances if present
             if hasattr(tt_bot_module.tt_bot, 'teamtalks') and failed_instance in tt_bot_module.tt_bot.teamtalks:
                 tt_bot_module.tt_bot.teamtalks.remove(failed_instance)
-                logger.info(f"Старый инстанс {server_host_info} удален из списка tt_bot.teamtalks.")
+                logger.info(f"Old instance {server_host_info} removed from tt_bot.teamtalks list.")
             else:
-                logger.info(f"Старый инстанс {server_host_info} не найден в tt_bot.teamtalks или список отсутствует.")
+                logger.info(f"Old instance {server_host_info} not found in tt_bot.teamtalks or list does not exist.")
 
-            logger.info(f"Старый инстанс {server_host_info} успешно закрыт и удален (попытка).")
+            logger.info(f"Old instance {server_host_info} successfully closed and removed (attempt).")
 
         except Exception as e:
             server_host_info_err = "unknown server"
             if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
                 server_host_info_err = failed_instance.server_info.host
-            logger.error(f"Ошибка при закрытии старого инстанса {server_host_info_err}: {e}", exc_info=True)
+            logger.error(f"Error closing old instance {server_host_info_err}: {e}", exc_info=True)
 
-    # Reset global state tracking current instance
     tt_bot_module.current_tt_instance = None
     tt_bot_module.login_complete_time = None
-    # Also reset the periodic sync task flag if it exists on the instance, though failed_instance is now "gone"
     if failed_instance and hasattr(failed_instance, '_periodic_sync_task_running'):
         failed_instance._periodic_sync_task_running = False
 
-
-    # Determine server_info for reconnection
     server_info_to_reconnect = None
     if failed_instance and hasattr(failed_instance, 'server_info') and failed_instance.server_info:
         server_info_to_reconnect = failed_instance.server_info
@@ -229,7 +201,7 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
         server_info_to_reconnect = TeamTalkServerInfo(
             host=app_config.HOSTNAME,
             tcp_port=app_config.PORT,
-            udp_port=app_config.PORT, # Assuming UDP same as TCP
+            udp_port=app_config.PORT,
             username=app_config.USERNAME,
             password=app_config.PASSWORD,
             encrypted=app_config.ENCRYPTED,
@@ -237,19 +209,16 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
         )
         logger.info(f"Constructed server_info from app_config for reconnection: {server_info_to_reconnect.host}")
     else:
-        logger.error("Невозможно определить информацию о сервере для переподключения. Переподключение остановлено.")
+        logger.error("Cannot determine server information for reconnection. Reconnection stopped.")
         RECONNECT_IN_PROGRESS = False
         return
 
-    # backoff = Backoff(base=5, max_value=60) # Removed
-
     while True:
-        # delay = backoff.delay() # Removed
-        logger.info(f"Следующая попытка переподключения к {server_info_to_reconnect.host} через {RECONNECT_RETRY_SECONDS} секунд...")
-        await asyncio.sleep(RECONNECT_RETRY_SECONDS) # Use fixed delay
+        logger.info(f"Next reconnection attempt to {server_info_to_reconnect.host} in {RECONNECT_RETRY_SECONDS} seconds...")
+        await asyncio.sleep(RECONNECT_RETRY_SECONDS)
 
         try:
-            logger.info(f"Попытка создания нового инстанса TeamTalk для {server_info_to_reconnect.host}...")
+            logger.info(f"Attempting to create new TeamTalk instance for {server_info_to_reconnect.host}...")
             await tt_bot_module.tt_bot.add_server(server_info_to_reconnect)
 
             await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
@@ -259,11 +228,11 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                tt_bot_module.current_tt_instance.logged_in and \
                hasattr(tt_bot_module.current_tt_instance.server_info, 'host') and \
                tt_bot_module.current_tt_instance.server_info.host == server_info_to_reconnect.host:
-                logger.info(f"Переподключение к {server_info_to_reconnect.host} успешно завершено!")
+                logger.info(f"Reconnection to {server_info_to_reconnect.host} successful!")
                 RECONNECT_IN_PROGRESS = False
                 return
             else:
-                logger.warning(f"Попытка переподключения к {server_info_to_reconnect.host} не удалась, инстанс не готов или не тот.")
+                logger.warning(f"Reconnection attempt to {server_info_to_reconnect.host} failed, instance not ready or not the correct one.")
                 if tt_bot_module.tt_bot.teamtalks and \
                    hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
                    tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host and \
@@ -277,7 +246,7 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                         logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
 
         except Exception as e:
-            logger.error(f"Критическая ошибка во время попытки переподключения к {server_info_to_reconnect.host}: {e}", exc_info=True)
+            logger.error(f"Critical error during reconnection attempt to {server_info_to_reconnect.host}: {e}", exc_info=True)
             if tt_bot_module.tt_bot.teamtalks and \
                hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
                tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host:
