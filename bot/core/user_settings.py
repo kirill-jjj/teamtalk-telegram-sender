@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from typing import Any, Union
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,11 +16,13 @@ from bot.database.models import (  # Assuming NotificationSetting is an Enum or 
 logger = logging.getLogger(__name__)
 
 class UserSpecificSettings(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     language: str = Field(default_factory=lambda: app_config.EFFECTIVE_DEFAULT_LANG)
     notification_settings: NotificationSetting = NotificationSetting.ALL
     muted_users_set: set[str] = Field(default_factory=set, alias="muted_users")
     mute_all_flag: bool = Field(default=False, alias="mute_all")
-    teamtalk_username: Union[str, None] = None # Using Union for Optional fields
+    teamtalk_username: str | None = None
     not_on_online_enabled: bool = False
     not_on_online_confirmed: bool = False
 
@@ -34,10 +36,6 @@ class UserSpecificSettings(BaseModel):
         if isinstance(value, set):
             return value
         return set() # Default to empty set if type is unexpected
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True # To allow using aliases during initialization
 
 def _prepare_muted_users_string(users_set: set[str]) -> str:
     if not users_set:
