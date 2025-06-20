@@ -58,7 +58,6 @@ async def cq_set_language(
         return
 
     new_lang_translator_obj = get_translator(new_lang_code)
-    _new = new_lang_translator_obj.gettext
 
     def update_logic():
         user_specific_settings.language = new_lang_code
@@ -67,16 +66,16 @@ async def cq_set_language(
         user_specific_settings.language = original_lang_code
 
     if new_lang_code == "en":
-        lang_name_display = _new("English")
+        lang_name_display = new_lang_translator_obj.gettext("English")
     elif new_lang_code == "ru":
-        lang_name_display = _new("Russian")
+        lang_name_display = new_lang_translator_obj.gettext("Russian")
     else:
         lang_name_display = new_lang_code
-    success_toast_text = _new("Language updated to {lang_name}.").format(lang_name=lang_name_display)
+    success_toast_text = new_lang_translator_obj.gettext("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        main_settings_builder = create_main_settings_keyboard(_new)
-        main_settings_text = _new("Settings")
+        main_settings_builder = create_main_settings_keyboard(new_lang_translator_obj.gettext)
+        main_settings_text = new_lang_translator_obj.gettext("Settings")
         return main_settings_text, main_settings_builder.as_markup()
 
     await process_setting_update(
