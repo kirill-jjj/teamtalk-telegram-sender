@@ -153,9 +153,9 @@ msgstr "Произошла ошибка при обработке запроса
 #, python-brace-format
 msgid "Successfully added {count} admin."
 msgid_plural "Successfully added {count} admins."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Успешно добавлен {count} администратор."
+msgstr[1] "Успешно добавлено {count} администратора."
+msgstr[2] "Успешно добавлено {count} администраторов."
 
 #: bot/teamtalk_bot/commands.py:257
 msgid ""
@@ -189,9 +189,9 @@ msgstr ""
 #, python-brace-format
 msgid "Successfully removed {count} admin."
 msgid_plural "Successfully removed {count} admins."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Успешно удален {count} администратор."
+msgstr[1] "Успешно удалено {count} администратора."
+msgstr[2] "Успешно удалено {count} администраторов."
 
 #: bot/teamtalk_bot/commands.py:283
 msgid ""
