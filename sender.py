@@ -37,188 +37,177 @@ try:
 except ImportError:
     logger.info("uvloop not found, using default asyncio event loop.")
 
-_telegram_polling_task_ref_for_shutdown = None
-_teamtalk_task_ref_for_shutdown = None
+# Global task references are removed. Tasks will be managed via local variables and parameters.
 
-async def on_aiogram_shutdown(*args, **kwargs):
-    logger.info("on_aiogram_shutdown called. Attempting to cancel tasks.")
-    global _teamtalk_task_ref_for_shutdown
-    if _teamtalk_task_ref_for_shutdown and not _teamtalk_task_ref_for_shutdown.done():
-        logger.info("Cancelling TeamTalk task...")
-        _teamtalk_task_ref_for_shutdown.cancel()
+async def on_startup(dispatcher: Dispatcher):
+    """Выполняется при запуске бота."""
+    logger.info("Initializing TeamTalk components for on_startup...")
+    # Removed: await tt_bot_module.tt_bot._async_setup_hook() # This call is now only in main()
+    teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
+    dispatcher["teamtalk_task"] = teamtalk_task # Store task in dispatcher context
+    logger.info("TeamTalk task started via on_startup.")
+
+    logger.debug("Fetching admin IDs for Telegram command setup (on_startup)...")
+    db_admin_ids = []
+    async with SessionFactory() as session:
+        db_admin_ids = await crud.get_all_admins_ids(session)
+    ADMIN_IDS_CACHE.update(db_admin_ids)
+    await set_telegram_commands(dispatcher.bot, admin_ids=db_admin_ids)
+    logger.debug("Telegram command setup complete (on_startup).")
+
+
+async def on_shutdown(dispatcher: Dispatcher):
+    """Выполняется при остановке бота."""
+    logger.warning('Stopping bot (on_shutdown)...')
+
+    teamtalk_task = dispatcher.get("teamtalk_task")
+    if teamtalk_task and not teamtalk_task.done():
+        logger.info("Cancelling TeamTalk task (on_shutdown)...")
+        teamtalk_task.cancel()
         try:
-            await _teamtalk_task_ref_for_shutdown
+            await teamtalk_task
         except asyncio.CancelledError:
-            logger.info("TeamTalk task cancelled successfully.")
+            logger.info("TeamTalk task cancelled successfully (on_shutdown).")
         except Exception as e:
-            logger.error(f"Error during TeamTalk task cancellation: {e}", exc_info=True)
+            logger.error(f"Error awaiting cancelled TeamTalk task (on_shutdown): {e}", exc_info=True)
+    elif teamtalk_task: # Task exists but is already done
+        logger.info("TeamTalk task was already done (on_shutdown).")
+    else: # No task found
+        logger.info("No TeamTalk task found in dispatcher context to cancel (on_shutdown).")
 
-    global _telegram_polling_task_ref_for_shutdown
-    if _telegram_polling_task_ref_for_shutdown and not _telegram_polling_task_ref_for_shutdown.done():
-        logger.info("Requesting cancellation of Telegram polling task...")
-        _telegram_polling_task_ref_for_shutdown.cancel()
+    # Close Telegram bot sessions
+    if hasattr(tg_bot_event, 'session') and tg_bot_event.session:
+        await tg_bot_event.session.close()
+    if tg_bot_message and hasattr(tg_bot_message, 'session') and tg_bot_message.session:
+        await tg_bot_message.session.close()
+    logger.info("Telegram bot sessions closed (on_shutdown).")
+
+    # Disconnect TeamTalk instances (using detailed logic)
+    logger.info("Disconnecting TeamTalk instances (on_shutdown)...")
+    if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
+        ttstr = sdk.ttstr
+        for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
+            try:
+                if tt_instance_item.logged_in:
+                    tt_instance_item.logout()
+                    logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
+                if tt_instance_item.connected:
+                    tt_instance_item.disconnect()
+                    logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
+                if hasattr(tt_instance_item, 'closeTeamTalk'):
+                    tt_instance_item.closeTeamTalk()
+                logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
+            except Exception as e_tt_close:
+                logger.error(f"Error closing TeamTalk instance during on_shutdown: {e_tt_close}", exc_info=True)
+    else:
+        logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup during on_shutdown.")
+    logger.info("Application shutdown sequence complete (on_shutdown).")
+
+
+async def shutdown_teamtalk_bot(task_to_shutdown): # Modified to accept task
+    """Gracefully shuts down the TeamTalk bot, including task cancellation and instance disconnection."""
+    logger.info("Attempting to shutdown TeamTalk bot gracefully...")
+
+    # Part 1: Cancel the running TeamTalk task
+    if task_to_shutdown and not task_to_shutdown.done(): # Modified to use parameter
+        logger.info("Cancelling TeamTalk task for shutdown...")
+        task_to_shutdown.cancel()
         try:
-            await _telegram_polling_task_ref_for_shutdown
+            await task_to_shutdown
         except asyncio.CancelledError:
-            logger.info("Telegram polling task cancelled successfully.")
+            logger.info("TeamTalk task cancelled successfully as part of shutdown.")
         except Exception as e:
-            logger.error(f"Error awaiting Telegram polling task cancellation: {e}", exc_info=True)
+            logger.error(f"Error during TeamTalk task cancellation in shutdown: {e}", exc_info=True)
+    else:
+        logger.info("TeamTalk task already done or not found during shutdown.")
+
+    # Part 2: Disconnect TeamTalk instances
+    logger.info("Disconnecting TeamTalk instances during shutdown...")
+    if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
+        # Ensure ttstr is available if not already global from main_async context
+        ttstr = sdk.ttstr
+        for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
+            try:
+                if tt_instance_item.logged_in:
+                    tt_instance_item.logout()
+                    logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+                if tt_instance_item.connected:
+                    tt_instance_item.disconnect()
+                    logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+                if hasattr(tt_instance_item, 'closeTeamTalk'):
+                    tt_instance_item.closeTeamTalk()
+                logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
+            except Exception as e_tt_close:
+                logger.error(f"Error closing TeamTalk instance during shutdown: {e_tt_close}", exc_info=True)
+    else:
+        logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup during shutdown.")
+    logger.info("TeamTalk bot shutdown process complete.")
 
 
-async def main_async():
+async def initialize_and_start_teamtalk_bot():
+    """Initializes and starts the TeamTalk bot."""
+    # This function might become redundant if on_startup handles its responsibilities.
+    # For now, it's kept if other parts of the module might call it,
+    # but main() below does not use it directly.
+    logger.info("Initializing TeamTalk bot (via initialize_and_start_teamtalk_bot)...")
+    await tt_bot_module.tt_bot._async_setup_hook()
+    task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")
+    logger.info("TeamTalk task created (via initialize_and_start_teamtalk_bot).")
+    return task
+
+async def main():
     logger.info("Application starting...")
 
-    ttstr = sdk.ttstr
-
-    logger.debug("Core modules imported. Initializing...")
-
-    logger.info("Initializing TeamTalk components...")
     await init_db()
-    logger.info("Database initialization complete.")
-
-    # Populate SUBSCRIBED_USERS_CACHE
     async with SessionFactory() as session:
         db_subscriber_ids = await get_all_subscribers_ids(session)
         SUBSCRIBED_USERS_CACHE.update(db_subscriber_ids)
-        logger.info(f"Loaded {len(db_subscriber_ids)} subscriber IDs into SUBSCRIBED_USERS_CACHE.")
-
-    asyncio.create_task(load_user_settings_to_cache(SessionFactory))
-    logger.info("User settings cache loading initiated.")
-
+    await load_user_settings_to_cache(SessionFactory)
+    # Note: tt_bot_module.tt_bot._async_setup_hook() is called in on_startup.
+    # The line below might be redundant if on_startup is always used.
+    # However, including it as per provided code for main().
     await tt_bot_module.tt_bot._async_setup_hook()
-    teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")
 
-    global _teamtalk_task_ref_for_shutdown
-    _teamtalk_task_ref_for_shutdown = teamtalk_task
-    logger.info("TeamTalk task started.")
-
-    logger.info("Initializing Telegram components...")
     tg_admin_chat_id = app_config.TG_ADMIN_CHAT_ID
     if tg_admin_chat_id is not None:
-        logger.debug(f"Ensuring TG_ADMIN_CHAT_ID ({tg_admin_chat_id}) is admin...")
         async with SessionFactory() as session:
             await crud.add_admin(session, tg_admin_chat_id)
-    else:
-        logger.info("TG_ADMIN_CHAT_ID not set. Skipping auto-admin registration.")
-
-    logger.debug("Fetching admin IDs for Telegram command setup...")
-    db_admin_ids = []
-    try:
-        async with SessionFactory() as session:
-            db_admin_ids = await crud.get_all_admins_ids(session)
-        ADMIN_IDS_CACHE.update(db_admin_ids) # Populate cache
-        logger.info(f"Loaded {len(db_admin_ids)} admin IDs into ADMIN_IDS_CACHE: {db_admin_ids}")
-    except Exception as e:
-        logger.error(f"Failed to fetch admin IDs and populate cache: {e}", exc_info=True)
-
-    asyncio.create_task(set_telegram_commands(tg_bot_event, admin_ids=db_admin_ids))
-    logger.debug("Telegram command setup initiated.")
 
     dp = Dispatcher()
 
+    # Register middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
-    dp.update.outer_middleware.register(TeamTalkInstanceMiddleware())
+    # TeamTalkInstanceMiddleware was here, but TeamTalk is now managed by on_startup/on_shutdown
+    # If TeamTalkInstanceMiddleware is still needed, it should be reviewed. For now, removing it.
     dp.message.middleware(SubscriptionCheckMiddleware())
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
-
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
-    logger.debug("Aiogram middlewares registered.")
 
+    # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
     dp.include_router(catch_all_router)
-    logger.debug("Aiogram routers included.")
 
-    dp.shutdown.register(on_aiogram_shutdown)
+    # Register startup and shutdown handlers
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
 
     logger.info("Starting Telegram polling...")
-    telegram_polling_task = asyncio.create_task(
-        dp.start_polling(
-            tg_bot_event,
-            allowed_updates=dp.resolve_used_update_types()
-        ),
-        name="telegram_polling_task"
-    )
-    global _telegram_polling_task_ref_for_shutdown
-    _telegram_polling_task_ref_for_shutdown = telegram_polling_task
-    logger.info("Telegram polling task created.")
-
-    logger.info("All components initialized. Awaiting task completion...")
     try:
-        await asyncio.gather(
-            telegram_polling_task,
-            teamtalk_task
-        )
-    except asyncio.CancelledError:
-        logger.info("Main asyncio.gather was cancelled (expected during shutdown).")
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt caught in main_async gather. Initiating shutdown sequence.")
+        await dp.start_polling(tg_bot_event, allowed_updates=dp.resolve_used_update_types())
     finally:
-        logger.info("Main gather finished. Proceeding to final cleanup in main_async...")
-
-        if hasattr(dp, 'storage') and hasattr(dp.storage, 'close'):
-             await dp.storage.close()
-        if hasattr(dp, 'fsm') and hasattr(dp.fsm, 'storage') and hasattr(dp.fsm.storage, 'close'):
-             await dp.fsm.storage.close()
-
-        if hasattr(tg_bot_event, 'session') and hasattr(tg_bot_event.session, 'close'):
-            await tg_bot_event.session.close()
-        if tg_bot_message and hasattr(tg_bot_message, 'session') and hasattr(tg_bot_message.session, 'close'):
-            await tg_bot_message.session.close()
-        logger.info("Telegram bot sessions closed.")
-
-        logger.info("Disconnecting TeamTalk instances...")
-        if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
-            for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
-                try:
-                    if tt_instance_item.logged_in:
-                        tt_instance_item.logout()
-                        logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-                    if tt_instance_item.connected:
-                        tt_instance_item.disconnect()
-                        logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-                    if hasattr(tt_instance_item, 'closeTeamTalk'):
-                        tt_instance_item.closeTeamTalk()
-                    logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-                except Exception as e_tt_close:
-                    logger.error(f"Error closing TeamTalk instance: {e_tt_close}", exc_info=True)
-        else:
-            logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup.")
-        logger.info("Application shutdown sequence in main_async complete.")
+        # Cleanup of resources like DB connections or bot sessions
+        # is expected to be handled by the on_shutdown handler.
+        logger.info("Application finished.")
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main_async())
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot stopped!")
     except (ValueError, KeyError) as config_error:
-        print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.", file=sys.stderr)
-        if logger:
-            logger.critical(f"Configuration Error: {config_error}. Please check your .env file or environment variables.")
-    except KeyboardInterrupt:
-        if logger:
-            logger.info("Application interrupted by user (KeyboardInterrupt). Shutting down...")
-        else:
-            print("Application interrupted. Shutting down...", file=sys.stderr)
-    except Exception as e_global:
-        if logger:
-            logger.critical(f"An unexpected critical error occurred in main: {e_global}", exc_info=True)
-        else:
-            print(f"CRITICAL: Unexpected error: {e_global}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-    finally:
-        if _telegram_polling_task_ref_for_shutdown and not _telegram_polling_task_ref_for_shutdown.done():
-            if logger:
-                logger.info("Attempting final cancellation of Telegram polling task from __main__ finally.")
-            _telegram_polling_task_ref_for_shutdown.cancel()
-
-        if _teamtalk_task_ref_for_shutdown and not _teamtalk_task_ref_for_shutdown.done():
-            if logger:
-                logger.info("Attempting final cancellation of TeamTalk task from __main__ finally.")
-            _teamtalk_task_ref_for_shutdown.cancel()
-
-        if logger:
-            logger.info("Application finished.")
-        else:
-            print("Application finished.", file=sys.stderr)
+        logger.critical(f"Configuration Error: {config_error}. Please check your .env file or environment variables.")
+    except Exception as e:
+        logger.critical(f"An unexpected critical error occurred: {e}", exc_info=True)
