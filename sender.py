@@ -124,7 +124,7 @@ async def shutdown_teamtalk_bot(task_to_shutdown):
     # Part 2: Disconnect TeamTalk instances
     logger.info("Disconnecting TeamTalk instances during shutdown...")
     if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
-    ttstr = sdk.ttstr # Ensure ttstr is available
+        ttstr = sdk.ttstr # Ensure ttstr is available
         for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
             try:
                 if tt_instance_item.logged_in:
