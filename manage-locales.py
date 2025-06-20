@@ -26,11 +26,11 @@ BABEL_CONFIG = "babel.cfg"
 # --- Paths: using pathlib for reliability ---
 try:
     BASE_DIR = Path(__file__).resolve().parent
-    LOCALE_DIR = BASE_DIR / "bot" / "locales"
+    LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 except NameError:
     BASE_DIR = Path.cwd()
-    LOCALE_DIR = BASE_DIR / "bot" / "locales"
+    LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 
 def run_command(command: List[str]) -> None:

@@ -1,7 +1,7 @@
 import gettext
 from pathlib import Path
 
-LOCALE_DIR = Path(__file__).parent.joinpath("locales")
+LOCALE_DIR = Path(__file__).parent.parent.joinpath("locales")
 DOMAIN = "messages"
 
 def get_translator(lang_code: str = "en") -> gettext.GNUTranslations:
