@@ -1,11 +1,14 @@
 import logging
 import asyncio
 from typing import Callable
-from aiogram.utils.formatting import Text, Bold # Added
+from aiogram.utils.formatting import Text, Bold
 
 import pytalk
+from pytalk import TeamTalkServerInfo # Added for new _tt_reconnect
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
+from pytalk.backoff import Backoff # Added for new _tt_reconnect
+from bot.teamtalk_bot import bot_instance as tt_bot_module # Added for new _tt_reconnect
 from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
@@ -31,6 +34,20 @@ from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
+
+RECONNECT_IN_PROGRESS = False # Added global flag
+
+# New function as per subtask
+def initiate_reconnect_task(failed_instance: TeamTalkInstance | None): # Allow None if called preemptively
+    global RECONNECT_IN_PROGRESS
+    if RECONNECT_IN_PROGRESS:
+        logger.info("Процесс переподключения уже запущен. Новая задача не создается.")
+        return
+
+    RECONNECT_IN_PROGRESS = True
+    # Ensure this task is created correctly.
+    # The failed_instance might be None if called from a place where the instance is already gone.
+    asyncio.create_task(_tt_reconnect(failed_instance))
 
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
@@ -159,111 +176,187 @@ async def forward_tt_message_to_telegram_admin(
         message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram")))
 
 
-async def _tt_reconnect():
-    """Handles the TeamTalk reconnection logic."""
-    # Use global tt_bot, current_tt_instance, login_complete_time from teamtalk_bot.bot_instance
-    from bot.teamtalk_bot import bot_instance as tt_bot_module
-    # from bot.teamtalk_bot.events import on_ready as tt_on_ready # Moved to avoid potential partial import issues
+async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
+    global RECONNECT_IN_PROGRESS
 
-    if tt_bot_module.current_tt_instance: # Check if already connected or reconnecting
-        logger.info("Reconnect already in progress or instance exists, skipping new task.")
-        return
+    # 1. Correctly terminate the old instance
+    if failed_instance:
+        try:
+            server_host_info = "unknown server"
+            if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
+                server_host_info = failed_instance.server_info.host
+            logger.info(f"Закрытие старого инстанса для сервера {server_host_info}...")
 
-    logger.info("Starting TeamTalk reconnection process...")
-    from bot.teamtalk_bot.events import on_ready as tt_on_ready # Moved here
+            if failed_instance.logged_in:
+                logger.debug(f"Attempting logout for instance {failed_instance.server_info.host}")
+                failed_instance.logout()
+            if failed_instance.connected:
+                logger.debug(f"Attempting disconnect for instance {failed_instance.server_info.host}")
+                failed_instance.disconnect()
+
+            logger.debug(f"Attempting closeTeamTalk for instance {failed_instance.server_info.host}")
+            failed_instance.closeTeamTalk() # This should release SDK resources
+
+            # Critical: Remove from pytalk's list of instances if present
+            if hasattr(tt_bot_module.tt_bot, 'teamtalks') and failed_instance in tt_bot_module.tt_bot.teamtalks:
+                tt_bot_module.tt_bot.teamtalks.remove(failed_instance)
+                logger.info(f"Старый инстанс {server_host_info} удален из списка tt_bot.teamtalks.")
+            else:
+                logger.info(f"Старый инстанс {server_host_info} не найден в tt_bot.teamtalks или список отсутствует.")
+
+            logger.info(f"Старый инстанс {server_host_info} успешно закрыт и удален (попытка).")
+
+        except Exception as e:
+            server_host_info_err = "unknown server"
+            if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
+                server_host_info_err = failed_instance.server_info.host
+            logger.error(f"Ошибка при закрытии старого инстанса {server_host_info_err}: {e}", exc_info=True)
+
+    # Reset global state tracking current instance
     tt_bot_module.current_tt_instance = None
     tt_bot_module.login_complete_time = None
-    await asyncio.sleep(RECONNECT_DELAY_SECONDS)
+    # Also reset the periodic sync task flag if it exists on the instance, though failed_instance is now "gone"
+    if failed_instance and hasattr(failed_instance, '_periodic_sync_task_running'):
+        failed_instance._periodic_sync_task_running = False
+
+
+    # Determine server_info for reconnection
+    server_info_to_reconnect = None
+    if failed_instance and hasattr(failed_instance, 'server_info') and failed_instance.server_info:
+        server_info_to_reconnect = failed_instance.server_info
+        logger.info(f"Using server_info from failed_instance: {server_info_to_reconnect.host}")
+    elif app_config.HOSTNAME and app_config.PORT and app_config.USERNAME and app_config.PASSWORD:
+        server_info_to_reconnect = TeamTalkServerInfo(
+            host=app_config.HOSTNAME,
+            tcp_port=app_config.PORT,
+            udp_port=app_config.PORT, # Assuming UDP same as TCP
+            username=app_config.USERNAME,
+            password=app_config.PASSWORD,
+            encrypted=app_config.ENCRYPTED,
+            nickname=app_config.NICKNAME
+        )
+        logger.info(f"Constructed server_info from app_config for reconnection: {server_info_to_reconnect.host}")
+    else:
+        logger.error("Невозможно определить информацию о сервере для переподключения. Переподключение остановлено.")
+        RECONNECT_IN_PROGRESS = False
+        return
+
+    backoff = Backoff(base=5, max_value=60) # Start with 5s, max 60s
 
     while True:
+        delay = backoff.delay()
+        logger.info(f"Следующая попытка переподключения к {server_info_to_reconnect.host} через {delay:.2f} секунд...")
+        await asyncio.sleep(delay)
+
         try:
-            logger.info("Attempting to re-add server via on_ready logic...")
-            # on_ready is expected to set current_tt_instance and login_complete_time on success
-            await tt_on_ready()
+            logger.info(f"Попытка создания нового инстанса TeamTalk для {server_info_to_reconnect.host}...")
+            await tt_bot_module.tt_bot.add_server(server_info_to_reconnect)
+
             await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
 
             if tt_bot_module.current_tt_instance and \
                tt_bot_module.current_tt_instance.connected and \
-               tt_bot_module.current_tt_instance.logged_in:
-                logger.info("TeamTalk reconnected successfully.")
-                break # Exit reconnect loop
+               tt_bot_module.current_tt_instance.logged_in and \
+               hasattr(tt_bot_module.current_tt_instance.server_info, 'host') and \
+               tt_bot_module.current_tt_instance.server_info.host == server_info_to_reconnect.host:
+                logger.info(f"Переподключение к {server_info_to_reconnect.host} успешно завершено!")
+                RECONNECT_IN_PROGRESS = False
+                return
             else:
-                logger.warning("TeamTalk reconnection attempt failed (instance not ready/connected/logged in). Retrying...")
-                tt_bot_module.current_tt_instance = None # Ensure it's reset for next attempt
-                tt_bot_module.login_complete_time = None
-        except Exception as e:
-            logger.error(f"Error during TeamTalk reconnection attempt: {e}. Retrying...")
-            tt_bot_module.current_tt_instance = None
-            tt_bot_module.login_complete_time = None
-        await asyncio.sleep(RECONNECT_RETRY_SECONDS)
-
-
-async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
-    """Handles the TeamTalk channel rejoin logic."""
-    from bot.teamtalk_bot import bot_instance as tt_bot_module
-
-    if tt_instance is not tt_bot_module.current_tt_instance:
-        logger.warning("Rejoin channel called for an outdated/inactive TT instance. Aborting.")
-        return
-
-    logger.info("Starting TeamTalk channel rejoin process...")
-    await asyncio.sleep(REJOIN_CHANNEL_DELAY_SECONDS)
-    attempts = 0
-
-    while True:
-        if not tt_bot_module.current_tt_instance or \
-           not tt_bot_module.current_tt_instance.connected or \
-           not tt_bot_module.current_tt_instance.logged_in:
-            logger.warning("TT not connected/logged in during rejoin attempt. Aborting rejoin and triggering reconnect.")
-            if not tt_bot_module.current_tt_instance: # If instance is gone, ensure reconnect is scheduled
-                tt_bot_module.login_complete_time = None
-                asyncio.create_task(_tt_reconnect())
-            return
-
-        attempts += 1
-        try:
-            channel_id_or_path = app_config.CHANNEL
-            channel_id = -1
-            channel_name = ""
-
-            if channel_id_or_path.isdigit():
-                channel_id = int(channel_id_or_path)
-                channel_obj = tt_instance.get_channel(channel_id)
-                channel_name = ttstr(channel_obj.name) if channel_obj else f"ID {channel_id}"
-            else: # Assume it's a path
-                channel_obj = tt_instance.get_channel_from_path(channel_id_or_path)
-                if channel_obj:
-                    channel_id = channel_obj.id
-                    channel_name = ttstr(channel_obj.name)
-                else:
-                    logger.error(f"Channel path '{channel_id_or_path}' not found during rejoin (Attempt {attempts}).")
-                    await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
-                    continue # Retry resolving path
-
-            if channel_id == -1:
-                logger.error(f"Could not resolve channel '{channel_id_or_path}' to an ID during rejoin (Attempt {attempts}).")
-                await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
-                continue
-
-            logger.info(f"Attempting to rejoin channel: {channel_name} (ID: {channel_id}) (Attempt {attempts})")
-            tt_instance.join_channel_by_id(channel_id, password=app_config.CHANNEL_PASSWORD)
-            await asyncio.sleep(1) # Give time for action to complete
-
-            current_channel_id = tt_instance.getMyChannelID()
-            if current_channel_id == channel_id:
-                logger.info(f"Successfully rejoined channel {channel_name}.")
-                # Update status text again in case it was lost
-                tt_instance.change_status(UserStatusMode.ONLINE, app_config.STATUS_TEXT)
-                break # Exit rejoin loop
-            else:
-                logger.warning(f"Failed to rejoin channel {channel_name}. Current channel ID: {current_channel_id}. Retrying...")
+                logger.warning(f"Попытка переподключения к {server_info_to_reconnect.host} не удалась, инстанс не готов или не тот.")
+                if tt_bot_module.tt_bot.teamtalks and \
+                   hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
+                   tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host and \
+                   not (tt_bot_module.tt_bot.teamtalks[-1].connected and tt_bot_module.tt_bot.teamtalks[-1].logged_in):
+                    logger.warning(f"Removing failed/partially created instance attempt for {server_info_to_reconnect.host} from tt_bot.teamtalks")
+                    try:
+                        last_instance = tt_bot_module.tt_bot.teamtalks.pop()
+                        if last_instance.connected: last_instance.disconnect()
+                        last_instance.closeTeamTalk()
+                    except Exception as e_cleanup:
+                        logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
 
         except Exception as e:
-            logger.error(f"Error during channel rejoin loop (Attempt {attempts}): {e}. Retrying...")
+            logger.error(f"Критическая ошибка во время попытки переподключения к {server_info_to_reconnect.host}: {e}", exc_info=True)
+            if tt_bot_module.tt_bot.teamtalks and \
+               hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
+               tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host:
+                 logger.warning(f"Removing instance for {server_info_to_reconnect.host} from tt_bot.teamtalks due to add_server() exception.")
+                 try:
+                    last_instance = tt_bot_module.tt_bot.teamtalks.pop()
+                    if last_instance.connected: last_instance.disconnect()
+                    last_instance.closeTeamTalk()
+                 except Exception as e_cleanup_exc:
+                     logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")
 
-        if attempts >= REJOIN_CHANNEL_MAX_ATTEMPTS:
-            logger.warning(f"Failed to rejoin channel after {REJOIN_CHANNEL_MAX_ATTEMPTS} attempts. Waiting {REJOIN_CHANNEL_FAIL_WAIT_SECONDS}s before trying again from scratch.")
-            await asyncio.sleep(REJOIN_CHANNEL_FAIL_WAIT_SECONDS)
-            attempts = 0 # Reset attempts for a fresh set
-        else:
-            await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
+# Old _tt_rejoin_channel function removed as its calls were replaced by the new full reconnect logic.
+# async def _tt_rejoin_channel(tt_instance: TeamTalkInstance):
+#     """Handles the TeamTalk channel rejoin logic."""
+#     from bot.teamtalk_bot import bot_instance as tt_bot_module
+#
+#     if tt_instance is not tt_bot_module.current_tt_instance:
+#         logger.warning("Rejoin channel called for an outdated/inactive TT instance. Aborting.")
+#         return
+#
+#     logger.info("Starting TeamTalk channel rejoin process...")
+#     await asyncio.sleep(REJOIN_CHANNEL_DELAY_SECONDS)
+#     attempts = 0
+#
+#     while True:
+#         if not tt_bot_module.current_tt_instance or \
+#            not tt_bot_module.current_tt_instance.connected or \
+#            not tt_bot_module.current_tt_instance.logged_in:
+#             logger.warning("TT not connected/logged in during rejoin attempt. Aborting rejoin and triggering reconnect.")
+#             if not tt_bot_module.current_tt_instance: # If instance is gone, ensure reconnect is scheduled
+#                 tt_bot_module.login_complete_time = None
+#                 # asyncio.create_task(_tt_reconnect()) # This would call the new _tt_reconnect
+#                 # Replaced by initiate_reconnect_task if needed from event handlers
+#             return
+#
+#         attempts += 1
+#         try:
+#             channel_id_or_path = app_config.CHANNEL
+#             channel_id = -1
+#             channel_name = ""
+#
+#             if channel_id_or_path.isdigit():
+#                 channel_id = int(channel_id_or_path)
+#                 channel_obj = tt_instance.get_channel(channel_id)
+#                 channel_name = ttstr(channel_obj.name) if channel_obj else f"ID {channel_id}"
+#             else: # Assume it's a path
+#                 channel_obj = tt_instance.get_channel_from_path(channel_id_or_path)
+#                 if channel_obj:
+#                     channel_id = channel_obj.id
+#                     channel_name = ttstr(channel_obj.name)
+#                 else:
+#                     logger.error(f"Channel path '{channel_id_or_path}' not found during rejoin (Attempt {attempts}).")
+#                     await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
+#                     continue # Retry resolving path
+#
+#             if channel_id == -1:
+#                 logger.error(f"Could not resolve channel '{channel_id_or_path}' to an ID during rejoin (Attempt {attempts}).")
+#                 await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
+#                 continue
+#
+#             logger.info(f"Attempting to rejoin channel: {channel_name} (ID: {channel_id}) (Attempt {attempts})")
+#             tt_instance.join_channel_by_id(channel_id, password=app_config.CHANNEL_PASSWORD)
+#             await asyncio.sleep(1) # Give time for action to complete
+#
+#             current_channel_id = tt_instance.getMyChannelID()
+#             if current_channel_id == channel_id:
+#                 logger.info(f"Successfully rejoined channel {channel_name}.")
+#                 # Update status text again in case it was lost
+#                 tt_instance.change_status(UserStatusMode.ONLINE, app_config.STATUS_TEXT)
+#                 break # Exit rejoin loop
+#             else:
+#                 logger.warning(f"Failed to rejoin channel {channel_name}. Current channel ID: {current_channel_id}. Retrying...")
+#
+#         except Exception as e:
+#             logger.error(f"Error during channel rejoin loop (Attempt {attempts}): {e}. Retrying...")
+#
+#         if attempts >= REJOIN_CHANNEL_MAX_ATTEMPTS:
+#             logger.warning(f"Failed to rejoin channel after {REJOIN_CHANNEL_MAX_ATTEMPTS} attempts. Waiting {REJOIN_CHANNEL_FAIL_WAIT_SECONDS}s before trying again from scratch.")
+#             await asyncio.sleep(REJOIN_CHANNEL_FAIL_WAIT_SECONDS)
+#             attempts = 0 # Reset attempts for a fresh set
+#         else:
+#             await asyncio.sleep(REJOIN_CHANNEL_RETRY_SECONDS)
