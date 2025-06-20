@@ -106,7 +106,6 @@ def extract_messages() -> None:
         f"--project={PROJECT_NAME}",
         f"--version={project_version}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
-        "--msgid-bugs-to=kirillkolovi@gmail.com",
         "."
     ]
     run_command(command)
