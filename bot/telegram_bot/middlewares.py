@@ -105,17 +105,8 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         subscriber = await session.get(SubscribedUser, telegram_id)
 
         if not subscriber:
-            logger.info(f"SubscriptionCheckMiddleware: User {telegram_id} is not subscribed. Blocking further processing.")
-            message_text = _("You are not subscribed. Please go to the TeamTalk server, send the /sub command to the bot in a private message, and click the link you receive to subscribe.")
-            try:
-                if isinstance(event, Message):
-                    await event.reply(message_text)
-                elif isinstance(event, CallbackQuery):
-                    await event.message.answer(message_text) # Send as new message in chat
-                    await event.answer() # Close the callback query notification
-            except Exception as e:
-                logger.error(f"SubscriptionCheckMiddleware: Error sending 'please subscribe' message to {telegram_id}: {e}")
-            return # Stop processing this event further
+            logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id}.")
+            return  # Просто прекращаем обработку, ничего не отвечая
 
         logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
         return await handler(event, data)
