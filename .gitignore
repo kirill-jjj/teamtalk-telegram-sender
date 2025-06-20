@@ -39,5 +39,5 @@ venv.bak/
 *.sw?
 
 # Файлы системы локализации (gettext)
-bot/locales/*.pot
-bot/locales/**/*.mo
+locales/*.pot
+locales/**/*.mo
