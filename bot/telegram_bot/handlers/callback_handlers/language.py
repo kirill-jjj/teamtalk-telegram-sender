@@ -20,9 +20,7 @@ async def cq_show_language_menu(
     _: callable,
     callback_data: SettingsCallback
 ):
-    if not callback_query.message:
-        await callback_query.answer(_("Error: No message associated with callback."))
-        return
+    # Removed: if not callback_query.message: check
     await callback_query.answer()
 
     language_menu_builder = create_language_selection_keyboard(_)
@@ -46,9 +44,7 @@ async def cq_set_language(
     _: callable,
     callback_data: LanguageCallback
 ):
-    if not callback_query.message or not callback_query.from_user or not callback_data.lang_code:
-        await callback_query.answer(_("Error: Missing data for language update."), show_alert=True)
-        return
+    # Removed: if not callback_query.message or not callback_query.from_user or not callback_data.lang_code: check
 
     new_lang_code = callback_data.lang_code
     original_lang_code = user_specific_settings.language

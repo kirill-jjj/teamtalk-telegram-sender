@@ -22,9 +22,7 @@ async def cq_show_subscriptions_menu(
     user_specific_settings: UserSpecificSettings,
     callback_data: SettingsCallback
 ):
-    if not callback_query.message:
-        await callback_query.answer(_("Error: No message associated with callback."))
-        return
+    # Removed: if not callback_query.message: check
     await callback_query.answer()
 
     current_notification_setting = user_specific_settings.notification_settings
@@ -49,9 +47,7 @@ async def cq_set_subscription_setting(
     user_specific_settings: UserSpecificSettings,
     callback_data: SubscriptionCallback
 ):
-    if not callback_query.message or not callback_query.from_user or not callback_data.setting_value:
-        await callback_query.answer(_("Error: Missing data for subscription update."), show_alert=True)
-        return
+    # Removed: if not callback_query.message or not callback_query.from_user or not callback_data.setting_value: check
 
     value_to_enum_map = {
         "all": NotificationSetting.ALL,
