@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from aiogram import Router, Bot
+from aiogram import Router, Bot, F # Added F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
@@ -9,14 +9,15 @@ from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.core.enums import SubscriberListAction
-from bot.telegram_bot.filters import IsAdminFilter
+# from bot.telegram_bot.filters import IsAdminFilter # Removed
+from bot.state import ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
 
 SUBSCRIBERS_PER_PAGE = 10
 
 subscriber_list_router = Router(name="subscriber_list_actions_router")
-subscriber_list_router.callback_query.filter(IsAdminFilter())
+# subscriber_list_router.callback_query.filter(IsAdminFilter()) # Removed
 
 async def _get_paginated_subscribers_info(
     session: AsyncSession,
@@ -82,7 +83,7 @@ async def _get_paginated_subscribers_info(
     return page_subscribers_info, current_page_num, total_pages
 
 
-@subscriber_list_router.callback_query(SubscriberListCallback.filter())
+@subscriber_list_router.callback_query(SubscriberListCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
 async def handle_subscriber_list_actions(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
