@@ -39,20 +39,16 @@ class UserSettingsMiddleware(BaseMiddleware):
         event: Message | CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
-        user_obj = data.get("event_from_user")
-        session_obj: AsyncSession | None = data.get("session")
+        user_obj: User = data["event_from_user"]
+        session_obj: AsyncSession = data["session"]
 
-        if user_obj and session_obj:
-            user_specific_settings = await get_or_create_user_settings(user_obj.id, session_obj)
-        else:
-            user_specific_settings = UserSpecificSettings()
-            logger.warning(f"UserSettingsMiddleware: No user or session. Using default settings.")
+        user_specific_settings = await get_or_create_user_settings(user_obj.id, session_obj)
+
+        data["user_specific_settings"] = user_specific_settings
 
         translator = get_translator(user_specific_settings.language)
         data["_"] = translator.gettext
         data["translator"] = translator
-
-        data["user_specific_settings"] = user_specific_settings
 
         return await handler(event, data)
 

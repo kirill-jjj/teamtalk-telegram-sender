@@ -111,11 +111,6 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
             logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
             USER_SETTINGS_CACHE[telegram_id] = default_settings
 
-            if default_settings.notification_settings != NotificationSetting.NONE:
-                if await add_subscriber(session, telegram_id):
-                    logger.info(f"User {telegram_id} automatically subscribed due to default notification settings.")
-                else:
-                    logger.warning(f"Failed to automatically subscribe user {telegram_id} on settings creation.")
             return default_settings
         except Exception as e:
             await session.rollback()
