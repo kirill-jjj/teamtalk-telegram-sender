@@ -4,6 +4,32 @@ import sys
 from bot.logging_setup import setup_logging
 logger = setup_logging()
 
+from aiogram import Dispatcher
+from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
+
+from bot.config import app_config
+from bot.teamtalk_bot import bot_instance as tt_bot_module
+from bot.teamtalk_bot import events as tt_events
+from bot.database.engine import init_db, SessionFactory
+from bot.core.user_settings import load_user_settings_to_cache
+from bot.database import crud
+from bot.database.crud import get_all_subscribers_ids
+from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
+from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
+from bot.telegram_bot.commands import set_telegram_commands
+from bot.telegram_bot.middlewares import (
+    DbSessionMiddleware,
+    UserSettingsMiddleware,
+    TeamTalkInstanceMiddleware,
+    SubscriptionCheckMiddleware
+)
+from bot.telegram_bot.handlers import (
+    user_commands_router,
+    admin_router,
+    callback_router,
+    catch_all_router
+)
+
 try:
     import uvloop
     uvloop.install()
@@ -41,32 +67,6 @@ async def on_aiogram_shutdown(*args, **kwargs):
 
 async def main_async():
     logger.info("Application starting...")
-
-    from aiogram import Dispatcher
-    from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
-
-    from bot.config import app_config
-    from bot.teamtalk_bot import bot_instance as tt_bot_module
-    from bot.teamtalk_bot import events as tt_events
-    from bot.database.engine import init_db, SessionFactory
-    from bot.core.user_settings import load_user_settings_to_cache
-    from bot.database import crud
-    from bot.database.crud import get_all_subscribers_ids
-    from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
-    from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
-    from bot.telegram_bot.commands import set_telegram_commands
-    from bot.telegram_bot.middlewares import (
-        DbSessionMiddleware,
-        UserSettingsMiddleware,
-        TeamTalkInstanceMiddleware,
-        SubscriptionCheckMiddleware
-    )
-    from bot.telegram_bot.handlers import (
-        user_commands_router,
-        admin_router,
-        callback_router,
-        catch_all_router
-    )
 
     ttstr = sdk.ttstr
 
