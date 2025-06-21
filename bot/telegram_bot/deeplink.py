@@ -104,16 +104,14 @@ async def _handle_subscribe_deeplink(
 ) -> str:
     # Ensure user is subscribed
     user_already_subscribed_to_bot = await session.get(SubscribedUser, telegram_id) is not None
-    user_had_settings_before = await session.get(UserSettings, telegram_id) is not None
+    # user_had_settings_before = await session.get(UserSettings, telegram_id) is not None # Removed as it's no longer used
 
     if not user_already_subscribed_to_bot:
         await add_subscriber(session, telegram_id)
-        log_msg = f"User {telegram_id} added to subscribers list"
-        if user_had_settings_before:
-            log_msg += " (had existing settings)."
-        else:
-            log_msg += "."
-        logger.info(log_msg)
+        # Simplified log: Avoids confusion about "existing settings" when defaults might have just been created.
+        # The core information is that the user was added to the subscriber list.
+        # The subsequent log about linking and updating settings confirms settings are being handled.
+        logger.info(f"User {telegram_id} added to subscribers list.")
 
     # Use existing settings if available, otherwise, get/create new ones.
     # The user_settings passed in is from middleware, it's already get_or_created.
