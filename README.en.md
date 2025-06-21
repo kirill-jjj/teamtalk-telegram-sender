@@ -91,13 +91,70 @@ source $HOME/.local/bin/env
     cp .env.example .env
     # Now edit .env with your values
     ```
-6.  **Run the bot**:
+6.  **Apply database migrations**:
+    Before the first run or after updating database models, apply migrations:
+    ```bash
+    uv run alembic upgrade head
+    ```
+7.  **Run the bot**:
     ```bash
     uv run sender.py
     ```
     You can also specify a particular configuration file (instead of the default `.env`) by passing it as an argument:
     ```bash
     uv run sender.py custom.env
+    ```
+
+## Database Migrations
+
+This project uses Alembic to manage database schema changes.
+
+### When to Use Migrations
+
+*   **Initial Setup**: Before running the bot for the first time, the initial migration must be applied to create the database tables.
+*   **After Model Updates**: If you change the SQLAlchemy models in `bot/models.py` (e.g., add a new table or column), you will need to create and apply a new migration.
+
+### Basic Alembic Commands
+
+All Alembic commands should be run within the activated virtual environment (`source .venv/bin/activate` or `uv run <command>`).
+
+*   **Create a New Revision (Migration)**:
+    After modifying models in `bot/models.py`, Alembic can attempt to automatically generate a migration script.
+    ```bash
+    uv run alembic revision -m "short_description_of_changes" --autogenerate
+    ```
+    This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect, especially for complex changes.
+
+*   **Apply Migrations**:
+    To apply all pending migrations to the database (i.e., update the schema to the latest version):
+    ```bash
+    uv run alembic upgrade head
+    ```
+
+*   **Rollback Migrations**:
+    To revert the last applied migration:
+    ```bash
+    uv run alembic downgrade -1
+    ```
+    To downgrade to a specific revision (replace `<revision_id>` with the hash of the desired revision):
+    ```bash
+    uv run alembic downgrade <revision_id>
+    ```
+    To revert all migrations (returning to an empty database schema):
+    ```bash
+    uv run alembic downgrade base
+    ```
+
+*   **View Current Revision**:
+    Shows the current revision of the database.
+    ```bash
+    uv run alembic current
+    ```
+
+*   **View Migration History**:
+    Shows a list of all migrations and their status.
+    ```bash
+    uv run alembic history
     ```
 
 ## Usage
