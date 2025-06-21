@@ -75,23 +75,9 @@ async def _execute_deeplink_action(
         logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
         return _("An error occurred.")
 
-
-async def _handle_subscribe_deeplink(
-    session: AsyncSession,
-    telegram_id: int,
-    _: callable,
-    payload: Any,
-    user_settings: UserSettings
-) -> str:
-    if await add_subscriber(session, telegram_id):
-        logger.info(f"User {telegram_id} subscribed via deeplink.")
-        # Ensure settings are loaded/created and cached, get_or_create handles this.
-        # The passed user_settings might be a new default one if this is the first interaction.
-        # If it was already cached, it's passed here.
-        # No specific update to user_settings needed here unless payload dictates it.
-        await get_or_create_user_settings(telegram_id, session) # Ensures it's in cache if newly created by add_subscriber
-        return _("You have successfully subscribed to notifications.")
-    return _("You are already subscribed to notifications.")
+# The old _handle_subscribe_deeplink function that was here has been removed.
+# Its functionality is now incorporated into the new _handle_subscribe_deeplink below
+# (which was formerly _handle_subscribe_and_link_noon_deeplink).
 
 async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
@@ -107,34 +93,44 @@ async def _handle_unsubscribe_deeplink(
         return _("You were not subscribed to notifications.")
 
 
-async def _handle_subscribe_and_link_noon_deeplink(
+# Renamed from _handle_subscribe_and_link_noon_deeplink
+# This is now the standard handler for DeeplinkAction.SUBSCRIBE
+async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    payload: str | None,
+    payload: str | None, # Expecting TeamTalk username as payload
     user_settings: UserSettings
 ) -> str:
-    if not await session.get(UserSettings, telegram_id):
+    # Ensure user is subscribed
+    user_already_subscribed_to_bot = await session.get(SubscribedUser, telegram_id) is not None
+    user_had_settings_before = await session.get(UserSettings, telegram_id) is not None
+
+    if not user_already_subscribed_to_bot:
         await add_subscriber(session, telegram_id)
-        logger.info(f"User {telegram_id} added to subscribers list via NOON deeplink.")
-        current_settings = await get_or_create_user_settings(telegram_id, session)
-    else:
-        if not await session.get(SubscribedUser, telegram_id): # Use direct import
-             await add_subscriber(session, telegram_id)
-             logger.info(f"User {telegram_id} (with existing settings) added to subscribers list via NOON deeplink.")
-        current_settings = user_settings
+        log_msg = f"User {telegram_id} added to subscribers list"
+        if user_had_settings_before:
+            log_msg += " (had existing settings)."
+        else:
+            log_msg += "."
+        logger.info(log_msg)
+
+    # Use existing settings if available, otherwise, get/create new ones.
+    # The user_settings passed in is from middleware, it's already get_or_created.
+    current_settings = user_settings
 
     tt_username_from_payload = payload
     if not tt_username_from_payload:
-        logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE_AND_LINK_NOON}' missing payload for user {telegram_id}.")
-        return _("Error: Missing TeamTalk username in confirmation link.")
+        # Since this is the standard subscription, payload is now expected.
+        logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE}' missing TeamTalk username in payload for user {telegram_id}.")
+        return _("Error: Missing required information for subscription. Please try the link again or contact support.")
 
     current_settings.teamtalk_username = tt_username_from_payload
-    current_settings.not_on_online_confirmed = True
+    current_settings.not_on_online_confirmed = True # This was part of "NOON" logic, now standard
     await update_user_settings_in_db(session, current_settings)
-    logger.info(f"User {telegram_id} linked NOON to TT user {tt_username_from_payload} and settings updated.")
+    logger.info(f"User {telegram_id} linked to TT user '{tt_username_from_payload}' and settings updated during subscription.")
 
-    return _("You have successfully subscribed to notifications.")
+    return _("You have successfully subscribed and linked your account.")
 
 
 DeeplinkHandlerType = Callable[
@@ -148,9 +144,9 @@ UnsubscribeDeeplinkHandlerType = Callable[
 ]
 
 DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, Any] = {
-    DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink,
+    DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink, # Now points to the new rich subscribe handler
     DeeplinkAction.UNSUBSCRIBE: _handle_unsubscribe_deeplink,
-    DeeplinkAction.SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
+    # SUBSCRIBE_AND_LINK_NOON is removed as the enum and its specific handler are gone.
 }
 
 

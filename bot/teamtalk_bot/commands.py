@@ -233,10 +233,10 @@ async def handle_tt_subscribe_command(
         tt_message=tt_message,
         session=session,
         _=_,
-        action=DeeplinkAction.SUBSCRIBE_AND_LINK_NOON, # Action type itself might remain if NOON feature is still used post-subscription
+        action=DeeplinkAction.SUBSCRIBE, # Changed from SUBSCRIBE_AND_LINK_NOON
         payload=sender_tt_username,
-        success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}", # Log message updated
-        reply_text_source=_("Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"), # User-facing text updated
+        success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
+        reply_text_source=_("Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"),
         error_reply_source=_("An error occurred while processing the subscription request."),
     )
 
