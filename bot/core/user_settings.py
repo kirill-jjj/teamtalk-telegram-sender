@@ -23,7 +23,6 @@ async def load_user_settings_to_cache(session_factory) -> None:
     logger.info("Loading user settings into cache...")
     async with session_factory() as session:
         statement = select(UserSettings)
-        # ИЗМЕНЕНИЕ: Возвращаем session.execute
         results = await session.execute(statement)
         user_settings_list = results.scalars().all()
         for settings_row in user_settings_list:

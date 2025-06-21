@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.models import UserSettings # UPDATED import
+from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
 from bot.core.enums import SettingsNavAction, NotificationAction
@@ -17,11 +17,11 @@ notifications_router = Router(name="callback_handlers.notifications")
 async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     callback_data: SettingsCallback
 ):
     await callback_query.answer()
-    notification_settings_builder = create_notification_settings_keyboard(_, user_settings) # UPDATED
+    notification_settings_builder = create_notification_settings_keyboard(_, user_settings)
     try:
         await callback_query.message.edit_text(
             text=_("Notification Settings"),
@@ -38,16 +38,16 @@ async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     callback_data: NotificationActionCallback
 ):
-    original_noon_status = user_settings.not_on_online_enabled # UPDATED
+    original_noon_status = user_settings.not_on_online_enabled
 
     def update_logic():
-        user_settings.not_on_online_enabled = not original_noon_status # UPDATED
+        user_settings.not_on_online_enabled = not original_noon_status
 
     def revert_logic():
-        user_settings.not_on_online_enabled = original_noon_status # UPDATED
+        user_settings.not_on_online_enabled = original_noon_status
 
     # Status text is for *after* the toggle
     new_status_display_text = _("Enabled") if not original_noon_status else _("Disabled")
@@ -55,14 +55,14 @@ async def cq_toggle_noon_setting_action(
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
         # user_settings will have the updated value due to update_logic already being called
-        updated_builder = create_notification_settings_keyboard(_, user_settings) # CORRECTED
+        updated_builder = create_notification_settings_keyboard(_, user_settings)
         menu_text = _("Notification Settings")
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_settings, # UPDATED
+        user_settings=user_settings,
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,

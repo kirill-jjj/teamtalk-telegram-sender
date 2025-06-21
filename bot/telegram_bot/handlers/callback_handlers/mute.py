@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytalk
 from pytalk.instance import TeamTalkInstance
 
-from bot.models import UserSettings # Import UserSettings SQLModel
-from bot.core.user_settings import ( # Import helpers from refactored user_settings
+from bot.models import UserSettings
+from bot.core.user_settings import (
     update_user_settings_in_db,
     get_muted_users_set,
     set_muted_users_from_set
@@ -92,11 +92,11 @@ async def _display_paginated_list_ui(
 async def _display_internal_user_list(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
 ):
-    users_to_process = get_muted_users_set(user_settings) # UPDATED
+    users_to_process = get_muted_users_set(user_settings)
     sorted_items = sorted(list(users_to_process))
 
     header_text, empty_list_text = "", ""
@@ -120,14 +120,14 @@ async def _display_internal_user_list(
         header_text_key=header_text,
         empty_list_text_key=empty_list_text,
         keyboard_factory=create_paginated_user_list_keyboard,
-        keyboard_factory_kwargs={"list_type": list_type, "user_settings": user_settings}, # UPDATED
+        keyboard_factory_kwargs={"list_type": list_type, "user_settings": user_settings},
     )
 
 
 async def _display_all_server_accounts_list(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     tt_instance: TeamTalkInstance, # Optionality handled by caller
     page: int = 0,
 ):
@@ -150,12 +150,12 @@ async def _display_all_server_accounts_list(
         header_text_key=_("All Server Accounts"),
         empty_list_text_key=_("No user accounts found on the server."),
         keyboard_factory=create_account_list_keyboard,
-        keyboard_factory_kwargs={"user_settings": user_settings}, # UPDATED
+        keyboard_factory_kwargs={"user_settings": user_settings},
     )
 
 
 def _get_username_to_toggle_from_callback(
-    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings # UPDATED
+    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings
 ) -> Optional[str]:
     """Extracts the username to be toggled from the callback data based on the list type."""
     user_idx = callback_data.user_idx
@@ -173,7 +173,7 @@ def _get_username_to_toggle_from_callback(
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         # This list always comes from muted_users_set, regardless of mute_all_flag
         # The interpretation of what this list means (muted or allowed) happens at a higher level
-        relevant_usernames = sorted(list(get_muted_users_set(user_settings))) # UPDATED
+        relevant_usernames = sorted(list(get_muted_users_set(user_settings)))
         page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]
@@ -183,7 +183,7 @@ def _get_username_to_toggle_from_callback(
 
 
 def _parse_mute_toggle_callback_data(
-    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings # UPDATED
+    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings
 ) -> Optional[str]:
     """
     Parses the callback data to get the username to toggle.
@@ -193,17 +193,17 @@ def _parse_mute_toggle_callback_data(
 
 
 def _determine_mute_action_and_update_settings(
-    username_to_toggle: str, user_settings: UserSettings # UPDATED
+    username_to_toggle: str, user_settings: UserSettings
 ) -> tuple[str, bool, set[str]]:
     """
     Determines the mute action, updates settings in-memory, and returns original settings.
     """
-    current_muted_set = get_muted_users_set(user_settings) # UPDATED
+    current_muted_set = get_muted_users_set(user_settings)
     original_muted_users_set = set(current_muted_set) # Make a copy
     action_taken: str
     current_status_is_muted: bool  # Is the user considered muted *before* this toggle action
 
-    if user_settings.mute_all: # UPDATED (was user_specific_settings.mute_all_flag)
+    if user_settings.mute_all:
         # Mute all ON: current_muted_set = allowed users
         if username_to_toggle in current_muted_set:
             current_muted_set.discard(username_to_toggle)
@@ -224,7 +224,7 @@ def _determine_mute_action_and_update_settings(
             action_taken = "added_to_muted_list"
             current_status_is_muted = False # Was unmuted, now muted
 
-    set_muted_users_from_set(user_settings, current_muted_set) # UPDATED: Persist change to string field
+    set_muted_users_from_set(user_settings, current_muted_set)
     return action_taken, current_status_is_muted, original_muted_users_set
 
 
@@ -249,7 +249,7 @@ def _generate_mute_toggle_toast_message(
 async def _save_mute_settings_and_notify(
     session: AsyncSession,
     callback_query: CallbackQuery,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     toast_message: str,
     username_to_toggle: str, # For logging
     action_taken: str, # For logging
@@ -266,12 +266,12 @@ async def _save_mute_settings_and_notify(
         return False
 
     try:
-        await update_user_settings_in_db(session, user_settings) # UPDATED call
+        await update_user_settings_in_db(session, user_settings)
         await callback_query.answer(toast_message, show_alert=False)
         return True
     except Exception as e:
         logger.error(f"DB/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
-        set_muted_users_from_set(user_settings, original_muted_users_set)  # UPDATED Revert in-memory change
+        set_muted_users_from_set(user_settings, original_muted_users_set)
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
 
@@ -279,7 +279,7 @@ async def _save_mute_settings_and_notify(
 async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback # Contains list_type and current_page
 ) -> None:
@@ -289,7 +289,7 @@ async def _refresh_mute_related_ui(
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_instance and tt_instance.connected and tt_instance.logged_in:
-            await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, current_page_for_refresh) # UPDATED
+            await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, current_page_for_refresh)
         else:
             # This toast might be overridden by the one in _save_mute_settings_and_notify if that one fails
             # However, if saving succeeds but TT is disconnected for UI refresh, this is important.
@@ -298,22 +298,22 @@ async def _refresh_mute_related_ui(
             manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
             # We don't need to pass specific callback_data for MANAGE_MUTED action itself,
             # as cq_show_manage_muted_menu doesn't use specific fields from it for its core logic.
-            await cq_show_manage_muted_menu(callback_query, _, user_settings, manage_muted_cb_data) # UPDATED
+            await cq_show_manage_muted_menu(callback_query, _, user_settings, manage_muted_cb_data)
     else:  # LIST_MUTED or LIST_ALLOWED
         # _display_internal_user_list correctly derives the effective list to show
         # based on user_settings.mute_all and the list_type_user_was_on.
-        await _display_internal_user_list(callback_query, _, user_settings, list_type_user_was_on, current_page_for_refresh) # UPDATED
+        await _display_internal_user_list(callback_query, _, user_settings, list_type_user_was_on, current_page_for_refresh)
 
 
 @mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
 async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     callback_data: NotificationActionCallback,
 ):
     await callback_query.answer()
-    manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings) # UPDATED
+    manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings)
     try:
         await callback_query.message.edit_text(text=_("Manage Muted/Allowed Users"), reply_markup=manage_muted_builder.as_markup())
     except TelegramBadRequest as e:
@@ -325,28 +325,28 @@ async def cq_show_manage_muted_menu(
 
 @mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))
 async def cq_toggle_mute_all_action(
-    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: MuteAllCallback # UPDATED
+    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: MuteAllCallback
 ):
-    original_flag = user_settings.mute_all # UPDATED
+    original_flag = user_settings.mute_all
 
     def update_logic():
-        user_settings.mute_all = not original_flag # UPDATED
+        user_settings.mute_all = not original_flag
 
     def revert_logic():
-        user_settings.mute_all = original_flag # UPDATED
+        user_settings.mute_all = original_flag
 
     new_status_display_text = _("Enabled") if not original_flag else _("Disabled")
     success_toast_text = _("Mute All mode is now {status}.").format(status=new_status_display_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        updated_builder = create_manage_muted_users_keyboard(_, user_settings) # UPDATED
+        updated_builder = create_manage_muted_users_keyboard(_, user_settings)
         menu_text = _("Manage Muted/Allowed Users")
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_settings, # UPDATED
+        user_settings=user_settings,
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,
@@ -357,11 +357,11 @@ async def cq_toggle_mute_all_action(
 
 @mute_router.callback_query(UserListCallback.filter(F.action.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_list_internal_users_action(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: UserListCallback # UPDATED
+    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: UserListCallback
 ):
     await callback_query.answer()
     requested_list_type = callback_data.action # This is now a UserListAction member
-    is_mute_all_active = user_settings.mute_all # UPDATED
+    is_mute_all_active = user_settings.mute_all
 
     effective_list_type = requested_list_type
     if is_mute_all_active:
@@ -373,23 +373,23 @@ async def cq_list_internal_users_action(
             effective_list_type = UserListAction.LIST_MUTED
         # if requested_list_type == UserListAction.LIST_MUTED, it remains UserListAction.LIST_MUTED
 
-    await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0) # UPDATED
+    await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0)
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_paginate_internal_user_list_action(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback # UPDATED
+    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback
 ):
     await callback_query.answer()
     # callback_data.list_type is already UserListAction from CallbackData definition
-    await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page) # UPDATED
+    await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page)
 
 
 @mute_router.callback_query(UserListCallback.filter(F.action == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_show_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
     callback_data: UserListCallback,
 ):
@@ -402,14 +402,14 @@ async def cq_show_all_accounts_list_action(
         try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
         except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT: {e}")
         return
-    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, 0) # UPDATED
+    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, 0)
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_paginate_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
     callback_data: PaginateUsersCallback,
 ):
@@ -421,7 +421,7 @@ async def cq_paginate_all_accounts_list_action(
         try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
         except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT on paginate: {e}")
         return
-    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, callback_data.page) # UPDATED
+    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, callback_data.page)
 
 
 @mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
@@ -429,32 +429,32 @@ async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
     _: callable,
-    user_settings: UserSettings, # UPDATED
+    user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
-    username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_settings) # UPDATED
+    username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_settings)
 
     if not username_to_toggle:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     action_taken, current_status_is_muted, original_muted_users_set = \
-        _determine_mute_action_and_update_settings(username_to_toggle, user_settings) # UPDATED
+        _determine_mute_action_and_update_settings(username_to_toggle, user_settings)
 
     new_status_is_muted = not current_status_is_muted
 
     toast_message = _generate_mute_toggle_toast_message(
         username_to_toggle,
         new_status_is_muted,
-        user_settings.mute_all, # UPDATED
+        user_settings.mute_all,
         _
     )
 
     save_successful = await _save_mute_settings_and_notify(
         session,
         callback_query,
-        user_settings, # UPDATED
+        user_settings,
         toast_message,
         username_to_toggle,
         action_taken,
@@ -468,7 +468,7 @@ async def cq_toggle_specific_user_mute_action(
     await _refresh_mute_related_ui(
         callback_query,
         _,
-        user_settings, # UPDATED
+        user_settings,
         tt_instance,
         callback_data
     )

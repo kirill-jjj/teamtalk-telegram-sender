@@ -1,6 +1,5 @@
 # bot/database/engine.py
 import logging
-# ИЗМЕНЕНИЕ: create_async_engine импортируется из sqlalchemy.ext.asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
