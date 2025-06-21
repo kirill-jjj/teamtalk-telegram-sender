@@ -8,7 +8,6 @@ from sqlmodel import SQLModel
 from bot.config import app_config
 from bot.constants import DB_MAIN_NAME
 
-# Important: import all models here so that SQLModel.metadata knows about them
 from bot import models  # noqa
 
 logger = logging.getLogger(__name__)
@@ -18,8 +17,6 @@ async_engines = {
     db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
     for db_name, db_file in DATABASE_FILES.items()
 }
-# Sessionmaker remains the same as we are using an async engine.
-# This is the standard and correct practice for async SQLAlchemy.
 SessionFactory = sessionmaker(
     async_engines[DB_MAIN_NAME], expire_on_commit=False, class_=AsyncSession
 )
