@@ -112,7 +112,7 @@ async def populate_user_accounts_cache(tt_instance):
 
             if username_str:
                 USER_ACCOUNTS_CACHE[username_str] = acc
-        logger.debug(f"User accounts cache populated with {len(USER_ACCOUNTS_CACHE)} accounts.")
+        logger.info(f"Successfully populated user accounts cache with {len(USER_ACCOUNTS_CACHE)} accounts.") # Changed from DEBUG to INFO
     except TimeoutError as e_timeout:
         logger.error(f"TimeoutError populating user accounts cache: {e_timeout}.", exc_info=True)
     except PytalkException as e_pytalk:
