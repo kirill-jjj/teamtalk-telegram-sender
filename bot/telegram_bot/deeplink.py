@@ -127,7 +127,7 @@ async def _handle_subscribe_and_link_noon_deeplink(
 
     current_settings.teamtalk_username = tt_username_from_payload
     current_settings.not_on_online_confirmed = True
-    logger.info(f"User {telegram_id} linked NOON to TT user {tt_username_from_payload}.")
+    logger.info(f"TeamTalk user {tt_username_from_payload} associated with user {telegram_id} during subscription process.")
 
     await update_user_settings_in_db(session, telegram_id, current_settings)
 

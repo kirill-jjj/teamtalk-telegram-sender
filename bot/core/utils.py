@@ -69,7 +69,7 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
                            "/subscribers - View and manage subscribed users."))
     elif platform == "teamtalk":
         parts.append(_("Available commands:"))
-        parts.append(_("/sub - Get a link to subscribe to notifications and link your TeamTalk account for NOON.\n"
+        parts.append(_("/sub - Get a link to subscribe to notifications.\n"
                        "/unsub - Get a link to unsubscribe from notifications.\n"
                        "/help - Show help."))
         if is_bot_admin:
