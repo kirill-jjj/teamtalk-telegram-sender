@@ -69,21 +69,25 @@ async def should_notify_user(
     event_type: str, 
     session_factory
 ) -> bool:
-    user_specific_settings = await get_or_create_user_settings(telegram_id, session_factory)
+    from bot.core.user_settings import get_muted_users_set # Moved import inside
 
-    notification_pref = user_specific_settings.notification_settings
-    mute_all_flag = user_specific_settings.mute_all_flag
-    muted_users = user_specific_settings.muted_users_set
+    async with session_factory() as session:
+        user_settings = await get_or_create_user_settings(telegram_id, session)
 
-    from bot.database.models import NotificationSetting as NotificationSettingEnum
-    if notification_pref == NotificationSettingEnum.NONE: return False
-    if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSettingEnum.JOIN_OFF: return False
-    if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSettingEnum.LEAVE_OFF: return False
+        notification_pref = user_settings.notification_settings
+        mute_all_flag = user_settings.mute_all
 
-    if mute_all_flag:
-        return tt_user_username in muted_users
-    else:
-        return tt_user_username not in muted_users
+        muted_users = get_muted_users_set(user_settings)
+
+        from bot.models import NotificationSetting # Moved import inside
+        if notification_pref == NotificationSetting.NONE: return False
+        if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSetting.JOIN_OFF: return False
+        if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSetting.LEAVE_OFF: return False
+
+        if mute_all_flag:
+            return tt_user_username in muted_users
+        else:
+            return tt_user_username not in muted_users
 
 
 def _generate_join_leave_notification_text(
