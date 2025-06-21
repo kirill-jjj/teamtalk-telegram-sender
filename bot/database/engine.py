@@ -23,6 +23,6 @@ SessionFactory = sessionmaker(
 
 
 async def init_db() -> None:
-    async with async_engines[DB_MAIN_NAME].begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    logger.info("Database initialized.")
+    # SQLModel.metadata.create_all is no longer needed as Alembic handles schema creation.
+    # We can leave this function as a placeholder or for future initialization logic if needed.
+    logger.info("Database initialization (handled by Alembic).")

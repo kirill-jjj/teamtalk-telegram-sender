@@ -41,7 +41,8 @@ dependencies = [
     "Babel>=2.15.0",
     "pydantic-settings~=2.9",
     "pydantic~=2.11",
-    "sqlmodel>=0.0.24"
+    "sqlmodel>=0.0.24",
+    "alembic~=1.16"
 ]
 
 [project.urls]
