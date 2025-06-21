@@ -4,7 +4,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# ИЗМЕНЕНИЕ: Импортируем UserSettings
 from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_language_selection_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
@@ -40,7 +39,7 @@ async def cq_show_language_menu(
 async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    user_settings: UserSettings, # Parameter name and type hint updated
+    user_settings: UserSettings,
     _: callable,
     callback_data: LanguageCallback
 ):
@@ -75,7 +74,7 @@ async def cq_set_language(
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_settings, # Pass updated variable
+        user_settings=user_settings,
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,

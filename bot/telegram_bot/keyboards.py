@@ -36,7 +36,6 @@ from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     SubscriberListCallback
 )
-# ИЗМЕНЕНИЕ: Импортируем из нового файла bot.models
 from bot.models import NotificationSetting, UserSettings
 from bot.core.user_settings import get_muted_users_set # For create_paginated_user_list_keyboard and create_account_list_keyboard
 from bot.core.utils import get_tt_user_display_name
@@ -114,7 +113,6 @@ def create_subscription_settings_keyboard(
 
 def create_notification_settings_keyboard(
     _: callable,
-    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
     user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
@@ -141,7 +139,6 @@ def create_notification_settings_keyboard(
 
 def create_manage_muted_users_keyboard(
     _: callable,
-    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
     user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Muted Users' keyboard."""
@@ -210,7 +207,6 @@ def create_paginated_user_list_keyboard(
     current_page: int,
     total_pages: int,
     list_type: UserListAction,
-    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт и имя переменной
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
@@ -252,7 +248,6 @@ def create_account_list_keyboard(
     page_items: list[pytalk.UserAccount],
     current_page: int,
     total_pages: int,
-    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт и имя переменной
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""

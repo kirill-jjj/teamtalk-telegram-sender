@@ -32,8 +32,6 @@ async def process_setting_update(
     update_action() # Apply change in-memory first
 
     try:
-        # ИЗМЕНЕНИЕ: Убираем лишний аргумент telegram_id.
-        # Теперь функция принимает только сессию и объект настроек.
         await update_user_settings_in_db(session, user_settings)
         # Send toast only on successful DB update
         await callback_query.answer(success_toast_text, show_alert=False)

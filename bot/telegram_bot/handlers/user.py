@@ -13,12 +13,10 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.telegram_bot.deeplink import handle_deeplink_payload
-# ИЗМЕНЕНИЕ: Заменяем импорт UserSpecificSettings на UserSettings из новой модели
 from bot.models import UserSettings
-# from bot.telegram_bot.filters import IsAdminFilter # Removed
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
-from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
+from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -37,7 +35,7 @@ async def start_command_handler(
     command: CommandObject,
     session: AsyncSession,
     _: callable,
-    user_settings: UserSettings # Type hint and parameter name updated
+    user_settings: UserSettings
 ):
     if not message.from_user: return
 
