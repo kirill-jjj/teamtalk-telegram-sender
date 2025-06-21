@@ -6,13 +6,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
-from bot.core.user_settings import (
-    UserSpecificSettings,
-    get_or_create_user_settings
-)
+# Updated imports: UserSettings from bot.models, get_or_create_user_settings remains
+from bot.models import UserSettings, SubscribedUser # UserSettings is now SQLModel, SubscribedUser also from bot.models
+from bot.core.user_settings import get_or_create_user_settings # This function will return SQLModel UserSettings
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
-from bot.database.models import SubscribedUser
+# bot.database.models.SubscribedUser import is removed as it's covered by bot.models
 
 
 logger = logging.getLogger(__name__)
@@ -42,11 +41,12 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        user_specific_settings = await get_or_create_user_settings(user_obj.id, session_obj)
+        # user_specific_settings renamed to user_settings, now an SQLModel instance
+        user_settings: UserSettings = await get_or_create_user_settings(user_obj.id, session_obj)
 
-        data["user_specific_settings"] = user_specific_settings
+        data["user_settings"] = user_settings # Key in data dict updated
 
-        translator = get_translator(user_specific_settings.language)
+        translator = get_translator(user_settings.language)
         data["_"] = translator.gettext
         data["translator"] = translator
 
