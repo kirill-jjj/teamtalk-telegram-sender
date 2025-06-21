@@ -34,10 +34,10 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
     if record_to_remove:
         try:
             table_name = record_to_remove.__tablename__
-            # ИСПРАВЛЕНИЕ: __sqlmodel_meta__ - это атрибут класса, а не экземпляра.
-            # Получаем его через type(record_to_remove).
-            pk_field = type(record_to_remove).__sqlmodel_meta__.primary_key[0]
-            pk_col_name = pk_field.name
+            # ИСПРАВЛЕНИЕ: Используем стандартный __mapper__ из SQLAlchemy для доступа к первичному ключу.
+            # Это надежный и документированный способ.
+            pk_col = record_to_remove.__mapper__.primary_key[0]
+            pk_col_name = pk_col.name
             record_pk = getattr(record_to_remove, pk_col_name, 'N/A')
 
             await session.delete(record_to_remove)
