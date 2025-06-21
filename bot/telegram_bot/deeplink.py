@@ -1,3 +1,5 @@
+# bot/telegram_bot/deeplink.py
+
 import logging
 from typing import Any, Callable, Coroutine, Optional
 
@@ -5,8 +7,10 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
+# ИЗМЕНЕНИЕ: Импортируем новую единую модель
+from bot.models import UserSettings, Deeplink as DeeplinkModel # Renamed to avoid conflict with module name
 from bot.core.user_settings import (
-    UserSpecificSettings,
+    # UserSpecificSettings больше не существует, убираем его из импорта
     get_or_create_user_settings,
     update_user_settings_in_db,
 )
@@ -16,19 +20,19 @@ from bot.database.crud import (
     delete_user_data_fully,
 )
 from bot.database.crud import get_deeplink as db_get_deeplink
-from bot.database.models import Deeplink
+# from bot.database.models import Deeplink # This line is problematic as bot/database/models.py was deleted. Deeplink is now from bot.models
 
 logger = logging.getLogger(__name__)
 
 
 async def _validate_deeplink_token(
     session: AsyncSession, token: str, message_from_user_id: int, message: Message, _: callable
-) -> Optional[Deeplink]:
+) -> Optional[DeeplinkModel]: # Adjusted type hint
     """
     Validates the deeplink token and checks if it's intended for the current user.
     Sends a reply and returns None if validation fails.
     """
-    deeplink_obj = await db_get_deeplink(session, token)
+    deeplink_obj = await db_get_deeplink(session, token) # This should return bot.models.Deeplink
     if not deeplink_obj:
         await message.reply(_("Invalid or expired deeplink."))
         return None
@@ -45,15 +49,14 @@ async def _execute_deeplink_action(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    deeplink_obj: Deeplink,
-    user_specific_settings: UserSpecificSettings,
+    deeplink_obj: DeeplinkModel, # Adjusted type hint
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings,
     token: str
 ) -> str:
     """
     Executes the action specified by the deeplink object and returns a reply text.
     """
-    # SQLAlchemy уже преобразовал значение из БД в нужный нам enum.
-    # Просто используем его, убедившись, что это действительно член нашего enum.
     action_enum_member = deeplink_obj.action
 
     if not isinstance(action_enum_member, DeeplinkAction):
@@ -66,13 +69,11 @@ async def _execute_deeplink_action(
         return _("Invalid deeplink action.")
 
     try:
-        # Учитываем, что у разных обработчиков разные сигнатуры.
         if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-            # Обработчик для отписки не требует payload и user_specific_settings
             return await handler_func(session, telegram_id, _)
         else:
-            # Обработчики для подписки и связывания аккаунта требуют больше аргументов
-            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_specific_settings)
+            # Pass user_settings to other handlers
+            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings)
 
     except Exception as e:
         logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
@@ -84,11 +85,16 @@ async def _handle_subscribe_deeplink(
     telegram_id: int,
     _: callable,
     payload: Any,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings
 ) -> str:
     if await add_subscriber(session, telegram_id):
         logger.info(f"User {telegram_id} subscribed via deeplink.")
-        await get_or_create_user_settings(telegram_id, session)
+        # Ensure settings are loaded/created and cached, get_or_create handles this.
+        # The passed user_settings might be a new default one if this is the first interaction.
+        # If it was already cached, it's passed here.
+        # No specific update to user_settings needed here unless payload dictates it.
+        await get_or_create_user_settings(telegram_id, session) # Ensures it's in cache if newly created by add_subscriber
         return _("You have successfully subscribed to notifications.")
     return _("You are already subscribed to notifications.")
 
@@ -96,12 +102,12 @@ async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable
+    # user_settings is not needed for unsubscribe action as per current logic
 ) -> str:
-    if await delete_user_data_fully(session, telegram_id): # delete_user_data_fully now also clears USER_SETTINGS_CACHE
+    if await delete_user_data_fully(session, telegram_id):
         logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink.")
         return _("You have successfully unsubscribed from notifications.")
     else:
-        # This case implies user was not found initially by delete_user_data_fully or deletion failed.
         logger.warning(f"Attempted to unsubscribe user {telegram_id} via deeplink, but user was not found or data deletion otherwise failed.")
         return _("You were not subscribed to notifications.")
 
@@ -111,14 +117,24 @@ async def _handle_subscribe_and_link_noon_deeplink(
     telegram_id: int,
     _: callable,
     payload: str | None,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings # This is the existing or newly created UserSettings instance
 ) -> str:
-    if await add_subscriber(session, telegram_id):
-        logger.info(f"User {telegram_id} successfully subscribed via deeplink.")
+    # User subscription status is handled first
+    if not await session.get(UserSettings, telegram_id): # Check if user settings exist
+        # This case implies the user might not be fully subscribed if settings are missing
+        # However, get_or_create_user_settings in handle_deeplink_payload ensures settings exist.
+        # This specific deeplink action might imply subscription.
+        await add_subscriber(session, telegram_id) # Ensure they are in subscribed_users table
+        logger.info(f"User {telegram_id} added to subscribers list via NOON deeplink.")
+         # Ensure settings are created if they weren't (e.g. direct deeplink use without /start)
+        current_settings = await get_or_create_user_settings(telegram_id, session)
     else:
-        logger.info(f"User {telegram_id} was already in the subscribers list.")
-
-    current_settings = await get_or_create_user_settings(telegram_id, session)
+        # If settings exist, ensure they are subscribed
+        if not await session.get(bot.models.SubscribedUser, telegram_id): # check SubscribedUser table
+             await add_subscriber(session, telegram_id) # Ensure they are in subscribed_users table
+             logger.info(f"User {telegram_id} (with existing settings) added to subscribers list via NOON deeplink.")
+        current_settings = user_settings # Use the passed-in, potentially cached settings
 
     tt_username_from_payload = payload
     if not tt_username_from_payload:
@@ -126,22 +142,21 @@ async def _handle_subscribe_and_link_noon_deeplink(
         return _("Error: Missing TeamTalk username in confirmation link.")
 
     current_settings.teamtalk_username = tt_username_from_payload
-    current_settings.not_on_online_confirmed = True
-    logger.info(f"TeamTalk user {tt_username_from_payload} associated with user {telegram_id} during subscription process.")
-
-    await update_user_settings_in_db(session, telegram_id, current_settings)
+    current_settings.not_on_online_confirmed = True # Mark NOON as confirmed
+    # The user_settings object (current_settings) is already the one from cache or DB.
+    # We modify it and then call update_user_settings_in_db.
+    await update_user_settings_in_db(session, current_settings)
+    logger.info(f"User {telegram_id} linked NOON to TT user {tt_username_from_payload} and settings updated.")
 
     return _("You have successfully subscribed to notifications.")
 
 
-# Adjusted for _handle_unsubscribe_deeplink taking fewer params
-# For others, payload is Any (was str | None for NOON link, Any for subscribe)
-# UserSpecificSettings is not always used by all handlers after refactor, but kept for type consistency if possible
+# ИЗМЕНЕНИЕ: Заменяем тайп-хинт в определении типа
 DeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable, Any, UserSpecificSettings],
+    [AsyncSession, int, callable, Any, UserSettings], # UserSettings here
     Coroutine[Any, Any, str]
 ]
-# A more specific type for unsubscribe might be needed if strict typing is paramount
+
 UnsubscribeDeeplinkHandlerType = Callable[
     [AsyncSession, int, callable],
     Coroutine[Any, Any, str]
@@ -149,7 +164,7 @@ UnsubscribeDeeplinkHandlerType = Callable[
 
 DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, Any] = {
     DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink,
-    DeeplinkAction.UNSUBSCRIBE: _handle_unsubscribe_deeplink, # type: ignore
+    DeeplinkAction.UNSUBSCRIBE: _handle_unsubscribe_deeplink,
     DeeplinkAction.SUBSCRIBE_AND_LINK_NOON: _handle_subscribe_and_link_noon_deeplink,
 }
 
@@ -159,37 +174,33 @@ async def handle_deeplink_payload(
     token: str,
     session: AsyncSession,
     _: callable,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings # This comes from UserSettingsMiddleware
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
-        # Attempt to reply to the message if possible, though message.from_user is None.
-        # This situation is tricky; replying without a target user context might not be ideal
-        # or even possible depending on the Telegram Bot API behavior for `message.reply`
-        # when `message.from_user` is not available.
-        # For now, we'll keep the original behavior of trying to reply.
         await message.reply(_("An error occurred."))
         return
 
     message_from_user_id = message.from_user.id
 
-    deeplink_obj = await _validate_deeplink_token(session, token, message_from_user_id, message, _)
+    # _validate_deeplink_token expects bot.models.Deeplink from db_get_deeplink
+    deeplink_obj: Optional[DeeplinkModel] = await _validate_deeplink_token(session, token, message_from_user_id, message, _)
     if not deeplink_obj:
-        # _validate_deeplink_token sends reply and returns None.
-        # The main function then returns. This means the token is NOT deleted if validation fails.
-        # This is probably better than deleting a token meant for another user.
         return
 
-
+    # user_settings is already fetched by the middleware and passed in.
+    # For SUBSCRIBE_AND_LINK_NOON, this user_settings object will be updated.
+    # For SUBSCRIBE, it's used to ensure consistency if needed.
     reply_text = await _execute_deeplink_action(
         session,
         message_from_user_id,
         _,
-        deeplink_obj,
-        user_specific_settings,
+        deeplink_obj, # This is DeeplinkModel instance
+        user_settings, # This is UserSettings SQLModel instance
         token
     )
 
     await message.reply(reply_text)
-    # Always delete the deeplink token after it has been processed or attempted to be processed.
+    # db_delete_deeplink_by_token expects the token string
     await delete_deeplink_by_token(session, token)
