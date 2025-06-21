@@ -1,3 +1,5 @@
+# bot/telegram_bot/keyboards.py
+
 """
 Keyboard utilities for the Telegram bot.
 
@@ -34,8 +36,9 @@ from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     SubscriberListCallback
 )
-from bot.database.models import NotificationSetting
-from bot.core.user_settings import UserSpecificSettings
+# ИЗМЕНЕНИЕ: Импортируем из нового файла bot.models
+from bot.models import NotificationSetting, UserSettings
+from bot.core.user_settings import get_muted_users_set # For create_paginated_user_list_keyboard and create_account_list_keyboard
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
@@ -111,12 +114,13 @@ def create_subscription_settings_keyboard(
 
 def create_notification_settings_keyboard(
     _: callable,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
     builder = InlineKeyboardBuilder()
 
-    is_noon_enabled = user_specific_settings.not_on_online_enabled
+    is_noon_enabled = user_settings.not_on_online_enabled
     status_text = _("Enabled") if is_noon_enabled else _("Disabled")
     noon_button_text = _("NOON (Not on Online): {status}").format(status=status_text)
 
@@ -137,12 +141,13 @@ def create_notification_settings_keyboard(
 
 def create_manage_muted_users_keyboard(
     _: callable,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт
+    user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Muted Users' keyboard."""
     builder = InlineKeyboardBuilder()
 
-    is_mute_all_enabled = user_specific_settings.mute_all_flag
+    is_mute_all_enabled = user_settings.mute_all # Field name changed from mute_all_flag
     mute_all_status_text = _("Enabled") if is_mute_all_enabled else _("Disabled")
     mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text)
     builder.button(
@@ -205,15 +210,18 @@ def create_paginated_user_list_keyboard(
     current_page: int,
     total_pages: int,
     list_type: UserListAction,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт и имя переменной
+    user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
 
+    muted_users_set = get_muted_users_set(user_settings)
+
     for idx, username in enumerate(page_items):
-        is_in_set = username in user_specific_settings.muted_users_set
+        is_in_set = username in muted_users_set # Use the fetched set
         effectively_muted: bool
-        if user_specific_settings.mute_all_flag:
+        if user_settings.mute_all: # Field name changed
             effectively_muted = not is_in_set
         else:
             effectively_muted = is_in_set
@@ -244,18 +252,21 @@ def create_account_list_keyboard(
     page_items: list[pytalk.UserAccount],
     current_page: int,
     total_pages: int,
-    user_specific_settings: UserSpecificSettings
+    # ИЗМЕНЕНИЕ: Заменяем тайп-хинт и имя переменной
+    user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""
     builder = InlineKeyboardBuilder()
+
+    muted_users_set = get_muted_users_set(user_settings)
 
     for idx, account_obj in enumerate(page_items):
         username_str = ttstr(account_obj.username)
         display_name = username_str
 
-        is_in_set = username_str in user_specific_settings.muted_users_set
+        is_in_set = username_str in muted_users_set # Use the fetched set
         effectively_muted: bool
-        if user_specific_settings.mute_all_flag:
+        if user_settings.mute_all: # Field name changed
             effectively_muted = not is_in_set
         else:
             effectively_muted = is_in_set
