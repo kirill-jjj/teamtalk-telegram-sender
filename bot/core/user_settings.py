@@ -8,10 +8,7 @@ from bot.models import UserSettings  # Импортируем новую еди�
 
 logger = logging.getLogger(__name__)
 
-# Этот класс больше не нужен, так как UserSettings из bot.models теперь выполняет обе роли.
-# class UserSpecificSettings(BaseModel): ...
 
-# Функция для преобразования в строку остается, так как мы храним muted_users как строку.
 def _prepare_muted_users_string(users_set: set[str]) -> str:
     if not users_set:
         return ""
@@ -50,16 +47,10 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
         except Exception as e:
             await session.rollback()
             logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
-            # Возвращаем временный объект, если сохранение не удалось
-            # В этом случае он не будет добавлен в кеш, что корректно, т.к. он не сохранен в БД.
             return UserSettings(telegram_id=telegram_id)
 
 
 async def update_user_settings_in_db(session: AsyncSession, settings: UserSettings):
-    # Обновление теперь тривиально
-    # SQLModel объекты, полученные из сессии, уже привязаны к ней.
-    # Поэтому session.add() неявно вызывается при изменении атрибутов и последующем session.commit()
-    # Однако, явный session.add() также безопасен и может быть полезен, если объект был создан вне сессии.
     session.add(settings)
     try:
         await session.commit()
@@ -70,7 +61,6 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
         await session.rollback()
         logger.error(f"Error updating settings for user {settings.telegram_id} in DB: {e}", exc_info=True)
 
-# Helper function to remove user from cache - useful for unsubscribing
 def remove_user_settings_from_cache(telegram_id: int) -> None:
     if telegram_id in USER_SETTINGS_CACHE:
         del USER_SETTINGS_CACHE[telegram_id]

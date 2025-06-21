@@ -114,21 +114,15 @@ async def _handle_subscribe_and_link_noon_deeplink(
     payload: str | None,
     user_settings: UserSettings
 ) -> str:
-    # User subscription status is handled first
-    if not await session.get(UserSettings, telegram_id): # Check if user settings exist
-        # This case implies the user might not be fully subscribed if settings are missing
-        # However, get_or_create_user_settings in handle_deeplink_payload ensures settings exist.
-        # This specific deeplink action might imply subscription.
-        await add_subscriber(session, telegram_id) # Ensure they are in subscribed_users table
+    if not await session.get(UserSettings, telegram_id):
+        await add_subscriber(session, telegram_id)
         logger.info(f"User {telegram_id} added to subscribers list via NOON deeplink.")
-         # Ensure settings are created if they weren't (e.g. direct deeplink use without /start)
         current_settings = await get_or_create_user_settings(telegram_id, session)
     else:
-        # If settings exist, ensure they are subscribed
-        if not await session.get(bot.models.SubscribedUser, telegram_id): # check SubscribedUser table
-             await add_subscriber(session, telegram_id) # Ensure they are in subscribed_users table
+        if not await session.get(bot.models.SubscribedUser, telegram_id):
+             await add_subscriber(session, telegram_id)
              logger.info(f"User {telegram_id} (with existing settings) added to subscribers list via NOON deeplink.")
-        current_settings = user_settings # Use the passed-in, potentially cached settings
+        current_settings = user_settings
 
     tt_username_from_payload = payload
     if not tt_username_from_payload:
@@ -136,9 +130,7 @@ async def _handle_subscribe_and_link_noon_deeplink(
         return _("Error: Missing TeamTalk username in confirmation link.")
 
     current_settings.teamtalk_username = tt_username_from_payload
-    current_settings.not_on_online_confirmed = True # Mark NOON as confirmed
-    # The user_settings object (current_settings) is already the one from cache or DB.
-    # We modify it and then call update_user_settings_in_db.
+    current_settings.not_on_online_confirmed = True
     await update_user_settings_in_db(session, current_settings)
     logger.info(f"User {telegram_id} linked NOON to TT user {tt_username_from_payload} and settings updated.")
 

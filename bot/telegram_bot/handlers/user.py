@@ -146,7 +146,6 @@ async def who_command_handler(
     message: Message,
     _: callable,
     tt_instance: TeamTalkInstance | None,
-    # session: AsyncSession, # No longer used
     translator: "gettext.GNUTranslations"
 ):
     if not message.from_user:
@@ -189,7 +188,6 @@ async def who_command_handler(
 async def help_command_handler(
     message: Message,
     _: callable
-    # session: AsyncSession # No longer used
 ):
     is_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False # This checks if TG user is a bot admin
     # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
