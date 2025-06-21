@@ -78,8 +78,9 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]
         # Assuming the PK column is named 'telegram_id' for these models
         # For SQLModel, you select the model or specific columns
         statement = select(model_class.telegram_id) # type: ignore
-        results = await session.exec(statement)
-        return results.all() # .all() directly gives a list of column values
+        # ИЗМЕНЕНИЕ: Возвращаем session.execute
+        result = await session.execute(statement)
+        return result.scalars().all()
     except Exception as e:
         logger.error(f"Error getting all IDs from {table_name}: {e}", exc_info=True)
         return []
