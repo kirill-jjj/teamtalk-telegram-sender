@@ -54,8 +54,8 @@ async def cq_toggle_noon_setting_action(
     success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        # user_specific_settings will have the updated value due to update_logic already being called
-        updated_builder = create_notification_settings_keyboard(_, user_specific_settings)
+        # user_settings will have the updated value due to update_logic already being called
+        updated_builder = create_notification_settings_keyboard(_, user_settings) # CORRECTED
         menu_text = _("Notification Settings")
         return menu_text, updated_builder.as_markup()
 
