@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from bot.models import UserSettings  # Импортируем новую единую модель
+from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
         USER_SETTINGS_CACHE[telegram_id] = user_settings
         return user_settings
     else:
-        # Создание нового объекта стало гораздо проще
         new_settings = UserSettings(telegram_id=telegram_id)
         session.add(new_settings)
         try:
