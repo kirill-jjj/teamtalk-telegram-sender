@@ -121,23 +121,6 @@ async def populate_user_accounts_cache(tt_instance):
         logger.error(f"Failed to populate user accounts cache: {e}.", exc_info=True)
 
 
-# Old _initiate_reconnect function was removed.
-# async def _initiate_reconnect(reason: str):
-#     logger.warning(reason)
-#     ONLINE_USERS_CACHE.clear()
-#     USER_ACCOUNTS_CACHE.clear()
-#     logger.info("Online users and user accounts caches have been cleared due to reconnection.")
-#
-#     if tt_bot_module.current_tt_instance is not None:
-#         logger.debug(f"Resetting current_tt_instance and login_complete_time due to: {reason}")
-#         tt_bot_module.current_tt_instance = None
-#         tt_bot_module.login_complete_time = None
-#     else:
-#         logger.debug(f"current_tt_instance was already None when _initiate_reconnect was called for: {reason}")
-#
-#     asyncio.create_task(_tt_reconnect())
-
-
 async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInstance, channel: PytalkChannel):
     """Handles the final steps of the bot's login and initialization sequence."""
     channel_name_display = ttstr(channel.name) if hasattr(channel, "name") and isinstance(channel.name, bytes) else str(channel.name)
@@ -260,7 +243,6 @@ async def on_my_login(server: PytalkServer):
             logger.warning(
                 f"Could not resolve channel '{app_config.CHANNEL}' to a valid ID or no channel configured. Bot remains in its current channel."
             )
-            # The 'tt_instance_val' was likely a typo, corrected to tt_instance
             current_channel_id_val = tt_instance.getMyCurrentChannelID()
             current_channel_obj_val = tt_instance.get_channel(current_channel_id_val)
             if current_channel_obj_val: # Log current channel if bot is in one

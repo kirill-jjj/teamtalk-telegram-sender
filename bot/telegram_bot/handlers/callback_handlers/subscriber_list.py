@@ -9,7 +9,6 @@ from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.core.enums import SubscriberListAction
-# from bot.telegram_bot.filters import IsAdminFilter # Removed
 from bot.state import ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 SUBSCRIBERS_PER_PAGE = 10
 
 subscriber_list_router = Router(name="subscriber_list_actions_router")
-# subscriber_list_router.callback_query.filter(IsAdminFilter()) # Removed
 
 async def _get_paginated_subscribers_info(
     session: AsyncSession,
