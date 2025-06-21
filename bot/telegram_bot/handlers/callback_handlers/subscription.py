@@ -4,8 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.user_settings import UserSpecificSettings
-from bot.database.models import NotificationSetting
+from bot.models import UserSettings, NotificationSetting # UPDATED import
 from bot.database.crud import add_subscriber, remove_subscriber
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
@@ -19,12 +18,12 @@ subscription_router = Router(name="callback_handlers.subscription")
 async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     _: callable,
-    user_specific_settings: UserSpecificSettings,
+    user_settings: UserSettings, # UPDATED
     callback_data: SettingsCallback
 ):
     await callback_query.answer()
 
-    current_notification_setting = user_specific_settings.notification_settings
+    current_notification_setting = user_settings.notification_settings # UPDATED
     subscription_settings_builder = create_subscription_settings_keyboard(_, current_notification_setting)
 
     try:
@@ -43,7 +42,7 @@ async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,
     _: callable,
-    user_specific_settings: UserSpecificSettings,
+    user_settings: UserSettings, # UPDATED
     callback_data: SubscriptionCallback
 ):
     value_to_enum_map = {
@@ -59,17 +58,17 @@ async def cq_set_subscription_setting(
         await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
         return
 
-    original_setting = user_specific_settings.notification_settings
+    original_setting = user_settings.notification_settings # UPDATED
 
     if new_setting_enum == original_setting:
         await callback_query.answer()
         return
 
     def update_logic():
-        user_specific_settings.notification_settings = new_setting_enum
+        user_settings.notification_settings = new_setting_enum # UPDATED
 
     def revert_logic():
-        user_specific_settings.notification_settings = original_setting
+        user_settings.notification_settings = original_setting # UPDATED
 
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),
@@ -88,7 +87,7 @@ async def cq_set_subscription_setting(
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_specific_settings,
+        user_settings=user_settings, # UPDATED
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,

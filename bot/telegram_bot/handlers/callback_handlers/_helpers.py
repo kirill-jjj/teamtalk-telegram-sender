@@ -3,14 +3,16 @@ from typing import Callable
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.core.user_settings import UserSpecificSettings, update_user_settings_in_db
+# ИЗМЕНЕНИЕ: Импортируем UserSettings
+from bot.models import UserSettings
+from bot.core.user_settings import update_user_settings_in_db
 
 logger = logging.getLogger(__name__)
 
 async def process_setting_update(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    user_settings: UserSpecificSettings,
+    user_settings: UserSettings, # Type hint updated
     _: callable,
     update_action: Callable[[], None],
     revert_action: Callable[[], None],
