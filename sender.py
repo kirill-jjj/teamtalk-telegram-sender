@@ -104,45 +104,6 @@ async def on_shutdown(dispatcher: Dispatcher):
     logger.info("Application shutdown sequence complete (on_shutdown).")
 
 
-async def shutdown_teamtalk_bot(task_to_shutdown):
-    """Gracefully shuts down the TeamTalk bot, including task cancellation and instance disconnection."""
-    logger.info("Attempting to shutdown TeamTalk bot gracefully...")
-
-    # Part 1: Cancel the running TeamTalk task
-    if task_to_shutdown and not task_to_shutdown.done():
-        logger.info("Cancelling TeamTalk task for shutdown...")
-        task_to_shutdown.cancel()
-        try:
-            await task_to_shutdown
-        except asyncio.CancelledError:
-            logger.info("TeamTalk task cancelled successfully as part of shutdown.")
-        except Exception as e:
-            logger.error(f"Error during TeamTalk task cancellation in shutdown: {e}", exc_info=True)
-    else:
-        logger.info("TeamTalk task already done or not found during shutdown.")
-
-    # Part 2: Disconnect TeamTalk instances
-    logger.info("Disconnecting TeamTalk instances during shutdown...")
-    if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
-        ttstr = sdk.ttstr # Ensure ttstr is available
-        for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
-            try:
-                if tt_instance_item.logged_in:
-                    tt_instance_item.logout()
-                    logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-                if tt_instance_item.connected:
-                    tt_instance_item.disconnect()
-                    logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-                if hasattr(tt_instance_item, 'closeTeamTalk'):
-                    tt_instance_item.closeTeamTalk()
-                logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'}")
-            except Exception as e_tt_close:
-                logger.error(f"Error closing TeamTalk instance during shutdown: {e_tt_close}", exc_info=True)
-    else:
-        logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup during shutdown.")
-    logger.info("TeamTalk bot shutdown process complete.")
-
-
 # dp.errors() decorator was removed as dp is defined later in main(); handler registered explicitly.
 async def global_error_handler(event: ErrorEvent, bot: Bot):
     """
@@ -175,16 +136,6 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
     except Exception as e:
         logger.error(f"Could not send error message to user: {e}", exc_info=True)
 
-
-async def initialize_and_start_teamtalk_bot():
-    """Initializes and starts the TeamTalk bot."""
-    # This function might become redundant if on_startup handles all its responsibilities.
-    # Kept for now if other parts of the module might call it, though main() does not use it directly.
-    logger.info("Initializing TeamTalk bot (via initialize_and_start_teamtalk_bot)...")
-    await tt_bot_module.tt_bot._async_setup_hook()
-    task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task")
-    logger.info("TeamTalk task created (via initialize_and_start_teamtalk_bot).")
-    return task
 
 async def main():
     logger.info("Application starting...")
