@@ -4,7 +4,8 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.user_settings import UserSpecificSettings
+# ИЗМЕНЕНИЕ: Импортируем UserSettings
+from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_language_selection_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
@@ -39,12 +40,12 @@ async def cq_show_language_menu(
 async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    user_specific_settings: UserSpecificSettings,
+    user_settings: UserSettings, # Parameter name and type hint updated
     _: callable,
     callback_data: LanguageCallback
 ):
     new_lang_code = callback_data.lang_code
-    original_lang_code = user_specific_settings.language
+    original_lang_code = user_settings.language
 
     if new_lang_code == original_lang_code:
         await callback_query.answer()
@@ -53,10 +54,10 @@ async def cq_set_language(
     new_lang_translator_obj = get_translator(new_lang_code)
 
     def update_logic():
-        user_specific_settings.language = new_lang_code
+        user_settings.language = new_lang_code
 
     def revert_logic():
-        user_specific_settings.language = original_lang_code
+        user_settings.language = original_lang_code
 
     if new_lang_code == "en":
         lang_name_display = new_lang_translator_obj.gettext("English")
@@ -74,7 +75,7 @@ async def cq_set_language(
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_specific_settings,
+        user_settings=user_settings, # Pass updated variable
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,

@@ -13,7 +13,8 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.telegram_bot.deeplink import handle_deeplink_payload
-from bot.core.user_settings import UserSpecificSettings
+# ИЗМЕНЕНИЕ: Заменяем импорт UserSpecificSettings на UserSettings из новой модели
+from bot.models import UserSettings
 # from bot.telegram_bot.filters import IsAdminFilter # Removed
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
@@ -36,13 +37,13 @@ async def start_command_handler(
     command: CommandObject,
     session: AsyncSession,
     _: callable,
-    user_specific_settings: UserSpecificSettings
+    user_settings: UserSettings # Type hint and parameter name updated
 ):
     if not message.from_user: return
 
     token = command.args
     if token:
-        await handle_deeplink_payload(message, token, session, _, user_specific_settings)
+        await handle_deeplink_payload(message, token, session, _, user_settings)
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
 
