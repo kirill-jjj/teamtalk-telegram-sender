@@ -40,7 +40,8 @@ dependencies = [
     'uvloop; sys_platform != "win32"',
     "Babel>=2.15.0",
     "pydantic-settings~=2.9",
-    "pydantic~=2.11"
+    "pydantic~=2.11",
+    "sqlmodel>=0.0.24"
 ]
 
 [project.urls]
