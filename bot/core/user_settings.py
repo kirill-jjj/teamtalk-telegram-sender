@@ -1,4 +1,3 @@
-# bot/core/user_settings.py
 import asyncio
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,12 +67,10 @@ def remove_user_settings_from_cache(telegram_id: int) -> None:
     else:
         logger.debug(f"User settings for {telegram_id} not found in cache for removal.")
 
-# Helper to get the set representation of muted users
 def get_muted_users_set(settings: UserSettings) -> set[str]:
     if not settings.muted_users:
         return set()
     return set(settings.muted_users.split(','))
 
-# Helper to update the string representation from the set
 def set_muted_users_from_set(settings: UserSettings, users_set: set[str]) -> None:
     settings.muted_users = _prepare_muted_users_string(users_set)

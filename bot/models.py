@@ -8,7 +8,6 @@ from sqlmodel import Field, SQLModel
 from bot.core.enums import DeeplinkAction
 
 
-# Enum для настроек уведомлений, перенесен из старого models.py
 class NotificationSetting(str, enum.Enum):
     ALL = "all"
     JOIN_OFF = "join_off"
@@ -16,8 +15,6 @@ class NotificationSetting(str, enum.Enum):
     NONE = "none"
 
 
-# Единая модель для настроек пользователя.
-# Заменяет UserSettings из bot/database/models.py и UserSpecificSettings из bot/core/user_settings.py
 class UserSettings(SQLModel, table=True):
     __tablename__ = "user_settings"
 
