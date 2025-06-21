@@ -7,7 +7,7 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.models import UserSettings, Deeplink as DeeplinkModel
+from bot.models import UserSettings, Deeplink as DeeplinkModel, SubscribedUser # Added SubscribedUser
 from bot.core.user_settings import (
     get_or_create_user_settings,
     update_user_settings_in_db,
@@ -119,7 +119,7 @@ async def _handle_subscribe_and_link_noon_deeplink(
         logger.info(f"User {telegram_id} added to subscribers list via NOON deeplink.")
         current_settings = await get_or_create_user_settings(telegram_id, session)
     else:
-        if not await session.get(bot.models.SubscribedUser, telegram_id):
+        if not await session.get(SubscribedUser, telegram_id): # Use direct import
              await add_subscriber(session, telegram_id)
              logger.info(f"User {telegram_id} (with existing settings) added to subscribers list via NOON deeplink.")
         current_settings = user_settings

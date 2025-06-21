@@ -34,9 +34,9 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
     if record_to_remove:
         try:
             table_name = record_to_remove.__tablename__
-            # PK может быть не 'id', получаем его динамически из метаданных SQLModel
-            # SQLModel stores PKs in a tuple, usually of one Field, so primary_key[0]
-            pk_field = record_to_remove.__sqlmodel_meta__.primary_key[0]
+            # ИСПРАВЛЕНИЕ: __sqlmodel_meta__ - это атрибут класса, а не экземпляра.
+            # Получаем его через type(record_to_remove).
+            pk_field = type(record_to_remove).__sqlmodel_meta__.primary_key[0]
             pk_col_name = pk_field.name
             record_pk = getattr(record_to_remove, pk_col_name, 'N/A')
 
