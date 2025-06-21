@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime
 
 import pytalk
-from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException # Modified
+from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.channel import Channel as PytalkChannel
@@ -28,9 +28,7 @@ from aiogram.filters import CommandObject
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
-    # _tt_reconnect, # Removed old import
-    # _tt_rejoin_channel, # Removed old import
-    initiate_reconnect_task, # Added new import
+    initiate_reconnect_task,
     forward_tt_message_to_telegram_admin,
 )
 from bot.teamtalk_bot.commands import (

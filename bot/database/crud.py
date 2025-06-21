@@ -3,10 +3,10 @@ import logging
 import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, SQLModel # SQLModel select
+from sqlmodel import select, SQLModel
 
 from bot.core.enums import DeeplinkAction
-# Импортируем модели из нового единого файла
+# Importing models from the new unified file
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
@@ -14,8 +14,8 @@ from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
 
-# db_add_generic и db_remove_generic остаются почти без изменений,
-# но тип model_instance теперь SQLModel
+# db_add_generic and db_remove_generic remain almost unchanged,
+# but model_instance type is now SQLModel
 async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> bool:
     try:
         session.add(model_instance)
@@ -34,8 +34,8 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
     if record_to_remove:
         try:
             table_name = record_to_remove.__tablename__
-            # ИСПРАВЛЕНИЕ: Используем стандартный __mapper__ из SQLAlchemy для доступа к первичному ключу.
-            # Это надежный и документированный способ.
+            # Using SQLAlchemy's __mapper__ to access the primary key column(s).
+            # This is a reliable and documented method.
             pk_col = record_to_remove.__mapper__.primary_key[0]
             pk_col_name = pk_col.name
             record_pk = getattr(record_to_remove, pk_col_name, 'N/A')
@@ -50,7 +50,6 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
             return False
     return False
 
-# Остальные функции адаптируются под новые модели и синтаксис session.exec
 async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[SQLModel], telegram_id: int) -> bool:
     # For SQLModel, model_class will be like UserSettings, Admin, etc.
     # We assume telegram_id is the primary key for these models.
@@ -59,7 +58,6 @@ async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[SQL
         logger.debug(f"User {telegram_id} already exists in {model_class.__tablename__}.")
         return False
 
-    # Create an instance of the SQLModel class
     entity = model_class(telegram_id=telegram_id) # type: ignore
     return await db_add_generic(session, entity)
 
@@ -75,8 +73,7 @@ async def _remove_entity(session: AsyncSession, model_class: type[SQLModel], tel
 async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]) -> list[int]:
     table_name = model_class.__tablename__
     try:
-        # Assuming the PK column is named 'telegram_id' for these models
-        # For SQLModel, you select the model or specific columns
+        # Assuming the PK column is named 'telegram_id' for these models.
         statement = select(model_class.telegram_id) # type: ignore
         result = await session.execute(statement)
         return result.scalars().all()
@@ -155,13 +152,13 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
     if deeplink_obj:
         if deeplink_obj.expiry_time < datetime.utcnow():
             logger.warning(f"Deeplink {token} expired. Deleting.")
-            # db_remove_generic expects the object itself
+            # db_remove_generic expects the model instance itself
             await db_remove_generic(session, deeplink_obj)
             return None # Return None as it's expired and deleted
     return deeplink_obj
 
 async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
-    deeplink_obj = await session.get(Deeplink, token) # Fetch by PK
+    deeplink_obj = await session.get(Deeplink, token)
     if deeplink_obj:
         return await db_remove_generic(session, deeplink_obj)
     logger.debug(f"Deeplink {token} not found for deletion.")
@@ -182,7 +179,6 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
 
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
     try:
-        # Fetch records to be deleted
         user_settings_record = await session.get(UserSettings, telegram_id)
         subscribed_user_record = await session.get(SubscribedUser, telegram_id)
         # Potentially other related data in the future

@@ -7,7 +7,7 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.models import UserSettings, Deeplink as DeeplinkModel, SubscribedUser # Added SubscribedUser
+from bot.models import UserSettings, Deeplink as DeeplinkModel, SubscribedUser
 from bot.core.user_settings import (
     get_or_create_user_settings,
     update_user_settings_in_db,
@@ -75,9 +75,6 @@ async def _execute_deeplink_action(
         logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
         return _("An error occurred.")
 
-# The old _handle_subscribe_deeplink function that was here has been removed.
-# Its functionality is now incorporated into the new _handle_subscribe_deeplink below
-# (which was formerly _handle_subscribe_and_link_noon_deeplink).
 
 async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
@@ -93,8 +90,6 @@ async def _handle_unsubscribe_deeplink(
         return _("You were not subscribed to notifications.")
 
 
-# Renamed from _handle_subscribe_and_link_noon_deeplink
-# This is now the standard handler for DeeplinkAction.SUBSCRIBE
 async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
@@ -102,18 +97,14 @@ async def _handle_subscribe_deeplink(
     payload: str | None, # Expecting TeamTalk username as payload
     user_settings: UserSettings
 ) -> str:
-    # Ensure user is subscribed
     user_already_subscribed_to_bot = await session.get(SubscribedUser, telegram_id) is not None
     # user_had_settings_before = await session.get(UserSettings, telegram_id) is not None # Removed as it's no longer used
 
     if not user_already_subscribed_to_bot:
         await add_subscriber(session, telegram_id)
-        # Simplified log: Avoids confusion about "existing settings" when defaults might have just been created.
-        # The core information is that the user was added to the subscriber list.
-        # The subsequent log about linking and updating settings confirms settings are being handled.
+        # Simplified log: Avoids confusion about "existing settings" if defaults were just created.
         logger.info(f"User {telegram_id} added to subscribers list.")
 
-    # Use existing settings if available, otherwise, get/create new ones.
     # The user_settings passed in is from middleware, it's already get_or_created.
     current_settings = user_settings
 
@@ -124,7 +115,7 @@ async def _handle_subscribe_deeplink(
         return _("Error: Missing required information for subscription. Please try the link again or contact support.")
 
     current_settings.teamtalk_username = tt_username_from_payload
-    current_settings.not_on_online_confirmed = True # This was part of "NOON" logic, now standard
+    current_settings.not_on_online_confirmed = True
     await update_user_settings_in_db(session, current_settings)
     logger.info(f"User {telegram_id} linked to TT user '{tt_username_from_payload}' and settings updated during subscription.")
 
@@ -142,9 +133,8 @@ UnsubscribeDeeplinkHandlerType = Callable[
 ]
 
 DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, Any] = {
-    DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink, # Now points to the new rich subscribe handler
+    DeeplinkAction.SUBSCRIBE: _handle_subscribe_deeplink,
     DeeplinkAction.UNSUBSCRIBE: _handle_unsubscribe_deeplink,
-    # SUBSCRIBE_AND_LINK_NOON is removed as the enum and its specific handler are gone.
 }
 
 
@@ -167,9 +157,7 @@ async def handle_deeplink_payload(
     if not deeplink_obj:
         return
 
-    # user_settings is already fetched by the middleware and passed in.
-    # For SUBSCRIBE_AND_LINK_NOON, this user_settings object will be updated.
-    # For SUBSCRIBE, it's used to ensure consistency if needed.
+    # user_settings is already fetched by middleware. It's used/updated by the action handler.
     reply_text = await _execute_deeplink_action(
         session,
         message_from_user_id,
