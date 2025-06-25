@@ -145,6 +145,7 @@ async def forward_tt_message_to_telegram_admin(
         bot_instance=tg_bot_message,
         chat_id=admin_chat_id,
         language=admin_language,
+        parse_mode="HTML", # Ensure HTML parsing for formatted content
         **content.as_kwargs()
     )
 
