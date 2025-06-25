@@ -100,16 +100,21 @@ async def send_telegram_message_individual(
 ) -> bool:
     send_silently = _should_send_silently(chat_id, tt_user_is_online)
 
+    # Ensure parse_mode is HTML, allowing kwargs to override if necessary,
+    # but defaulting to HTML if not provided by kwargs.
+    # More robustly, we want to ensure HTML is used for these messages.
+    kwargs_to_send = kwargs.copy() # Avoid modifying the original kwargs
+    kwargs_to_send['parse_mode'] = "HTML"
+
     try:
         await bot_instance.send_message(
             chat_id=chat_id,
-            # text=text, # Removed
+            # text=text, # Removed, text is expected to be in kwargs_to_send
             reply_markup=reply_markup,
             disable_notification=send_silently,
-            parse_mode="HTML",
-            **kwargs
+            **kwargs_to_send
         )
-        logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}, ParseMode: HTML")
+        logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}, ParseMode: {kwargs_to_send.get('parse_mode')}")
         return True
 
     except TelegramAPIError as e:
