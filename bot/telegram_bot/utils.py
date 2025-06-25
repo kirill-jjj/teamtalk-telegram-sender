@@ -106,9 +106,10 @@ async def send_telegram_message_individual(
             # text=text, # Removed
             reply_markup=reply_markup,
             disable_notification=send_silently,
+            parse_mode="HTML",
             **kwargs
         )
-        logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}")
+        logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}, ParseMode: HTML")
         return True
 
     except TelegramAPIError as e:
