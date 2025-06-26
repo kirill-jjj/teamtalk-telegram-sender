@@ -119,7 +119,7 @@ async def _handle_subscribe_deeplink(
     await update_user_settings_in_db(session, current_settings)
     logger.info(f"User {telegram_id} linked to TT user '{tt_username_from_payload}' and settings updated during subscription.")
 
-    return _("You have successfully subscribed and linked your account.")
+    return _("You have successfully subscribed to notifications.")
 
 
 DeeplinkHandlerType = Callable[
