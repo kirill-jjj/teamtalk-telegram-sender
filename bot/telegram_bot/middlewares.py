@@ -42,16 +42,8 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        # --- НАЧАЛО ИСПРАВЛЕНИЯ ---
-        # Вместо get_or_create_user_settings, который возвращает кешированный
-        # или "простой" объект, мы делаем явный запрос с "жадной" загрузкой
-        # связанных muted_users_list.
-
-        # Сначала проверим кеш, чтобы не дергать БД без нужды
         if user_obj.id in USER_SETTINGS_CACHE:
             user_settings = USER_SETTINGS_CACHE[user_obj.id]
-            # Даже если в кеше есть, нам нужно убедиться, что связанные данные загружены
-            # SQLAlchemy достаточно умна, чтобы не перезагружать, если они уже есть
             stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
             result = await session_obj.execute(stmt)
             user_settings = result.scalar_one_or_none()
@@ -59,26 +51,14 @@ class UserSettingsMiddleware(BaseMiddleware):
              user_settings = None
 
         if not user_settings:
-            # Если в кеше не было или объект оказался "пустым", создаем его
-            # get_or_create_user_settings должен сам добавлять в кеш
             user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
-            # И снова перезагружаем с жадной загрузкой, чтобы гарантировать наличие muted_users_list
-            # Это важно, так как get_or_create_user_settings мог вернуть объект без этой связи,
-            # или создать новый, который точно ее не имеет загруженной.
             stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
             result = await session_obj.execute(stmt)
             user_settings = result.scalar_one_or_none()
 
         if not user_settings:
-            # Если даже после создания не нашлось, это ошибка
             logger.error(f"Could not get or create user settings for user {user_obj.id}")
-            # Можно здесь вернуть или обработать ошибку соответствующим образом,
-            # например, не передавать user_settings дальше или вернуть ошибку пользователю.
-            # Для данного исправления предполагаем, что user_settings должен быть всегда.
-            # Если это критично, можно поднять исключение или вернуть ответ пользователю.
-            return await handler(event, data) # Пропускаем дальнейшую обработку, если настройки не найдены
-
-        # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+            return await handler(event, data)
 
         data["user_settings"] = user_settings
 
