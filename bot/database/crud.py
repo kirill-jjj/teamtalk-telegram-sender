@@ -115,10 +115,6 @@ async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, Admin)
 
-async def is_admin(session: AsyncSession, telegram_id: int) -> bool:
-    admin_record = await session.get(Admin, telegram_id)
-    return admin_record is not None
-
 async def create_deeplink(
     session: AsyncSession,
     action: DeeplinkAction,
@@ -159,11 +155,6 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
         return await db_remove_generic(session, deeplink_obj)
     logger.debug(f"Deeplink {token} not found for deletion.")
     return False
-
-# UserSettings CRUD is primarily managed by core.user_settings for cache coherency.
-# This function can remain for direct DB access if needed elsewhere, but typically not called directly.
-async def get_user_settings_row(session: AsyncSession, telegram_id: int) -> UserSettings | None:
-    return await session.get(UserSettings, telegram_id)
 
 async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> bool:
     """
