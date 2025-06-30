@@ -16,8 +16,8 @@ from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
     RECONNECT_DELAY_SECONDS,
-    RECONNECT_RETRY_SECONDS,
-    RECONNECT_CHECK_INTERVAL_SECONDS,
+    # RECONNECT_RETRY_SECONDS, # Moved to app_config.TT_RECONNECT_RETRY_SECONDS
+    # RECONNECT_CHECK_INTERVAL_SECONDS, # Moved to app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS
     REJOIN_CHANNEL_DELAY_SECONDS,
     REJOIN_CHANNEL_RETRY_SECONDS,
     REJOIN_CHANNEL_MAX_ATTEMPTS,
@@ -215,14 +215,14 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
         return
 
     while True:
-        logger.info(f"Next reconnection attempt to {server_info_to_reconnect.host} in {RECONNECT_RETRY_SECONDS} seconds...")
-        await asyncio.sleep(RECONNECT_RETRY_SECONDS)
+        logger.info(f"Next reconnection attempt to {server_info_to_reconnect.host} in {app_config.TT_RECONNECT_RETRY_SECONDS} seconds...")
+        await asyncio.sleep(app_config.TT_RECONNECT_RETRY_SECONDS)
 
         try:
             logger.info(f"Attempting to create new TeamTalk instance for {server_info_to_reconnect.host}...")
             await tt_bot_module.tt_bot.add_server(server_info_to_reconnect)
 
-            await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
+            await asyncio.sleep(app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS)
 
             if tt_bot_module.current_tt_instance and \
                tt_bot_module.current_tt_instance.connected and \
