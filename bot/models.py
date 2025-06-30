@@ -1,8 +1,7 @@
-# bot/models.py
 import enum
 from datetime import datetime
-from typing import Optional, List # Added List
-from sqlmodel import Field, SQLModel, Relationship # Added Relationship
+from typing import Optional, List
+from sqlmodel import Field, SQLModel, Relationship
 
 from bot.core.enums import DeeplinkAction
 
@@ -20,7 +19,6 @@ class UserSettings(SQLModel, table=True):
     telegram_id: int = Field(default=None, primary_key=True, index=True)
     language: str = Field(default="en", nullable=False)
     notification_settings: NotificationSetting = Field(default=NotificationSetting.ALL, nullable=False)
-    # muted_users: str = Field(default="", nullable=False) # Stored as comma-separated string
     mute_all: bool = Field(default=False, nullable=False)
     teamtalk_username: Optional[str] = Field(default=None, index=True)
     not_on_online_enabled: bool = Field(default=False, nullable=False)

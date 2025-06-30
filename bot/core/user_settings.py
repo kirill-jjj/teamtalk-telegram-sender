@@ -7,8 +7,6 @@ from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 
-# Removed _prepare_muted_users_string as it's no longer needed.
-
 USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
 
 async def load_user_settings_to_cache(session_factory) -> None:
@@ -61,6 +59,3 @@ def remove_user_settings_from_cache(telegram_id: int) -> None:
         logger.debug(f"Removed user settings for {telegram_id} from cache.")
     else:
         logger.debug(f"User settings for {telegram_id} not found in cache for removal.")
-
-# Removed get_muted_users_set and set_muted_users_from_set
-# as muted_users are now handled in a separate table.

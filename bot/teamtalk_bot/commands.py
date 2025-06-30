@@ -4,7 +4,7 @@ from typing import Optional, Callable, List
 from aiogram.filters import CommandObject
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
-from aiogram.exceptions import TelegramAPIError # Added
+from aiogram.exceptions import TelegramAPIError
 
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -233,7 +233,7 @@ async def handle_tt_subscribe_command(
         tt_message=tt_message,
         session=session,
         _=_,
-        action=DeeplinkAction.SUBSCRIBE, # Changed from SUBSCRIBE_AND_LINK_NOON
+        action=DeeplinkAction.SUBSCRIBE,
         payload=sender_tt_username,
         success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_("Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"),

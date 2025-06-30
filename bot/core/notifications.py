@@ -51,13 +51,6 @@ def _is_user_globally_ignored(username: str) -> bool:
     return username in ignored_set
 
 
-# ------------------------------------------------------------------------------------
-# ЗАМЕНА НАЧИНАЕТСЯ ЗДЕСЬ
-# ------------------------------------------------------------------------------------
-
-# Функция `should_notify_user` больше не нужна, так как вся логика переносится
-# в `_get_recipients_for_notification` для пакетной обработки. Удаляем её.
-
 async def _get_recipients_for_notification(username_to_check: str, event_type: str) -> list[int]:
     """
     Эффективно получает список ID получателей, выполняя один запрос к БД.
@@ -122,10 +115,6 @@ async def _get_recipients_for_notification(username_to_check: str, event_type: s
                 recipients.append(chat_id)
 
     return recipients
-
-# ------------------------------------------------------------------------------------
-# ЗАМЕНА ЗАКАНЧИВАЕТСЯ ЗДЕСЬ
-# ------------------------------------------------------------------------------------
 
 
 def _generate_join_leave_notification_text(
