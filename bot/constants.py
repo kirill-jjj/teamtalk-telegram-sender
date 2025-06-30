@@ -28,10 +28,6 @@ LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 DEFAULT_DATABASE_FILE = "bot_data.db"
 DB_MAIN_NAME = "main"
 
-DEFAULT_TT_CLIENT_NAME = "TTTM"
-DEFAULT_TT_STATUS_TEXT = ""
-DEFAULT_TT_PORT = 10333
-
 
 WHO_CHANNEL_ID_ROOT = 1
 WHO_CHANNEL_ID_SERVER_ROOT_ALT = 0 # Sometimes used for users not in a specific channel
