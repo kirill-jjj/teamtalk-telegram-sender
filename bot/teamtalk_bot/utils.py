@@ -4,10 +4,9 @@ from typing import Callable
 from aiogram.utils.formatting import Text, Bold
 
 import pytalk
-from pytalk import TeamTalkServerInfo # Added for new _tt_reconnect
+from pytalk import TeamTalkServerInfo
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
-# from pytalk.backoff import Backoff # Removed
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from pytalk.enums import UserStatusMode
 

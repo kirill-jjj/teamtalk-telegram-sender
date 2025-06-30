@@ -1,4 +1,3 @@
-# bot/database/crud.py
 import logging
 import secrets
 from datetime import datetime, timedelta
@@ -10,12 +9,9 @@ from bot.core.enums import DeeplinkAction
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings
 from bot.constants import DEEPLINK_EXPIRY_MINUTES
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
-# from bot.core.user_settings import USER_SETTINGS_CACHE # Moved to delete_user_data_fully to avoid circular import
 
 logger = logging.getLogger(__name__)
 
-# db_add_generic and db_remove_generic remain almost unchanged,
-# but model_instance type is now SQLModel
 async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> bool:
     try:
         session.add(model_instance)

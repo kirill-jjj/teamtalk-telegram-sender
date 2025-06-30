@@ -1,4 +1,3 @@
-# bot/telegram_bot/deeplink.py
 
 import logging
 from typing import Any, Callable, Coroutine, Optional
@@ -98,7 +97,6 @@ async def _handle_subscribe_deeplink(
     user_settings: UserSettings
 ) -> str:
     user_already_subscribed_to_bot = await session.get(SubscribedUser, telegram_id) is not None
-    # user_had_settings_before = await session.get(UserSettings, telegram_id) is not None # Removed as it's no longer used
 
     if not user_already_subscribed_to_bot:
         await add_subscriber(session, telegram_id)
