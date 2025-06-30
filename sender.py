@@ -4,7 +4,7 @@ import sys
 from bot.logging_setup import setup_logging
 logger = setup_logging()
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, html
 from aiogram.types import ErrorEvent, Message
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
@@ -109,6 +109,9 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
     """
     Global error handler for uncaught exceptions in handlers.
     """
+    # Экранируем текст исключения, чтобы избежать ошибок парсинга HTML
+    escaped_exception_text = html.quote(str(event.exception))
+
     logger.critical(f"Unhandled exception in handler: {event.exception}", exc_info=True)
 
     if app_config.TG_ADMIN_CHAT_ID:
@@ -116,7 +119,7 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
             error_text = (
                 f"<b>Критическая ошибка!</b>\n"
                 f"<b>Тип ошибки:</b> {type(event.exception).__name__}\n"
-                f"<b>Сообщение:</b> {event.exception}"
+                f"<b>Сообщение:</b> {escaped_exception_text}" # <-- Используем экранированный текст
             )
             await bot.send_message(app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
         except Exception as e:
