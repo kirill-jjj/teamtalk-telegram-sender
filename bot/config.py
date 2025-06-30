@@ -1,15 +1,26 @@
 import argparse
+import os # Added
 from typing import Any, Literal, Optional
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Name of the environment variable that can override the config file path
+CONFIG_FILE_ENV_VAR = "APP_CONFIG_FILE_PATH"
+
 def get_config_path_from_args():
     """
-    Parses command line arguments to get the path to the config file.
-    Defaults to '.env' if no path is provided.
+    Determines the config file path.
+    Priority:
+    1. Environment variable APP_CONFIG_FILE_PATH.
+    2. --config command-line argument.
+    3. Default value '.env'.
     """
-    parser = argparse.ArgumentParser(description="Bot Configuration")
+    env_config_path = os.getenv(CONFIG_FILE_ENV_VAR)
+    if env_config_path:
+        return env_config_path
+
+    parser = argparse.ArgumentParser(description="Application Configuration")
     parser.add_argument(
         "--config",
         type=str,
