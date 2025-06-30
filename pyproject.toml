@@ -8,7 +8,7 @@ name = "teamtalk-telegram-sender"
 version = "0.1.0"
 description = "A bot that bridges TeamTalk 5 server events (user join/leave) to Telegram notifications and forwards PMs."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.13"
 license = {text = "GNU General Public License v3.0"}
 authors = [
     {name = "kirill-jjj", email = "kirillkolovi@gmail.com"},
