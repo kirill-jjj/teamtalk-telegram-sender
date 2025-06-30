@@ -7,7 +7,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.utils import build_help_message, get_online_teamtalk_users # Added import
+from bot.core.utils import build_help_message, get_online_teamtalk_users
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
@@ -158,7 +158,7 @@ async def who_command_handler(
     try:
         all_users_list = await get_online_teamtalk_users(tt_instance)
     except Exception as e:
-        logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True) # Log message could be updated
+        logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
         await message.reply(translator.gettext("Error getting users from TeamTalk."))
         return
 
