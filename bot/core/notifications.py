@@ -11,6 +11,9 @@ from bot.language import get_translator
 from bot.database.engine import SessionFactory
 from bot.state import SUBSCRIBED_USERS_CACHE
 from bot.core.user_settings import get_or_create_user_settings
+# Removed get_muted_users_set as it's no longer used from user_settings
+from bot.models import MutedUser, NotificationSetting # Added MutedUser, NotificationSetting
+from sqlmodel import select # Added select
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
@@ -69,7 +72,7 @@ async def should_notify_user(
     event_type: str, 
     session_factory
 ) -> bool:
-    from bot.core.user_settings import get_muted_users_set # Moved import inside
+    # Removed from bot.core.user_settings import get_muted_users_set
 
     async with session_factory() as session:
         user_settings = await get_or_create_user_settings(telegram_id, session)
@@ -77,17 +80,27 @@ async def should_notify_user(
         notification_pref = user_settings.notification_settings
         mute_all_flag = user_settings.mute_all
 
-        muted_users = get_muted_users_set(user_settings)
+        # Removed: muted_users = get_muted_users_set(user_settings)
+        # from bot.models import NotificationSetting # This is now imported at the top
 
-        from bot.models import NotificationSetting # Moved import inside
         if notification_pref == NotificationSetting.NONE: return False
         if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSetting.JOIN_OFF: return False
         if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSetting.LEAVE_OFF: return False
 
+        # New logic to check MutedUser table
+        statement = select(MutedUser).where(
+            MutedUser.user_settings_telegram_id == telegram_id,
+            MutedUser.muted_teamtalk_username == tt_user_username
+        )
+        result = await session.exec(statement)
+        is_muted_explicitly = result.first() is not None
+
         if mute_all_flag:
-            return tt_user_username in muted_users
+            # If "Mute All", then receive notifications only for those explicitly in the muted_users list (exceptions)
+            return is_muted_explicitly
         else:
-            return tt_user_username not in muted_users
+            # Otherwise, receive notifications for all, EXCEPT those explicitly in the muted_users list
+            return not is_muted_explicitly
 
 
 def _generate_join_leave_notification_text(
