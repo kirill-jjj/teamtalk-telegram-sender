@@ -21,7 +21,8 @@ from bot.constants import (
     REJOIN_CHANNEL_DELAY_SECONDS,
     REJOIN_CHANNEL_RETRY_SECONDS,
     REJOIN_CHANNEL_MAX_ATTEMPTS,
-    REJOIN_CHANNEL_FAIL_WAIT_SECONDS
+    REJOIN_CHANNEL_FAIL_WAIT_SECONDS,
+    DEFAULT_LANGUAGE
 )
 from bot.telegram_bot.utils import send_telegram_message_individual
 from bot.telegram_bot.bot_instances import tg_bot_message
