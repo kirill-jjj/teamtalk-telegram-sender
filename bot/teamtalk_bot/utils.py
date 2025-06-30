@@ -15,13 +15,13 @@ from bot.language import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
-    RECONNECT_DELAY_SECONDS,
+    # RECONNECT_DELAY_SECONDS, # Removed as unused
     # RECONNECT_RETRY_SECONDS, # Moved to app_config.TT_RECONNECT_RETRY_SECONDS
     # RECONNECT_CHECK_INTERVAL_SECONDS, # Moved to app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS
-    REJOIN_CHANNEL_DELAY_SECONDS,
-    REJOIN_CHANNEL_RETRY_SECONDS,
-    REJOIN_CHANNEL_MAX_ATTEMPTS,
-    REJOIN_CHANNEL_FAIL_WAIT_SECONDS,
+    # REJOIN_CHANNEL_DELAY_SECONDS, # Removed as unused
+    # REJOIN_CHANNEL_RETRY_SECONDS, # Removed as unused
+    # REJOIN_CHANNEL_MAX_ATTEMPTS, # Removed as unused
+    # REJOIN_CHANNEL_FAIL_WAIT_SECONDS, # Removed as unused
     DEFAULT_LANGUAGE
 )
 from bot.telegram_bot.utils import send_telegram_message_individual
