@@ -242,10 +242,10 @@ async def on_my_login(server: PytalkServer):
             logger.warning(
                 f"Could not resolve channel '{app_config.CHANNEL}' to a valid ID or no channel configured. Bot remains in its current channel."
             )
-            current_channel_id_val = tt_instance.getMyCurrentChannelID()
-            current_channel_obj_val = tt_instance.get_channel(current_channel_id_val)
-            if current_channel_obj_val: # Log current channel if bot is in one
-                 logger.info(f"Bot currently in channel '{ttstr(current_channel_obj_val.name)}'. Finalization will occur via on_user_join.")
+            current_channel_id = tt_instance.getMyCurrentChannelID()
+            current_channel_object = tt_instance.get_channel(current_channel_id)
+            if current_channel_object: # Log current channel if bot is in one
+                 logger.info(f"Bot currently in channel '{ttstr(current_channel_object.name)}'. Finalization will occur via on_user_join.")
 
     except PytalkPermissionError as e_perm_join:
         logger.error(f"Pytalk PermissionError joining channel '{target_channel_name_log}': {e_perm_join}.", exc_info=True)
