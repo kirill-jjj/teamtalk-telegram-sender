@@ -5,15 +5,16 @@ from aiogram import Router, F, html
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select, delete # Added select, delete
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
 
-from bot.models import UserSettings
+from bot.models import UserSettings, MutedUser # Added MutedUser
 from bot.core.user_settings import (
     update_user_settings_in_db,
-    get_muted_users_set,
-    set_muted_users_from_set
+    # get_muted_users_set, # Removed
+    # set_muted_users_from_set # Removed
 )
 from bot.telegram_bot.keyboards import (
     create_manage_muted_users_keyboard,
@@ -93,10 +94,20 @@ async def _display_internal_user_list(
     callback_query: CallbackQuery,
     _: callable,
     user_settings: UserSettings,
-    list_type: UserListAction,
+    list_type: UserListAction, # This will determine the header and empty text
     page: int = 0,
+    session: Optional[AsyncSession] = None, # Added session for DB query
 ):
-    users_to_process = get_muted_users_set(user_settings)
+    if not session: # Should be provided by the caller
+        logger.error("Session not provided to _display_internal_user_list")
+        await callback_query.answer(_("An error occurred. Please try again."), show_alert=True)
+        return
+
+    # Query MutedUser table directly
+    statement = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
+    results = await session.execute(statement)
+    # users_to_process will be a list of usernames (str)
+    users_to_process = results.scalars().all()
     sorted_items = sorted(list(users_to_process))
 
     header_text, empty_list_text = "", ""
@@ -154,8 +165,8 @@ async def _display_all_server_accounts_list(
     )
 
 
-def _get_username_to_toggle_from_callback(
-    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings
+async def _get_username_to_toggle_from_callback( # Made async
+    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings, session: AsyncSession # Added session
 ) -> Optional[str]:
     """Extracts the username to be toggled from the callback data based on the list type."""
     user_idx = callback_data.user_idx
@@ -171,9 +182,10 @@ def _get_username_to_toggle_from_callback(
         if 0 <= user_idx < len(page_items):
             return ttstr(page_items[user_idx].username)
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-        # This list always comes from muted_users_set, regardless of mute_all_flag
-        # The interpretation of what this list means (muted or allowed) happens at a higher level
-        relevant_usernames = sorted(list(get_muted_users_set(user_settings)))
+        # Query MutedUser table directly
+        statement = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
+        results = await session.execute(statement)
+        relevant_usernames = sorted(list(results.scalars().all()))
         page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]
@@ -182,50 +194,71 @@ def _get_username_to_toggle_from_callback(
     return None
 
 
-def _parse_mute_toggle_callback_data(
-    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings
+async def _parse_mute_toggle_callback_data( # Made async
+    callback_data: ToggleMuteSpecificCallback, user_settings: UserSettings, session: AsyncSession # Added session
 ) -> Optional[str]:
     """
     Parses the callback data to get the username to toggle.
     This is a wrapper around _get_username_to_toggle_from_callback.
     """
-    return _get_username_to_toggle_from_callback(callback_data, user_settings)
+    return await _get_username_to_toggle_from_callback(callback_data, user_settings, session) # Added await and session
 
 
-def _determine_mute_action_and_update_settings(
-    username_to_toggle: str, user_settings: UserSettings
-) -> tuple[str, bool, set[str]]:
+async def _determine_mute_action_and_update_settings( # Made async
+    username_to_toggle: str, user_settings: UserSettings, session: AsyncSession # Added session
+) -> tuple[str, bool, list[str]]: # Return type changed from set to list for original_muted_users
     """
-    Determines the mute action, updates settings in-memory, and returns original settings.
+    Determines the mute action, updates MutedUser table, and returns original settings.
     """
-    current_muted_set = get_muted_users_set(user_settings)
-    original_muted_users_set = set(current_muted_set) # Make a copy
+    # Get current muted usernames from MutedUser table
+    stmt_select = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
+    result = await session.execute(stmt_select)
+    current_muted_list = result.scalars().all()
+    original_muted_usernames_list = list(current_muted_list) # Make a copy
+
     action_taken: str
-    current_status_is_muted: bool  # Is the user considered muted *before* this toggle action
+    current_status_is_muted: bool # Is the user considered muted *before* this toggle action
+
+    is_currently_in_db_list = username_to_toggle in current_muted_list
 
     if user_settings.mute_all:
-        # Mute all ON: current_muted_set = allowed users
-        if username_to_toggle in current_muted_set:
-            current_muted_set.discard(username_to_toggle)
+        # Mute all ON: MutedUser table stores ALLOWED users (exceptions to mute all)
+        if is_currently_in_db_list: # User was in allowed list
+            # Remove from allowed list (means user becomes muted by Mute All)
+            stmt_delete = delete(MutedUser).where(
+                MutedUser.user_settings_telegram_id == user_settings.telegram_id,
+                MutedUser.muted_teamtalk_username == username_to_toggle
+            )
+            await session.execute(stmt_delete)
             action_taken = "removed_from_allowed_list"
-            current_status_is_muted = False # Was allowed, now muted by MuteAll
-        else:
-            current_muted_set.add(username_to_toggle)
+            current_status_is_muted = False # Was allowed, now effectively muted
+        else: # User was not in allowed list (means user was muted by Mute All)
+            # Add to allowed list
+            new_entry = MutedUser(user_settings_telegram_id=user_settings.telegram_id, muted_teamtalk_username=username_to_toggle)
+            session.add(new_entry)
             action_taken = "added_to_allowed_list"
-            current_status_is_muted = True # Was muted by MuteAll, now allowed
+            current_status_is_muted = True # Was effectively muted, now allowed
     else:
-        # Mute all OFF: current_muted_set = muted users
-        if username_to_toggle in current_muted_set:
-            current_muted_set.discard(username_to_toggle)
+        # Mute all OFF: MutedUser table stores MUTED users
+        if is_currently_in_db_list: # User was in muted list
+            # Remove from muted list (means user becomes unmuted)
+            stmt_delete = delete(MutedUser).where(
+                MutedUser.user_settings_telegram_id == user_settings.telegram_id,
+                MutedUser.muted_teamtalk_username == username_to_toggle
+            )
+            await session.execute(stmt_delete)
             action_taken = "removed_from_muted_list"
             current_status_is_muted = True # Was muted, now unmuted
-        else:
-            current_muted_set.add(username_to_toggle)
+        else: # User was not in muted list (means user was unmuted)
+            # Add to muted list
+            new_entry = MutedUser(user_settings_telegram_id=user_settings.telegram_id, muted_teamtalk_username=username_to_toggle)
+            session.add(new_entry)
             action_taken = "added_to_muted_list"
             current_status_is_muted = False # Was unmuted, now muted
 
-    set_muted_users_from_set(user_settings, current_muted_set)
-    return action_taken, current_status_is_muted, original_muted_users_set
+    # No need for set_muted_users_from_set, changes are made directly to DB via session
+    # The session will be committed in _save_mute_settings_and_notify
+    return action_taken, current_status_is_muted, original_muted_usernames_list
 
 
 def _generate_mute_toggle_toast_message(
@@ -249,29 +282,45 @@ def _generate_mute_toggle_toast_message(
 async def _save_mute_settings_and_notify(
     session: AsyncSession,
     callback_query: CallbackQuery,
-    user_settings: UserSettings,
+    user_settings: UserSettings, # UserSettings might be updated (e.g. mute_all)
     toast_message: str,
     username_to_toggle: str, # For logging
     action_taken: str, # For logging
-    original_muted_users_set: set[str],
+    original_muted_usernames_list: list[str], # PARAMETER RENAMED and type changed
     _: callable
 ) -> bool:
     """
-    Saves mute settings to DB, sends toast notification, and handles errors/reverts.
+    Commits session (which includes MutedUser changes and potentially UserSettings changes),
+    sends toast notification, and handles errors/reverts.
     Returns True if successful, False otherwise.
     """
-    if not callback_query.from_user: # Should be checked by caller, but as a safeguard
+    if not callback_query.from_user:
         logger.error("Cannot save settings: callback_query.from_user is None.")
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
 
     try:
-        await update_user_settings_in_db(session, user_settings)
+        # UserSettings related to mute_all might have been changed by its own handler and added to session.
+        # MutedUser changes (add/delete) are already in the session from _determine_mute_action_and_update_settings.
+        # This commit will save both UserSettings changes (if any) and MutedUser changes.
+        await session.commit()
+
+        # Refresh user_settings from DB as its state (e.g. mute_all or related collections) might have changed.
+        await session.refresh(user_settings)
+
+        # Update cache as user_settings might have changed (e.g. mute_all status)
+        # The muted_users_list relationship will also be updated by the refresh.
+        from bot.core.user_settings import USER_SETTINGS_CACHE # Local import
+        USER_SETTINGS_CACHE[user_settings.telegram_id] = user_settings
+
         await callback_query.answer(toast_message, show_alert=False)
         return True
     except Exception as e:
-        logger.error(f"DB/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
-        set_muted_users_from_set(user_settings, original_muted_users_set)
+        logger.error(f"DB commit/Answer error for {username_to_toggle} (action: {action_taken}): {e}", exc_info=True)
+        await session.rollback() # Rollback any changes in the session (MutedUser, UserSettings)
+        # After rollback, user_settings object in memory might be stale.
+        # The original_muted_usernames_list was for context; actual DB state is reverted by rollback.
+        # If user_settings.mute_all was changed, that too is rolled back.
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
 
@@ -281,7 +330,8 @@ async def _refresh_mute_related_ui(
     _: callable,
     user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
-    callback_data: ToggleMuteSpecificCallback # Contains list_type and current_page
+    callback_data: ToggleMuteSpecificCallback, # Contains list_type and current_page
+    session: AsyncSession # Added session
 ) -> None:
     """Refreshes the mute-related UI list after a toggle action."""
     list_type_user_was_on = callback_data.list_type
@@ -302,7 +352,7 @@ async def _refresh_mute_related_ui(
     else:  # LIST_MUTED or LIST_ALLOWED
         # _display_internal_user_list correctly derives the effective list to show
         # based on user_settings.mute_all and the list_type_user_was_on.
-        await _display_internal_user_list(callback_query, _, user_settings, list_type_user_was_on, current_page_for_refresh)
+        await _display_internal_user_list(callback_query, _, user_settings, list_type_user_was_on, current_page_for_refresh, session) # Added session
 
 
 @mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
@@ -357,8 +407,8 @@ async def cq_toggle_mute_all_action(
 
 @mute_router.callback_query(UserListCallback.filter(F.action.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_list_internal_users_action(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: UserListCallback
-):
+    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: UserListCallback
+): # Added session
     await callback_query.answer()
     requested_list_type = callback_data.action # This is now a UserListAction member
     is_mute_all_active = user_settings.mute_all
@@ -373,16 +423,16 @@ async def cq_list_internal_users_action(
             effective_list_type = UserListAction.LIST_MUTED
         # if requested_list_type == UserListAction.LIST_MUTED, it remains UserListAction.LIST_MUTED
 
-    await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0)
+    await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0, session) # Added session
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
 async def cq_paginate_internal_user_list_action(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback
-):
+    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback
+): # Added session
     await callback_query.answer()
     # callback_data.list_type is already UserListAction from CallbackData definition
-    await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page)
+    await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page, session) # Added session
 
 
 @mute_router.callback_query(UserListCallback.filter(F.action == UserListAction.LIST_ALL_ACCOUNTS))
@@ -433,15 +483,42 @@ async def cq_toggle_specific_user_mute_action(
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
-    username_to_toggle = _parse_mute_toggle_callback_data(callback_data, user_settings)
+    # Pass session to _parse_mute_toggle_callback_data
+    username_to_toggle = await _parse_mute_toggle_callback_data(callback_data, user_settings, session)
 
     if not username_to_toggle:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    action_taken, current_status_is_muted, original_muted_users_set = \
-        _determine_mute_action_and_update_settings(username_to_toggle, user_settings)
+    # Pass session to _determine_mute_action_and_update_settings
+    # It now returns original_muted_usernames_list (list[str])
+    action_taken, current_status_is_muted, original_muted_usernames_list = \
+        await _determine_mute_action_and_update_settings(username_to_toggle, user_settings, session)
 
+    # This logic remains the same: new_status_is_muted is the state *after* the toggle.
+    # If current_status_is_muted was True (meaning user *was* muted before toggle),
+    # then new_status_is_muted will be False (user is *now* unmuted).
+    # If current_status_is_muted was False (user *was* unmuted before toggle),
+    # then new_status_is_muted will be True (user is *now* muted).
+    # This seems inverted compared to the previous logic. Let's re-evaluate.
+
+    # Let's trace:
+    # _determine_mute_action_and_update_settings returns `current_status_is_muted` which is the state *before* the toggle.
+    # Example: mute_all=False (normal mode). User 'xyz' is NOT in MutedUser table.
+    #   - is_currently_in_db_list = False
+    #   - current_status_is_muted = False (was unmuted)
+    #   - Action: add 'xyz' to MutedUser. User becomes muted.
+    #   - We want toast "xyz is now muted". So new_status_is_muted should be True.
+    #   - current_status_is_muted (False) != new_status_is_muted (True)
+
+    # Example: mute_all=False. User 'xyz' IS in MutedUser table.
+    #   - is_currently_in_db_list = True
+    #   - current_status_is_muted = True (was muted)
+    #   - Action: remove 'xyz' from MutedUser. User becomes unmuted.
+    #   - We want toast "xyz is now unmuted". So new_status_is_muted should be False.
+    #   - current_status_is_muted (True) != new_status_is_muted (False)
+
+    # So, `new_status_is_muted` should indeed be the opposite of `current_status_is_muted` (the status *before* action).
     new_status_is_muted = not current_status_is_muted
 
     toast_message = _generate_mute_toggle_toast_message(
@@ -458,7 +535,7 @@ async def cq_toggle_specific_user_mute_action(
         toast_message,
         username_to_toggle,
         action_taken,
-        original_muted_users_set,
+        original_muted_usernames_list, # Pass the renamed variable
         _
     )
 
@@ -470,5 +547,6 @@ async def cq_toggle_specific_user_mute_action(
         _,
         user_settings,
         tt_instance,
-        callback_data
+        callback_data,
+        session # Pass session
     )

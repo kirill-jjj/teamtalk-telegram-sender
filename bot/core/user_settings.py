@@ -7,11 +7,7 @@ from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 
-
-def _prepare_muted_users_string(users_set: set[str]) -> str:
-    if not users_set:
-        return ""
-    return ",".join(sorted(list(users_set)))
+# Removed _prepare_muted_users_string as it's no longer needed.
 
 USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
 
@@ -66,10 +62,5 @@ def remove_user_settings_from_cache(telegram_id: int) -> None:
     else:
         logger.debug(f"User settings for {telegram_id} not found in cache for removal.")
 
-def get_muted_users_set(settings: UserSettings) -> set[str]:
-    if not settings.muted_users:
-        return set()
-    return set(settings.muted_users.split(','))
-
-def set_muted_users_from_set(settings: UserSettings, users_set: set[str]) -> None:
-    settings.muted_users = _prepare_muted_users_string(users_set)
+# Removed get_muted_users_set and set_muted_users_from_set
+# as muted_users are now handled in a separate table.

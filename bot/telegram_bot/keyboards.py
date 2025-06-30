@@ -36,8 +36,8 @@ from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     SubscriberListCallback
 )
-from bot.models import NotificationSetting, UserSettings
-from bot.core.user_settings import get_muted_users_set # For create_paginated_user_list_keyboard and create_account_list_keyboard
+from bot.models import NotificationSetting, UserSettings # MutedUser might be needed if we pass MutedUser objects
+# from bot.core.user_settings import get_muted_users_set # Removed
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
@@ -212,12 +212,15 @@ def create_paginated_user_list_keyboard(
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
 
-    muted_users_set = get_muted_users_set(user_settings)
+    # Create a set of muted usernames from the user_settings.muted_users_list relationship
+    # This list contains MutedUser objects.
+    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
 
     for idx, username in enumerate(page_items):
-        is_in_set = username in muted_users_set # Use the fetched set
+        # page_items are strings (usernames)
+        is_in_set = username in muted_usernames_from_relationship
         effectively_muted: bool
-        if user_settings.mute_all: # Field name changed
+        if user_settings.mute_all:
             effectively_muted = not is_in_set
         else:
             effectively_muted = is_in_set
@@ -253,15 +256,16 @@ def create_account_list_keyboard(
     """Creates keyboard for a paginated list of all server user accounts."""
     builder = InlineKeyboardBuilder()
 
-    muted_users_set = get_muted_users_set(user_settings)
+    # Create a set of muted usernames from the user_settings.muted_users_list relationship
+    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
 
     for idx, account_obj in enumerate(page_items):
         username_str = ttstr(account_obj.username)
         display_name = username_str
 
-        is_in_set = username_str in muted_users_set # Use the fetched set
+        is_in_set = username_str in muted_usernames_from_relationship
         effectively_muted: bool
-        if user_settings.mute_all: # Field name changed
+        if user_settings.mute_all:
             effectively_muted = not is_in_set
         else:
             effectively_muted = is_in_set
