@@ -45,7 +45,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
     """Periodically synchronizes the ONLINE_USERS_CACHE with the server's state."""
-    sync_interval_seconds = 300
+    # sync_interval_seconds = 300 # Replaced by app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS
     while True:
         try:
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
@@ -59,22 +59,23 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
                 logger.debug(f"Online users cache synchronized. Users online: {len(ONLINE_USERS_CACHE)}.")
             else:
                 logger.warning("Skipping periodic online users cache sync: TT instance not ready.")
-                await asyncio.sleep(RECONNECT_CHECK_INTERVAL_SECONDS)
+                await asyncio.sleep(app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS)
                 continue
 
         except TimeoutError as e_timeout:
             logger.error(f"TimeoutError during periodic online users cache synchronization: {e_timeout}.", exc_info=True)
-            await asyncio.sleep(sync_interval_seconds // 2)
+            # Use a fraction of the main sync interval for retry after timeout
+            await asyncio.sleep(app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS // 2)
         except PytalkException as e_pytalk:
             logger.error(f"Pytalk specific error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
-                await asyncio.sleep(60)
+                await asyncio.sleep(60) # Keep a fixed shorter delay for pytalk errors before next full interval
         except Exception as e:
             logger.error(f"Error during periodic online users cache synchronization: {e}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
-                 await asyncio.sleep(60)
+                 await asyncio.sleep(60) # Keep a fixed shorter delay for general errors
 
-        await asyncio.sleep(sync_interval_seconds)
+        await asyncio.sleep(app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
 
 TT_COMMAND_HANDLERS = {
     "/sub": handle_tt_subscribe_command,

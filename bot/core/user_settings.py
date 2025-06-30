@@ -2,15 +2,27 @@ import asyncio
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from cachetools import TTLCache
 
 from bot.models import UserSettings
+from bot.config import app_config
 
 logger = logging.getLogger(__name__)
 
-USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
+# Initialize a TTL cache
+# maxsize is an estimate, adjust as needed based on expected concurrent users
+# ttl is in seconds, from app_config
+USER_SETTINGS_CACHE: TTLCache[int, UserSettings] = TTLCache(
+    maxsize=1024, ttl=app_config.USER_SETTINGS_CACHE_TTL_SECONDS
+)
 
 async def load_user_settings_to_cache(session_factory) -> None:
     logger.info("Loading user settings into cache...")
+    # Note: Loading all settings into a TTL cache at startup might not be ideal
+    # if the dataset is very large and TTL is short, as they might expire before use.
+    # However, for moderate numbers of users or longer TTLs, this pre-populates.
+    # Alternatively, the cache can be purely populated on-demand via get_or_create_user_settings.
+    # For now, keeping the pre-population logic.
     async with session_factory() as session:
         statement = select(UserSettings)
         results = await session.execute(statement)

@@ -7,7 +7,7 @@ from sqlmodel import select, SQLModel
 from bot.core.enums import DeeplinkAction
 # Importing models from the new unified file
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings
-from bot.constants import DEEPLINK_EXPIRY_MINUTES
+from bot.config import app_config # Changed from constants to app_config
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
@@ -123,11 +123,11 @@ async def create_deeplink(
     session: AsyncSession,
     action: DeeplinkAction,
     payload: str | None = None,
-    expected_telegram_id: int | None = None,
-    expiry_minutes: int = DEEPLINK_EXPIRY_MINUTES
+    expected_telegram_id: int | None = None
+    # expiry_minutes parameter removed, will use app_config.DEEPLINK_TTL_SECONDS
 ) -> str:
     token_str = secrets.token_urlsafe(16)
-    expiry_time = datetime.utcnow() + timedelta(minutes=expiry_minutes)
+    expiry_time = datetime.utcnow() + timedelta(seconds=app_config.DEEPLINK_TTL_SECONDS)
     deeplink_obj = Deeplink(
         token=token_str,
         action=action,
