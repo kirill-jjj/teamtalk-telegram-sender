@@ -2,7 +2,7 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession # Changed import
 from sqlmodel import SQLModel
 
 from bot.config import app_config
