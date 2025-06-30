@@ -1,20 +1,25 @@
-import sys
-
-
-def get_env_file_from_args():
-    """
-    Simple function to find the path to a .env file in command line arguments.
-    Returns the first argument ending with .env, or '.env' if none is found.
-    """
-    for arg in sys.argv[1:]:
-        if arg.endswith('.env'):
-            return arg
-    return '.env'
-
+import argparse
 from typing import Any, Literal, Optional
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+def get_config_path_from_args():
+    """
+    Parses command line arguments to get the path to the config file.
+    Defaults to '.env' if no path is provided.
+    """
+    parser = argparse.ArgumentParser(description="Bot Configuration")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=".env",
+        help="Path to the configuration file (e.g., .env, prod.env). Defaults to '.env'",
+    )
+    # Parse known args to allow other arguments (like those from aiogram)
+    # without causing an error if sender.py is called directly with them.
+    args, _ = parser.parse_known_args()
+    return args.config
 
 GenderType = Literal["male", "female", "neutral"]
 LangType = Literal["en", "ru"]
@@ -59,7 +64,7 @@ class Settings(BaseSettings):
     EFFECTIVE_DEFAULT_LANG: LangType = "en"
 
     model_config = SettingsConfigDict(
-            env_file=get_env_file_from_args(),
+            env_file=get_config_path_from_args(),
             env_file_encoding='utf-8',
             extra='ignore'
         )
