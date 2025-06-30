@@ -493,30 +493,9 @@ async def cq_toggle_specific_user_mute_action(
     action_taken, current_status_is_muted, original_muted_usernames_list = \
         await _determine_mute_action_and_update_settings(username_to_toggle, user_settings, session)
 
-    # This logic remains the same: new_status_is_muted is the state *after* the toggle.
-    # If current_status_is_muted was True (meaning user *was* muted before toggle),
-    # then new_status_is_muted will be False (user is *now* unmuted).
-    # If current_status_is_muted was False (user *was* unmuted before toggle),
-    # then new_status_is_muted will be True (user is *now* muted).
-    # This seems inverted compared to the previous logic. Let's re-evaluate.
-
-    # Let's trace:
-    # _determine_mute_action_and_update_settings returns `current_status_is_muted` which is the state *before* the toggle.
-    # Example: mute_all=False (normal mode). User 'xyz' is NOT in MutedUser table.
-    #   - is_currently_in_db_list = False
-    #   - current_status_is_muted = False (was unmuted)
-    #   - Action: add 'xyz' to MutedUser. User becomes muted.
-    #   - We want toast "xyz is now muted". So new_status_is_muted should be True.
-    #   - current_status_is_muted (False) != new_status_is_muted (True)
-
-    # Example: mute_all=False. User 'xyz' IS in MutedUser table.
-    #   - is_currently_in_db_list = True
-    #   - current_status_is_muted = True (was muted)
-    #   - Action: remove 'xyz' from MutedUser. User becomes unmuted.
-    #   - We want toast "xyz is now unmuted". So new_status_is_muted should be False.
-    #   - current_status_is_muted (True) != new_status_is_muted (False)
-
-    # So, `new_status_is_muted` should indeed be the opposite of `current_status_is_muted` (the status *before* action).
+    # `current_status_is_muted` is the user's mute status *before* the toggle action.
+    # `new_status_is_muted` should reflect the status *after* the toggle for the toast message.
+    # Therefore, new_status_is_muted is the inverse of current_status_is_muted.
     new_status_is_muted = not current_status_is_muted
 
     toast_message = _generate_mute_toggle_toast_message(

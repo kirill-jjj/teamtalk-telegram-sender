@@ -5,7 +5,7 @@ from aiogram import html
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
-from sqlalchemy.orm import selectinload # <--- ВАЖНЫЙ ИМПОРТ
+from sqlalchemy.orm import selectinload # For eager loading related objects
 from sqlmodel import select
 
 from bot.config import app_config
