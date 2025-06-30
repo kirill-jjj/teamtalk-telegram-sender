@@ -2,13 +2,14 @@ import logging
 from typing import Callable, Coroutine, Any, Dict, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, User
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, selectinload
+from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
 # Updated imports: UserSettings from bot.models, get_or_create_user_settings remains
 from bot.models import UserSettings, SubscribedUser # UserSettings is now SQLModel, SubscribedUser also from bot.models
-from bot.core.user_settings import get_or_create_user_settings # This function will return SQLModel UserSettings
+from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE # This function will return SQLModel UserSettings
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
 # bot.database.models.SubscribedUser import is removed as it's covered by bot.models
@@ -41,10 +42,45 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        # user_specific_settings renamed to user_settings, now an SQLModel instance
-        user_settings: UserSettings = await get_or_create_user_settings(user_obj.id, session_obj)
+        # --- НАЧАЛО ИСПРАВЛЕНИЯ ---
+        # Вместо get_or_create_user_settings, который возвращает кешированный
+        # или "простой" объект, мы делаем явный запрос с "жадной" загрузкой
+        # связанных muted_users_list.
 
-        data["user_settings"] = user_settings # Key in data dict updated
+        # Сначала проверим кеш, чтобы не дергать БД без нужды
+        if user_obj.id in USER_SETTINGS_CACHE:
+            user_settings = USER_SETTINGS_CACHE[user_obj.id]
+            # Даже если в кеше есть, нам нужно убедиться, что связанные данные загружены
+            # SQLAlchemy достаточно умна, чтобы не перезагружать, если они уже есть
+            stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
+            result = await session_obj.execute(stmt)
+            user_settings = result.scalar_one_or_none()
+        else:
+             user_settings = None
+
+        if not user_settings:
+            # Если в кеше не было или объект оказался "пустым", создаем его
+            # get_or_create_user_settings должен сам добавлять в кеш
+            user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
+            # И снова перезагружаем с жадной загрузкой, чтобы гарантировать наличие muted_users_list
+            # Это важно, так как get_or_create_user_settings мог вернуть объект без этой связи,
+            # или создать новый, который точно ее не имеет загруженной.
+            stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
+            result = await session_obj.execute(stmt)
+            user_settings = result.scalar_one_or_none()
+
+        if not user_settings:
+            # Если даже после создания не нашлось, это ошибка
+            logger.error(f"Could not get or create user settings for user {user_obj.id}")
+            # Можно здесь вернуть или обработать ошибку соответствующим образом,
+            # например, не передавать user_settings дальше или вернуть ошибку пользователю.
+            # Для данного исправления предполагаем, что user_settings должен быть всегда.
+            # Если это критично, можно поднять исключение или вернуть ответ пользователю.
+            return await handler(event, data) # Пропускаем дальнейшую обработку, если настройки не найдены
+
+        # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+        data["user_settings"] = user_settings
 
         translator = get_translator(user_settings.language)
         data["_"] = translator.gettext
