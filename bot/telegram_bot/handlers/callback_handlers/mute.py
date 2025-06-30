@@ -262,7 +262,7 @@ async def _determine_mute_action_and_update_settings( # Made async
 def _generate_mute_toggle_toast_message(
     username_to_toggle: str,
     new_status_is_muted: bool, # True if muted AFTER toggle, False if unmuted AFTER toggle
-    mute_all_flag: bool, # Current state of user_specific_settings.mute_all_flag
+    mute_all_flag: bool, # Current state of user_settings.mute_all (the flag from the UserSettings object)
     _: callable
 ) -> str:
     """Generates the toast message for the mute toggle action."""
