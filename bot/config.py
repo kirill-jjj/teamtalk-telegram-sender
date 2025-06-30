@@ -42,7 +42,6 @@ class Settings(BaseSettings):
     """
 
     # --- Telegram ---
-    TG_BOT_TOKEN: Optional[str] = None
     TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias='TELEGRAM_BOT_EVENT_TOKEN')
     TG_BOT_MESSAGE_TOKEN: Optional[str] = None
     TG_ADMIN_CHAT_ID: Optional[int] = None
@@ -85,11 +84,8 @@ class Settings(BaseSettings):
         """
         Validator for checking interdependent fields.
         """
-        if not self.TG_EVENT_TOKEN and self.TG_BOT_TOKEN:
-            self.TG_EVENT_TOKEN = self.TG_BOT_TOKEN
-
         if not self.TG_EVENT_TOKEN:
-            raise ValueError("The TG_BOT_TOKEN or TELEGRAM_BOT_EVENT_TOKEN environment variable must be set.")
+            raise ValueError("The TELEGRAM_BOT_EVENT_TOKEN environment variable must be set.")
 
         self.EFFECTIVE_DEFAULT_LANG = self.DEFAULT_LANG
 
