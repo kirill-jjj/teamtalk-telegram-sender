@@ -46,7 +46,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_db_url() # Use the new function
+    url = get_db_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -62,7 +62,6 @@ async def run_migrations_online_async() -> None:
     """Run migrations in 'online' mode using an asyncio event loop."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    # Use the get_db_url function to set the database URL
     db_url = get_db_url()
 
     connectable = create_async_engine(

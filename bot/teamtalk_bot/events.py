@@ -231,7 +231,7 @@ async def on_my_login(server: PytalkServer):
             if channel_obj:
                 channel_id = channel_obj.id
                 target_channel_name_log = ttstr(channel_obj.name)
-            else: # Keep log as error since channel is configured but not found
+            else:
                 logger.error(f"Channel path '{channel_id_or_path}' not found during login.")
 
         if channel_id != -1:
