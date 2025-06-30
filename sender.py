@@ -12,7 +12,7 @@ from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 from bot.config import app_config
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 # Removed unused: from bot.teamtalk_bot import events as tt_events
-from bot.database.engine import init_db, SessionFactory
+from bot.database.engine import SessionFactory
 from bot.core.user_settings import load_user_settings_to_cache
 from bot.database import crud
 from bot.database.crud import get_all_subscribers_ids
@@ -140,7 +140,6 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
 async def main():
     logger.info("Application starting...")
 
-    await init_db()
     async with SessionFactory() as session:
         db_subscriber_ids = await get_all_subscribers_ids(session)
         SUBSCRIBED_USERS_CACHE.update(db_subscriber_ids)
