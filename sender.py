@@ -133,9 +133,6 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
             await update.message.answer(user_message)
         elif update.callback_query and isinstance(update.callback_query.message, Message):
             await update.callback_query.message.answer(user_message)
-        # Example of how to acknowledge a callback if message sending fails or is not applicable:
-        # elif update.callback_query:
-        #     await update.callback_query.answer("Error processed.", show_alert=False) # Generic ack
     except Exception as e:
         logger.error(f"Could not send error message to user: {e}", exc_info=True)
 

@@ -13,8 +13,6 @@ from pytalk.instance import TeamTalkInstance
 from bot.models import UserSettings, MutedUser # Added MutedUser
 from bot.core.user_settings import (
     update_user_settings_in_db,
-    # get_muted_users_set, # Removed
-    # set_muted_users_from_set # Removed
 )
 from bot.telegram_bot.keyboards import (
     create_manage_muted_users_keyboard,

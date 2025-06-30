@@ -37,7 +37,6 @@ from bot.telegram_bot.callback_data import (
     SubscriberListCallback
 )
 from bot.models import NotificationSetting, UserSettings # MutedUser might be needed if we pass MutedUser objects
-# from bot.core.user_settings import get_muted_users_set # Removed
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
