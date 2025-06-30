@@ -69,8 +69,7 @@ source $HOME/.local/bin/env
     ```bash
     uv sync
     ```
-    *(This command prepares the environment with all dependencies.)*
-    (Activate the virtual environment: `source .venv/bin/activate` on Linux/macOS or `.venv\Scripts\activate` on Windows)
+    (`uv sync` will create a `.venv` virtual environment if it doesn't exist and install all dependencies. `uv` automatically uses this environment for commands like `uv run`.)
 4.  **Generate Localization Files**: The project uses a gettext-based localization system managed by the `manage-locales.py` script. These commands should be run from the root of the project.
     *   To extract all translatable strings from the code into a template file (`bot/locales/messages.pot`):
         ```bash
@@ -100,10 +99,11 @@ source $HOME/.local/bin/env
     ```bash
     uv run sender.py
     ```
-    You can also specify a particular configuration file (instead of the default `.env`) by passing it as an argument:
+    You can also specify a particular configuration file (instead of the default `.env`) using the `--config` option:
     ```bash
-    uv run sender.py custom.env
+    uv run sender.py -- --config custom.env
     ```
+    (Note the `--` before `--config custom.env`. This tells `uv run` that subsequent arguments are for the `sender.py` script, not for the `uv` command itself.)
 
 ## Database Migrations
 
@@ -116,20 +116,42 @@ This project uses Alembic to manage database schema changes.
 
 ### Basic Alembic Commands
 
-All Alembic commands should be run within the activated virtual environment (`source .venv/bin/activate` or `uv run <command>`).
+It is recommended to use the `manage-migrations.py` script for managing database migrations, as it allows easy specification of the configuration file for the database connection. Commands are run using `uv run`.
 
-*   **Create a New Revision (Migration)**:
-    After modifying models in `bot/models.py`, Alembic can attempt to automatically generate a migration script.
+*   **Apply Migrations (Recommended Method)**:
+    To apply all pending migrations to the database (using the default `.env` configuration):
+    ```bash
+    uv run manage-migrations.py -- upgrade head
+    ```
+    If using a different configuration file (e.g., `prod.env`):
+    ```bash
+    uv run manage-migrations.py -- --config prod.env upgrade head
+    ```
+    (Note the first `--` tells `uv run` that subsequent arguments are for `manage-migrations.py`. The `--config prod.env` is an argument to `manage-migrations.py`.)
+
+*   **Create a New Revision (Migration) (Recommended Method)**:
+    After modifying models in `bot/models.py`, use `manage-migrations.py` to create a revision:
+    ```bash
+    uv run manage-migrations.py -- revision -m "short_description_of_changes" --autogenerate
+    ```
+    Or with a custom config:
+    ```bash
+    uv run manage-migrations.py -- --config prod.env revision -m "short_description_of_changes" --autogenerate
+    ```
+    This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect.
+
+You can also run Alembic commands directly if needed, though `manage-migrations.py` is preferred for most cases. `uv` automatically uses the activated virtual environment.
+
+*   **Create a New Revision (Migration) (Direct Alembic Call)**:
     ```bash
     uv run alembic revision -m "short_description_of_changes" --autogenerate
     ```
-    This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect, especially for complex changes.
 
-*   **Apply Migrations**:
-    To apply all pending migrations to the database (i.e., update the schema to the latest version):
+*   **Apply Migrations (Direct Alembic Call)**:
     ```bash
     uv run alembic upgrade head
     ```
+    When calling `alembic` directly, it will use the database configuration as defined in `alembic/env.py`, which by default reads `.env` (via `bot.config`).
 
 *   **Rollback Migrations**:
     To revert the last applied migration:
