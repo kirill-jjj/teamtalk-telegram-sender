@@ -11,7 +11,7 @@ from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
 from bot.teamtalk_bot import bot_instance as tt_bot_module
-from bot.teamtalk_bot import events as tt_events
+# Removed unused: from bot.teamtalk_bot import events as tt_events
 from bot.database.engine import init_db, SessionFactory
 from bot.core.user_settings import load_user_settings_to_cache
 from bot.database import crud

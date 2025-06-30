@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
 
 from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
-from bot.core.utils import get_username_as_str, get_tt_user_display_name, get_online_teamtalk_users # Added import
+from bot.core.utils import get_username_as_str, get_tt_user_display_name, get_online_teamtalk_users
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
 import pytalk
 
@@ -45,7 +45,7 @@ async def _show_user_buttons(
     # Self-filtering by user_id has been removed.
 
     if not online_users:
-        await message.reply(_("No users online.")) # Adjusted message for generality
+        await message.reply(_("No users online."))
         return
 
     # get_tt_user_display_name now expects `_` (translator) as its second argument.
