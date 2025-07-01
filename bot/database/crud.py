@@ -46,8 +46,6 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
     return False
 
 async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[SQLModel], telegram_id: int) -> bool:
-    # For SQLModel, model_class will be like UserSettings, Admin, etc.
-    # We assume telegram_id is the primary key for these models.
     existing_entity = await session.get(model_class, telegram_id)
     if existing_entity:
         logger.debug(f"User {telegram_id} already exists in {model_class.__tablename__}.")
@@ -68,7 +66,6 @@ async def _remove_entity(session: AsyncSession, model_class: type[SQLModel], tel
 async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]) -> list[int]:
     table_name = model_class.__tablename__
     try:
-        # Assuming the PK column is named 'telegram_id' for these models.
         statement = select(model_class.telegram_id) # type: ignore
         result = await session.execute(statement)
         return result.scalars().all()

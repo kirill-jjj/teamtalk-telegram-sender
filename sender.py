@@ -1,4 +1,3 @@
-# Standard library imports first
 import asyncio
 import sys
 import os
@@ -27,13 +26,10 @@ def main():
     try:
         asyncio.run(async_main())
     except (KeyboardInterrupt, SystemExit):
-        # logger is not yet created, so use print
         print("Bot stopped!")
     except (ValueError, KeyError) as config_error:
-        # logger is not yet created
         print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.")
     except Exception as e:
-        # logger is not yet created
         print(f"CRITICAL: An unexpected critical error occurred: {e}")
         # For debugging, traceback can also be printed
         traceback.print_exc()

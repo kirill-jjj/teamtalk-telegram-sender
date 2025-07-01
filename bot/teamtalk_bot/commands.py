@@ -15,7 +15,7 @@ from bot.config import app_config
 from bot.language import get_translator
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
-from bot.telegram_bot.bot_instances import tg_bot_event # For get_me()
+from bot.telegram_bot.bot_instances import tg_bot_event
 from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
 from bot.teamtalk_bot.utils import send_long_tt_reply
 from bot.core.enums import DeeplinkAction

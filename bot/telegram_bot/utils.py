@@ -159,11 +159,10 @@ async def send_telegram_messages_to_list(
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_to_use,
             chat_id=chat_id,
-            # text=text, # text is now passed via kwargs
             language=language,
             reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online,
-            text=text, # Pass text as a keyword argument
-            parse_mode="HTML" # Explicitly set parse_mode for notifications
+            text=text,
+            parse_mode="HTML"
         ))
     await asyncio.gather(*tasks_list)
