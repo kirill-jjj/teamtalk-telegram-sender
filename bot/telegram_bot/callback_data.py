@@ -5,7 +5,7 @@ from bot.core.enums import (
     LanguageAction,
     SubscriptionAction,
     NotificationAction,
-    MuteAllAction,
+    # MuteAllAction, # Removed
     UserListAction,
     PaginateUsersAction,
     ToggleMuteSpecificAction,
@@ -30,13 +30,19 @@ class SubscriptionCallback(CallbackData, prefix="sub_set"):
 class NotificationActionCallback(CallbackData, prefix="notif_action"):
     action: NotificationAction
 
-# For toggling Mute All
-class MuteAllCallback(CallbackData, prefix="mute_all_toggle"):
-    action: MuteAllAction
+# Removed MuteAllCallback
+# class MuteAllCallback(CallbackData, prefix="mute_all_toggle"):
+#     action: MuteAllAction
 
 # For navigating user lists (initial call to display a list)
 class UserListCallback(CallbackData, prefix="user_list_nav"):
     action: UserListAction
+
+from bot.models import MuteListMode # Added
+
+# For setting mute list mode
+class SetMuteModeCallback(CallbackData, prefix="mute_mode_set"):
+    mode: MuteListMode
 
 # For paginating any user list
 class PaginateUsersCallback(CallbackData, prefix="paginate_list"):

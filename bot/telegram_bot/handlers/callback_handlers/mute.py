@@ -19,17 +19,19 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.callback_data import (
     NotificationActionCallback,
-    MuteAllCallback,
+    # MuteAllCallback, # Removed
+    SetMuteModeCallback, # Added
     UserListCallback,
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
 )
 from bot.core.enums import (
     NotificationAction,
-    MuteAllAction,
+    # MuteAllAction, # Removed
     UserListAction,
     ToggleMuteSpecificAction
 )
+from bot.models import MuteListMode # Added
 from bot.constants import USERS_PER_PAGE
 from bot.state import USER_ACCOUNTS_CACHE
 from ._helpers import process_setting_update, safe_edit_text
@@ -105,16 +107,22 @@ async def _display_internal_user_list(
     sorted_items = sorted(list(users_to_process))
 
     header_text, empty_list_text = "", ""
-    if list_type == UserListAction.LIST_MUTED:
-        header_text = _("Muted Users (Block List)")
-        empty_list_text = _("You haven't muted anyone yet.")
-    elif list_type == UserListAction.LIST_ALLOWED:
-        header_text = _("Allowed Users (Allow List)")
-        empty_list_text = _("No users are currently on the allow list.")
-    else:
-        logger.error(f"Unknown list_type '{list_type.value if isinstance(list_type, UserListAction) else list_type}' in _display_internal_user_list")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+    # Determine header and empty text based on current mute_list_mode
+    if user_settings.mute_list_mode == MuteListMode.BLACKLIST:
+        header_text = _("Blacklisted Users (Block List)")
+        empty_list_text = _("Your blacklist is empty.")
+    elif user_settings.mute_list_mode == MuteListMode.WHITELIST:
+        header_text = _("Whitelisted Users (Allow List)")
+        empty_list_text = _("Your whitelist is empty.")
+    else: # Should not happen
+        logger.error(f"Unknown mute_list_mode '{user_settings.mute_list_mode}' in _display_internal_user_list")
+        await callback_query.answer(_("An error occurred due to an invalid mode. Please try again later."), show_alert=True)
         return
+
+    # The `list_type` parameter for `create_paginated_user_list_keyboard` might still need
+    # to differentiate if `UserListAction.LIST_ALLOWED` is ever used.
+    # For now, the problem description implies `UserListAction.LIST_MUTED` is always used by the "Manage List" button.
+    # The keyboard itself uses `user_settings` to determine mute status of each user.
 
     await _display_paginated_list_ui(
         callback_query=callback_query,
@@ -189,41 +197,42 @@ def _plan_mute_toggle_action(username_to_toggle: str, user_settings: UserSetting
     is_currently_in_db_list = username_to_toggle in current_muted_usernames
 
     action_to_take: str
-    new_status_is_muted: bool
+    # new_status_is_muted: bool # This is now determined by the list mode + action, not directly planned here.
+    # The function now just plans if we add or remove from the MutedUser table.
+    # The "effective" mute status is determined at runtime by the mode + list content.
 
-    if user_settings.mute_all:
-        if is_currently_in_db_list:
-            action_to_take = "remove"
-            new_status_is_muted = True
-        else:
-            action_to_take = "add"
-            new_status_is_muted = False
+    if is_currently_in_db_list:
+        action_to_take = "remove" # If in DB, the action is to remove it
+        # new_status_is_muted will depend on mode:
+        #   BLACKLIST: removing means effectively UNMUTED
+        #   WHITELIST: removing means effectively MUTED
     else:
-        if is_currently_in_db_list:
-            action_to_take = "remove"
-            new_status_is_muted = False
-        else:
-            action_to_take = "add"
-            new_status_is_muted = True
+        action_to_take = "add" # If not in DB, the action is to add it
+        # new_status_is_muted will depend on mode:
+        #   BLACKLIST: adding means effectively MUTED
+        #   WHITELIST: adding means effectively UNMUTED
 
-    return action_to_take, new_status_is_muted
+    # We return the action ("add" or "remove") and whether the user *was added* to the list.
+    # The `was_added` flag is True if action_to_take is "add".
+    was_added_to_list = action_to_take == "add"
+    return action_to_take, was_added_to_list
 
 
 def _generate_mute_toggle_toast_message(
     username_to_toggle: str,
-    new_status_is_muted: bool,
-    mute_all_flag: bool,
+    was_added_to_list: bool, # Changed from new_status_is_muted
+    current_mode: MuteListMode, # Changed from mute_all_flag
     _: callable
 ) -> str:
     quoted_username = html.quote(username_to_toggle)
-    status_text: str
+    action_text: str
 
-    if new_status_is_muted:
-        status_text = _("muted (due to Mute All mode)") if mute_all_flag else _("muted")
-    else:
-        status_text = _("allowed (in Mute All mode)") if mute_all_flag else _("unmuted")
+    if current_mode == MuteListMode.BLACKLIST:
+        action_text = _("added to blacklist") if was_added_to_list else _("removed from blacklist")
+    else: # WHITELIST
+        action_text = _("added to whitelist") if was_added_to_list else _("removed from whitelist")
 
-    return _("{username} is now {status}.").format(username=quoted_username, status=status_text)
+    return _("{username} has been {action}.").format(username=quoted_username, action=action_text)
 
 
 async def _commit_mute_changes_and_notify(
@@ -284,42 +293,66 @@ async def cq_show_manage_muted_menu(
 ):
     await callback_query.answer()
     manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings)
+
+    # Updated text for manage muted menu
+    current_mode_text = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
+    if user_settings.mute_list_mode == MuteListMode.WHITELIST:
+        current_mode_text = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+
+    full_text = f"{_('Manage Mute List')}\n\n{current_mode_text}" # Main title + description
+
     await safe_edit_text(
         message_to_edit=callback_query.message,
-        text=_("Manage Muted/Allowed Users"),
+        text=full_text, # Use new full_text
         reply_markup=manage_muted_builder.as_markup(),
         logger_instance=logger,
         log_context="cq_show_manage_muted_menu"
     )
 
-
-@mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))
-async def cq_toggle_mute_all_action(
-    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings
+# Removed cq_toggle_mute_all_action
+# New handler for setting mute mode:
+@mute_router.callback_query(SetMuteModeCallback.filter())
+async def cq_set_mute_mode_action(
+    callback_query: CallbackQuery,
+    session: AsyncSession,
+    _: callable,
+    user_settings: UserSettings,
+    callback_data: SetMuteModeCallback
 ):
     managed_user_settings = await session.merge(user_settings)
-    original_flag = managed_user_settings.mute_all
+    new_mode = callback_data.mode
+
+    if managed_user_settings.mute_list_mode == new_mode:
+        await callback_query.answer() # Mode is already set, do nothing
+        return
+
+    original_mode = managed_user_settings.mute_list_mode
 
     def update_logic():
-        managed_user_settings.mute_all = not original_flag
+        managed_user_settings.mute_list_mode = new_mode
 
     def revert_logic():
-        managed_user_settings.mute_all = original_flag
+        managed_user_settings.mute_list_mode = original_mode
 
-    new_status_display_text = _("Enabled") if not original_flag else _("Disabled")
-    success_toast_text = _("Mute All mode is now {status}.").format(status=new_status_display_text)
+    mode_text = _("Blacklist") if new_mode == MuteListMode.BLACKLIST else _("Whitelist")
+    success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        # Create the keyboard with the LATEST user_settings state after potential update_logic
-        # The process_setting_update will call this AFTER committing changes and refreshing user_settings
-        updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings) # Use managed_user_settings
-        menu_text = _("Manage Muted/Allowed Users")
+        # After committing changes and refreshing user_settings, create the keyboard
+        updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings)
+
+        # Generate the descriptive text for the menu again
+        current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
+        if managed_user_settings.mute_list_mode == MuteListMode.WHITELIST:
+            current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+        menu_text = f"{_('Manage Mute List')}\n\n{current_mode_desc}"
+
         return menu_text, updated_builder.as_markup()
 
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=managed_user_settings,
+        user_settings=managed_user_settings, # Pass the merged (managed) instance
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,
@@ -333,18 +366,29 @@ async def cq_list_internal_users_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: UserListCallback
 ):
     await callback_query.answer()
-    requested_list_type = callback_data.action
-    is_mute_all_active = user_settings.mute_all
+    # The requested_list_type from UserListCallback might become redundant if the UI always shows
+    # the correct list based on current mode.
+    # For now, we assume UserListAction.LIST_MUTED is always sent by the "Manage Blacklist/Whitelist" button.
+    # The header text inside _display_internal_user_list will adapt.
 
-    effective_list_type = requested_list_type
-    if is_mute_all_active:
-        if requested_list_type == UserListAction.LIST_MUTED:
-            effective_list_type = UserListAction.LIST_ALLOWED
-    else:
-        if requested_list_type == UserListAction.LIST_ALLOWED:
-            effective_list_type = UserListAction.LIST_MUTED
+    # The problem description's keyboard change:
+    # list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.BLACKLIST else _("Manage Whitelist")
+    # builder.button(
+    #     text=list_mode_text,
+    #     callback_data=UserListCallback(action=UserListAction.LIST_MUTED).pack() # Always LIST_MUTED
+    # )
+    # This implies that `callback_data.action` will be LIST_MUTED.
+    # The actual display (header, etc.) should adapt based on `user_settings.mute_list_mode`.
 
-    await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0, session)
+    # We can simplify: the list_type for display is just what was passed,
+    # and _display_internal_user_list should correctly interpret it or be adapted.
+    # The old logic for `effective_list_type` is no longer needed because `mute_all` is gone.
+    # The `_display_internal_user_list` function needs to correctly determine header/empty text based on `user_settings.mute_list_mode`.
+    # It also needs to be adapted to show the correct header based on the current mute_list_mode.
+    # Let's assume for now that UserListAction.LIST_MUTED implies "show the list of users who are exceptions"
+    # (i.e., the blacklist if mode is blacklist, or the whitelist if mode is whitelist).
+
+    await _display_internal_user_list(callback_query, _, user_settings, callback_data.action, 0, session)
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])))
@@ -352,6 +396,7 @@ async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback
 ):
     await callback_query.answer()
+    # Similar to above, _display_internal_user_list needs to handle the list_type correctly in context of mute_list_mode
     await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page, session)
 
 
@@ -409,7 +454,7 @@ async def cq_toggle_specific_user_mute_action(
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    action_to_take, new_status_is_muted = _plan_mute_toggle_action(username_to_toggle, managed_user_settings)
+    action_to_take, was_added_to_list = _plan_mute_toggle_action(username_to_toggle, managed_user_settings)
 
     if action_to_take == "add":
         new_entry = MutedUser(user_settings_telegram_id=managed_user_settings.telegram_id, muted_teamtalk_username=username_to_toggle)
@@ -423,8 +468,8 @@ async def cq_toggle_specific_user_mute_action(
 
     toast_message = _generate_mute_toggle_toast_message(
         username_to_toggle,
-        new_status_is_muted,
-        managed_user_settings.mute_all,
+        was_added_to_list, # Use this instead of new_status_is_muted
+        managed_user_settings.mute_list_mode, # Use current mode instead of mute_all
         _
     )
 

@@ -20,7 +20,7 @@ from bot.core.enums import (
     LanguageAction,
     SubscriptionAction,
     NotificationAction,
-    MuteAllAction,
+    # MuteAllAction, # Removed
     UserListAction,
     ToggleMuteSpecificAction,
     SubscriberListAction
@@ -30,14 +30,15 @@ from bot.telegram_bot.callback_data import (
     LanguageCallback,
     SubscriptionCallback,
     NotificationActionCallback,
-    MuteAllCallback,
+    # MuteAllCallback, # Removed
+    SetMuteModeCallback, # Added
     UserListCallback,
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
     AdminActionCallback,
     SubscriberListCallback
 )
-from bot.models import NotificationSetting, UserSettings
+from bot.models import NotificationSetting, UserSettings, MuteListMode # Added MuteListMode
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
@@ -53,9 +54,9 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
     - If user_settings.mute_all is False, the set is a block list; user is muted if IN the set.
     """
     is_in_set = username in muted_usernames_set
-    if user_settings.mute_all:
+    if user_settings.mute_list_mode == MuteListMode.WHITELIST: # Changed mute_all to mute_list_mode
         return not is_in_set  # Muted if not in the allow list
-    else:
+    else: # BLACKLIST mode
         return is_in_set      # Muted if in the block list
 
 # --- Settings Keyboards ---
@@ -142,7 +143,7 @@ def create_notification_settings_keyboard(
         callback_data=NotificationActionCallback(action=NotificationAction.TOGGLE_NOON).pack()
     )
     builder.button(
-        text=_("Manage Muted/Allowed Users"),
+        text=_("Manage Mute List"), # Changed text
         callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
     )
     builder.button(
@@ -156,27 +157,36 @@ def create_manage_muted_users_keyboard(
     _: callable,
     user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
-    """Creates the 'Manage Muted Users' keyboard."""
+    """Creates the 'Manage Mute List' keyboard.""" # Changed description
     builder = InlineKeyboardBuilder()
+    active_marker = "✅ " # As per problem description
+    inactive_marker = "⚪️ " # As per problem description
 
-    is_mute_all_enabled = user_settings.mute_all
-    mute_all_status_text = _("Enabled") if is_mute_all_enabled else _("Disabled")
-    mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text)
+    # Radio buttons for mode selection
+    blacklist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.BLACKLIST else inactive_marker}{_('Blacklist Mode')}"
+    whitelist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.WHITELIST else inactive_marker}{_('Whitelist Mode')}"
+
     builder.button(
-        text=mute_all_button_text,
-        callback_data=MuteAllCallback(action=MuteAllAction.TOGGLE_MUTE_ALL).pack()
+        text=blacklist_text,
+        callback_data=SetMuteModeCallback(mode=MuteListMode.BLACKLIST).pack()
+    )
+    builder.button(
+        text=whitelist_text,
+        callback_data=SetMuteModeCallback(mode=MuteListMode.WHITELIST).pack()
+    )
+    builder.adjust(2) # Display side-by-side
+
+    # Dynamic button text for managing the list
+    list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.BLACKLIST else _("Manage Whitelist")
+    # The original user prompt used LIST_MUTED for both, so we stick to that.
+    # If LIST_ALLOWED was meant for whitelist, UserListAction.LIST_ALLOWED should be used for whitelist mode.
+    builder.button(
+        text=list_mode_text,
+        callback_data=UserListCallback(action=UserListAction.LIST_MUTED).pack()
     )
 
-    if is_mute_all_enabled:
-        list_users_button_text = _("View Allowed Users (Allow List)")
-        list_users_cb_data = UserListCallback(action=UserListAction.LIST_ALLOWED).pack()
-    else:
-        list_users_button_text = _("View Muted Users (Block List)")
-        list_users_cb_data = UserListCallback(action=UserListAction.LIST_MUTED).pack()
-    builder.button(text=list_users_button_text, callback_data=list_users_cb_data)
-
     builder.button(
-        text=_("Mute/Unmute from Server List"),
+        text=_("Mute/Unmute from Server List"), # This button seems to list all server users for quick mute/unmute.
         callback_data=UserListCallback(action=UserListAction.LIST_ALL_ACCOUNTS).pack()
     )
     builder.button(
