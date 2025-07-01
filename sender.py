@@ -11,7 +11,7 @@ from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
 from bot.config import app_config
 from bot.teamtalk_bot import bot_instance as tt_bot_module
-from bot.teamtalk_bot import events as tt_events
+from bot.teamtalk_bot import events as tt_events  # DO NOT REMOVE: Critical for TeamTalk event registration. Bot runs without it, but TT part will be disabled.
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import load_user_settings_to_cache
 from bot.database import crud
