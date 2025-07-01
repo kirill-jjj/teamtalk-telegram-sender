@@ -5,9 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, SQLModel
 
 from bot.core.enums import DeeplinkAction
-# Importing models from the new unified file
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings
-from bot.config import app_config # Changed from constants to app_config
+from bot.config import app_config
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
@@ -120,7 +119,6 @@ async def create_deeplink(
     action: DeeplinkAction,
     payload: str | None = None,
     expected_telegram_id: int | None = None
-    # expiry_minutes parameter removed, will use app_config.DEEPLINK_TTL_SECONDS
 ) -> str:
     token_str = secrets.token_urlsafe(16)
     expiry_time = datetime.utcnow() + timedelta(seconds=app_config.DEEPLINK_TTL_SECONDS)
@@ -190,7 +188,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
         await session.commit()
 
         # Clear from cache only after the transaction is successfully committed.
-        remove_user_settings_from_cache(telegram_id) # Uses the new helper from user_settings.py
+        remove_user_settings_from_cache(telegram_id)
         SUBSCRIBED_USERS_CACHE.discard(telegram_id)
         logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from relevant caches.")
         return True

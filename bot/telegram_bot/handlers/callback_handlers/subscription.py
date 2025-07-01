@@ -94,10 +94,3 @@ async def cq_set_subscription_setting(
         success_toast_text=success_toast_text,
         ui_refresh_callable=refresh_ui_callable
     )
-
-    # After UserSettings have been successfully updated by process_setting_update
-    # UserSettings.notification_settings is now updated by process_setting_update.
-    # No further action is needed here to manage SubscribedUser table,
-    # as disabling notifications should not unsubscribe the user from the bot itself.
-    # The notification sending logic (_get_recipients_for_notification)
-    # already checks user_settings.notification_settings != NotificationSetting.NONE.

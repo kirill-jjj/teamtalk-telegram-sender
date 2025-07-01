@@ -308,7 +308,6 @@ async def on_message(message: TeamTalkMessage):
             bot_reply_language = admin_settings.language
 
     translator = get_translator(bot_reply_language)
-    # _ = translator.gettext # Removed this line
 
     command_parts = message_content.split(maxsplit=1)
     command_name = command_parts[0].lower()

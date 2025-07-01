@@ -37,7 +37,7 @@ from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     SubscriberListCallback
 )
-from bot.models import NotificationSetting, UserSettings # MutedUser might be needed if we pass MutedUser objects
+from bot.models import NotificationSetting, UserSettings
 from bot.core.utils import get_tt_user_display_name
 from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
@@ -159,7 +159,7 @@ def create_manage_muted_users_keyboard(
     """Creates the 'Manage Muted Users' keyboard."""
     builder = InlineKeyboardBuilder()
 
-    is_mute_all_enabled = user_settings.mute_all # Field name changed from mute_all_flag
+    is_mute_all_enabled = user_settings.mute_all
     mute_all_status_text = _("Enabled") if is_mute_all_enabled else _("Disabled")
     mute_all_button_text = _("Mute All Mode: {status}").format(status=mute_all_status_text)
     builder.button(
@@ -227,12 +227,9 @@ def create_paginated_user_list_keyboard(
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
     builder = InlineKeyboardBuilder()
 
-    # Create a set of muted usernames from the user_settings.muted_users_list relationship
-    # This list contains MutedUser objects.
     muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
 
     for idx, username in enumerate(page_items):
-        # page_items are strings (usernames)
         effectively_muted = _is_username_effectively_muted(username, user_settings, muted_usernames_from_relationship)
 
         button_text = _("Unmute {username}").format(username=username) if effectively_muted else _("Mute {username}").format(username=username)
@@ -315,7 +312,7 @@ def create_subscriber_list_keyboard(
                 callback_data=SubscriberListCallback(
                     action=SubscriberListAction.DELETE_SUBSCRIBER,
                     telegram_id=subscriber.telegram_id,
-                    page=current_page  # Keep track of current page for refresh
+                    page=current_page
                 ).pack()
             )
         )

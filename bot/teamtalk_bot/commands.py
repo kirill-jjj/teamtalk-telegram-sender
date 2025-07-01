@@ -209,7 +209,7 @@ async def _generate_and_reply_deeplink(
         else:
              reply_text = _(reply_text_source)
 
-        tt_message.reply(reply_text) # Pytalk call
+        tt_message.reply(reply_text)
 
     except TelegramAPIError as e_tg:
         logger.error(
@@ -229,7 +229,7 @@ async def _generate_and_reply_deeplink(
             exc_info=True
         )
         try:
-            tt_message.reply(_(error_reply_source)) # Use the provided generic error source
+            tt_message.reply(_(error_reply_source))
         except Exception as e_reply_generic:
             logger.error(f"Failed to send generic error reply to TT user {sender_tt_username}: {e_reply_generic}")
 
