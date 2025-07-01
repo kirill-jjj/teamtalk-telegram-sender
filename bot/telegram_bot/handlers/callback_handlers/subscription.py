@@ -3,6 +3,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field, ValidationError
 
 from bot.models import UserSettings, NotificationSetting
 from bot.database.crud import add_subscriber, remove_subscriber
@@ -12,6 +13,12 @@ from bot.core.enums import SettingsNavAction, SubscriptionAction
 from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
+
+
+class SubscriptionUpdate(BaseModel):
+    setting: NotificationSetting = Field(validation_alias='setting_value')
+
+
 subscription_router = Router(name="callback_handlers.subscription")
 
 @subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
@@ -42,16 +49,12 @@ async def cq_set_subscription_setting(
     user_settings: UserSettings,
     callback_data: SubscriptionCallback
 ):
-    value_to_enum_map = {
-        "all": NotificationSetting.ALL,
-        "leave_off": NotificationSetting.LEAVE_OFF,
-        "join_off": NotificationSetting.JOIN_OFF,
-        "none": NotificationSetting.NONE,
-    }
-    new_setting_enum = value_to_enum_map.get(callback_data.setting_value)
+    try:
+        update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
+        new_setting_enum = update_data.setting
 
-    if new_setting_enum is None:
-        logger.error(f"Invalid subscription setting value: {callback_data.setting_value} for user {callback_query.from_user.id}")
+    except ValidationError as e:
+        logger.error(f"Invalid subscription setting value received in callback: {e} for user {callback_query.from_user.id}. Raw value: {callback_data.setting_value}")
         await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
         return
 
