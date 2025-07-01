@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta
 from aiogram import html
 
-# sqlalchemy.orm.selectinload больше не нужен, но добавляем and_, or_
 from sqlalchemy import and_, or_
 
 import pytalk
