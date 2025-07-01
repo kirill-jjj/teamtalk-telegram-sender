@@ -96,12 +96,9 @@ async def _handle_subscribe_deeplink(
     payload: str | None, # Expecting TeamTalk username as payload
     user_settings: UserSettings
 ) -> str:
-    user_already_subscribed_to_bot = await session.get(SubscribedUser, telegram_id) is not None
-
-    if not user_already_subscribed_to_bot:
-        await add_subscriber(session, telegram_id)
-        # Simplified log: Avoids confusion about "existing settings" if defaults were just created.
-        logger.info(f"User {telegram_id} added to subscribers list.")
+    await add_subscriber(session, telegram_id)
+    # Simplified log: Avoids confusion about "existing settings" if defaults were just created.
+    logger.info(f"User {telegram_id} added to subscribers list.")
 
     # The user_settings passed in is from middleware, it's already get_or_created.
     current_settings = user_settings

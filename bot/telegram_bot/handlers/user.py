@@ -144,7 +144,6 @@ def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, tr
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
-    _: callable,
     tt_instance: TeamTalkInstance | None,
     translator: "gettext.GNUTranslations"
 ):
