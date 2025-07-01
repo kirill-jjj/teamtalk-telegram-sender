@@ -2,10 +2,12 @@ import logging
 from datetime import datetime, timedelta
 from aiogram import html
 
+# sqlalchemy.orm.selectinload больше не нужен, но добавляем and_, or_
+from sqlalchemy import and_, or_
+
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
-from sqlalchemy.orm import selectinload # For eager loading related objects
 from sqlmodel import select
 
 from bot.config import app_config
@@ -53,68 +55,50 @@ def _is_user_globally_ignored(username: str) -> bool:
 
 async def _get_recipients_for_notification(username_to_check: str, event_type: str) -> list[int]:
     """
-    Эффективно получает список ID получателей, выполняя один запрос к БД.
+    Эффективно получает список ID получателей, выполняя один запрос к БД,
+    который фильтрует данные на стороне базы данных.
     """
-    recipients = []
-
-    # Берем копию ID подписчиков из кэша
     subscriber_ids = list(SUBSCRIBED_USERS_CACHE)
     if not subscriber_ids:
         return []
 
     async with SessionFactory() as session:
-        # 1. Одним запросом получаем все настройки для всех подписчиков
-        #    Используем `selectinload` для "жадной" загрузки связанных MutedUser,
-        #    чтобы избежать дополнительных запросов в цикле.
-        stmt = (
-            select(UserSettings)
-            .options(selectinload(UserSettings.muted_users_list))
-            .where(UserSettings.telegram_id.in_(subscriber_ids))
+        filters = [
+            UserSettings.telegram_id.in_(subscriber_ids),
+            UserSettings.notification_settings != NotificationSetting.NONE
+        ]
+        if event_type == NOTIFICATION_EVENT_JOIN:
+            filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
+        elif event_type == NOTIFICATION_EVENT_LEAVE:
+            filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
+
+        mute_subquery = (
+            select(MutedUser.id)
+            .where(
+                and_(
+                    MutedUser.user_settings_telegram_id == UserSettings.telegram_id,
+                    MutedUser.muted_teamtalk_username == username_to_check
+                )
+            )
+            .exists()
         )
+
+        mute_logic = or_(
+            and_(
+                UserSettings.mute_all == False,
+                ~mute_subquery
+            ),
+            and_(
+                UserSettings.mute_all == True,
+                mute_subquery
+            )
+        )
+        filters.append(mute_logic)
+
+        stmt = select(UserSettings.telegram_id).where(and_(*filters))
         result = await session.execute(stmt)
-        all_settings = result.scalars().all()
 
-        # 2. Создаем словарь для быстрого доступа к настройкам по ID
-        settings_map = {s.telegram_id: s for s in all_settings}
-
-        # 3. Теперь итерируем по подписчикам и проверяем все в памяти
-        for chat_id in subscriber_ids:
-            user_settings = settings_map.get(chat_id)
-
-            # Если по какой-то причине настроек нет (хотя должны быть), пропускаем
-            if not user_settings:
-                continue
-
-            # Проверка настроек уведомлений
-            notification_pref = user_settings.notification_settings
-            if notification_pref == NotificationSetting.NONE:
-                continue
-            if event_type == NOTIFICATION_EVENT_JOIN and notification_pref == NotificationSetting.JOIN_OFF:
-                continue
-            if event_type == NOTIFICATION_EVENT_LEAVE and notification_pref == NotificationSetting.LEAVE_OFF:
-                continue
-
-            # Проверка на Mute
-            mute_all_flag = user_settings.mute_all
-
-            # Используем уже загруженный `muted_users_list`
-            muted_usernames_set = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
-            is_muted_explicitly = username_to_check in muted_usernames_set
-
-            should_receive = False
-            if mute_all_flag:
-                # Если "Mute All", то уведомления приходят только для тех, кто в списке исключений (allowed)
-                if is_muted_explicitly:
-                    should_receive = True
-            else:
-                # Иначе, уведомления приходят для всех, КРОМЕ тех, кто в списке (muted)
-                if not is_muted_explicitly:
-                    should_receive = True
-
-            if should_receive:
-                recipients.append(chat_id)
-
-    return recipients
+        return result.scalars().all()
 
 
 def _generate_join_leave_notification_text(
