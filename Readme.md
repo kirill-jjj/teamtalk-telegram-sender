@@ -59,7 +59,6 @@
     ```
 3.  **Установите зависимости**: Создайте виртуальное окружение и установите зависимости с помощью `uv`.
     ```bash
-    uv venv
     uv sync
     ```
     (`uv sync` создаст виртуальное окружение `.venv`, если оно не существует, и установит все зависимости. `uv` автоматически использует это окружение для команд типа `uv run`.)
@@ -94,9 +93,8 @@
     ```
     Вы также можете указать конкретный файл конфигурации (вместо `.env` по умолчанию) с помощью опции `--config`:
     ```bash
-    uv run sender.py -- --config custom.env
+    uv run sender.py --config custom.env
     ```
-    (Обратите внимание на `--` перед `--config custom.env`. Это сообщает `uv run`, что последующие аргументы предназначены для скрипта `sender.py`, а не для самой команды `uv`.)
 
 ## Миграции базы данных
 
@@ -114,22 +112,21 @@
 *   **Применение миграций (рекомендуемый способ)**:
     Чтобы применить все ожидающие миграции к базе данных (используя конфигурацию из `.env` по умолчанию):
     ```bash
-    uv run manage-migrations.py -- upgrade head
+    uv run manage-migrations.py upgrade head
     ```
     Если вы используете другой файл конфигурации (например, `prod.env`):
     ```bash
-    uv run manage-migrations.py -- --config prod.env upgrade head
+    uv run manage-migrations.py --config prod.env upgrade head
     ```
-    (Обратите внимание на `--` перед `--config prod.env`. Это сообщает `uv run`, что последующие аргументы предназначены для скрипта `manage-migrations.py`.)
 
 *   **Создание новой ревизии (миграции) (рекомендуемый способ)**:
     После изменения моделей в `bot/models.py`, используйте `manage-migrations.py` для создания ревизии:
     ```bash
-    uv run manage-migrations.py -- revision -m "краткое_описание_изменений" --autogenerate
+    uv run manage-migrations.py revision -m "краткое_описание_изменений" --autogenerate
     ```
     Или с кастомным конфигом:
     ```bash
-    uv run manage-migrations.py -- --config prod.env revision -m "краткое_описание_изменений" --autogenerate
+    uv run manage-migrations.py --config prod.env revision -m "краткое_описание_изменений" --autogenerate
     ```
     Эта команда создаст новый файл миграции в `alembic/versions/`. Важно **проверить** этот файл и при необходимости внести ручные корректировки, так как автогенерация не всегда идеальна.
 
