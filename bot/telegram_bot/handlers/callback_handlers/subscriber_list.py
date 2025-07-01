@@ -8,6 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
+from bot.telegram_bot.models import SubscriberInfo
 from bot.core.enums import SubscriberListAction
 from bot.state import ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
 
@@ -21,7 +22,7 @@ async def _get_paginated_subscribers_info(
     session: AsyncSession,
     bot: Bot,
     requested_page: int
-) -> tuple[list[dict], int, int]:
+) -> tuple[list[SubscriberInfo], int, int]:
     """
     Fetches all subscriber IDs, gets their details, and returns a paginated list.
     Returns: (page_subscriber_info_list, current_page, total_pages)
@@ -76,7 +77,7 @@ async def _get_paginated_subscribers_info(
             elif chat_info.username:
                 display_name = f"@{chat_info.username}"
 
-        page_subscribers_info.append({'telegram_id': telegram_id, 'display_name': display_name})
+        page_subscribers_info.append(SubscriberInfo(telegram_id=telegram_id, display_name=display_name))
 
     return page_subscribers_info, current_page_num, total_pages
 

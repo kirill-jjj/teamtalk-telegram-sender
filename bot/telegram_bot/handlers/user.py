@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import gettext
-from typing import Any
+from typing import Any, List
 from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -14,6 +14,7 @@ from pytalk.user import User as TeamTalkUser
 
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
+from bot.telegram_bot.models import WhoUser, WhoChannelGroup
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
 from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
@@ -85,7 +86,7 @@ def _group_users_for_who_command(
     bot_user_id: int,
     is_caller_admin: bool,
     translator: "gettext.GNUTranslations"
-) -> tuple[dict[str, list[str]], int]:
+) -> tuple[list[WhoChannelGroup], int]:
     """Groups users by channel display name for the /who command."""
     channels_display_data: dict[str, list[str]] = {}
     users_added_to_groups_count = 0
@@ -103,37 +104,43 @@ def _group_users_for_who_command(
         channels_display_data[user_display_channel_name].append(html.quote(user_nickname))
         users_added_to_groups_count += 1
 
-    return channels_display_data, users_added_to_groups_count
+    result_groups = [
+        WhoChannelGroup(
+            channel_name=name,
+            users=[WhoUser(nickname=nick) for nick in nicks]
+        )
+        for name, nicks in channels_display_data.items()
+    ]
+
+    return result_groups, users_added_to_groups_count
 
 
-def _format_who_message(grouped_data: dict[str, list[str]], total_users: int, translator: "gettext.GNUTranslations") -> str:
+def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, translator: "gettext.GNUTranslations") -> str:
     """Formats the /who command's reply message."""
     if total_users == 0:
         return translator.gettext("No users found online.")
 
-    sorted_channel_names = sorted(grouped_data.keys())
-    sorted_users_in_channels: dict[str, list[str]] = {}
-    for name in sorted_channel_names:
-        sorted_users_in_channels[name] = sorted(grouped_data[name])
+    # Sort groups by channel name
+    sorted_groups = sorted(grouped_data, key=lambda group: group.channel_name)
 
-    # For gettext, ngettext is typically used for pluralization.
     users_word_total = translator.ngettext("user", "users", total_users)
-    # This will use the singular/plural forms defined in .po files for the current language.
-
     text_reply = translator.gettext("There are {user_count} {users_word} on the server:\n").format(user_count=total_users, users_word=users_word_total)
 
     channel_info_parts: list[str] = []
-    for display_channel_name in sorted_channel_names:
-        users_in_channel_list = sorted_users_in_channels[display_channel_name]
+    for group in sorted_groups:
+        # Sort users within each group by nickname
+        sorted_nicknames = sorted([user.nickname for user in group.users])
+
         user_text_segment = ""
-        if users_in_channel_list:
-            if len(users_in_channel_list) > 1:
+        if sorted_nicknames:
+            if len(sorted_nicknames) > 1:
                 user_separator = translator.gettext(" and ")
-                user_list_except_last_segment = ", ".join(users_in_channel_list[:-1])
-                user_text_segment = f"<b>{user_list_except_last_segment}{user_separator}{users_in_channel_list[-1]}</b>"
+                user_list_except_last_segment = ", ".join(sorted_nicknames[:-1])
+                user_text_segment = f"<b>{user_list_except_last_segment}{user_separator}{sorted_nicknames[-1]}</b>"
             else:
-                user_text_segment = f"<b>{users_in_channel_list[0]}</b>"
-            channel_info_parts.append(f"{user_text_segment} {display_channel_name}")
+                user_text_segment = f"<b>{sorted_nicknames[0]}</b>"
+
+            channel_info_parts.append(f"{user_text_segment} {group.channel_name}")
 
     if channel_info_parts:
         text_reply += "\n" + "\n".join(channel_info_parts)
