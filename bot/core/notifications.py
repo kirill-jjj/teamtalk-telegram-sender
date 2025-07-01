@@ -84,12 +84,12 @@ async def _get_recipients_for_notification(username_to_check: str, event_type: s
 
         mute_logic = or_(
             and_(
-                UserSettings.mute_list_mode == MuteListMode.BLACKLIST,
-                ~user_is_in_list_subquery # Use renamed subquery
+                UserSettings.mute_list_mode == MuteListMode.blacklist, # Changed to lowercase
+                ~user_is_in_list_subquery
             ),
             and_(
-                UserSettings.mute_list_mode == MuteListMode.WHITELIST,
-                user_is_in_list_subquery # Use renamed subquery
+                UserSettings.mute_list_mode == MuteListMode.whitelist, # Changed to lowercase
+                user_is_in_list_subquery
             )
         )
         filters.append(mute_logic)

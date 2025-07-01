@@ -168,13 +168,24 @@ async def async_main():
         user_message = "Произошла непредвиденная ошибка. Администратор уже уведомлен. Пожалуйста, попробуйте позже."
         update = event.update
 
-        try:
-            if update.message:
-                await update.message.answer(user_message)
-            elif update.callback_query and isinstance(update.callback_query.message, Message):
-                await update.callback_query.message.answer(user_message)
-        except Exception as e:
-            logger.error(f"Could not send error message to user: {e}", exc_info=True)
+        user_id = None
+        if update.message and update.message.from_user:
+            user_id = update.message.from_user.id
+        elif update.callback_query and update.callback_query.from_user:
+            user_id = update.callback_query.from_user.id
+
+        # Check if the user who caused the error is the admin
+        # We need app_config here. It's imported earlier in async_main.
+        if user_id and app_config.TG_ADMIN_CHAT_ID and user_id == app_config.TG_ADMIN_CHAT_ID:
+            logger.debug("Error originated from admin user. Suppressing generic error message to admin.")
+        else:
+            try:
+                if update.message:
+                    await update.message.answer(user_message)
+                elif update.callback_query and isinstance(update.callback_query.message, Message):
+                    await update.callback_query.message.answer(user_message)
+            except Exception as e:
+                logger.error(f"Could not send error message to user: {e}", exc_info=True)
 
     logger.info("Application starting...")
 
