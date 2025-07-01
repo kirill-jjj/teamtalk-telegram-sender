@@ -201,7 +201,6 @@ async def async_main():
             await crud.add_admin(session, tg_admin_chat_id)
 
     dp = Dispatcher()
-    # ... и так далее до конца файла
     dp.update.outer_middleware.register(DbSessionMiddleware(SessionFactory))
     dp.message.middleware(SubscriptionCheckMiddleware())
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
