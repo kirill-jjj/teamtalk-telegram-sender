@@ -63,6 +63,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         process_revision_directives=process_revision_directives,
+        render_as_batch=True
     )
 
     with context.begin_transaction():
@@ -91,6 +92,7 @@ def do_run_migrations(connection):
         connection=connection,
         target_metadata=target_metadata,
         process_revision_directives=process_revision_directives,
+        render_as_batch=True
     )
     with context.begin_transaction():
         context.run_migrations()
