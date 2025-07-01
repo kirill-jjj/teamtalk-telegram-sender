@@ -32,7 +32,7 @@ from bot.core.enums import (
 )
 from bot.constants import USERS_PER_PAGE
 from bot.state import USER_ACCOUNTS_CACHE
-from ._helpers import process_setting_update
+from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
@@ -76,13 +76,14 @@ async def _display_paginated_list_ui(
         _=_, page_items=page_slice, current_page=current_page_idx, total_pages=total_pages, **keyboard_factory_kwargs
     )
 
-    try:
-        await callback_query.message.edit_text(text=final_message_text, reply_markup=keyboard_markup, parse_mode="HTML")
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest in _display_paginated_list_ui for {header_text_key}: {e}", exc_info=True)
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError in _display_paginated_list_ui for {header_text_key}: {e}", exc_info=True)
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=final_message_text,
+        reply_markup=keyboard_markup,
+        parse_mode="HTML",
+        logger_instance=logger,
+        log_context=f"_display_paginated_list_ui for {header_text_key}"
+    )
 
 
 async def _display_internal_user_list(
@@ -283,13 +284,13 @@ async def cq_show_manage_muted_menu(
 ):
     await callback_query.answer()
     manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings)
-    try:
-        await callback_query.message.edit_text(text=_("Manage Muted/Allowed Users"), reply_markup=manage_muted_builder.as_markup())
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for manage_muted_users menu: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for manage_muted_users menu: {e}")
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=_("Manage Muted/Allowed Users"),
+        reply_markup=manage_muted_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_show_manage_muted_menu"
+    )
 
 
 @mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))

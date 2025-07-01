@@ -9,7 +9,7 @@ from bot.database.crud import add_subscriber, remove_subscriber
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.core.enums import SettingsNavAction, SubscriptionAction
-from ._helpers import process_setting_update
+from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
 subscription_router = Router(name="callback_handlers.subscription")
@@ -26,16 +26,13 @@ async def cq_show_subscriptions_menu(
     current_notification_setting = user_settings.notification_settings
     subscription_settings_builder = create_subscription_settings_keyboard(_, current_notification_setting)
 
-    try:
-        await callback_query.message.edit_text(
-            text=_("Subscription Settings"),
-            reply_markup=subscription_settings_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for subscription settings menu: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for subscription settings menu: {e}")
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=_("Subscription Settings"),
+        reply_markup=subscription_settings_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_show_subscriptions_menu"
+    )
 
 @subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionAction.SET_SUB))
 async def cq_set_subscription_setting(

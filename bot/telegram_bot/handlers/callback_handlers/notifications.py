@@ -8,7 +8,7 @@ from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
 from bot.core.enums import SettingsNavAction, NotificationAction
-from ._helpers import process_setting_update
+from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
@@ -22,16 +22,13 @@ async def cq_show_notifications_menu(
 ):
     await callback_query.answer()
     notification_settings_builder = create_notification_settings_keyboard(_, user_settings)
-    try:
-        await callback_query.message.edit_text(
-            text=_("Notification Settings"),
-            reply_markup=notification_settings_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for notification settings menu: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for notification settings menu: {e}")
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=_("Notification Settings"),
+        reply_markup=notification_settings_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_show_notifications_menu"
+    )
 
 @notifications_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.TOGGLE_NOON))
 async def cq_toggle_noon_setting_action(

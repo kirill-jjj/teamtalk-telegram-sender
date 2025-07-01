@@ -9,7 +9,7 @@ from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_lan
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
-from ._helpers import process_setting_update
+from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
@@ -24,16 +24,13 @@ async def cq_show_language_menu(
 
     language_menu_builder = create_language_selection_keyboard(_)
 
-    try:
-        await callback_query.message.edit_text(
-            text=_("Please choose your language:"),
-            reply_markup=language_menu_builder.as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            logger.error(f"TelegramBadRequest editing message for language selection: {e}")
-    except TelegramAPIError as e:
-        logger.error(f"TelegramAPIError editing message for language selection: {e}")
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=_("Please choose your language:"),
+        reply_markup=language_menu_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_show_language_menu"
+    )
 
 @language_router.callback_query(LanguageCallback.filter(F.action == LanguageAction.SET_LANG))
 async def cq_set_language(

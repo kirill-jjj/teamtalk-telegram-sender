@@ -1,7 +1,7 @@
 # bot/telegram_bot/handlers/callback_handlers/_helpers.py
 import logging
-from typing import Callable
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from typing import Callable, Optional
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.models import UserSettings
@@ -57,3 +57,52 @@ async def process_setting_update(
             logger.warning(f"Could not send error alert for DB update failure/revert: {ans_err_revert}")
         # Do not proceed to UI refresh if DB update failed
         return
+
+
+async def safe_edit_text(
+    message_to_edit: Message,
+    text: str,
+    reply_markup: Optional[InlineKeyboardMarkup] = None,
+    parse_mode: Optional[str] = None,
+    disable_web_page_preview: Optional[bool] = None,
+    logger_instance: Optional[logging.Logger] = None,
+    log_context: str = ""
+) -> bool:
+    """
+    Safely edits a message text, handling common Telegram API errors.
+
+    Args:
+        message_to_edit: The aiogram.types.Message object to edit.
+        text: New text of the message.
+        reply_markup: Optional inline keyboard markup.
+        parse_mode: Optional parse mode for the text.
+        disable_web_page_preview: Optional bool to disable link previews.
+        logger_instance: Optional logger instance. If None, uses the module's logger.
+        log_context: Optional context string for error logging.
+
+    Returns:
+        True if the message was edited successfully or if the error was "message is not modified".
+        False for other TelegramAPIError or unexpected errors.
+    """
+    current_logger = logger_instance or logger
+    context_for_log = f" ({log_context})" if log_context else ""
+
+    try:
+        await message_to_edit.edit_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode,
+            disable_web_page_preview=disable_web_page_preview
+        )
+        return True
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            current_logger.error(f"TelegramBadRequest editing message{context_for_log}: {e}", exc_info=True)
+            return False # Explicitly return False for handled errors other than "not modified"
+        return True # "Message not modified" is considered a success in terms of state
+    except TelegramAPIError as e:
+        current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
+        return False
+    except Exception as e:
+        current_logger.error(f"Unexpected error editing message{context_for_log}: {e}", exc_info=True)
+        return False
