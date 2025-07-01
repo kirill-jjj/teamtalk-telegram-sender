@@ -352,8 +352,6 @@ async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: PaginateUsersCallback
 ):
     await callback_query.answer()
-    # Note: The pagination callback carries the `list_type` that was used for the initial display.
-    # This means `callback_data.list_type` here is the `effective_list_type` from `cq_list_internal_users_action`.
     await _display_internal_user_list(callback_query, _, user_settings, callback_data.list_type, callback_data.page, session)
 
 

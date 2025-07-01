@@ -4,7 +4,6 @@ from typing import Any, Literal, Optional
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Name of the environment variable that can override the config file path
 CONFIG_FILE_ENV_VAR = "APP_CONFIG_FILE_PATH"
 
 def get_env_file():
