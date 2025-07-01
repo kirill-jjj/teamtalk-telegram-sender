@@ -1,21 +1,25 @@
+# bot/core/user_settings.py
+
 import asyncio
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, selectinload # Added selectinload
+from sqlmodel import select
+from sqlalchemy.orm import selectinload # <--- ИСПРАВЛЕННЫЙ ИМПОРТ
 
 from bot.models import UserSettings
-# from bot.config import app_config # No longer needed for TTL
+# from bot.config import app_config # Removed as TTLCache and its TTL are gone
 
 logger = logging.getLogger(__name__)
 
-# Replaced TTLCache with a standard dictionary.
-# This will store settings as long as the bot is running.
+# Заменяем TTLCache на обычный словарь.
+# Он будет хранить настройки постоянно, пока бот работает.
 USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
+
 
 async def load_user_settings_to_cache(session_factory) -> None:
     logger.info("Loading all user settings into cache...")
     async with session_factory() as session:
-        # Use selectinload for eager loading of muted_users_list
+        # Используем selectinload для "жадной" загрузки связанных данных (списка замученных)
         statement = select(UserSettings).options(selectinload(UserSettings.muted_users_list))
         results = await session.execute(statement)
         user_settings_list = results.scalars().all()
@@ -23,47 +27,40 @@ async def load_user_settings_to_cache(session_factory) -> None:
             USER_SETTINGS_CACHE[settings_row.telegram_id] = settings_row
     logger.info(f"{len(USER_SETTINGS_CACHE)} user settings loaded into cache.")
 
+
 async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -> UserSettings:
     """
-    Gets user settings from the cache. If not present,
-    loads from DB or creates new ones, then adds to cache.
+    Получает настройки пользователя из кэша. Если их там нет,
+    загружает из БД или создает новые, а затем добавляет в кэш.
     """
     if telegram_id in USER_SETTINGS_CACHE:
         return USER_SETTINGS_CACHE[telegram_id]
 
-    # If not in cache, query the DB, eagerly loading muted_users_list.
-    # Also eagerly load other potential relationships if they exist and are relevant here.
+    # Если в кэше нет, ищем в БД. "Жадно" загружаем muted_users_list.
     user_settings = await session.get(
         UserSettings,
         telegram_id,
-        options=[
-            selectinload(UserSettings.muted_users_list),
-            # Add other selectinload options here if UserSettings has more relationships
-            # e.g., selectinload(UserSettings.another_related_list)
-        ]
+        options=[selectinload(UserSettings.muted_users_list)]
     )
     if user_settings:
         USER_SETTINGS_CACHE[telegram_id] = user_settings
         return user_settings
     else:
-        # If not in DB, create new settings
+        # Создаем новые настройки, если в БД их тоже не было
         new_settings = UserSettings(telegram_id=telegram_id)
         session.add(new_settings)
         try:
             await session.commit()
             await session.refresh(new_settings)
-            # Eagerly load muted_users_list for the new user as well.
-            # This ensures the cached object is consistent.
+            # "Жадно" загружаем muted_users_list и для нового пользователя
             await session.refresh(new_settings, attribute_names=['muted_users_list'])
-            # If other relationships were added above, refresh them too:
-            # await session.refresh(new_settings, attribute_names=['muted_users_list', 'another_related_list'])
             logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
             USER_SETTINGS_CACHE[telegram_id] = new_settings
             return new_settings
         except Exception as e:
             await session.rollback()
             logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
-            # Return a transient default object in case of error to prevent crashes
+            # Возвращаем временный объект в случае ошибки, чтобы бот не упал
             return UserSettings(telegram_id=telegram_id)
 
 
@@ -71,16 +68,15 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
     session.add(settings)
     try:
         await session.commit()
-        # Refresh the main object and its relationships to ensure the cached object is up-to-date.
         await session.refresh(settings)
+        # Убедимся, что связанные данные тоже обновлены
         await session.refresh(settings, attribute_names=['muted_users_list'])
-        # If other relationships are managed, refresh them too:
-        # await session.refresh(settings, attribute_names=['muted_users_list', 'another_related_list'])
         USER_SETTINGS_CACHE[settings.telegram_id] = settings
         logger.debug(f"Updated settings for user {settings.telegram_id} in DB and cache.")
     except Exception as e:
         await session.rollback()
         logger.error(f"Error updating settings for user {settings.telegram_id} in DB: {e}", exc_info=True)
+
 
 def remove_user_settings_from_cache(telegram_id: int) -> None:
     if telegram_id in USER_SETTINGS_CACHE:
