@@ -112,7 +112,7 @@ def _generate_join_leave_notification_text(
 
     if event_type == NOTIFICATION_EVENT_JOIN:
         notification_template = _("User {user_nickname} joined server {server_name}")
-    else:  # Assuming only JOIN and LEAVE types
+    else:
         notification_template = _("User {user_nickname} left server {server_name}")
 
     return notification_template.format(

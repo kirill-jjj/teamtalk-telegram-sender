@@ -18,12 +18,10 @@ class Settings(BaseSettings):
     Loads variables from a .env file and validates them.
     """
 
-    # --- Telegram ---
     TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias='TELEGRAM_BOT_EVENT_TOKEN')
     TG_BOT_MESSAGE_TOKEN: Optional[str] = None
     TG_ADMIN_CHAT_ID: Optional[int] = None
 
-    # --- TeamTalk Connection ---
     HOSTNAME: str = Field(validation_alias='HOST_NAME')
     PORT: int = 10333
     ENCRYPTED: bool = False
@@ -32,28 +30,22 @@ class Settings(BaseSettings):
     CHANNEL: str
     CHANNEL_PASSWORD: Optional[str] = None
 
-    # --- Bot Identity ---
     NICKNAME: str = Field(validation_alias='NICK_NAME')
     STATUS_TEXT: str = ""
     CLIENT_NAME: str = "TTTM"
     SERVER_NAME: Optional[str] = None
 
-    # --- Bot Admin ---
     ADMIN_USERNAME: Optional[str] = None
 
-    # --- Functionality ---
     GLOBAL_IGNORE_USERNAMES: Optional[str] = None
     DATABASE_FILE: str = "bot_data.db"
     DEFAULT_LANG: LangType = "en"
     GENDER: GenderType = "neutral"
 
-    # --- Operational Parameters ---
     DEEPLINK_TTL_SECONDS: int = 300  # Lifetime of deeplinks in seconds (e.g., for /sub)
     TT_RECONNECT_RETRY_SECONDS: int = 15 # How often to retry initial connection or full reconnect to TeamTalk
     TT_RECONNECT_CHECK_INTERVAL_SECONDS: int = 10 # Interval to check for TT connection if bot thinks it's disconnected
     ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
-
-    # Derived fields (not from .env)
 
     model_config = SettingsConfigDict(
             env_file=get_env_file(),
