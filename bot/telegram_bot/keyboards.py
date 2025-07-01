@@ -12,6 +12,7 @@ import pytalk # For UserAccount type hint
 from typing import Callable, List
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from bot.telegram_bot.models import SubscriberInfo
 
 from bot.core.enums import (
     AdminAction,
@@ -299,7 +300,7 @@ def create_account_list_keyboard(
 
 def create_subscriber_list_keyboard(
     _: Callable,
-    page_subscribers_info: List[dict],
+    page_subscribers_info: List[SubscriberInfo],
     current_page: int,
     total_pages: int
 ) -> InlineKeyboardMarkup:
@@ -307,13 +308,13 @@ def create_subscriber_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     for subscriber in page_subscribers_info:
-        button_text = _("Delete {user_info}").format(user_info=subscriber['display_name'])
+        button_text = _("Delete {user_info}").format(user_info=subscriber.display_name)
         builder.row(
             InlineKeyboardButton(
                 text=button_text,
                 callback_data=SubscriberListCallback(
                     action=SubscriberListAction.DELETE_SUBSCRIBER,
-                    telegram_id=subscriber['telegram_id'], # Using telegram_id from dict
+                    telegram_id=subscriber.telegram_id,
                     page=current_page  # Keep track of current page for refresh
                 ).pack()
             )
