@@ -43,7 +43,7 @@ dependencies = [
     "pydantic~=2.11",
     "sqlmodel>=0.0.24",
     "alembic~=1.16",
-    "cachetools~=5.3"
+    "cachetools~=6.1"
 ]
 
 [project.urls]
