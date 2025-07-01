@@ -96,21 +96,8 @@ async def cq_set_subscription_setting(
     )
 
     # After UserSettings have been successfully updated by process_setting_update
-    # Manage SubscribedUser table and cache based on the change
-    # No explicit success check for process_setting_update needed here, as it handles its own rollback.
-    # If it failed, the original_setting and new_setting_enum would effectively be the same or reverted.
-
-    user_id = callback_query.from_user.id
-
-    if new_setting_enum == NotificationSetting.NONE and original_setting != NotificationSetting.NONE:
-        if await remove_subscriber(session, user_id):
-            logger.info(f"User {user_id} unsubscribed and removed from cache via settings change to NONE.")
-        else:
-            # This could happen if they were already unsubscribed for some reason, or DB error.
-            logger.warning(f"User {user_id} set notifications to NONE, but failed to remove from SubscribedUser table (or already removed).")
-    elif new_setting_enum != NotificationSetting.NONE and original_setting == NotificationSetting.NONE:
-        if await add_subscriber(session, user_id):
-            logger.info(f"User {user_id} subscribed and added to cache via settings change from NONE to {new_setting_enum.value}.")
-        else:
-            # This could happen if they were already subscribed for some reason, or DB error.
-            logger.warning(f"User {user_id} set notifications from NONE to {new_setting_enum.value}, but failed to add to SubscribedUser table (or already added).")
+    # UserSettings.notification_settings is now updated by process_setting_update.
+    # No further action is needed here to manage SubscribedUser table,
+    # as disabling notifications should not unsubscribe the user from the bot itself.
+    # The notification sending logic (_get_recipients_for_notification)
+    # already checks user_settings.notification_settings != NotificationSetting.NONE.
