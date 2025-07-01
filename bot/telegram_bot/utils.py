@@ -92,7 +92,6 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool) -> bool:
 async def send_telegram_message_individual(
     bot_instance: Bot,
     chat_id: int,
-    # text: str, # Removed
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_user_is_online: bool = False,
@@ -123,7 +122,7 @@ async def send_telegram_messages_to_list(
     bot_token_to_use: str, # TG_EVENT_TOKEN or TG_BOT_MESSAGE_TOKEN
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
-    reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None, # tt_username, tt_nickname, lang, recipient_tg_id
+    reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None,
     tt_user_username_for_markup: str | None = None,
     tt_user_nickname_for_markup: str | None = None
 ):
