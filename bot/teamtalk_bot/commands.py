@@ -117,8 +117,9 @@ def _create_admin_action_report(
         errors.append(_(invalid_id_msg_source).format(telegram_id_str=invalid_entry))
 
     if errors:
-        error_messages_formatted = "- " + "\n- ".join(errors)
-        reply_parts.append(f"{_(header_source)}\n{error_messages_formatted}")
+        header = _(header_source)
+        error_list_str = "\n".join(f"- {error}" for error in errors)
+        reply_parts.append(f"{header}\n{error_list_str}")
 
     if not reply_parts:
         return _("No action was performed. Please check the IDs provided.")
@@ -291,7 +292,7 @@ async def handle_tt_add_admin_command(
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
-        header_msg_key=_("Errors:\n- ")
+        header_msg_key=_("Errors:")
     )
 
 
@@ -317,7 +318,7 @@ async def handle_tt_remove_admin_command(
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
         error_msg_key=_("Admin with ID {telegram_id} not found."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
-        header_msg_key=_("Info/Errors:\n- ")
+        header_msg_key=_("Info/Errors:")
     )
 
 
