@@ -28,6 +28,16 @@ target_metadata = SQLModel.metadata
 # ... etc.
 import os
 
+def process_revision_directives(context, revision, directives):
+    """
+    This hook prevents Alembic from creating empty migration files
+    if no actual structural changes are detected.
+    """
+    if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
+        directives[:] = []
+        print("INFO  [alembic.autogenerate.compare] No structural changes detected.")
+
+
 def get_db_url():
     # Construct an absolute path to the database file
     db_path = os.path.abspath(app_config.DATABASE_FILE)
@@ -52,6 +62,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        process_revision_directives=process_revision_directives,
     )
 
     with context.begin_transaction():
@@ -79,6 +90,7 @@ def do_run_migrations(connection):
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
+        process_revision_directives=process_revision_directives,
     )
     with context.begin_transaction():
         context.run_migrations()
