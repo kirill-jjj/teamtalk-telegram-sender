@@ -56,12 +56,11 @@ async def cq_set_language(
     def revert_logic():
         managed_user_settings.language = original_lang_code
 
-    if new_lang_code == "en":
-        lang_name_display = new_lang_translator_obj.gettext("English")
-    elif new_lang_code == "ru":
-        lang_name_display = new_lang_translator_obj.gettext("Russian")
-    else:
-        lang_name_display = new_lang_code
+    lang_display_map = {
+        "en": new_lang_translator_obj.gettext("English"),
+        "ru": new_lang_translator_obj.gettext("Russian"),
+    }
+    lang_name_display = lang_display_map.get(new_lang_code, new_lang_code)
     success_toast_text = new_lang_translator_obj.gettext("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
