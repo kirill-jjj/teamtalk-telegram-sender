@@ -375,13 +375,14 @@ async def cq_show_manage_muted_menu(
 async def cq_toggle_mute_all_action(
     callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: MuteAllCallback
 ):
-    original_flag = user_settings.mute_all
+    managed_user_settings = await session.merge(user_settings)
+    original_flag = managed_user_settings.mute_all
 
     def update_logic():
-        user_settings.mute_all = not original_flag
+        managed_user_settings.mute_all = not original_flag
 
     def revert_logic():
-        user_settings.mute_all = original_flag
+        managed_user_settings.mute_all = original_flag
 
     new_status_display_text = _("Enabled") if not original_flag else _("Disabled")
     success_toast_text = _("Mute All mode is now {status}.").format(status=new_status_display_text)
@@ -394,7 +395,7 @@ async def cq_toggle_mute_all_action(
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_settings,
+        user_settings=managed_user_settings,
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,
@@ -481,8 +482,14 @@ async def cq_toggle_specific_user_mute_action(
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
+    # ШАГ 1: "Присоединяем" объект из кеша к текущей сессии с помощью merge.
+    # Это вернет нам "управляемый" экземпляр, с которым сессия умеет работать.
+    managed_user_settings = await session.merge(user_settings)
+
+    # ШАГ 2: Везде дальше используем ТОЛЬКО managed_user_settings.
+
     # Pass session to _parse_mute_toggle_callback_data
-    username_to_toggle = await _parse_mute_toggle_callback_data(callback_data, user_settings, session)
+    username_to_toggle = await _parse_mute_toggle_callback_data(callback_data, managed_user_settings, session)
 
     if not username_to_toggle:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -491,7 +498,7 @@ async def cq_toggle_specific_user_mute_action(
     # Pass session to _determine_mute_action_and_update_settings
     # It now returns original_muted_usernames_list (list[str])
     action_taken, current_status_is_muted, original_muted_usernames_list = \
-        await _determine_mute_action_and_update_settings(username_to_toggle, user_settings, session)
+        await _determine_mute_action_and_update_settings(username_to_toggle, managed_user_settings, session)
 
     # `current_status_is_muted` is the user's mute status *before* the toggle action.
     # `new_status_is_muted` should reflect the status *after* the toggle for the toast message.
@@ -501,14 +508,14 @@ async def cq_toggle_specific_user_mute_action(
     toast_message = _generate_mute_toggle_toast_message(
         username_to_toggle,
         new_status_is_muted,
-        user_settings.mute_all,
+        managed_user_settings.mute_all,
         _
     )
 
     save_successful = await _save_mute_settings_and_notify(
         session,
         callback_query,
-        user_settings,
+        managed_user_settings, # <-- Используем управляемый объект
         toast_message,
         username_to_toggle,
         action_taken,
@@ -522,7 +529,7 @@ async def cq_toggle_specific_user_mute_action(
     await _refresh_mute_related_ui(
         callback_query,
         _,
-        user_settings,
+        managed_user_settings, # <-- Используем управляемый объект
         tt_instance,
         callback_data,
         session # Pass session
