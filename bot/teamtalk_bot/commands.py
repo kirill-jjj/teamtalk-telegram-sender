@@ -26,11 +26,9 @@ ttstr = pytalk.instance.sdk.ttstr
 def is_tt_admin(func):
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
-        # The translator `_` is expected as the first positional argument after `tt_message`,
-        # so it will be in `args[0]`.
-        # If `args` is empty, an IndexError will occur, highlighting a programming error
-        # in how the decorated function is called, which is intended.
-        _ = args[0]
+        _ = kwargs.get('_')
+        if not _ or not callable(_):
+            raise TypeError("Translator function '_' was not provided as a keyword argument to the decorated function.")
 
         username = ttstr(tt_message.user.username)
         admin_username = app_config.ADMIN_USERNAME
@@ -42,10 +40,6 @@ def is_tt_admin(func):
             tt_message.reply(_("You do not have permission to use this command."))
             return None
 
-        # The wrapped function's signature will be:
-        # async def some_func(tt_message: TeamTalkMessage, _: callable, *, kwarg1=val1, ...)
-        # `*args` here will correctly pass the translator as the second positional argument to `func`.
-        # `**kwargs` will pass any keyword arguments.
         return await func(tt_message, *args, **kwargs)
     return wrapper
 
