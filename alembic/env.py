@@ -13,7 +13,13 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from sqlmodel import SQLModel
-from bot.models import * # noqa
+from bot.models import (
+    UserSettings,
+    MutedUser,
+    SubscribedUser,
+    Admin,
+    Deeplink
+) # noqa
 from bot.config import app_config
 
 target_metadata = SQLModel.metadata
