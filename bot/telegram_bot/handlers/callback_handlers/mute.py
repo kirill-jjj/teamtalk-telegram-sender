@@ -337,57 +337,12 @@ async def cq_list_internal_users_action(
     is_mute_all_active = user_settings.mute_all
 
     effective_list_type = requested_list_type
-    # This logic seems to be about interpreting what "Muted" vs "Allowed" means in UI when MuteAll is active
-    # If MuteAll is ON:
-    #   - Clicking "View Muted Users" should show the "Allow list" (those exempt from MuteAll)
-    #   - Clicking "View Allowed Users" (if such a button exists directly) should also show this "Allow list"
-    # If MuteAll is OFF:
-    #   - Clicking "View Muted Users" should show the "Block list"
-    #   - Clicking "View Allowed Users" (if such a button exists) might be less relevant or show everyone not on block list.
-    # The keyboard `create_manage_muted_users_keyboard` changes labels based on `user_settings.mute_all`.
-    # So, if `user_settings.mute_all` is true, the button might say "Manage Allow List" (for UserListAction.LIST_MUTED)
-    # and "Manage Block List" (for UserListAction.LIST_ALLOWED).
-    # The provided code snippet for cq_toggle_specific_user_mute_action uses list_type to determine which list to refresh.
-    # The key is that `create_paginated_user_list_keyboard` also gets `user_settings` and its internal labeling might adapt.
-    # The logic here seems to ensure that if `mute_all` is true, `LIST_MUTED` actually shows allowed users,
-    # and if `mute_all` is false, `LIST_ALLOWED` actually shows muted users. This might be inverted or confusing.
-    # Let's re-verify the user's original intent for list display logic vs. button labels.
-    # The current code seems to map:
-    # If MuteAll ON:
-    #   - Requesting LIST_MUTED shows ALLOWED (those in DB)
-    #   - Requesting LIST_ALLOWED shows MUTED (those in DB - this seems like it would be the same as above) - wait, this is wrong.
-    # Let's use the provided code's logic for now, as it's what the user gave.
-    # The provided code in the problem description for this handler is:
-    # if is_mute_all_active:
-    #     if requested_list_type == UserListAction.LIST_MUTED: # Button "View Muted" (actually means view allow-list)
-    #         effective_list_type = UserListAction.LIST_ALLOWED # So internally, we treat it as showing allow-list
-    # else: # MuteAll is OFF
-    #     if requested_list_type == UserListAction.LIST_ALLOWED: # Button "View Allowed" (actually means view block-list)
-    #         effective_list_type = UserListAction.LIST_MUTED # So internally, we treat it as showing block-list
-    # This logic is a bit confusing. The keyboard labels change, e.g. "Manage Muted Users" becomes "Manage Allowed Users (exceptions to Mute All)".
-    # If keyboard says "Manage Allowed Users", callback is LIST_MUTED.
-    # If keyboard says "Manage Blocked Users", callback is LIST_ALLOWED.
-    # The `_display_internal_user_list` then uses the `effective_list_type` for its header.
-    # Let's assume the keyboard callback data mapping is:
-    #   - MuteAll=True, Button "Allowed List" -> callback_data.action = UserListAction.LIST_MUTED (users in DB are allowed)
-    #   - MuteAll=False, Button "Muted List" -> callback_data.action = UserListAction.LIST_MUTED (users in DB are muted)
-    # The current code has:
-    # if is_mute_all_active: # Mute All ON
-    #    if requested_list_type == UserListAction.LIST_MUTED: # User clicked button that means "show me people in DB (allow list)"
-    #        effective_list_type = UserListAction.LIST_ALLOWED # Use "Allowed Users" header for display
-    # else: # Mute All OFF
-    #    if requested_list_type == UserListAction.LIST_ALLOWED: # User clicked button that means "show me people in DB (block list)"
-    #        effective_list_type = UserListAction.LIST_MUTED # Use "Muted Users" header for display
-
-    # This interpretation seems to make sense with dynamic keyboard labels.
-    # The key is that `MutedUser` table always stores the exceptions.
-    # - If mute_all=True, table stores the ALLOWED list.
-    # - If mute_all=False, table stores the MUTED list.
-    # `_display_internal_user_list` takes a `list_type` to display appropriate headers.
-    # If `user_settings.mute_all` is true, the button "Manage Allowed Users" (those exempt from Mute All)
-    # likely sends `UserListAction.LIST_MUTED` (as per keyboard).
-    # The handler then translates this to `effective_list_type = UserListAction.LIST_ALLOWED` for the header generation.
-    # This seems fine and consistent with the user's provided code.
+    if is_mute_all_active:
+        if requested_list_type == UserListAction.LIST_MUTED:
+            effective_list_type = UserListAction.LIST_ALLOWED
+    else:
+        if requested_list_type == UserListAction.LIST_ALLOWED:
+            effective_list_type = UserListAction.LIST_MUTED
 
     await _display_internal_user_list(callback_query, _, user_settings, effective_list_type, 0, session)
 
