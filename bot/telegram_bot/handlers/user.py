@@ -1,7 +1,6 @@
 import logging
 import asyncio
 import gettext
-from typing import Any, List
 from aiogram import Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -17,7 +16,7 @@ from bot.models import UserSettings
 from bot.telegram_bot.models import WhoUser, WhoChannelGroup
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.core.utils import get_tt_user_display_name
-from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
+from bot.state import ADMIN_IDS_CACHE
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -38,7 +37,8 @@ async def start_command_handler(
     _: callable,
     user_settings: UserSettings
 ):
-    if not message.from_user: return
+    if not message.from_user:
+        return
 
     token = command.args
     if token:
@@ -209,7 +209,8 @@ async def settings_command_handler(
     message: Message,
     _: callable
 ):
-    if not message.from_user: return
+    if not message.from_user:
+        return
 
     try:
         await message.delete()

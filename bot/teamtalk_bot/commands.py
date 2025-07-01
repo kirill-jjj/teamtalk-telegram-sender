@@ -1,7 +1,7 @@
 import logging
 import functools
 import gettext
-from typing import Optional, Callable, List, Any
+from typing import Optional, Callable, Any
 from aiogram.filters import CommandObject
 from pydantic import BaseModel, model_validator, Field
 from aiogram.types import BotCommandScopeChat, BotCommand
@@ -12,7 +12,6 @@ import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
 from bot.config import app_config
-from bot.language import get_translator
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event

@@ -3,7 +3,7 @@ import asyncio
 import pytalk
 from typing import Callable
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 
 

@@ -3,7 +3,6 @@ import asyncio
 from aiogram import Router, Bot, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
-from aiogram.exceptions import TelegramAPIError
 
 from bot.database.crud import delete_user_data_fully, get_all_subscribers_ids
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard

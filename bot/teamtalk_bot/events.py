@@ -1,6 +1,5 @@
 import logging
 import asyncio
-import gettext
 from datetime import datetime
 
 import pytalk

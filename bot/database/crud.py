@@ -157,7 +157,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
     Also removes the user from the in-memory cache upon successful deletion.
     """
     # Import here to avoid circular dependency at module load time
-    from bot.core.user_settings import USER_SETTINGS_CACHE, remove_user_settings_from_cache
+    from bot.core.user_settings import remove_user_settings_from_cache
 
     logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
     try:

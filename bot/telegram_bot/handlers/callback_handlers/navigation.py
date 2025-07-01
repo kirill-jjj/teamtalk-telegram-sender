@@ -1,7 +1,6 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback

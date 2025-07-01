@@ -1,9 +1,9 @@
 import logging
 import math
-from typing import Callable, Any, Optional, Tuple
+from typing import Callable, Optional, Tuple
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
-from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
+from aiogram.exceptions import TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, delete
 
@@ -369,8 +369,10 @@ async def cq_show_all_accounts_list_action(
         await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
     if not USER_ACCOUNTS_CACHE:
-        try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
-        except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT: {e}")
+        try:
+            await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
+        except TelegramAPIError as e:
+            logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT: {e}")
         return
     await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, 0)
 
@@ -388,8 +390,10 @@ async def cq_paginate_all_accounts_list_action(
         await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
         return
     if not USER_ACCOUNTS_CACHE:
-        try: await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
-        except TelegramAPIError as e: logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT on paginate: {e}")
+        try:
+            await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
+        except TelegramAPIError as e:
+            logger.warning(f"Failed to edit message for NO_SERVER_ACCOUNTS_LOADED_TEXT on paginate: {e}")
         return
     await _display_all_server_accounts_list(callback_query, _, user_settings, tt_instance, callback_data.page)
 

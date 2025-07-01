@@ -6,10 +6,10 @@ from bot.core.enums import (
     SubscriptionAction,
     NotificationAction,
     UserListAction,
-    PaginateUsersAction,
     ToggleMuteSpecificAction,
     SubscriberListAction
 )
+from bot.models import MuteListMode
 
 # For main settings navigation
 class SettingsCallback(CallbackData, prefix="settings_nav"):
@@ -32,8 +32,6 @@ class NotificationActionCallback(CallbackData, prefix="notif_action"):
 # For navigating user lists (initial call to display a list)
 class UserListCallback(CallbackData, prefix="user_list_nav"):
     action: UserListAction
-
-from bot.models import MuteListMode
 
 # For setting mute list mode
 class SetMuteModeCallback(CallbackData, prefix="mute_mode_set"):

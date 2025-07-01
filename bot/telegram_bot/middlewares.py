@@ -2,12 +2,10 @@ import logging
 from typing import Callable, Coroutine, Any, Dict, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, User
-from sqlalchemy.orm import sessionmaker, selectinload
-from sqlalchemy.future import select
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import pytalk
-from bot.models import UserSettings, SubscribedUser
+from bot.models import SubscribedUser
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator

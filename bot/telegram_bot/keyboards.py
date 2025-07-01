@@ -36,7 +36,6 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
-from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
 ttstr = pytalk.instance.sdk.ttstr
 

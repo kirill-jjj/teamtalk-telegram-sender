@@ -6,9 +6,8 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.models import UserSettings, Deeplink as DeeplinkModel, SubscribedUser
+from bot.models import UserSettings, Deeplink as DeeplinkModel
 from bot.core.user_settings import (
-    get_or_create_user_settings,
     update_user_settings_in_db,
 )
 from bot.database.crud import (
