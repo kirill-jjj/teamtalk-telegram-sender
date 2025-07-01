@@ -320,11 +320,11 @@ async def on_message(message: TeamTalkMessage):
             if command_name in ["/add_admin", "/remove_admin"]:
                 args_str = command_parts[1] if len(command_parts) > 1 else None
                 command_obj = CommandObject(args=args_str)
-                await handler(message, _, command=command_obj, session=session)
+                await handler(message, command=command_obj, session=session, _=_)
             elif command_name == "/help":
-                await handler(message, _)
+                await handler(message, _=_)
             else:
-                await handler(message, session, _)
+                await handler(message, session=session, _=_)
         elif message_content.startswith("/"): # It's a command but not in handlers
             await handle_tt_unknown_command_specific(message, _)
         else: # Not a command, forward to admin
