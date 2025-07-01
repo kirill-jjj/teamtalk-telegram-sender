@@ -55,7 +55,6 @@ class Settings(BaseSettings):
     ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
 
     # Derived fields (not from .env)
-    EFFECTIVE_DEFAULT_LANG: LangType = "en"
 
     model_config = SettingsConfigDict(
             env_file=get_env_file(),
@@ -70,8 +69,6 @@ class Settings(BaseSettings):
         """
         if not self.TG_EVENT_TOKEN:
             raise ValueError("The TELEGRAM_BOT_EVENT_TOKEN environment variable must be set.")
-
-        self.EFFECTIVE_DEFAULT_LANG = self.DEFAULT_LANG
 
         return self
 

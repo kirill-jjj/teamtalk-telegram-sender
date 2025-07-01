@@ -280,7 +280,6 @@ async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     _: callable,
     user_settings: UserSettings,
-    callback_data: NotificationActionCallback, # This parameter was in the original user code, keep it for consistency
 ):
     await callback_query.answer()
     manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings)
@@ -295,7 +294,7 @@ async def cq_show_manage_muted_menu(
 
 @mute_router.callback_query(MuteAllCallback.filter(F.action == MuteAllAction.TOGGLE_MUTE_ALL))
 async def cq_toggle_mute_all_action(
-    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings, callback_data: MuteAllCallback # This parameter was in the original user code
+    callback_query: CallbackQuery, session: AsyncSession, _: callable, user_settings: UserSettings
 ):
     managed_user_settings = await session.merge(user_settings)
     original_flag = managed_user_settings.mute_all
@@ -363,7 +362,6 @@ async def cq_show_all_accounts_list_action(
     _: callable,
     user_settings: UserSettings,
     tt_instance: Optional[TeamTalkInstance],
-    callback_data: UserListCallback, # This parameter was in the original user code
 ):
     await callback_query.answer()
     if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
