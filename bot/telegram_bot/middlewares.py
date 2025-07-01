@@ -7,9 +7,8 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytalk
-# Updated imports: UserSettings from bot.models, get_or_create_user_settings remains
-from bot.models import UserSettings, SubscribedUser # UserSettings is now SQLModel, SubscribedUser also from bot.models
-from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE # This function will return SQLModel UserSettings
+from bot.models import UserSettings, SubscribedUser
+from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
 
@@ -41,23 +40,19 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        # 1. Simply try to get settings from the cache.
         user_settings = USER_SETTINGS_CACHE.get(user_obj.id)
 
-        # 2. If not in cache - it's a new user.
-        #    Call our function that queries the database and puts the ready object into the cache.
         if not user_settings:
             user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
 
-        # 3. If settings are still not available (almost impossible, but better to check),
-        #    then log an error.
+        # It's highly unlikely user_settings would still be None here due to get_or_create_user_settings logic,
+        # but check defensively.
         if not user_settings:
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
             # In this case, we can even not call the handler and just exit,
             # to avoid further errors.
             return
 
-        # 4. Pass the ready, complete data to the handler.
         data["user_settings"] = user_settings
         translator = get_translator(user_settings.language)
         data["_"] = translator.gettext

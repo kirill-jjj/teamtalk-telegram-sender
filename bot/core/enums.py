@@ -39,5 +39,5 @@ class SubscriberListAction(Enum):
     PAGE = "page"
 
 class DeeplinkAction(Enum):
-    SUBSCRIBE = "subscribe" # This will now handle the "rich" subscription with linking
+    SUBSCRIBE = "subscribe"
     UNSUBSCRIBE = "unsubscribe"

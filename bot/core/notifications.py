@@ -13,7 +13,7 @@ from bot.config import app_config
 from bot.language import get_translator
 from bot.database.engine import SessionFactory
 from bot.state import SUBSCRIBED_USERS_CACHE
-from bot.models import UserSettings, MutedUser, NotificationSetting # Импортируем UserSettings
+from bot.models import UserSettings, MutedUser, NotificationSetting
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
@@ -54,8 +54,8 @@ def _is_user_globally_ignored(username: str) -> bool:
 
 async def _get_recipients_for_notification(username_to_check: str, event_type: str) -> list[int]:
     """
-    Эффективно получает список ID получателей, выполняя один запрос к БД,
-    который фильтрует данные на стороне базы данных.
+    Efficiently retrieves a list of recipient IDs by executing a single DB query
+    that filters data on the database side.
     """
     subscriber_ids = list(SUBSCRIBED_USERS_CACHE)
     if not subscriber_ids:

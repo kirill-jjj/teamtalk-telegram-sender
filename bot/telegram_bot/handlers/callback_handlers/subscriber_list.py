@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from aiogram import Router, Bot, F # Added F
+from aiogram import Router, Bot, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
@@ -10,7 +10,7 @@ from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.telegram_bot.models import SubscriberInfo
 from bot.core.enums import SubscriberListAction
-from bot.state import ADMIN_IDS_CACHE # Added ADMIN_IDS_CACHE
+from bot.state import ADMIN_IDS_CACHE
 
 logger = logging.getLogger(__name__)
 
@@ -155,5 +155,8 @@ async def handle_subscriber_list_actions(
                 reply_markup=keyboard
             )
         await query.answer()
-    else: # Should ideally not be hit if callback_data.action is always a valid SubscriberListAction
+    else:
+        # This case should ideally not be reached if action is always a valid enum member.
+        # Logging defensively.
+        logger.warning(f"Unhandled SubscriberListAction: {action} from user {query.from_user.id}")
         await query.answer(_("Unknown action."), show_alert=True)

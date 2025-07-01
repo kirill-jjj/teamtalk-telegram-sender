@@ -10,7 +10,6 @@ from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 
-# It will store settings persistently while the bot is running.
 USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
 
 

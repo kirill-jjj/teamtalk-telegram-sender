@@ -65,8 +65,6 @@ async def process_user_action_selection(
          await callback_query.answer(_("TeamTalk bot is not connected."), show_alert=True)
          return
 
-    # Manual admin check removed, handled by decorator filter now
-
     user_to_act_on = tt_instance.get_user(callback_data.user_id)
     if not user_to_act_on:
         await callback_query.answer(_("User not found on server anymore."), show_alert=True)
