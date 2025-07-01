@@ -54,9 +54,9 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
     - If user_settings.mute_all is False, the set is a block list; user is muted if IN the set.
     """
     is_in_set = username in muted_usernames_set
-    if user_settings.mute_list_mode == MuteListMode.WHITELIST: # Changed mute_all to mute_list_mode
+    if user_settings.mute_list_mode == MuteListMode.whitelist: # Changed to lowercase
         return not is_in_set  # Muted if not in the allow list
-    else: # BLACKLIST mode
+    else: # blacklist mode
         return is_in_set      # Muted if in the block list
 
 # --- Settings Keyboards ---
@@ -163,21 +163,21 @@ def create_manage_muted_users_keyboard(
     inactive_marker = "⚪️ " # As per problem description
 
     # Radio buttons for mode selection
-    blacklist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.BLACKLIST else inactive_marker}{_('Blacklist Mode')}"
-    whitelist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.WHITELIST else inactive_marker}{_('Whitelist Mode')}"
+    blacklist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker}{_('Blacklist Mode')}" # Changed to lowercase
+    whitelist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker}{_('Whitelist Mode')}" # Changed to lowercase
 
     builder.button(
         text=blacklist_text,
-        callback_data=SetMuteModeCallback(mode=MuteListMode.BLACKLIST).pack()
+        callback_data=SetMuteModeCallback(mode=MuteListMode.blacklist).pack() # Changed to lowercase
     )
     builder.button(
         text=whitelist_text,
-        callback_data=SetMuteModeCallback(mode=MuteListMode.WHITELIST).pack()
+        callback_data=SetMuteModeCallback(mode=MuteListMode.whitelist).pack() # Changed to lowercase
     )
     builder.adjust(2) # Display side-by-side
 
     # Dynamic button text for managing the list
-    list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.BLACKLIST else _("Manage Whitelist")
+    list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Manage Whitelist") # Changed to lowercase
     # The original user prompt used LIST_MUTED for both, so we stick to that.
     # If LIST_ALLOWED was meant for whitelist, UserListAction.LIST_ALLOWED should be used for whitelist mode.
     builder.button(
