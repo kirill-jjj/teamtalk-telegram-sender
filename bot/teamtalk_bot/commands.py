@@ -1,7 +1,8 @@
 import logging
 import functools
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Any
 from aiogram.filters import CommandObject
+from pydantic import BaseModel, model_validator, Field
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.exceptions import TelegramAPIError
@@ -20,6 +21,33 @@ from bot.core.enums import DeeplinkAction
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
+
+
+class AdminIdArgs(BaseModel):
+    valid_ids: list[int] = Field(default_factory=list)
+    invalid_entries: list[str] = Field(default_factory=list)
+
+    @model_validator(mode='before')
+    @classmethod
+    def parse_str_to_dict(cls, data: Any) -> dict[str, list]:
+        if data is None or not isinstance(data, str):
+            return {"valid_ids": [], "invalid_entries": []}
+
+        command_args_str = data.strip()
+        if not command_args_str:
+            return {"valid_ids": [], "invalid_entries": []}
+
+        valid_ids = []
+        invalid_entries = []
+        parts = command_args_str.split()
+
+        for part in parts:
+            if part.isdigit():
+                valid_ids.append(int(part))
+            else:
+                invalid_entries.append(part)
+
+        return {"valid_ids": valid_ids, "invalid_entries": invalid_entries}
 
 
 # Decorator for TeamTalk admin commands
@@ -42,23 +70,6 @@ def is_tt_admin(func):
 
         return await func(tt_message, *args, **kwargs)
     return wrapper
-
-
-def _parse_telegram_ids(command_args: str | None) -> tuple[list[int], list[str]]:
-    """Parses a string of arguments into a list of valid Telegram IDs and a list of invalid entries."""
-    if not command_args:
-        return [], []
-
-    valid_ids = []
-    invalid_entries = []
-    parts = command_args.split()
-
-    for part in parts:
-        if part.isdigit():
-            valid_ids.append(int(part))
-        else:
-            invalid_entries.append(part)
-    return valid_ids, invalid_entries
 
 
 async def _execute_admin_action_for_id(
@@ -124,16 +135,16 @@ async def _manage_admin_ids(
     header_msg_key: str,
 ):
     """A generic handler for adding or removing admin IDs."""
-    valid_ids, invalid_entries = _parse_telegram_ids(command.args)
+    args = AdminIdArgs.model_validate(command.args)
 
-    if not valid_ids and not invalid_entries:
+    if not args.valid_ids and not args.invalid_entries:
         tt_message.reply(_(prompt_msg_key))
         return
 
     success_count = 0
     failed_action_ids = []
 
-    for telegram_id in valid_ids:
+    for telegram_id in args.valid_ids:
         logger.info(f"Attempting to {crud_function.__name__} for TG ID {telegram_id} by TT admin {ttstr(tt_message.user.username)}.")
         if await _execute_admin_action_for_id(
             session=session, telegram_id=telegram_id, crud_function=crud_function, commands_to_set=commands_to_set
@@ -154,7 +165,7 @@ async def _manage_admin_ids(
         _,
         success_count,
         failed_action_ids,
-        invalid_entries,
+        args.invalid_entries,
         success_message_direct=success_message_formatted,
         error_msg_source=error_msg_key,
         invalid_id_msg_source=invalid_id_msg_key,
