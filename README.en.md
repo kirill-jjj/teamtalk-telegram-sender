@@ -101,9 +101,8 @@ source $HOME/.local/bin/env
     ```
     You can also specify a particular configuration file (instead of the default `.env`) using the `--config` option:
     ```bash
-    uv run sender.py -- --config custom.env
+    uv run sender.py --config custom.env
     ```
-    (Note the `--` before `--config custom.env`. This tells `uv run` that subsequent arguments are for the `sender.py` script, not for the `uv` command itself.)
 
 ## Database Migrations
 
@@ -121,22 +120,21 @@ It is recommended to use the `manage-migrations.py` script for managing database
 *   **Apply Migrations (Recommended Method)**:
     To apply all pending migrations to the database (using the default `.env` configuration):
     ```bash
-    uv run manage-migrations.py -- upgrade head
+    uv run manage-migrations.py upgrade head
     ```
     If using a different configuration file (e.g., `prod.env`):
     ```bash
-    uv run manage-migrations.py -- --config prod.env upgrade head
+    uv run manage-migrations.py --config prod.env upgrade head
     ```
-    (Note the first `--` tells `uv run` that subsequent arguments are for `manage-migrations.py`. The `--config prod.env` is an argument to `manage-migrations.py`.)
 
 *   **Create a New Revision (Migration) (Recommended Method)**:
     After modifying models in `bot/models.py`, use `manage-migrations.py` to create a revision:
     ```bash
-    uv run manage-migrations.py -- revision -m "short_description_of_changes" --autogenerate
+    uv run manage-migrations.py revision -m "short_description_of_changes" --autogenerate
     ```
     Or with a custom config:
     ```bash
-    uv run manage-migrations.py -- --config prod.env revision -m "short_description_of_changes" --autogenerate
+    uv run manage-migrations.py --config prod.env revision -m "short_description_of_changes" --autogenerate
     ```
     This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect.
 
