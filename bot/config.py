@@ -1,4 +1,3 @@
-import argparse
 import os
 from typing import Any, Literal, Optional
 
@@ -8,29 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Name of the environment variable that can override the config file path
 CONFIG_FILE_ENV_VAR = "APP_CONFIG_FILE_PATH"
 
-def get_config_path_from_args():
-    """
-    Determines the config file path.
-    Priority:
-    1. Environment variable APP_CONFIG_FILE_PATH.
-    2. --config command-line argument.
-    3. Default value '.env'.
-    """
-    env_config_path = os.getenv(CONFIG_FILE_ENV_VAR)
-    if env_config_path:
-        return env_config_path
-
-    parser = argparse.ArgumentParser(description="Application Configuration")
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=".env",
-        help="Path to the configuration file (e.g., .env, prod.env). Defaults to '.env'",
-    )
-    # Parse known args to allow other arguments (like those from aiogram)
-    # without causing an error if sender.py is called directly with them.
-    args, _ = parser.parse_known_args()
-    return args.config
+def get_env_file():
+    return os.getenv(CONFIG_FILE_ENV_VAR, ".env")
 
 GenderType = Literal["male", "female", "neutral"]
 LangType = Literal["en", "ru"]
@@ -76,11 +54,11 @@ class Settings(BaseSettings):
     TT_RECONNECT_CHECK_INTERVAL_SECONDS: int = 10 # Interval to check for TT connection if bot thinks it's disconnected
     ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
 
-    # --- Производные поля (не из .env) ---
+    # Derived fields (not from .env)
     EFFECTIVE_DEFAULT_LANG: LangType = "en"
 
     model_config = SettingsConfigDict(
-            env_file=get_config_path_from_args(),
+            env_file=get_env_file(),
             env_file_encoding='utf-8',
             extra='ignore'
         )
