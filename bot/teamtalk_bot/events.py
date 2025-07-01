@@ -20,7 +20,6 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
-    # RECONNECT_CHECK_INTERVAL_SECONDS, # Removed as unused, app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS is used directly
 )
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
@@ -45,7 +44,6 @@ ttstr = pytalk.instance.sdk.ttstr
 
 async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
     """Periodically synchronizes the ONLINE_USERS_CACHE with the server's state."""
-    # sync_interval_seconds = 300 # Replaced by app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS
     while True:
         try:
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
