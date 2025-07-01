@@ -74,7 +74,6 @@ class Settings(BaseSettings):
     DEEPLINK_TTL_SECONDS: int = 300  # Lifetime of deeplinks in seconds (e.g., for /sub)
     TT_RECONNECT_RETRY_SECONDS: int = 15 # How often to retry initial connection or full reconnect to TeamTalk
     TT_RECONNECT_CHECK_INTERVAL_SECONDS: int = 10 # Interval to check for TT connection if bot thinks it's disconnected
-    USER_SETTINGS_CACHE_TTL_SECONDS: int = 300 # Cache TTL for user-specific settings
     ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
 
     # --- Производные поля (не из .env) ---
