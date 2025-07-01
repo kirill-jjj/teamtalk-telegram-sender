@@ -1,5 +1,3 @@
-# bot/core/user_settings.py
-
 import asyncio
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -1,4 +1,3 @@
-# bot/telegram_bot/handlers/callback_handlers/_helpers.py
 import logging
 from typing import Callable, Optional
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message

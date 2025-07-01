@@ -108,10 +108,10 @@ async def _display_internal_user_list(
 
     header_text, empty_list_text = "", ""
     # Determine header and empty text based on current mute_list_mode
-    if user_settings.mute_list_mode == MuteListMode.blacklist: # Changed to lowercase
+    if user_settings.mute_list_mode == MuteListMode.blacklist:
         header_text = _("Blacklisted Users (Block List)")
         empty_list_text = _("Your blacklist is empty.")
-    elif user_settings.mute_list_mode == MuteListMode.whitelist: # Changed to lowercase
+    elif user_settings.mute_list_mode == MuteListMode.whitelist:
         header_text = _("Whitelisted Users (Allow List)")
         empty_list_text = _("Your whitelist is empty.")
     else: # Should not happen
@@ -227,7 +227,7 @@ def _generate_mute_toggle_toast_message(
     quoted_username = html.quote(username_to_toggle)
     action_text: str
 
-    if current_mode == MuteListMode.blacklist: # Changed to lowercase
+    if current_mode == MuteListMode.blacklist:
         action_text = _("added to blacklist") if was_added_to_list else _("removed from blacklist")
     else: # whitelist
         action_text = _("added to whitelist") if was_added_to_list else _("removed from whitelist")
@@ -296,7 +296,7 @@ async def cq_show_manage_muted_menu(
 
     # Updated text for manage muted menu
     current_mode_text = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
-    if user_settings.mute_list_mode == MuteListMode.whitelist: # Changed to lowercase
+    if user_settings.mute_list_mode == MuteListMode.whitelist:
         current_mode_text = _("Current mode is Whitelist. You only receive notifications from users on the list.")
 
     full_text = f"{_('Manage Mute List')}\n\n{current_mode_text}" # Main title + description
@@ -334,7 +334,7 @@ async def cq_set_mute_mode_action(
     def revert_logic():
         managed_user_settings.mute_list_mode = original_mode
 
-    mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist") # Changed to lowercase
+    mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
 
     def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
@@ -343,7 +343,7 @@ async def cq_set_mute_mode_action(
 
         # Generate the descriptive text for the menu again
         current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
-        if managed_user_settings.mute_list_mode == MuteListMode.whitelist: # Changed to lowercase
+        if managed_user_settings.mute_list_mode == MuteListMode.whitelist:
             current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
         menu_text = f"{_('Manage Mute List')}\n\n{current_mode_desc}"
 

@@ -13,7 +13,7 @@ from bot.config import app_config
 from bot.language import get_translator
 from bot.database.engine import SessionFactory
 from bot.state import SUBSCRIBED_USERS_CACHE
-from bot.models import UserSettings, MutedUser, NotificationSetting, MuteListMode # Added MuteListMode
+from bot.models import UserSettings, MutedUser, NotificationSetting, MuteListMode
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
@@ -71,7 +71,7 @@ async def _get_recipients_for_notification(username_to_check: str, event_type: s
         elif event_type == NOTIFICATION_EVENT_LEAVE:
             filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
-        user_is_in_list_subquery = ( # Renamed from mute_subquery
+        user_is_in_list_subquery = (
             select(MutedUser.id)
             .where(
                 and_(
@@ -84,11 +84,11 @@ async def _get_recipients_for_notification(username_to_check: str, event_type: s
 
         mute_logic = or_(
             and_(
-                UserSettings.mute_list_mode == MuteListMode.blacklist, # Changed to lowercase
+                UserSettings.mute_list_mode == MuteListMode.blacklist,
                 ~user_is_in_list_subquery
             ),
             and_(
-                UserSettings.mute_list_mode == MuteListMode.whitelist, # Changed to lowercase
+                UserSettings.mute_list_mode == MuteListMode.whitelist,
                 user_is_in_list_subquery
             )
         )
