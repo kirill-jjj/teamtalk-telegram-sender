@@ -1,5 +1,6 @@
 import logging
 import functools
+import gettext
 from typing import Optional, Callable, List, Any
 from aiogram.filters import CommandObject
 from pydantic import BaseModel, model_validator, Field
@@ -54,9 +55,11 @@ class AdminIdArgs(BaseModel):
 def is_tt_admin(func):
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
-        _ = kwargs.get('_')
-        if not _ or not callable(_):
-            raise TypeError("Translator function '_' was not provided as a keyword argument to the decorated function.")
+        translator = kwargs.get('translator')
+        if not translator or not isinstance(translator, gettext.GNUTranslations):
+             raise TypeError("Translator object 'translator' was not provided as a keyword argument to the decorated function.")
+
+        _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
         admin_username = app_config.ADMIN_USERNAME
@@ -92,7 +95,7 @@ async def _execute_admin_action_for_id(
 
 
 def _create_admin_action_report(
-    _: callable,
+    translator: gettext.GNUTranslations,
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
@@ -102,6 +105,7 @@ def _create_admin_action_report(
     header_source: str
 ) -> str:
     """Creates a final report message for the admin action."""
+    _ = translator.gettext
     reply_parts = []
     if success_count > 0:
         reply_parts.append(success_message_direct)
@@ -126,7 +130,7 @@ async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     command: CommandObject,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     crud_function: Callable[[AsyncSession, int], bool],
     commands_to_set: list[BotCommand],
     prompt_msg_key: str,
@@ -135,6 +139,7 @@ async def _manage_admin_ids(
     header_msg_key: str,
 ):
     """A generic handler for adding or removing admin IDs."""
+    _ = translator.gettext
     args = AdminIdArgs.model_validate(command.args)
 
     if not args.valid_ids and not args.invalid_entries:
@@ -157,12 +162,12 @@ async def _manage_admin_ids(
 
     success_message_formatted = ""
     if crud_function is add_admin:
-        success_message_formatted = _.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", success_count).format(count=success_count)
+        success_message_formatted = translator.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", success_count).format(count=success_count)
     elif crud_function is remove_admin_db:
-        success_message_formatted = _.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", success_count).format(count=success_count)
+        success_message_formatted = translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", success_count).format(count=success_count)
 
     report_message = _create_admin_action_report(
-        _,
+        translator,
         success_count,
         failed_action_ids,
         args.invalid_entries,
@@ -266,19 +271,21 @@ async def handle_tt_unsubscribe_command(
 @is_tt_admin
 async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
-    _: callable, *,
+    translator: gettext.GNUTranslations,
+    *,
     command: CommandObject,
     session: AsyncSession
 ):
     # Dummy call for pybabel extraction
     if False:
-        _.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1)
+        translator.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1)
 
+    _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,
         command=command,
         session=session,
-        _=_,
+        translator=translator,
         crud_function=add_admin,
         commands_to_set=ADMIN_COMMANDS,
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
@@ -291,19 +298,20 @@ async def handle_tt_add_admin_command(
 @is_tt_admin
 async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
-    _: callable, *,
+    translator: gettext.GNUTranslations, *,
     command: CommandObject,
     session: AsyncSession
 ):
     # Dummy call for pybabel extraction
     if False:
-        _.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
+        translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
 
+    _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,
         command=command,
         session=session,
-        _=_,
+        translator=translator,
         crud_function=remove_admin_db,
         commands_to_set=USER_COMMANDS,
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
