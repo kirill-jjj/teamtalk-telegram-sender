@@ -37,16 +37,15 @@ async def process_setting_update(
         await callback_query.answer(success_toast_text, show_alert=False)
 
         # Attempt to refresh UI only after successful DB update and toast
-        try:
-            new_text, new_markup = ui_refresh_callable()
-            await callback_query.message.edit_text(text=new_text, reply_markup=new_markup)
-        except TelegramBadRequest as e_br:
-            if "message is not modified" not in str(e_br).lower(): # Common, safe to ignore
-                logger.error(f"TelegramBadRequest refreshing UI after setting update: {e_br}", exc_info=True)
-        except TelegramAPIError as e_api: # More general API errors
-            logger.error(f"TelegramAPIError refreshing UI after setting update: {e_api}", exc_info=True)
-        except Exception as e_ui: # Catch any other exception during UI refresh
-            logger.error(f"Generic error refreshing UI after setting update: {e_ui}", exc_info=True)
+        # Use safe_edit_text for robust UI refresh
+        new_text, new_markup = ui_refresh_callable()
+        await safe_edit_text(
+            message_to_edit=callback_query.message,
+            text=new_text,
+            reply_markup=new_markup,
+            logger_instance=logger,
+            log_context="process_setting_update_ui_refresh"
+        )
 
     except Exception as e_db: # Catch errors from update_user_settings_in_db or initial callback_query.answer
         logger.error(f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
