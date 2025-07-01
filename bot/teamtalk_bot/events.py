@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import gettext
 from datetime import datetime
 
 import pytalk
@@ -307,7 +308,7 @@ async def on_message(message: TeamTalkMessage):
             bot_reply_language = admin_settings.language
 
     translator = get_translator(bot_reply_language)
-    _ = translator.gettext
+    # _ = translator.gettext # Removed this line
 
     command_parts = message_content.split(maxsplit=1)
     command_name = command_parts[0].lower()
@@ -317,13 +318,16 @@ async def on_message(message: TeamTalkMessage):
         if handler:
             if command_name in ["/add_admin", "/remove_admin"]:
                 args_str = command_parts[1] if len(command_parts) > 1 else None
-                command_obj = CommandObject(args=args_str)
-                await handler(message, command=command_obj, session=session, _=_)
+                command_obj = CommandObject(command=command_name, args=args_str)
+                await handler(message, command=command_obj, session=session, translator=translator)
             elif command_name == "/help":
+                _ = translator.gettext
                 await handler(message, _=_)
-            else:
+            else: # For /sub, /unsub or any other future commands that might take session and _
+                _ = translator.gettext
                 await handler(message, session=session, _=_)
         elif message_content.startswith("/"): # It's a command but not in handlers
+            _ = translator.gettext
             await handle_tt_unknown_command_specific(message, _)
         else: # Not a command, forward to admin
             await forward_tt_message_to_telegram_admin(message)
