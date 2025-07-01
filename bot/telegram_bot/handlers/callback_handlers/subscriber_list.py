@@ -115,7 +115,7 @@ async def handle_subscriber_list_actions(
         else:
             new_keyboard = create_subscriber_list_keyboard(
                 _,
-                subscribers_info=page_subscribers_info,
+                page_subscribers_info=page_subscribers_info,
                 current_page=current_page,
                 total_pages=total_pages
             )
@@ -142,7 +142,7 @@ async def handle_subscriber_list_actions(
         else:
             keyboard = create_subscriber_list_keyboard(
                 _,
-                subscribers_info=page_subscribers_info,
+                page_subscribers_info=page_subscribers_info,
                 current_page=current_page,
                 total_pages=total_pages
             )

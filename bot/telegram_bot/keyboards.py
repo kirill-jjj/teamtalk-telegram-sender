@@ -299,14 +299,14 @@ def create_account_list_keyboard(
 
 def create_subscriber_list_keyboard(
     _: Callable,
-    subscribers_info: List[dict],
+    page_subscribers_info: List[dict],
     current_page: int,
     total_pages: int
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for managing the subscriber list."""
     builder = InlineKeyboardBuilder()
 
-    for subscriber in subscribers_info:
+    for subscriber in page_subscribers_info:
         button_text = _("Delete {user_info}").format(user_info=subscriber['display_name'])
         builder.row(
             InlineKeyboardButton(

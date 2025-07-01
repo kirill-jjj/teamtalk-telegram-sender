@@ -89,17 +89,17 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     Handles the /subscribers command to display a paginated list of subscribed users
     with their names and usernames if available. Admins only.
     """
-    page_subscribers_info_data, current_page, total_pages = await _get_paginated_subscribers_info(
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
         session, bot, requested_page=0
     )
 
-    if total_pages == 0 or not page_subscribers_info_data:
+    if total_pages == 0 or not page_subscribers_info:
         await message.reply(_("No subscribers found."))
         return
 
     keyboard = create_subscriber_list_keyboard(
         _,
-        subscribers_info=page_subscribers_info_data,
+        page_subscribers_info=page_subscribers_info, # Matching the new parameter name
         current_page=current_page,
         total_pages=total_pages
     )
