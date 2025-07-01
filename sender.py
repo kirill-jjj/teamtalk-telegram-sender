@@ -38,7 +38,6 @@ def main():
         # For debugging, traceback can also be printed
         traceback.print_exc()
 
-# Rename old main to async_main
 async def async_main():
     # Now we import everything else here, AFTER setting the env var
     from bot.logging_setup import setup_logging
