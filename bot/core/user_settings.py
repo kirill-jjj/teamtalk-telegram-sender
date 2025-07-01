@@ -10,7 +10,6 @@ from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 
-# Replacing TTLCache with a regular dictionary.
 # It will store settings persistently while the bot is running.
 USER_SETTINGS_CACHE: dict[int, UserSettings] = {}
 
