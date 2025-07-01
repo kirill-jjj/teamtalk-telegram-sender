@@ -43,8 +43,9 @@ async def cq_set_language(
     _: callable,
     callback_data: LanguageCallback
 ):
+    managed_user_settings = await session.merge(user_settings)
     new_lang_code = callback_data.lang_code
-    original_lang_code = user_settings.language
+    original_lang_code = managed_user_settings.language
 
     if new_lang_code == original_lang_code:
         await callback_query.answer()
@@ -53,10 +54,10 @@ async def cq_set_language(
     new_lang_translator_obj = get_translator(new_lang_code)
 
     def update_logic():
-        user_settings.language = new_lang_code
+        managed_user_settings.language = new_lang_code
 
     def revert_logic():
-        user_settings.language = original_lang_code
+        managed_user_settings.language = original_lang_code
 
     if new_lang_code == "en":
         lang_name_display = new_lang_translator_obj.gettext("English")
@@ -74,7 +75,7 @@ async def cq_set_language(
     await process_setting_update(
         callback_query=callback_query,
         session=session,
-        user_settings=user_settings,
+        user_settings=managed_user_settings,
         _=_,
         update_action=update_logic,
         revert_action=revert_logic,
