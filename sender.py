@@ -1,17 +1,15 @@
-# sender.py
-
-# СНАЧАЛА СТАНДАРТНЫЕ БИБЛИОТЕКИ
+# Standard library imports first
 import asyncio
 import sys
 import os
-import argparse # Добавляем argparse
+import argparse
 import traceback # For detailed error reporting before logger is set up
 
-# === НАЧАЛО БЛОКА КОНФИГУРАЦИИ ===
-# Этот блок должен идти ПЕРЕД импортами из твоего приложения.
+# === CONFIGURATION BLOCK START ===
+# This block must come BEFORE imports from your application.
 def main():
-    # Мы определяем парсер внутри main, чтобы он не выполнялся при импорте,
-    # но логику парсинга вызываем до всего остального.
+    # We define the parser inside main so it doesn't run on import,
+    # but parsing logic is called before anything else.
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -21,41 +19,39 @@ def main():
     )
     args, _ = parser.parse_known_args()
 
-    # Устанавливаем переменную окружения, которую прочитает bot.config
+    # Set the environment variable that bot.config will read
     os.environ["APP_CONFIG_FILE_PATH"] = args.config
 
-    # Теперь, когда переменная окружения установлена, мы можем безопасно
-    # запустить основной асинхронный код, который будет импортировать app_config.
+    # Now that the environment variable is set, we can safely
+    # run the main asynchronous code, which will import app_config.
     try:
         asyncio.run(async_main())
     except (KeyboardInterrupt, SystemExit):
-        # logger еще не создан, так что используем print
+        # logger is not yet created, so use print
         print("Bot stopped!")
     except (ValueError, KeyError) as config_error:
-        # logger еще не создан
+        # logger is not yet created
         print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.")
     except Exception as e:
-        # logger еще не создан
+        # logger is not yet created
         print(f"CRITICAL: An unexpected critical error occurred: {e}")
-        # Для отладки можно и трейсбек вывести
+        # For debugging, traceback can also be printed
         traceback.print_exc()
 
-# Переименовываем старую main в async_main
+# Rename old main to async_main
 async def async_main():
-    # Теперь мы импортируем все остальное здесь, ПОСЛЕ установки env var
+    # Now we import everything else here, AFTER setting the env var
     from bot.logging_setup import setup_logging
     logger = setup_logging()
 
-    # Импорты, которые зависят от конфигурации
+    # Imports that depend on configuration
     from aiogram import Bot, Dispatcher, html
     from aiogram.types import ErrorEvent, Message
     from aiogram.utils.callback_answer import CallbackAnswerMiddleware
     from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
 
-    from bot.config import app_config # <--- КОНФИГ ИМПОРТИРУЕТСЯ ЗДЕСЬ
+    from bot.config import app_config # <--- Config is imported here
     from bot.teamtalk_bot import bot_instance as tt_bot_module
-    # ... и все остальные твои импорты из bot.*
-    # ... (я их скопирую из твоего файла для полноты)
     from bot.teamtalk_bot import events as tt_events  # DO NOT REMOVE: Critical for TeamTalk event registration. Bot runs without it, but TT part will be disabled.
     from bot.database.engine import SessionFactory
     from bot.core.user_settings import load_user_settings_to_cache
@@ -180,11 +176,7 @@ async def async_main():
         except Exception as e:
             logger.error(f"Could not send error message to user: {e}", exc_info=True)
 
-    # Остальная часть твоей функции `main` без изменений
     logger.info("Application starting...")
-
-    # ... (весь код, который был в твоей main, остается здесь)
-    # ...
 
     async with SessionFactory() as session:
         db_subscriber_ids = await get_all_subscribers_ids(session)
@@ -213,12 +205,6 @@ async def async_main():
     dp.include_router(admin_router)
     dp.include_router(callback_router)
     dp.include_router(catch_all_router)
-
-    # В on_startup и on_shutdown ничего менять не нужно
-    # ... твой код
-    # ... (полный код on_shutdown)
-
-    # ... твой код
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
