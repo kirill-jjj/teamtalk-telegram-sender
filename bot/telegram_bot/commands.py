@@ -37,12 +37,12 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int] = None):
                 logger.error(f"An unexpected error occurred while setting admin commands for admin_id {admin_id}: {e}")
 
     try:
-        # Сначала удаляем старые команды для всех пользователей в приватных чатах
+        # First, delete old commands for all users in private chats
         default_scope = BotCommandScopeAllPrivateChats()
         await bot.delete_my_commands(scope=default_scope)
         logger.info(f"Successfully deleted old commands for scope {default_scope!r}.")
 
-        # Теперь устанавливаем новый, правильный список команд
+        # Now, set the new, correct list of commands
         await bot.set_my_commands(commands=USER_COMMANDS, scope=default_scope)
         logger.info(f"Successfully set user commands for scope {default_scope!r}.")
     except TelegramAPIError as e:

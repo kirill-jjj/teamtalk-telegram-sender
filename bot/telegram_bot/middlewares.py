@@ -12,7 +12,6 @@ from bot.models import UserSettings, SubscribedUser # UserSettings is now SQLMod
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE # This function will return SQLModel UserSettings
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
-# bot.database.models.SubscribedUser import is removed as it's covered by bot.models
 
 
 logger = logging.getLogger(__name__)
@@ -42,23 +41,23 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        # 1. Просто пытаемся достать настройки из кеша.
+        # 1. Simply try to get settings from the cache.
         user_settings = USER_SETTINGS_CACHE.get(user_obj.id)
 
-        # 2. Если в кеше нет — значит, это новый пользователь.
-        #    Вызываем нашу функцию, которая сходит в базу и положит в кеш готовый объект.
+        # 2. If not in cache - it's a new user.
+        #    Call our function that queries the database and puts the ready object into the cache.
         if not user_settings:
             user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
 
-        # 3. Если даже после этого настроек нет (что почти невозможно, но лучше проверить),
-        #    то логируем ошибку.
+        # 3. If settings are still not available (almost impossible, but better to check),
+        #    then log an error.
         if not user_settings:
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            # В этом случае можно даже не вызывать хендлер, а просто выйти,
-            # чтобы избежать дальнейших ошибок.
+            # In this case, we can even not call the handler and just exit,
+            # to avoid further errors.
             return
 
-        # 4. Передаем в хендлер уже готовые, полные данные.
+        # 4. Pass the ready, complete data to the handler.
         data["user_settings"] = user_settings
         translator = get_translator(user_settings.language)
         data["_"] = translator.gettext

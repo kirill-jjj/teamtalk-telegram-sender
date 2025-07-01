@@ -30,7 +30,6 @@ from bot.core.enums import (
     NotificationAction,
     MuteAllAction,
     UserListAction,
-    # PaginateUsersAction, # Not directly used for filtering here, list_type is UserListAction
     ToggleMuteSpecificAction
 )
 from bot.constants import USERS_PER_PAGE
@@ -482,11 +481,11 @@ async def cq_toggle_specific_user_mute_action(
     tt_instance: Optional[TeamTalkInstance],
     callback_data: ToggleMuteSpecificCallback,
 ):
-    # ШАГ 1: "Присоединяем" объект из кеша к текущей сессии с помощью merge.
-    # Это вернет нам "управляемый" экземпляр, с которым сессия умеет работать.
+    # STEP 1: "Attach" the object from the cache to the current session using merge.
+    # This will return a "managed" instance that the session can work with.
     managed_user_settings = await session.merge(user_settings)
 
-    # ШАГ 2: Везде дальше используем ТОЛЬКО managed_user_settings.
+    # STEP 2: Use ONLY managed_user_settings everywhere below.
 
     # Pass session to _parse_mute_toggle_callback_data
     username_to_toggle = await _parse_mute_toggle_callback_data(callback_data, managed_user_settings, session)
@@ -515,7 +514,7 @@ async def cq_toggle_specific_user_mute_action(
     save_successful = await _save_mute_settings_and_notify(
         session,
         callback_query,
-        managed_user_settings, # <-- Используем управляемый объект
+        managed_user_settings, # <-- Use the managed object
         toast_message,
         username_to_toggle,
         action_taken,
@@ -529,7 +528,7 @@ async def cq_toggle_specific_user_mute_action(
     await _refresh_mute_related_ui(
         callback_query,
         _,
-        managed_user_settings, # <-- Используем управляемый объект
+        managed_user_settings, # <-- Use the managed object
         tt_instance,
         callback_data,
         session # Pass session
