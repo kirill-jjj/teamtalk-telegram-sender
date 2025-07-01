@@ -1,12 +1,10 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
-from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field, ValidationError
 
 from bot.models import UserSettings, NotificationSetting
-from bot.database.crud import add_subscriber, remove_subscriber
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.core.enums import SettingsNavAction, SubscriptionAction

@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import table, column
 
 # revision identifiers, used by Alembic.
@@ -33,13 +32,13 @@ def upgrade() -> None:
     # Set mute_list_mode to 'whitelist' where mute_all was True
     op.execute(
         user_settings_table.update().
-        where(user_settings_table.c.mute_all == True).
+        where(user_settings_table.c.mute_all).
         values(mute_list_mode='whitelist')
     )
     # Set mute_list_mode to 'blacklist' where mute_all was False (already server_default, but explicit)
     op.execute(
         user_settings_table.update().
-        where(user_settings_table.c.mute_all == False).
+        where(sa.not_(user_settings_table.c.mute_all)).
         values(mute_list_mode='blacklist')
     )
 

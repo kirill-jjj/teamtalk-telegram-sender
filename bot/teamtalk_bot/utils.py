@@ -8,7 +8,6 @@ from pytalk import TeamTalkServerInfo
 from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
 from bot.teamtalk_bot import bot_instance as tt_bot_module
-from pytalk.enums import UserStatusMode
 
 from bot.config import app_config
 from bot.language import get_translator
@@ -233,7 +232,8 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                     logger.warning(f"Removing failed/partially created instance attempt for {server_info_to_reconnect.host} from tt_bot.teamtalks")
                     try:
                         last_instance = tt_bot_module.tt_bot.teamtalks.pop()
-                        if last_instance.connected: last_instance.disconnect()
+                        if last_instance.connected:
+                            last_instance.disconnect()
                         last_instance.closeTeamTalk()
                     except Exception as e_cleanup:
                         logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
@@ -246,7 +246,8 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                  logger.warning(f"Removing instance for {server_info_to_reconnect.host} from tt_bot.teamtalks due to add_server() exception.")
                  try:
                     last_instance = tt_bot_module.tt_bot.teamtalks.pop()
-                    if last_instance.connected: last_instance.disconnect()
+                    if last_instance.connected:
+                        last_instance.disconnect()
                     last_instance.closeTeamTalk()
                  except Exception as e_cleanup_exc:
                      logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")

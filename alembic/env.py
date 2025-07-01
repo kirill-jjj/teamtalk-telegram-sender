@@ -1,6 +1,5 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -12,15 +11,10 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from sqlmodel import SQLModel
-from bot.models import (
-    UserSettings,
-    MutedUser,
-    SubscribedUser,
-    Admin,
-    Deeplink
-) # noqa
-from bot.config import app_config
+from sqlmodel import SQLModel  # noqa: E402
+from bot.config import app_config  # noqa: E402
+# Import models here for Alembic 'autogenerate' support
+from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401, E402
 
 target_metadata = SQLModel.metadata
 
@@ -28,7 +22,7 @@ target_metadata = SQLModel.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-import os
+import os  # noqa: E402
 
 def process_revision_directives(context, revision, directives):
     """

@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import os
 import argparse
 import traceback # For detailed error reporting before logger is set up
@@ -47,7 +46,7 @@ async def async_main():
 
     from bot.config import app_config # <--- Config is imported here
     from bot.teamtalk_bot import bot_instance as tt_bot_module
-    from bot.teamtalk_bot import events as tt_events  # DO NOT REMOVE: Critical for TeamTalk event registration. Bot runs without it, but TT part will be disabled.
+    from bot.teamtalk_bot import events as tt_events  # noqa: F401 # DO NOT REMOVE: Critical for TeamTalk event registration
     from bot.database.engine import SessionFactory
     from bot.core.user_settings import load_user_settings_to_cache
     from bot.database import crud

@@ -3,16 +3,14 @@ from aiogram import Router, Bot, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
-from aiogram.exceptions import TelegramAPIError
 
-from bot.state import ONLINE_USERS_CACHE, ADMIN_IDS_CACHE
-from bot.core.utils import get_username_as_str, get_tt_user_display_name, get_online_teamtalk_users
+from bot.state import ADMIN_IDS_CACHE
+from bot.core.utils import get_tt_user_display_name, get_online_teamtalk_users
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
-import pytalk
 
 from bot.core.enums import AdminAction
 from pytalk.instance import TeamTalkInstance
-from .callback_handlers.subscriber_list import _get_paginated_subscribers_info, SUBSCRIBERS_PER_PAGE
+from .callback_handlers.subscriber_list import _get_paginated_subscribers_info
 
 logger = logging.getLogger(__name__)
 

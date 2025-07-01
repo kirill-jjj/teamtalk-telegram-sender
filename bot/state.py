@@ -1,3 +1,5 @@
+import pytalk
+
 # This module stores global, mutable application state,
 # such as caches and state flags.
 

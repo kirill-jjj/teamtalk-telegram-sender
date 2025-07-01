@@ -2,7 +2,6 @@ import logging
 from aiogram import Router, F, html
 from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramAPIError
-from sqlalchemy.ext.asyncio import AsyncSession
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.exceptions import PermissionError as PytalkPermissionError
