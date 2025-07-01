@@ -42,6 +42,21 @@ from bot.constants import CALLBACK_NICKNAME_MAX_LENGTH
 
 ttstr = pytalk.instance.sdk.ttstr
 
+
+# --- Helper Functions ---
+
+def _is_username_effectively_muted(username: str, user_settings: UserSettings, muted_usernames_set: set[str]) -> bool:
+    """
+    Determines if a username is effectively muted based on user settings and a provided set of muted/allowed usernames.
+    - If user_settings.mute_all is True, the set is an allow list; user is muted if NOT in the set.
+    - If user_settings.mute_all is False, the set is a block list; user is muted if IN the set.
+    """
+    is_in_set = username in muted_usernames_set
+    if user_settings.mute_all:
+        return not is_in_set  # Muted if not in the allow list
+    else:
+        return is_in_set      # Muted if in the block list
+
 # --- Settings Keyboards ---
 
 def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
@@ -217,12 +232,7 @@ def create_paginated_user_list_keyboard(
 
     for idx, username in enumerate(page_items):
         # page_items are strings (usernames)
-        is_in_set = username in muted_usernames_from_relationship
-        effectively_muted: bool
-        if user_settings.mute_all:
-            effectively_muted = not is_in_set
-        else:
-            effectively_muted = is_in_set
+        effectively_muted = _is_username_effectively_muted(username, user_settings, muted_usernames_from_relationship)
 
         button_text = _("Unmute {username}").format(username=username) if effectively_muted else _("Mute {username}").format(username=username)
 
@@ -262,12 +272,7 @@ def create_account_list_keyboard(
         username_str = ttstr(account_obj.username)
         display_name = username_str
 
-        is_in_set = username_str in muted_usernames_from_relationship
-        effectively_muted: bool
-        if user_settings.mute_all:
-            effectively_muted = not is_in_set
-        else:
-            effectively_muted = is_in_set
+        effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
 
         current_status_text = _("Muted") if effectively_muted else _("Not Muted")
 
