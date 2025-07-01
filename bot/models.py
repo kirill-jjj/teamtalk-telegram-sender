@@ -14,8 +14,8 @@ class NotificationSetting(str, enum.Enum):
 
 
 class MuteListMode(str, enum.Enum):
-    BLACKLIST = "blacklist"
-    WHITELIST = "whitelist"
+    blacklist = "blacklist"  # Changed from BLACKLIST
+    whitelist = "whitelist"  # Changed from WHITELIST
 
 
 class UserSettings(SQLModel, table=True):
