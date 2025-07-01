@@ -42,26 +42,24 @@ class UserSettingsMiddleware(BaseMiddleware):
         user_obj: User = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
 
-        if user_obj.id in USER_SETTINGS_CACHE:
-            user_settings = USER_SETTINGS_CACHE[user_obj.id]
-            stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
-            result = await session_obj.execute(stmt)
-            user_settings = result.scalar_one_or_none()
-        else:
-             user_settings = None
+        # 1. Просто пытаемся достать настройки из кеша.
+        user_settings = USER_SETTINGS_CACHE.get(user_obj.id)
 
+        # 2. Если в кеше нет — значит, это новый пользователь.
+        #    Вызываем нашу функцию, которая сходит в базу и положит в кеш готовый объект.
         if not user_settings:
             user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
-            stmt = select(UserSettings).where(UserSettings.telegram_id == user_obj.id).options(selectinload(UserSettings.muted_users_list))
-            result = await session_obj.execute(stmt)
-            user_settings = result.scalar_one_or_none()
 
+        # 3. Если даже после этого настроек нет (что почти невозможно, но лучше проверить),
+        #    то логируем ошибку.
         if not user_settings:
-            logger.error(f"Could not get or create user settings for user {user_obj.id}")
-            return await handler(event, data)
+            logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
+            # В этом случае можно даже не вызывать хендлер, а просто выйти,
+            # чтобы избежать дальнейших ошибок.
+            return
 
+        # 4. Передаем в хендлер уже готовые, полные данные.
         data["user_settings"] = user_settings
-
         translator = get_translator(user_settings.language)
         data["_"] = translator.gettext
         data["translator"] = translator
