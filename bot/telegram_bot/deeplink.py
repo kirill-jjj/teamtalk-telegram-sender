@@ -14,9 +14,10 @@ from bot.core.user_settings import (
 from bot.database.crud import (
     add_subscriber,
     delete_deeplink_by_token,
-    delete_user_data_fully,
+    # delete_user_data_fully, # No longer used directly
 )
 from bot.database.crud import get_deeplink as db_get_deeplink
+from bot.services import user_service # Import the new service
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +83,8 @@ async def _handle_unsubscribe_deeplink(
     _: callable
     # user_settings is not needed for unsubscribe action as per current logic
 ) -> str:
-    if await delete_user_data_fully(session, telegram_id):
-        logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink.")
+    if await user_service.delete_full_user_profile(session, telegram_id):
+        logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink (using user_service).")
         return _("You have successfully unsubscribed from notifications.")
     else:
         logger.warning(f"Attempted to unsubscribe user {telegram_id} via deeplink, but user was not found or data deletion otherwise failed.")
