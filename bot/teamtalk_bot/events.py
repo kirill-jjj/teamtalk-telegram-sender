@@ -113,10 +113,14 @@ async def populate_user_accounts_cache(tt_instance):
         logger.info(f"Successfully populated user accounts cache with {len(USER_ACCOUNTS_CACHE)} accounts.")
     except TimeoutError as e_timeout:
         logger.error(f"TimeoutError populating user accounts cache: {e_timeout}.", exc_info=True)
-    except PytalkException as e_pytalk:
+    except PytalkException as e_pytalk: # Covers TeamTalkException
         logger.error(f"Pytalk specific error populating user accounts cache: {e_pytalk}.", exc_info=True)
-    except Exception as e:
-        logger.error(f"Failed to populate user accounts cache: {e}.", exc_info=True)
+    except pytalk.exceptions.PermissionError as e_perm: # More specific Pytalk error
+        logger.error(f"Pytalk PermissionError populating user accounts cache: {e_perm}.", exc_info=True)
+    except ValueError as e_val: # ValueError from pytalk.instance
+        logger.error(f"ValueError populating user accounts cache (from pytalk): {e_val}.", exc_info=True)
+    except Exception as e: # General fallback
+        logger.error(f"Failed to populate user accounts cache with an unexpected error: {e}.", exc_info=True)
 
 
 async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInstance, channel: PytalkChannel):

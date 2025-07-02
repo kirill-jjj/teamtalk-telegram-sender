@@ -22,7 +22,7 @@ def get_effective_server_name(tt_instance: Optional[TeamTalkInstance], _: callab
                 server_name = ttstr(tt_instance.server.get_properties().server_name)
                 if not server_name:
                     server_name = _("Unknown Server")
-            except Exception as e:
+            except (TimeoutError, pytalk.exceptions.TeamTalkException) as e:
                 logger.error(f"Error getting server name from TT instance: {e}")
                 server_name = _("Unknown Server")
         else:

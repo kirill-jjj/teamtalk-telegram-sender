@@ -89,7 +89,7 @@ async def _execute_admin_action_for_id(
                 commands=commands_to_set,
                 scope=BotCommandScopeChat(chat_id=telegram_id)
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(f"Failed to set commands for TG ID {telegram_id} after {crud_function.__name__}: {e}")
         return True
     return False
@@ -221,8 +221,8 @@ async def _generate_and_reply_deeplink(
         # Note: If tt_message.reply fails here, it will go to the outer generic Exception.
         try:
             tt_message.reply(_("Error communicating with Telegram. Please try again later."))
-        except TeamTalkException as e_reply_tg:
-            logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username}: {e_reply_tg}")
+        except pytalk.exceptions.TeamTalkException as e_reply_tt_tg:
+            logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tg}")
         except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
     except SQLAlchemyError as e_db:
@@ -232,19 +232,19 @@ async def _generate_and_reply_deeplink(
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_db:
-            logger.error(f"Failed to send DB error reply to TT user {sender_tt_username}: {e_reply_db}")
+        except pytalk.exceptions.TeamTalkException as e_reply_tt_db:
+            logger.error(f"Failed to send DB error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_db}")
         except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send DB error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    except TeamTalkException as e_tt:
+    except TeamTalkException as e_tt: # This is already pytalk.exceptions.TeamTalkException
         logger.error(
             f"TeamTalk error processing deeplink action {action} for TT user {sender_tt_username}: {e_tt}",
             exc_info=True
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_tt:
-            logger.error(f"Failed to send TT error reply to TT user {sender_tt_username}: {e_reply_tt}")
+        except pytalk.exceptions.TeamTalkException as e_reply_tt_tt: # Explicitly pytalk's exception
+            logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tt}")
         except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
     except Exception as e:
@@ -254,8 +254,8 @@ async def _generate_and_reply_deeplink(
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_generic:
-            logger.error(f"Failed to send generic error reply to TT user {sender_tt_username}: {e_reply_generic}")
+        except pytalk.exceptions.TeamTalkException as e_reply_tt_final:
+            logger.error(f"Failed to send generic error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_final}")
         except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send generic error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
 
