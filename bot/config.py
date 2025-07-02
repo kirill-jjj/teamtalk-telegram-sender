@@ -1,8 +1,8 @@
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Literal # <--- ДОБАВЛЕНО: импортируем Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from bot.core.languages import Language # <--- ДОБАВЛЕНО
+from bot.core.languages import Language
 
 CONFIG_FILE_ENV_VAR = "APP_CONFIG_FILE_PATH"
 
