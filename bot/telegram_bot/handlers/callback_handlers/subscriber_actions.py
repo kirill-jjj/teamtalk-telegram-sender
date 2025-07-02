@@ -20,9 +20,8 @@ from bot.telegram_bot.keyboards import (
 from bot.models import UserSettings, BanList # For fetching UserSettings, interacting with BanList
 from bot.database import crud # For BanList and UserSettings CRUD
 from bot.services import user_service # For deleting user
-from bot.state import ADMIN_IDS_CACHE
+from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE # Added USER_ACCOUNTS_CACHE
 from bot.core.enums import SubscriberListAction # For back button to main list
-# Removed: from bot.core.utils import get_teamtalk_server_accounts
 import pytalk # To get UserAccount type for list[pytalk.UserAccount]
 
 logger = logging.getLogger(__name__)
@@ -247,14 +246,15 @@ async def handle_manage_tt_account(
             await query.answer(_("TeamTalk bot is not connected. Cannot fetch server accounts."), show_alert=True)
             return
 
-        try:
-            # Directly use the SDK method; tt_instance.getUserAccounts() returns a list of UserAccount
-            server_accounts: list[pytalk.UserAccount] = tt_instance.getUserAccounts()
-        except Exception as e:
-            logger.error(f"Error fetching TeamTalk server accounts: {e}")
-            server_accounts = []
+        # Use USER_ACCOUNTS_CACHE as the source of truth for all server accounts
+        if not USER_ACCOUNTS_CACHE:
+            logger.warning("USER_ACCOUNTS_CACHE is empty while trying to link TT account.")
+            await query.answer(_("TeamTalk server accounts cache is not populated. Please try again later."), show_alert=True)
+            return
 
-        if not server_accounts:
+        server_accounts: list[pytalk.UserAccount] = list(USER_ACCOUNTS_CACHE.values())
+
+        if not server_accounts: # Should be redundant if USER_ACCOUNTS_CACHE check above is robust
             await query.answer(_("No TeamTalk server accounts found or unable to fetch."), show_alert=True)
             return
 
