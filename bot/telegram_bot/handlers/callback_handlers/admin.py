@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramAPIError
 import pytalk
 from pytalk.instance import TeamTalkInstance
-from pytalk.exceptions import PermissionError as PytalkPermissionError
+from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException
 
 from bot.state import ADMIN_IDS_CACHE
 from bot.telegram_bot.callback_data import AdminActionCallback
@@ -45,9 +45,12 @@ async def _execute_tt_user_action(
     except PytalkPermissionError as e:
         logger.error(f"PermissionError during '{action}' on TT user ID {user_to_act_on.id}: {e}")
         return False, _("The bot lacks permissions on the TeamTalk server to perform this action.")
-    except Exception as e:
-        logger.error(f"Error during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
+    except PytalkException as e: # <--- ИЗМЕНЕНО
+        logger.error(f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
         return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
+    except Exception as e: # Запасной вариант для совсем неожиданных ошибок
+        logger.critical(f"CRITICAL: Unexpected error during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
+        return False, _("An unexpected error occurred. Administrator has been notified.")
 
 
 @admin_actions_router.callback_query(

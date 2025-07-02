@@ -3,6 +3,7 @@ from typing import Callable, Optional
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 from bot.models import UserSettings
 from bot.core.user_settings import update_user_settings_in_db
 
@@ -46,7 +47,7 @@ async def process_setting_update(
             log_context="process_setting_update_ui_refresh"
         )
 
-    except Exception as e_db: # Catch errors from update_user_settings_in_db or initial callback_query.answer
+    except SQLAlchemyError as e_db: # Catch errors from update_user_settings_in_db or initial callback_query.answer
         logger.error(f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
         revert_action() # Revert in-memory change
         try:
@@ -101,6 +102,6 @@ async def safe_edit_text(
     except TelegramAPIError as e:
         current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
         return False
-    except Exception as e:
-        current_logger.error(f"Unexpected error editing message{context_for_log}: {e}", exc_info=True)
+    except Exception as e: # Оставлено, но с уточнением в логе
+        current_logger.critical(f"UNEXPECTED CRITICAL ERROR editing message{context_for_log}: {e}", exc_info=True) # <--- УТОЧНЕНО
         return False

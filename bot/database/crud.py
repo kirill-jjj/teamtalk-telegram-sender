@@ -1,6 +1,7 @@
 import logging
 import secrets
 from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, SQLModel
 
@@ -20,7 +21,7 @@ async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> boo
         await session.refresh(model_instance)
         logger.debug(f"Added record to {model_instance.__tablename__}: {model_instance}")
         return True
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"Error adding to DB ({model_instance.__tablename__}): {e}", exc_info=True)
         await session.rollback()
         return False
@@ -39,7 +40,7 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
             await session.commit()
             logger.debug(f"Removed record from {table_name} with PK ({pk_col_name}={record_pk})")
             return True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Error removing from DB ({record_to_remove.__tablename__}): {e}", exc_info=True)
             await session.rollback()
             return False
@@ -69,7 +70,7 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]
         statement = select(model_class.telegram_id) # type: ignore
         result = await session.execute(statement)
         return result.scalars().all()
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"Error getting all IDs from {table_name}: {e}", exc_info=True)
         return []
 
@@ -190,7 +191,7 @@ async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> boo
         logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from relevant caches.")
         return True
 
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"Error during full data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
         await session.rollback()
         return False
