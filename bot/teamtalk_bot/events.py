@@ -195,6 +195,7 @@ async def on_ready():
     except PytalkException as e_pytalk:
         logger.error(f"Pytalk specific error during server connection attempt: {e_pytalk}.", exc_info=True)
         initiate_reconnect_task(None)
+    # Removed broad Exception catch here as per audit
 
 
 @tt_bot_module.tt_bot.event
@@ -213,12 +214,8 @@ async def on_my_login(server: PytalkServer):
         logger.warning(f"TimeoutError getting server properties on login: {e_timeout_prop}.")
     except pytalk.exceptions.TeamTalkException as e_pytalk_prop: # Explicit import
         logger.warning(f"Pytalk specific error getting server properties on login: {e_pytalk_prop}.")
-    except (ConnectionError, OSError) as e_net_prop: # Added network errors
-        logger.warning(f"Network error getting server properties on login: {e_net_prop}.")
-    except Exception as e_prop:
-        if isinstance(e_prop, (KeyboardInterrupt, SystemExit)):
-            raise
-        logger.warning(f"Unexpected error getting server properties on login: {e_prop}.", exc_info=True) # Added exc_info
+    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError, AttributeError) as e_prop:
+             logger.warning(f"Error getting server properties on login: {e_prop}.")
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} (Host: {server.info.host}).")
 
@@ -262,6 +259,7 @@ async def on_my_login(server: PytalkServer):
     except PytalkException as e_pytalk_join:
         logger.error(f"Pytalk specific error joining channel '{target_channel_name_log}': {e_pytalk_join}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
+    # Removed broad Exception catch here as per audit
 
 
 @tt_bot_module.tt_bot.event
