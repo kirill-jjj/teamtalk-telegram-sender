@@ -50,10 +50,10 @@ async def _execute_tt_user_action(
         return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
     except (ValueError, TypeError, AttributeError) as e_data:
         logger.error(f"Data error during '{action}' on TT user ID {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}: {e_data}", exc_info=True)
-        return False, _("An internal data error occurred processing the request.")
+        return False, _("An internal data error occurred processing the request.") # Already wrapped, confirming
     except (TimeoutError, OSError) as e:
         logger.critical(f"CRITICAL: Network/OS error during '{action}' on TT user ID {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}: {e}", exc_info=True)
-        return False, _("A network or system error occurred. Administrator has been notified.")
+        return False, _("A network or system error occurred. Administrator has been notified.") # Already wrapped, confirming
 
 
 @admin_actions_router.callback_query(
