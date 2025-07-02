@@ -245,7 +245,7 @@ async def menu_command_handler(
 
     try:
         await message.answer(
-            text=_("Main Menu:"),
+            text=_("Main Menu:"),  # Ensure this is translatable
             reply_markup=menu_builder.as_markup()
         )
     except TelegramAPIError as e:
