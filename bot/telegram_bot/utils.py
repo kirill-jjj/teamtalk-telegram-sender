@@ -30,18 +30,21 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
     """
     if isinstance(error, TelegramForbiddenError):
         if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
-            logger.warning(f"User {chat_id} blocked the bot or is deactivated. Unsubscribing...")
+            # <<< ИЗМЕНЕНО: Обновляем лог, чтобы отразить полное удаление данных
+            logger.warning(f"User {chat_id} blocked the bot or is deactivated. Deleting all user data...")
             try:
-                async with SessionFactory() as unsubscribe_session:
-                    removed = await remove_subscriber(unsubscribe_session, chat_id)
-                if removed:
-                    logger.info(f"Successfully unsubscribed blocked/deactivated user {chat_id}.")
+                async with SessionFactory() as session:
+                    # <<< ИЗМЕНЕНО: Вызываем правильную, полную функцию удаления
+                    success = await delete_user_data_fully(session, chat_id)
+                if success:
+                    # <<< ИЗМЕНЕНО: Обновляем лог
+                    logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
                 else:
-                    logger.debug(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
-                USER_SETTINGS_CACHE.pop(chat_id, None)
-                logger.debug(f"Removed user {chat_id} from settings cache.")
+                    logger.error(f"Failed to delete data for blocked/deactivated user {chat_id}, though an attempt was made.")
+                # <<< УДАЛЕНО: pop из USER_SETTINGS_CACHE теперь происходит внутри delete_user_data_fully,
+                # поэтому дублировать здесь не нужно.
             except SQLAlchemyError as db_err:
-                logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
+                logger.error(f"Failed to delete data for blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
             logger.error(f"Telegram API Forbidden error for chat_id {chat_id}: {error}")
 
