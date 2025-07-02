@@ -681,3 +681,7 @@ msgstr "неизвестная настройка"
 #, python-brace-format
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Настройка подписок обновлена на: {setting_name}"
+
+#: bot/telegram_bot/keyboards.py:390
+msgid "ℹ️ Who is online?"
+msgstr "ℹ️ Кто в сети?"

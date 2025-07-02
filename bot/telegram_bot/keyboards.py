@@ -33,7 +33,8 @@ from bot.telegram_bot.callback_data import (
     PaginateUsersCallback,
     ToggleMuteSpecificCallback,
     AdminActionCallback,
-    SubscriberListCallback
+    SubscriberListCallback,
+    MenuCallback
 )
 from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
@@ -379,4 +380,40 @@ def create_user_selection_keyboard(
         )
 
     builder.adjust(2)
+    return builder
+
+
+def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
+    """Creates the main menu keyboard with commands."""
+    builder = InlineKeyboardBuilder()
+
+    # Common user commands
+    builder.button(
+        text=_("ℹ️ Who is online?"),
+        callback_data=MenuCallback(command="who").pack()
+    )
+    builder.button(
+        text=_("⚙️ Settings"),
+        callback_data=MenuCallback(command="settings").pack()
+    )
+    builder.button(
+        text=_("❓ Help"),
+        callback_data=MenuCallback(command="help").pack()
+    )
+
+    if is_admin:
+        builder.button(
+            text=_("👢 Kick User"),
+            callback_data=MenuCallback(command="kick").pack()
+        )
+        builder.button(
+            text=_("🚫 Ban User"),
+            callback_data=MenuCallback(command="ban").pack()
+        )
+        builder.button(
+            text=_("👥 Subscribers"),
+            callback_data=MenuCallback(command="subscribers").pack()
+        )
+
+    builder.adjust(1) # Adjust to show one button per row for a cleaner look
     return builder

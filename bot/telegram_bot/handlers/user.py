@@ -12,10 +12,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # For /who command
 
+from aiogram.exceptions import TelegramAPIError # Added for message deletion
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
 from bot.telegram_bot.models import WhoUser, WhoChannelGroup
-from bot.telegram_bot.keyboards import create_main_settings_keyboard
+from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_main_menu_keyboard # Added create_main_menu_keyboard
 from bot.core.utils import get_tt_user_display_name
 from bot.state import ADMIN_IDS_CACHE
 from bot.constants import (
@@ -224,3 +225,28 @@ async def settings_command_handler(
         )
     except TelegramAPIError as e:
         logger.error(f"Could not send settings menu: {e}")
+
+
+@user_commands_router.message(Command("menu"))
+async def menu_command_handler(
+    message: Message,
+    _: callable
+):
+    if not message.from_user:
+        return
+
+    try:
+        await message.delete()
+    except TelegramAPIError as e:
+        logger.warning(f"Could not delete user menu command: {e}")
+
+    is_admin = message.from_user.id in ADMIN_IDS_CACHE
+    menu_builder = create_main_menu_keyboard(_, is_admin)
+
+    try:
+        await message.answer(
+            text=_("Main Menu:"),
+            reply_markup=menu_builder.as_markup()
+        )
+    except TelegramAPIError as e:
+        logger.error(f"Could not send main menu: {e}")

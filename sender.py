@@ -66,7 +66,9 @@ async def async_main():
         admin_router,
         callback_router,
         catch_all_router
+        # menu_callback_router will be imported separately to avoid circular if it grows
     )
+    from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router # Import the new router
 
     try:
         import uvloop
@@ -210,6 +212,7 @@ async def async_main():
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
+    dp.include_router(menu_callback_router) # Added menu_callback_router
     dp.include_router(catch_all_router)
 
     dp.startup.register(on_startup)

@@ -59,3 +59,7 @@ class SubscriberListCallback(CallbackData, prefix="sub_list"):
     action: SubscriberListAction
     telegram_id: int | None = None  # Present for "delete_subscriber"
     page: int | None = None
+
+# For main menu commands
+class MenuCallback(CallbackData, prefix="main_menu"):
+    command: str
