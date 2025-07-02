@@ -3,7 +3,9 @@ import asyncio
 from datetime import datetime
 
 import pytalk
-from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException
+# Ensure specific exceptions are imported directly if they are frequently used.
+# Otherwise, access them via pytalk.exceptions.SpecificError
+from pytalk.exceptions import TeamTalkException, PermissionError
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.channel import Channel as PytalkChannel
@@ -136,10 +138,14 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.info(f"Online users cache initialized with {len(ONLINE_USERS_CACHE)} users.")
     except TimeoutError as e_timeout:
         logger.error(f"TimeoutError during initial population of online users cache: {e_timeout}.", exc_info=True)
-    except PytalkException as e_pytalk:
+    except pytalk.exceptions.TeamTalkException as e_pytalk: # Changed PytalkException to explicit import
         logger.error(f"Pytalk specific error during initial population of online users cache: {e_pytalk}.", exc_info=True)
+    except (ConnectionError, OSError) as e_net: # Added network errors
+        logger.error(f"Network error during initial population of online users cache: {e_net}.", exc_info=True)
     except Exception as e:
-        logger.error(f"Error during initial population of online users cache: {e}.", exc_info=True)
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        logger.critical(f"Unexpected error during initial population of online users cache: {e}.", exc_info=True)
 
     asyncio.create_task(populate_user_accounts_cache(tt_instance))
 
@@ -156,12 +162,16 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         tt_bot_module.login_complete_time = datetime.utcnow()
         logger.debug(f"TeamTalk status set to: '{app_config.STATUS_TEXT}'.")
         logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
-    except PytalkPermissionError as e_perm:
+    except pytalk.exceptions.PermissionError as e_perm: # Explicit import
         logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}.", exc_info=True)
-    except PytalkException as e_pytalk:
+    except pytalk.exceptions.TeamTalkException as e_pytalk: # Explicit import
         logger.error(f"Pytalk specific error setting status for bot: {e_pytalk}.", exc_info=True)
+    except (TimeoutError, ConnectionError, OSError) as e_net: # Added network/timeout
+        logger.error(f"Network/Timeout error setting status for bot: {e_net}.", exc_info=True)
     except Exception as e:
-        logger.error(f"Error setting status or login_complete_time for bot: {e}.", exc_info=True)
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        logger.critical(f"Unexpected error setting status or login_complete_time for bot: {e}.", exc_info=True)
 
 
 @tt_bot_module.tt_bot.event
@@ -211,10 +221,14 @@ async def on_my_login(server: PytalkServer):
             server_name = ttstr(server_props.server_name)
     except TimeoutError as e_timeout_prop:
         logger.warning(f"TimeoutError getting server properties on login: {e_timeout_prop}.")
-    except PytalkException as e_pytalk_prop:
+    except pytalk.exceptions.TeamTalkException as e_pytalk_prop: # Explicit import
         logger.warning(f"Pytalk specific error getting server properties on login: {e_pytalk_prop}.")
+    except (ConnectionError, OSError) as e_net_prop: # Added network errors
+        logger.warning(f"Network error getting server properties on login: {e_net_prop}.")
     except Exception as e_prop:
-        logger.warning(f"Could not get server properties on login: {e_prop}.")
+        if isinstance(e_prop, (KeyboardInterrupt, SystemExit)):
+            raise
+        logger.warning(f"Unexpected error getting server properties on login: {e_prop}.", exc_info=True) # Added exc_info
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} (Host: {server.info.host}).")
 

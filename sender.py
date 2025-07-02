@@ -43,6 +43,7 @@ async def async_main():
     from aiogram.types import ErrorEvent, Message
     from aiogram.utils.callback_answer import CallbackAnswerMiddleware
     from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
+    import pytalk.exceptions # Added for specific exception handling
 
     from bot.config import app_config # <--- Config is imported here
     from bot.teamtalk_bot import bot_instance as tt_bot_module
@@ -132,8 +133,9 @@ async def async_main():
                     if hasattr(tt_instance_item, 'closeTeamTalk'):
                         tt_instance_item.closeTeamTalk()
                     logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
-                except Exception as e_tt_close:
+                except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e_tt_close:
                     logger.error(f"Error closing TeamTalk instance during on_shutdown: {e_tt_close}", exc_info=True)
+                # Deliberately not catching generic Exception here to allow critical shutdown errors to propagate
         else:
             logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup during on_shutdown.")
         logger.info("Application shutdown sequence complete (on_shutdown).")
