@@ -4,7 +4,9 @@ MUTE_ACTION_UNMUTE = "unmute"
 NOTIFICATION_EVENT_JOIN = "join"
 NOTIFICATION_EVENT_LEAVE = "leave"
 
-DEFAULT_LANGUAGE = "en"
+from bot.core.languages import Language # <--- ДОБАВЛЕНО
+
+DEFAULT_LANGUAGE = Language.ENGLISH.value # <--- ИЗМЕНЕНО. Используем .value, потому что get_translator ожидает строку.
 
 TEAMTALK_PRIVATE_MESSAGE_TYPE = 1
 

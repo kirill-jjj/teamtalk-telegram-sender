@@ -17,7 +17,9 @@ async def process_setting_update(
     update_action: Callable[[], None],
     revert_action: Callable[[], None],
     success_toast_text: str,
-    ui_refresh_callable: Callable[[], tuple[str, InlineKeyboardMarkup]]
+    new_text: str, # <--- ДОБАВЛЕНО
+    new_markup: InlineKeyboardMarkup # <--- ДОБАВЛЕНО
+    # ui_refresh_callable: Callable[[], tuple[str, InlineKeyboardMarkup]] # <--- УДАЛИТЬ
 ) -> None:
     # Ensure message and from_user are present, crucial for callback context
     if not callback_query.message or not callback_query.from_user:
@@ -36,10 +38,8 @@ async def process_setting_update(
         # Send toast only on successful DB update
         await callback_query.answer(success_toast_text, show_alert=False)
 
-        # Attempt to refresh UI only after successful DB update and toast
-        # Use safe_edit_text for robust UI refresh
-        new_text, new_markup = ui_refresh_callable()
-        await safe_edit_text(
+        # Теперь вызываем safe_edit_text напрямую с переданными new_text и new_markup
+        await safe_edit_text( # <--- ИЗМЕНЕНО
             message_to_edit=callback_query.message,
             text=new_text,
             reply_markup=new_markup,
@@ -47,7 +47,7 @@ async def process_setting_update(
             log_context="process_setting_update_ui_refresh"
         )
 
-    except SQLAlchemyError as e_db: # Catch errors from update_user_settings_in_db or initial callback_query.answer
+    except SQLAlchemyError as e_db: # Уже изменено в предыдущем шаге
         logger.error(f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
         revert_action() # Revert in-memory change
         try:

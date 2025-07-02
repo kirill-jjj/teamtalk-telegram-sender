@@ -13,8 +13,9 @@ from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
+from bot.core.languages import Language # <--- ДОБАВЛЕНО
 from bot.constants import (
-    DEFAULT_LANGUAGE,
+    DEFAULT_LANGUAGE, # Это уже Language.ENGLISH.value, оставляем
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 
@@ -123,16 +124,25 @@ async def send_telegram_messages_to_list(
     bot_token_to_use: str, # TG_EVENT_TOKEN or TG_BOT_MESSAGE_TOKEN
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
-    reply_markup_generator: Callable[[str, str, str, int], InlineKeyboardMarkup | None] | None = None,
-    tt_user_username_for_markup: str | None = None,
-    tt_user_nickname_for_markup: str | None = None
+        reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
+        # tt_user_username_for_markup: str | None = None, # <--- УДАЛИТЬ
+        # tt_user_nickname_for_markup: str | None = None # <--- УДАЛИТЬ
 ):
     """
     Sends messages to a list of chat_ids.
     Uses the appropriate bot instance based on bot_token_to_use.
     """
-    bot_to_use = tg_bot_event if bot_token_to_use == app_config.TG_EVENT_TOKEN else tg_bot_message
-    if not bot_to_use:
+    # Убедимся, что app_config.TG_EVENT_TOKEN является уникальным маркером,
+    # если он равен None, то это просто пустой токен.
+    if bot_token_to_use == app_config.TG_EVENT_TOKEN:
+        bot_to_use = tg_bot_event
+    elif bot_token_to_use == app_config.TG_BOT_MESSAGE_TOKEN:
+        bot_to_use = tg_bot_message
+    else: # Неизвестный токен
+        logger.error(f"Attempted to use unknown bot token: {bot_token_to_use}")
+        return
+
+    if not bot_to_use: # Если выбранный токен соответствует None Bot
         logger.error(f"No Telegram bot instance available for token: {bot_token_to_use}")
         return
 
@@ -140,14 +150,14 @@ async def send_telegram_messages_to_list(
     tasks_list = []
     for chat_id in chat_ids:
         user_settings = USER_SETTINGS_CACHE.get(chat_id)
-        language = user_settings.language if user_settings else DEFAULT_LANGUAGE
+            language = user_settings.language.value if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language)
 
         current_reply_markup = None
-        if reply_markup_generator and tt_user_username_for_markup and tt_user_nickname_for_markup:
+            if reply_markup_generator: # <--- ИЗМЕНЕНО: убраны проверки tt_user_username_for_markup и tt_user_nickname_for_markup
             current_reply_markup = reply_markup_generator(
-                tt_user_username_for_markup,
-                tt_user_nickname_for_markup,
+                    # tt_user_username_for_markup, # <--- УДАЛИТЬ, если будете вызывать reply_markup_generator
+                    # tt_user_nickname_for_markup, # <--- УДАЛИТЬ, если будете вызывать reply_markup_generator
                 language,
                 chat_id
             )

@@ -1,10 +1,11 @@
 import gettext
 from pathlib import Path
+from bot.core.languages import Language # <--- ДОБАВЛЕНО
 
 LOCALE_DIR = Path(__file__).parent.parent.joinpath("locales")
 DOMAIN = "messages"
 
-def get_translator(lang_code: str = "en") -> gettext.GNUTranslations:
+def get_translator(lang_code: str = Language.ENGLISH.value) -> gettext.GNUTranslations: # <--- ИЗМЕНЕНО
     """
     Returns a translator object for the specified language.
     If a translation is not found, returns NullTranslations, which

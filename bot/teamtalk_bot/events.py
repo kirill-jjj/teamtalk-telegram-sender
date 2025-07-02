@@ -24,6 +24,7 @@ from bot.constants import (
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 from aiogram.filters import CommandObject
+from bot.core.languages import Language # <--- ДОБАВЛЕНО
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
@@ -298,13 +299,12 @@ async def on_message(message: TeamTalkMessage):
 
     logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'." )
 
-    bot_reply_language = DEFAULT_LANGUAGE
+    bot_reply_language = Language.ENGLISH.value # <--- ИЗМЕНЕНО
     if app_config.TG_ADMIN_CHAT_ID is not None:
         admin_chat_id_int = app_config.TG_ADMIN_CHAT_ID
-
         admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
         if admin_settings:
-            bot_reply_language = admin_settings.language
+            bot_reply_language = admin_settings.language.value # <--- ИЗМЕНЕНО. user_settings.language теперь Language Enum
 
     translator = get_translator(bot_reply_language)
 

@@ -161,4 +161,6 @@ async def send_join_leave_notification_logic(
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code
         )
+        # tt_user_username_for_markup=user_username, # <--- УДАЛИТЬ
+        # tt_user_nickname_for_markup=user_nickname # <--- УДАЛИТЬ
     )

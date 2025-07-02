@@ -77,10 +77,10 @@ async def cq_set_subscription_setting(
     setting_display_name = setting_to_text_map.get(new_setting_enum, _("unknown setting"))
     success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name)
 
-    def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
-        menu_text = _("Subscription Settings")
-        return menu_text, updated_builder.as_markup()
+    # Подготавливаем текст и разметку здесь
+    # new_setting_enum already reflects the new state for UI generation before commit by process_setting_update.
+    updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
+    menu_text = _("Subscription Settings")
 
     await process_setting_update(
         callback_query=callback_query,
@@ -90,5 +90,7 @@ async def cq_set_subscription_setting(
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
-        ui_refresh_callable=refresh_ui_callable
+        new_text=menu_text, # <--- ИЗМЕНЕНО
+        new_markup=updated_builder.as_markup(), # <--- ИЗМЕНЕНО
+        # ui_refresh_callable=refresh_ui_callable # <--- УДАЛИТЬ
     )

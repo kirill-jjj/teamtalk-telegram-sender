@@ -323,17 +323,13 @@ async def cq_set_mute_mode_action(
     mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
 
-    def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        # After committing changes and refreshing user_settings, create the keyboard
-        updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings)
-
-        # Generate the descriptive text for the menu again
-        current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
-        if managed_user_settings.mute_list_mode == MuteListMode.whitelist:
-            current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
-        menu_text = f"{_('Manage Mute List')}\n\n{current_mode_desc}"
-
-        return menu_text, updated_builder.as_markup()
+    # Подготавливаем текст и разметку здесь
+    # managed_user_settings reflects the new mode because update_logic is called by process_setting_update before UI refresh.
+    updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings)
+    current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
+    if managed_user_settings.mute_list_mode == MuteListMode.whitelist: # This will reflect the new mode
+        current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+    menu_text = f"{_('Manage Mute List')}\n\n{current_mode_desc}"
 
     await process_setting_update(
         callback_query=callback_query,
@@ -343,7 +339,9 @@ async def cq_set_mute_mode_action(
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
-        ui_refresh_callable=refresh_ui_callable,
+        new_text=menu_text, # <--- ИЗМЕНЕНО
+        new_markup=updated_builder.as_markup(), # <--- ИЗМЕНЕНО
+        # ui_refresh_callable=refresh_ui_callable, # <--- УДАЛИТЬ
     )
 
 
