@@ -7,9 +7,9 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
 
-
 from bot.config import app_config
-from bot.database.crud import delete_user_data_fully
+# from bot.database.crud import delete_user_data_fully # No longer used directly
+from bot.services import user_service # Import the new service
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
@@ -33,9 +33,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
             logger.warning(f"User {chat_id} blocked the bot or is deactivated. Deleting all user data...")
             try:
                 async with SessionFactory() as session:
-                    success = await delete_user_data_fully(session, chat_id)
+                    success = await user_service.delete_full_user_profile(session, chat_id)
                 if success:
-                    logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
+                    logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id} (using user_service).")
                 else:
                     logger.error(f"Failed to delete data for blocked/deactivated user {chat_id}, though an attempt was made.")
             except SQLAlchemyError as db_err:
@@ -48,9 +48,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
             logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {error}")
             try:
                 async with SessionFactory() as session:
-                    delete_success = await delete_user_data_fully(session, chat_id)
+                    delete_success = await user_service.delete_full_user_profile(session, chat_id)
                 if delete_success:
-                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
+                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found (using user_service).")
                 else:
                     logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
 
