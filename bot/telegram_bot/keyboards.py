@@ -393,25 +393,25 @@ def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuil
         callback_data=MenuCallback(command="who").pack()
     )
     builder.button(
-        text=_("⚙️ Settings"),
+        text=_("⚙️ Settings"),  # Already translatable, but good to confirm
         callback_data=MenuCallback(command="settings").pack()
     )
     builder.button(
-        text=_("❓ Help"),
+        text=_("❓ Help"),  # Already translatable, but good to confirm
         callback_data=MenuCallback(command="help").pack()
     )
 
     if is_admin:
         builder.button(
-            text=_("👢 Kick User"),
+            text=_("👢 Kick User"),  # Already translatable
             callback_data=MenuCallback(command="kick").pack()
         )
         builder.button(
-            text=_("🚫 Ban User"),
+            text=_("🚫 Ban User"),  # Already translatable
             callback_data=MenuCallback(command="ban").pack()
         )
         builder.button(
-            text=_("👥 Subscribers"),
+            text=_("👥 Subscribers"),  # Already translatable
             callback_data=MenuCallback(command="subscribers").pack()
         )
 
