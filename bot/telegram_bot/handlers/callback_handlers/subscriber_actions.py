@@ -1,0 +1,338 @@
+import logging
+from aiogram import Router, F, Bot
+from aiogram.types import CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
+from pytalk.instance import TeamTalkInstance # For TeamTalk actions like ban/kick if needed directly
+
+from bot.telegram_bot.callback_data import (
+    ViewSubscriberCallback,
+    SubscriberActionCallback,
+    ManageTTAccountCallback,
+    LinkTTAccountChosenCallback,
+    SubscriberListCallback # For "Back" button to subscriber list
+)
+from bot.telegram_bot.keyboards import (
+    create_subscriber_action_menu_keyboard,
+    create_manage_tt_account_keyboard,
+    create_linkable_tt_account_list_keyboard
+    # We might need create_account_list_keyboard if we adapt it, or a new one
+)
+from bot.models import UserSettings, BanList # For fetching UserSettings, interacting with BanList
+from bot.database import crud # For BanList and UserSettings CRUD
+from bot.services import user_service # For deleting user
+from bot.state import ADMIN_IDS_CACHE
+from bot.core.enums import SubscriberListAction # For back button to main list
+from bot.core.utils import get_teamtalk_server_accounts # To list TT accounts for linking
+
+logger = logging.getLogger(__name__)
+subscriber_actions_router = Router(name="subscriber_actions_router")
+
+# This router will need to be included in the main dispatcher.
+
+@subscriber_actions_router.callback_query(ViewSubscriberCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
+async def handle_view_subscriber(
+    query: CallbackQuery,
+    callback_data: ViewSubscriberCallback,
+    session: AsyncSession, # For potential DB operations if needed directly
+    _: callable # Translator
+):
+    """Displays the action menu for a specific subscriber."""
+    if not query.message:
+        await query.answer(_("Error: Message context lost."), show_alert=True)
+        return
+
+    keyboard = create_subscriber_action_menu_keyboard(
+        _,
+        target_telegram_id=callback_data.telegram_id,
+        page=callback_data.page
+    )
+
+    # You might want to display some info about the user here too.
+    # For now, just showing the action menu.
+    # Fetching user details to display:
+    user_to_view = await session.get(UserSettings, callback_data.telegram_id)
+    display_name = str(callback_data.telegram_id)
+    if user_to_view and user_to_view.telegram_id: # Check if user_to_view is not None
+        try:
+            chat_info = await query.bot.get_chat(user_to_view.telegram_id)
+            full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
+            username_part = f" (@{chat_info.username})" if chat_info.username else ""
+            if full_name:
+                display_name = f"{full_name}{username_part}"
+            elif chat_info.username:
+                display_name = f"@{chat_info.username}"
+        except Exception as e:
+            logger.error(f"Could not fetch chat info for {user_to_view.telegram_id}: {e}")
+            # display_name remains telegram_id if chat info fails
+
+    text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
+    if user_to_view and user_to_view.teamtalk_username:
+        text += _("\nLinked TeamTalk account: {tt_username}").format(tt_username=user_to_view.teamtalk_username)
+
+    await query.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+    await query.answer()
+
+
+@subscriber_actions_router.callback_query(SubscriberActionCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
+async def handle_subscriber_action(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    bot: Bot, # For bot.get_chat if needed, or for TeamTalk actions via tt_instance
+    tt_instance: TeamTalkInstance | None, # For TeamTalk actions
+    _: callable # Translator
+):
+    if not query.message:
+        await query.answer(_("Error: Message context lost."), show_alert=True)
+        return
+
+    action = callback_data.action
+    target_telegram_id = callback_data.target_telegram_id
+    return_page = callback_data.page
+
+    if action == "delete":
+        success = await user_service.delete_full_user_profile(session, target_telegram_id)
+        if success:
+            await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
+            # Refresh the main subscriber list
+            # This logic is similar to the original subscriber_list_router delete action
+            from bot.telegram_bot.handlers.callback_handlers.subscriber_list import _get_paginated_subscribers_info, create_subscriber_list_keyboard # Avoid circular import if possible
+
+            page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
+                session, bot, return_page
+            )
+            if total_pages == 0 or not page_subscribers_info:
+                await query.message.edit_text(_("No subscribers found."))
+            else:
+                new_keyboard = create_subscriber_list_keyboard(
+                    _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
+                )
+                await query.message.edit_text(
+                    _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+                        current_page_display=current_page + 1, total_pages=total_pages
+                    ),
+                    reply_markup=new_keyboard
+                )
+        else:
+            await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True)
+        return # Explicit return after handling delete
+
+    elif action == "ban":
+        user_settings = await session.get(UserSettings, target_telegram_id)
+        tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
+
+        banned_tg = await crud.add_to_ban_list(session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu")
+        banned_tt = False
+        if tt_username_to_ban:
+            banned_tt = await crud.add_to_ban_list(session, teamtalk_username=tt_username_to_ban, reason=f"Banned by admin (linked to TG ID: {target_telegram_id})")
+            # Optional: Actual TeamTalk server ban via tt_instance if user is online
+            if tt_instance and tt_instance.connected and tt_instance.logged_in:
+                try:
+                    # Find user by username and ban. This requires pytalk SDK for ban by username/IP.
+                    # For now, we assume ban is DB-side for future /sub checks.
+                    # tt_instance.banUser(user_id, ban_ip=True) # banUser typically needs user_id
+                    logger.info(f"Conceptual TeamTalk ban for {tt_username_to_ban} (not implemented in this step)")
+                except Exception as e:
+                    logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban}: {e}")
+
+
+        # After banning, also delete their subscription and settings data
+        await user_service.delete_full_user_profile(session, target_telegram_id)
+
+        # Consolidate messages
+        ban_messages = []
+        if banned_tg:
+            ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
+        if tt_username_to_ban and banned_tt:
+            ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
+
+        if not ban_messages:
+            alert_message = _("User already banned or error occurred.")
+        else:
+            alert_message = " ".join(ban_messages)
+            alert_message += " " + _("Subscriber data also deleted.")
+
+        await query.answer(alert_message, show_alert=True)
+
+        # Refresh the main subscriber list (same as delete)
+        from bot.telegram_bot.handlers.callback_handlers.subscriber_list import _get_paginated_subscribers_info, create_subscriber_list_keyboard
+        page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
+            session, bot, return_page
+        )
+        if total_pages == 0 or not page_subscribers_info:
+            await query.message.edit_text(_("No subscribers found."))
+        else:
+            new_keyboard = create_subscriber_list_keyboard(
+                _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
+            )
+            await query.message.edit_text(
+                _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+                    current_page_display=current_page + 1, total_pages=total_pages
+                ),
+                reply_markup=new_keyboard
+            )
+        return # Explicit return
+
+    elif action == "manage_tt":
+        user_settings = await session.get(UserSettings, target_telegram_id)
+        current_tt_username = user_settings.teamtalk_username if user_settings else None
+
+        keyboard = create_manage_tt_account_keyboard(
+            _,
+            target_telegram_id=target_telegram_id,
+            current_tt_username=current_tt_username,
+            page=return_page
+        )
+        await query.message.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard
+        )
+        await query.answer()
+        return # Explicit return
+
+    else:
+        await query.answer(_("Unknown action."), show_alert=True)
+        logger.warning(f"Unknown subscriber action: {action}")
+
+
+@subscriber_actions_router.callback_query(ManageTTAccountCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
+async def handle_manage_tt_account(
+    query: CallbackQuery,
+    callback_data: ManageTTAccountCallback,
+    session: AsyncSession,
+    tt_instance: TeamTalkInstance | None, # For listing server accounts
+    _: callable
+):
+    if not query.message:
+        await query.answer(_("Error: Message context lost."), show_alert=True)
+        return
+
+    action = callback_data.action
+    target_telegram_id = callback_data.target_telegram_id
+    return_page = callback_data.page # Page of the main subscriber list
+
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    if not user_settings:
+        await query.answer(_("User settings not found for this subscriber."), show_alert=True)
+        # Potentially send back to subscriber list or main menu
+        return
+
+    if action == "unlink":
+        if user_settings.teamtalk_username:
+            unlinked_tt_username = user_settings.teamtalk_username
+            user_settings.teamtalk_username = None
+            user_settings.not_on_online_confirmed = False # Reset NOON confirmation
+            await session.commit()
+            await session.refresh(user_settings)
+            await query.answer(_("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True)
+        else:
+            await query.answer(_("No TeamTalk account was linked."), show_alert=True)
+
+        # Refresh the manage_tt menu
+        keyboard = create_manage_tt_account_keyboard(
+            _, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page
+        )
+        await query.message.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard
+        )
+        return # Explicit return
+
+    elif action == "link_new":
+        if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
+            await query.answer(_("TeamTalk bot is not connected. Cannot fetch server accounts."), show_alert=True)
+            return
+
+        server_accounts = await get_teamtalk_server_accounts(tt_instance)
+        if not server_accounts:
+            await query.answer(_("No TeamTalk server accounts found or unable to fetch."), show_alert=True)
+            return
+
+        # For simplicity, assuming server_accounts is not paginated here.
+        # If it needs pagination, that's a further enhancement to create_linkable_tt_account_list_keyboard
+        # and LinkTTAccountChosenCallback might need a page index for the account list.
+        link_keyboard = create_linkable_tt_account_list_keyboard(
+            _,
+            page_items=server_accounts,
+            current_page_idx=0, # Assuming single page for now
+            total_pages=1,      # Assuming single page for now
+            target_telegram_id=target_telegram_id,
+            subscriber_list_page=return_page
+        )
+        await query.message.edit_text(
+            _("Select a TeamTalk account to link to subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=link_keyboard
+        )
+        await query.answer()
+        return # Explicit return
+
+    else:
+        await query.answer(_("Unknown manage account action."), show_alert=True)
+        logger.warning(f"Unknown manage TT account action: {action}")
+
+
+@subscriber_actions_router.callback_query(LinkTTAccountChosenCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
+async def handle_link_tt_account_chosen(
+    query: CallbackQuery,
+    callback_data: LinkTTAccountChosenCallback,
+    session: AsyncSession,
+    _: callable
+):
+    if not query.message:
+        await query.answer(_("Error: Message context lost."), show_alert=True)
+        return
+
+    target_telegram_id = callback_data.target_telegram_id
+    tt_username_to_link = callback_data.tt_username
+    return_page = callback_data.page # Page of the main subscriber list
+
+    # Check if the chosen TeamTalk username is banned
+    if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
+        await query.answer(
+            _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(tt_username=tt_username_to_link),
+            show_alert=True
+        )
+        # Optionally, redisplay the "Manage TT Account" menu or the TT account list
+        # For now, just show alert. To be more user-friendly, one might re-render the previous menu.
+        # Re-rendering the "Manage TT Account" menu:
+        user_s = await session.get(UserSettings, target_telegram_id)
+        current_tt_username = user_s.teamtalk_username if user_s else None
+        kb = create_manage_tt_account_keyboard(_, target_telegram_id, current_tt_username, return_page)
+        await query.message.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=kb
+        )
+        return
+
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    if not user_settings:
+        await query.answer(_("User settings not found for this subscriber."), show_alert=True)
+        # This case should ideally be handled before even showing the link list.
+        return
+
+    old_tt_username = user_settings.teamtalk_username
+    user_settings.teamtalk_username = tt_username_to_link
+    user_settings.not_on_online_confirmed = False # Reset NOON confirmation if account changes
+    await session.commit()
+    await session.refresh(user_settings)
+
+    alert_text = _("TeamTalk account {new_tt_username} linked successfully.").format(new_tt_username=tt_username_to_link)
+    if old_tt_username and old_tt_username != tt_username_to_link:
+        alert_text += " " + _("(Replaced {old_tt_username})").format(old_tt_username=old_tt_username)
+
+    await query.answer(alert_text, show_alert=True)
+
+    # Refresh the "Manage TT Account" menu to show the new state
+    keyboard = create_manage_tt_account_keyboard(
+        _,
+        target_telegram_id=target_telegram_id,
+        current_tt_username=tt_username_to_link, # Newly linked username
+        page=return_page
+    )
+    await query.message.edit_text(
+         _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+        reply_markup=keyboard
+    )

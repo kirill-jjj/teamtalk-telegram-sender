@@ -64,3 +64,21 @@ class Deeplink(SQLModel, table=True):
     payload: Optional[str] = Field(default=None)
     expected_telegram_id: Optional[int] = Field(default=None)
     expiry_time: datetime = Field(nullable=False)
+
+
+class BanList(SQLModel, table=True):
+    __tablename__ = "ban_list"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    telegram_id: Optional[int] = Field(default=None, index=True, unique=False) # A TG ID can be banned independently
+    teamtalk_username: Optional[str] = Field(default=None, index=True, unique=False) # A TT username can be banned independently
+    # We might have multiple entries if a user is banned by TG ID and then their TT username is also banned separately,
+    # or if one TT user is linked to multiple TG accounts that get banned.
+    # `unique=False` allows this. Consider composite unique constraints if specific rules are needed.
+
+    ban_reason: Optional[str] = Field(default=None)
+    banned_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    # Constraint to ensure at least one identifier is present
+    # This is more complex to enforce at DB level with SQLModel directly without raw SQL.
+    # Will be enforced at application level in CRUD.

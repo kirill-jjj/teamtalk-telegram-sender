@@ -709,3 +709,116 @@ msgstr "👥 Подписчики"
 #: bot/telegram_bot/handlers/user.py:248
 msgid "Main Menu:"
 msgstr "Главное меню:"
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:60
+#, python-brace-format
+msgid "Actions for subscriber: {display_name}"
+msgstr "Действия для подписчика: {display_name}"
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:62
+#, python-brace-format
+msgid "\nLinked TeamTalk account: {tt_username}"
+msgstr "\nПривязанный аккаунт TeamTalk: {tt_username}"
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:111
+#, python-brace-format
+msgid "Telegram ID {telegram_id} banned."
+msgstr "Telegram ID {telegram_id} забанен."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:113
+#, python-brace-format
+msgid "TeamTalk username {tt_username} banned."
+msgstr "Имя пользователя TeamTalk {tt_username} забанено."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:117
+msgid "User already banned or error occurred."
+msgstr "Пользователь уже забанен или произошла ошибка."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:120
+msgid "Subscriber data also deleted."
+msgstr "Данные подписчика также удалены."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:145
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:223
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:328
+#, python-brace-format
+msgid "Manage TeamTalk account link for subscriber {telegram_id}:"
+msgstr "Управление привязкой TeamTalk для подписчика {telegram_id}:"
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:209
+msgid "User settings not found for this subscriber."
+msgstr "Настройки пользователя для этого подписчика не найдены."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:216
+#, python-brace-format
+msgid "TeamTalk account {tt_username} unlinked."
+msgstr "Аккаунт TeamTalk {tt_username} отвязан."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:218
+msgid "No TeamTalk account was linked."
+msgstr "Аккаунт TeamTalk не был привязан."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:232
+msgid "TeamTalk bot is not connected. Cannot fetch server accounts."
+msgstr "Бот TeamTalk не подключен. Невозможно получить список аккаунтов сервера."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:237
+msgid "No TeamTalk server accounts found or unable to fetch."
+msgstr "Аккаунты TeamTalk на сервере не найдены или не удалось их получить."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:250
+#, python-brace-format
+msgid "Select a TeamTalk account to link to subscriber {telegram_id}:"
+msgstr "Выберите аккаунт TeamTalk для привязки к подписчику {telegram_id}:"
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:256
+msgid "Unknown manage account action."
+msgstr "Неизвестное действие по управлению аккаунтом."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:281
+#, python-brace-format
+msgid "This TeamTalk username ({tt_username}) is banned and cannot be linked."
+msgstr "Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть привязано."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:312
+#, python-brace-format
+msgid "TeamTalk account {new_tt_username} linked successfully."
+msgstr "Аккаунт TeamTalk {new_tt_username} успешно привязан."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:314
+#, python-brace-format
+msgid "(Replaced {old_tt_username})"
+msgstr "(Заменен {old_tt_username})"
+
+#: bot/telegram_bot/keyboards.py:435
+msgid "🗑️ Delete Subscriber"
+msgstr "🗑️ Удалить подписчика"
+
+#: bot/telegram_bot/keyboards.py:444
+msgid "🚫 Ban User (TG & TT)"
+msgstr "🚫 Забанить (TG и TT)"
+
+#: bot/telegram_bot/keyboards.py:453
+msgid "🔗 Manage TeamTalk Account"
+msgstr "🔗 Управлять аккаунтом TeamTalk"
+
+#: bot/telegram_bot/keyboards.py:462
+msgid "⬅️ Back to Subscribers List"
+msgstr "⬅️ Назад к списку подписчиков"
+
+#: bot/telegram_bot/keyboards.py:480
+#, python-brace-format
+msgid "🔓 Unlink {current_tt_username}"
+msgstr "🔓 Отвязать {current_tt_username}"
+
+#: bot/telegram_bot/keyboards.py:489
+msgid "➕ Link/Change TeamTalk Account"
+msgstr "➕ Привязать/Изменить аккаунт TeamTalk"
+
+#: bot/telegram_bot/keyboards.py:498
+msgid "⬅️ Back to User Actions"
+msgstr "⬅️ Назад к действиям"
+
+#: bot/telegram_bot/keyboards.py:543
+msgid "⬅️ Back to Manage Account"
+msgstr "⬅️ Назад к управлению аккаунтом"

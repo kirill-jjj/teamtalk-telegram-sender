@@ -63,3 +63,26 @@ class SubscriberListCallback(CallbackData, prefix="sub_list"):
 # For main menu commands
 class MenuCallback(CallbackData, prefix="main_menu"):
     command: str
+
+# For viewing a specific subscriber's details/actions menu
+class ViewSubscriberCallback(CallbackData, prefix="view_sub"):
+    telegram_id: int
+    page: int # To return to the correct page of the subscriber list
+
+# For actions within a subscriber's detail menu
+class SubscriberActionCallback(CallbackData, prefix="sub_action"):
+    action: str  # e.g., "delete", "ban", "manage_tt"
+    target_telegram_id: int
+    page: int # To return to the main subscriber list page
+
+# For managing a subscriber's TeamTalk account link
+class ManageTTAccountCallback(CallbackData, prefix="manage_tt_acc"):
+    action: str  # e.g., "unlink", "link_new"
+    target_telegram_id: int
+    page: int # To return to the main subscriber list page
+
+# For choosing a TT account to link from a list
+class LinkTTAccountChosenCallback(CallbackData, prefix="link_tt_chosen"):
+    tt_username: str # The TeamTalk username chosen for linking
+    target_telegram_id: int # The Telegram user to link to
+    page: int # Page of the subscriber list to return to, or page of TT user list if that's paginated

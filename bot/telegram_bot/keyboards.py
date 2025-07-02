@@ -34,7 +34,11 @@ from bot.telegram_bot.callback_data import (
     ToggleMuteSpecificCallback,
     AdminActionCallback,
     SubscriberListCallback,
-    MenuCallback
+    MenuCallback,
+    ViewSubscriberCallback,
+    SubscriberActionCallback,
+    ManageTTAccountCallback,
+    LinkTTAccountChosenCallback # Added LinkTTAccountChosenCallback
 )
 from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
@@ -312,17 +316,14 @@ def create_subscriber_list_keyboard(
     for subscriber in page_subscribers_info:
         user_info_parts = [subscriber.display_name]
         if subscriber.teamtalk_username:
-            # Using a simple format, can be made a translatable string if more complex structure is needed
             user_info_parts.append(f"TT: {html.escape(subscriber.teamtalk_username)}")
 
-        user_info_str = ", ".join(user_info_parts)
-        button_text = _("Delete {user_info_str}").format(user_info_str=user_info_str)
+        button_text = ", ".join(user_info_parts) # This is the display text for the button
 
         builder.row(
             InlineKeyboardButton(
-                text=button_text,
-                callback_data=SubscriberListCallback(
-                    action=SubscriberListAction.DELETE_SUBSCRIBER,
+                text=button_text, # Display user info
+                callback_data=ViewSubscriberCallback( # New callback to view details
                     telegram_id=subscriber.telegram_id,
                     page=current_page
                 ).pack()
@@ -424,3 +425,131 @@ def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuil
 
     builder.adjust(1) # Adjust to show one button per row for a cleaner look
     return builder
+
+
+def create_subscriber_action_menu_keyboard(
+    _: callable,
+    target_telegram_id: int,
+    page: int # Page of the main subscriber list to return to
+) -> InlineKeyboardMarkup:
+    """Creates the action menu for a specific subscriber."""
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=_("🗑️ Delete Subscriber"),
+        callback_data=SubscriberActionCallback(
+            action="delete",
+            target_telegram_id=target_telegram_id,
+            page=page
+        ).pack()
+    )
+    builder.button(
+        text=_("🚫 Ban User (TG & TT)"),
+        callback_data=SubscriberActionCallback(
+            action="ban",
+            target_telegram_id=target_telegram_id,
+            page=page
+        ).pack()
+    )
+    builder.button(
+        text=_("🔗 Manage TeamTalk Account"),
+        callback_data=SubscriberActionCallback(
+            action="manage_tt",
+            target_telegram_id=target_telegram_id,
+            page=page
+        ).pack()
+    )
+    builder.button(
+        text=_("⬅️ Back to Subscribers List"),
+        callback_data=SubscriberListCallback( # This should go back to the list view
+            action=SubscriberListAction.PAGE, # Existing action for pagination
+            page=page                         # The page number of the list we came from
+        ).pack()
+    )
+    builder.adjust(1) # One button per row
+    return builder.as_markup()
+
+
+def create_manage_tt_account_keyboard(
+    _: callable,
+    target_telegram_id: int,
+    current_tt_username: str | None,
+    page: int, # Page of the main subscriber list to return to (via subscriber action menu)
+    list_action_page: int = 0 # Page of the TT account list, if paginated
+) -> InlineKeyboardMarkup:
+    """Creates the keyboard for managing a subscriber's TeamTalk account link."""
+    builder = InlineKeyboardBuilder()
+
+    if current_tt_username:
+        builder.button(
+            text=_("🔓 Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),
+            callback_data=ManageTTAccountCallback(
+                action="unlink",
+                target_telegram_id=target_telegram_id,
+                page=page # This 'page' is for returning to subscriber list via action menu
+            ).pack()
+        )
+
+    builder.button(
+        text=_("➕ Link/Change TeamTalk Account"),
+        callback_data=ManageTTAccountCallback(
+            action="link_new",
+            target_telegram_id=target_telegram_id,
+            page=page # This 'page' is for returning to subscriber list via action menu
+        ).pack()
+    )
+
+    # Button to go back to the specific subscriber's action menu
+    builder.button(
+        text=_("⬅️ Back to User Actions"),
+        callback_data=ViewSubscriberCallback( # Use ViewSubscriberCallback to go back to the action menu
+            telegram_id=target_telegram_id,
+            page=page # This 'page' is for the subscriber list page context
+        ).pack()
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def create_linkable_tt_account_list_keyboard(
+    _: callable,
+    page_items: list[pytalk.UserAccount], # Same items as mute list
+    current_page_idx: int, # Renamed to avoid confusion with subscriber list page
+    total_pages: int,
+    target_telegram_id: int, # The TG user we are linking for
+    subscriber_list_page: int # The page of the main subscriber list to return to eventually
+) -> InlineKeyboardMarkup:
+    """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
+    builder = InlineKeyboardBuilder()
+
+    for account_obj in page_items: # account_obj is pytalk.UserAccount
+        username_str = ttstr(account_obj.username)
+        # We don't need to show mute status here, just the username to link
+        button_text = username_str
+
+        callback_d = LinkTTAccountChosenCallback(
+            tt_username=username_str,
+            target_telegram_id=target_telegram_id,
+            page=subscriber_list_page # This page is for the main subscriber list context
+            # If this account list itself becomes paginated, LinkTTAccountChosenCallback would need current_page_idx too
+        )
+        builder.button(text=button_text, callback_data=callback_d.pack())
+
+    if page_items:
+        builder.adjust(1) # One account per row for clarity
+
+    # Pagination for this TT account list (if it becomes paginated in future, for now assumes one page or handled by caller)
+    # For now, let's assume the caller of this keyboard handles pagination of page_items if needed,
+    # and this keyboard just renders the current page of TT accounts.
+    # If pagination is added for *this* list, a different callback for its pagination is needed.
+
+    # Back button to the "Manage TT Account" menu for the specific subscriber
+    builder.row(InlineKeyboardButton(
+        text=_("⬅️ Back to Manage Account"),
+        callback_data=SubscriberActionCallback( # This takes us back to the manage_tt action, which will re-render the manage_tt_account_keyboard
+            action="manage_tt",
+            target_telegram_id=target_telegram_id,
+            page=subscriber_list_page
+        ).pack()
+    ))
+    return builder.as_markup()
