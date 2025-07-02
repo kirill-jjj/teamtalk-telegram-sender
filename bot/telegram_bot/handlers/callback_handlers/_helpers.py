@@ -55,6 +55,16 @@ async def process_setting_update(
         # Do not proceed to UI refresh if DB update failed
         return
 
+    except TelegramAPIError as e_tg:
+        # Эта ошибка может произойти при вызове answer() или safe_edit_text()
+        # после успешного сохранения в БД. Пользователь мог заблокировать бота.
+        # Поскольку данные уже сохранены, мы просто логируем ошибку.
+        # Откатывать здесь ничего не нужно.
+        logger.warning(
+            f"Telegram API error during UI update for user {callback_query.from_user.id} "
+            f"after settings were saved. Error: {e_tg}"
+        )
+
 
 async def safe_edit_text(
     message_to_edit: Message,
