@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 from bot.config import app_config
-from bot.database.crud import remove_subscriber, delete_user_data_fully
+from bot.database.crud import delete_user_data_fully # Removed remove_subscriber
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
