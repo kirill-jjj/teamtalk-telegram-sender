@@ -110,4 +110,3 @@ async def safe_edit_text(
     except TelegramAPIError as e:
         current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
         return False
-    # БЛОК except Exception as e: УДАЛЕН

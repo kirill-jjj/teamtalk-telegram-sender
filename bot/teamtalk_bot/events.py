@@ -71,7 +71,6 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
             logger.error(f"Pytalk specific error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
                 await asyncio.sleep(60) # Keep a fixed shorter delay for pytalk errors before next full interval
-        # БЛОК except Exception as e: УДАЛЕН
         await asyncio.sleep(app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
 
 TT_COMMAND_HANDLERS = {
@@ -117,7 +116,6 @@ async def populate_user_accounts_cache(tt_instance):
         logger.error(f"Pytalk PermissionError populating user accounts cache: {e_perm}.", exc_info=True)
     except ValueError as e_val: # ValueError from pytalk.instance
         logger.error(f"ValueError populating user accounts cache (from pytalk): {e_val}.", exc_info=True)
-    # БЛОК except Exception as e: УДАЛЕН
 
 
 async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInstance, channel: PytalkChannel):
@@ -189,8 +187,6 @@ async def on_ready():
         tt_bot_module.login_complete_time = None
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated for server: {app_config.HOSTNAME}.")
-    # ------------ ИЗМЕНЕНИЯ ЗДЕСЬ ------------
-    # Конкретизируем обработку ошибок, которые может вызвать add_server (включая connect и login)
     except PytalkPermissionError as e_perm:
         logger.critical(f"Pytalk PermissionError during server connection attempt: {e_perm}.", exc_info=True)
         # В этом случае реконнект не имеет смысла, так как данные для входа неверны
@@ -261,11 +257,7 @@ async def on_my_login(server: PytalkServer):
             current_channel_object = tt_instance.get_channel(current_channel_id)
             if current_channel_object: # Log current channel if bot is in one
                  logger.info(f"Bot currently in channel '{ttstr(current_channel_object.name)}'. Finalization will occur via on_user_join.")
-
-            # ... (логика, если канал не найден, без изменений) ...
             pass
-    # ------------ ИЗМЕНЕНИЯ ЗДЕСЬ ------------
-    # Конкретизируем обработку ошибок для операций с каналами
     except PytalkPermissionError as e_perm_join:
         logger.error(f"Pytalk PermissionError joining channel '{target_channel_name_log}': {e_perm_join}.", exc_info=True)
     except ValueError as e_val_join:

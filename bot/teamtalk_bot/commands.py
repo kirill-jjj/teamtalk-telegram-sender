@@ -247,7 +247,6 @@ async def _generate_and_reply_deeplink(
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tt}")
         except (pytalk.exceptions.TeamTalkException, OSError) as e_reply_generic_fallback:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    # БЛОК except Exception as e: ПОЛНОСТЬЮ УДАЛЕН.
 
 
 async def handle_tt_subscribe_command(
