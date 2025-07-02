@@ -5,10 +5,11 @@ from aiogram.types import TelegramObject, Message, CallbackQuery, User
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.models import SubscribedUser
+from bot.models import SubscribedUser # Keep if other middlewares use it, or remove if specific to old sub check
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
+from bot.state import SUBSCRIBED_USERS_CACHE # Added cache import
 
 
 logger = logging.getLogger(__name__)
@@ -83,12 +84,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         telegram_id = user.id
-        session: AsyncSession | None = data.get("session") # From DbSessionMiddleware
-
-        if not session:
-            logger.error("SubscriptionCheckMiddleware: No database session found in event data. Ensure DbSessionMiddleware runs before.")
-            # Potentially send an error message or just let it pass to hit an error later
-            return await handler(event, data)
 
         # Allow /start command with a token (deeplink) to pass without subscription check
         if isinstance(event, Message) and event.text:
@@ -97,11 +92,9 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
                 logger.debug(f"SubscriptionCheckMiddleware: Allowing /start command with token for user {telegram_id}.")
                 return await handler(event, data)
 
-        subscriber = await session.get(SubscribedUser, telegram_id)
-
-        if not subscriber:
+        if telegram_id not in SUBSCRIBED_USERS_CACHE:
             logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id}.")
             return  # Simply stop processing, do not reply.
 
-        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
+        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed (checked via cache). Proceeding.")
         return await handler(event, data)
