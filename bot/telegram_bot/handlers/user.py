@@ -163,10 +163,8 @@ async def who_command_handler(
         return
 
     try:
-        # This function works with a local cache, not direct SDK calls here.
         all_users_list = await get_online_teamtalk_users(tt_instance)
     except (AttributeError, TypeError, RuntimeError) as e:
-        # Catch specific errors that might occur if ONLINE_USERS_CACHE is malformed
         logger.error(f"Error processing ONLINE_USERS_CACHE for /who command: {e}", exc_info=True)
         await message.reply(translator.gettext("An internal error occurred while retrieving the user list."))
         return

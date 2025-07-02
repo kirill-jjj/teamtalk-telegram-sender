@@ -164,12 +164,9 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}.", exc_info=True)
     except pytalk.exceptions.TeamTalkException as e_pytalk: # Explicit import
         logger.error(f"Pytalk specific error setting status for bot: {e_pytalk}.", exc_info=True)
-    except (TimeoutError, ConnectionError, OSError) as e_net: # Added network/timeout
-        logger.error(f"Network/Timeout error setting status for bot: {e_net}.", exc_info=True)
-    except Exception as e:
-        if isinstance(e, (KeyboardInterrupt, SystemExit)):
-            raise
-        logger.critical(f"Unexpected error setting status or login_complete_time for bot: {e}.", exc_info=True)
+    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e:
+        # Log critical because failure here means bot might not be fully operational or visible as expected.
+        logger.critical(f"Error setting status or login_complete_time for bot: {e}.", exc_info=True)
 
 
 @tt_bot_module.tt_bot.event
@@ -197,9 +194,6 @@ async def on_ready():
         initiate_reconnect_task(None)
     except PytalkException as e_pytalk:
         logger.error(f"Pytalk specific error during server connection attempt: {e_pytalk}.", exc_info=True)
-        initiate_reconnect_task(None)
-    except Exception as e:
-        logger.critical(f"Generic UNEXPECTED error initiating TeamTalk server connection: {e}.", exc_info=True)
         initiate_reconnect_task(None)
 
 
@@ -267,9 +261,6 @@ async def on_my_login(server: PytalkServer):
          initiate_reconnect_task(tt_instance)
     except PytalkException as e_pytalk_join:
         logger.error(f"Pytalk specific error joining channel '{target_channel_name_log}': {e_pytalk_join}.", exc_info=True)
-        initiate_reconnect_task(tt_instance)
-    except Exception as e:
-        logger.critical(f"Generic UNEXPECTED error during channel joining phase for '{target_channel_name_log}': {e}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
 
 
