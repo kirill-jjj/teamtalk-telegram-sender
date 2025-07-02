@@ -359,8 +359,6 @@ async def handle_tt_help_command(
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True
 
-    # Вызываем функцию с новыми, понятными именованными аргументами.
-    # Статус админа Telegram здесь нерелевантен.
     help_text = build_help_message(
         _,
         platform="teamtalk",

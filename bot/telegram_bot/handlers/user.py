@@ -200,11 +200,8 @@ async def help_command_handler(
     message: Message,
     _: callable
 ):
-    # Определяем только тот статус, который нам нужен для Telegram
     is_telegram_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False
 
-    # Вызываем функцию с новыми, понятными именованными аргументами.
-    # Статус админа TeamTalk здесь нерелевантен, поэтому передаем False.
     help_text = build_help_message(
         _,
         platform="telegram",
