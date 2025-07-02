@@ -235,7 +235,7 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                         if last_instance.connected:
                             last_instance.disconnect()
                         last_instance.closeTeamTalk()
-                except Exception as e_cleanup: # This is a nested cleanup, general Exception is acceptable here
+                    except Exception as e_cleanup: # This is a nested cleanup, general Exception is acceptable here
                         logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
 
         except (pytalk.exceptions.PermissionError, ValueError, TimeoutError, pytalk.exceptions.TeamTalkException) as e:
@@ -243,11 +243,11 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
             if tt_bot_module.tt_bot.teamtalks and \
                hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
                tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host:
-                 logger.warning(f"Removing instance for {server_info_to_reconnect.host} from tt_bot.teamtalks due to add_server() exception.")
-                 try:
+                logger.warning(f"Removing instance for {server_info_to_reconnect.host} from tt_bot.teamtalks due to add_server() exception.")
+                try:
                     last_instance = tt_bot_module.tt_bot.teamtalks.pop()
                     if last_instance.connected:
                         last_instance.disconnect()
                     last_instance.closeTeamTalk()
-                 except Exception as e_cleanup_exc:
-                     logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")
+                except Exception as e_cleanup_exc: # Corrected indentation for this except
+                    logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")
