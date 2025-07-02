@@ -8,6 +8,7 @@ from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_lan
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
+from bot.core.languages import Language # <--- ДОБАВЛЕНО
 from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
@@ -40,32 +41,32 @@ async def cq_set_language(
     callback_data: LanguageCallback
 ):
     managed_user_settings = await session.merge(user_settings)
-    new_lang_code = callback_data.lang_code
-    original_lang_code = managed_user_settings.language
+    # callback_data.lang_code — это строка, поэтому преобразуем её в Enum
+    new_lang_code_enum = Language(callback_data.lang_code) # <--- ИЗМЕНЕНО
+    original_lang_code_enum = managed_user_settings.language # Теперь это Enum
 
-    if new_lang_code == original_lang_code:
+    if new_lang_code_enum == original_lang_code_enum:
         await callback_query.answer()
         return
 
-    new_lang_translator_obj = get_translator(new_lang_code)
+    new_lang_translator_obj = get_translator(new_lang_code_enum.value) # <--- ИЗМЕНЕНО
 
     def update_logic():
-        managed_user_settings.language = new_lang_code
+        managed_user_settings.language = new_lang_code_enum # <--- ИЗМЕНЕНО
 
     def revert_logic():
-        managed_user_settings.language = original_lang_code
+        managed_user_settings.language = original_lang_code_enum # <--- ИЗМЕНЕНО
 
     lang_display_map = {
-        "en": new_lang_translator_obj.gettext("English"),
-        "ru": new_lang_translator_obj.gettext("Russian"),
+        Language.ENGLISH: new_lang_translator_obj.gettext("English"), # <--- ИЗМЕНЕНО
+        Language.RUSSIAN: new_lang_translator_obj.gettext("Russian"), # <--- ИЗМЕНЕНО
     }
-    lang_name_display = lang_display_map.get(new_lang_code, new_lang_code)
+    lang_name_display = lang_display_map.get(new_lang_code_enum, new_lang_code_enum.value) # <--- ИЗМЕНЕНО
     success_toast_text = new_lang_translator_obj.gettext("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
-    def refresh_ui_callable() -> tuple[str, InlineKeyboardMarkup]:
-        main_settings_builder = create_main_settings_keyboard(new_lang_translator_obj.gettext)
-        main_settings_text = new_lang_translator_obj.gettext("Settings")
-        return main_settings_text, main_settings_builder.as_markup()
+    # Подготавливаем текст и разметку здесь
+    main_settings_builder = create_main_settings_keyboard(new_lang_translator_obj.gettext)
+    main_settings_text = new_lang_translator_obj.gettext("Settings")
 
     await process_setting_update(
         callback_query=callback_query,
@@ -75,5 +76,7 @@ async def cq_set_language(
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
-        ui_refresh_callable=refresh_ui_callable
+        new_text=main_settings_text, # <--- ИЗМЕНЕНО
+        new_markup=main_settings_builder.as_markup() # <--- ИЗМЕНЕНО
+        # ui_refresh_callable=refresh_ui_callable # <--- УДАЛИТЬ
     )
