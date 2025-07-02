@@ -348,12 +348,7 @@ async def handle_tt_help_command(
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True
 
-    help_text = build_help_message(
-        _,
-        platform="teamtalk",
-        is_tt_server_admin=is_main_tt_admin,
-        is_telegram_bot_admin=False
-    )
+    help_text = build_help_message(_, "teamtalk", is_telegram_admin=False, is_teamtalk_admin=is_main_tt_admin)
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
