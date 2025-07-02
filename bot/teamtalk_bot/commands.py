@@ -223,7 +223,7 @@ async def _generate_and_reply_deeplink(
             tt_message.reply(_("Error communicating with Telegram. Please try again later."))
         except pytalk.exceptions.TeamTalkException as e_reply_tt_tg:
             logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tg}")
-        except Exception as e_reply_generic_fallback:
+        except (pytalk.exceptions.TeamTalkException, OSError) as e_reply_generic_fallback:
             logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
     except SQLAlchemyError as e_db:
         logger.error(
@@ -234,7 +234,7 @@ async def _generate_and_reply_deeplink(
             tt_message.reply(_(error_reply_source))
         except pytalk.exceptions.TeamTalkException as e_reply_tt_db:
             logger.error(f"Failed to send DB error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_db}")
-        except Exception as e_reply_generic_fallback:
+        except (pytalk.exceptions.TeamTalkException, OSError) as e_reply_generic_fallback:
             logger.error(f"Failed to send DB error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
     except TeamTalkException as e_tt: # This is already pytalk.exceptions.TeamTalkException
         logger.error(
@@ -245,7 +245,7 @@ async def _generate_and_reply_deeplink(
             tt_message.reply(_(error_reply_source))
         except pytalk.exceptions.TeamTalkException as e_reply_tt_tt: # Explicitly pytalk's exception
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tt}")
-        except Exception as e_reply_generic_fallback:
+        except (pytalk.exceptions.TeamTalkException, OSError) as e_reply_generic_fallback:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
     # БЛОК except Exception as e: ПОЛНОСТЬЮ УДАЛЕН.
 
