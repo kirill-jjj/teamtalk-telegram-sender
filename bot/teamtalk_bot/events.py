@@ -24,7 +24,7 @@ from bot.constants import (
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 from aiogram.filters import CommandObject
-from bot.core.languages import Language # <--- ДОБАВЛЕНО
+from bot.core.languages import Language
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
@@ -69,7 +69,7 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
             logger.error(f"Pytalk specific error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
                 await asyncio.sleep(60) # Keep a fixed shorter delay for pytalk errors before next full interval
-        except Exception as e: # Можно оставить как запасной вариант для *неожиданных* ошибок
+        except Exception as e:
             logger.error(f"Error during periodic online users cache synchronization: {e}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
                  await asyncio.sleep(60) # Keep a fixed shorter delay for general errors
@@ -139,7 +139,7 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.error(f"TimeoutError during initial population of online users cache: {e_timeout}.", exc_info=True)
     except PytalkException as e_pytalk:
         logger.error(f"Pytalk specific error during initial population of online users cache: {e_pytalk}.", exc_info=True)
-    except Exception as e: # Оставлено как запасной вариант
+    except Exception as e:
         logger.error(f"Error during initial population of online users cache: {e}.", exc_info=True)
 
     asyncio.create_task(populate_user_accounts_cache(tt_instance))
@@ -161,7 +161,7 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}.", exc_info=True)
     except PytalkException as e_pytalk:
         logger.error(f"Pytalk specific error setting status for bot: {e_pytalk}.", exc_info=True)
-    except Exception as e: # Оставлено как запасной вариант
+    except Exception as e:
         logger.error(f"Error setting status or login_complete_time for bot: {e}.", exc_info=True)
 
 
@@ -190,7 +190,7 @@ async def on_ready():
     except PytalkException as e_pytalk:
         logger.error(f"Pytalk specific error during server connection attempt: {e_pytalk}.", exc_info=True)
         initiate_reconnect_task(None)
-    except Exception as e: # Оставлено как запасной вариант для других неожиданных ошибок
+    except Exception as e:
         logger.error(f"Generic error initiating TeamTalk server connection: {e}.", exc_info=True)
         initiate_reconnect_task(None)
 
@@ -211,7 +211,7 @@ async def on_my_login(server: PytalkServer):
         logger.warning(f"TimeoutError getting server properties on login: {e_timeout_prop}.")
     except PytalkException as e_pytalk_prop:
         logger.warning(f"Pytalk specific error getting server properties on login: {e_pytalk_prop}.")
-    except Exception as e_prop: # Оставлено как запасной вариант
+    except Exception as e_prop:
         logger.warning(f"Could not get server properties on login: {e_prop}.")
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} (Host: {server.info.host}).")
@@ -256,7 +256,7 @@ async def on_my_login(server: PytalkServer):
     except PytalkException as e_pytalk_join:
         logger.error(f"Pytalk specific error joining channel '{target_channel_name_log}': {e_pytalk_join}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
-    except Exception as e: # Оставлено как запасной вариант
+    except Exception as e:
         logger.error(f"Generic error during channel joining phase for '{target_channel_name_log}': {e}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
 
@@ -299,12 +299,12 @@ async def on_message(message: TeamTalkMessage):
 
     logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'." )
 
-    bot_reply_language = Language.ENGLISH.value # <--- ИЗМЕНЕНО
+    bot_reply_language = Language.ENGLISH.value
     if app_config.TG_ADMIN_CHAT_ID is not None:
         admin_chat_id_int = app_config.TG_ADMIN_CHAT_ID
         admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
         if admin_settings:
-            bot_reply_language = admin_settings.language.value # <--- ИЗМЕНЕНО. user_settings.language теперь Language Enum
+            bot_reply_language = admin_settings.language.value
 
     translator = get_translator(bot_reply_language)
 

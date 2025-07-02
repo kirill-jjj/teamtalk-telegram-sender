@@ -17,9 +17,8 @@ async def process_setting_update(
     update_action: Callable[[], None],
     revert_action: Callable[[], None],
     success_toast_text: str,
-    new_text: str, # <--- ДОБАВЛЕНО
-    new_markup: InlineKeyboardMarkup # <--- ДОБАВЛЕНО
-    # ui_refresh_callable: Callable[[], tuple[str, InlineKeyboardMarkup]] # <--- УДАЛИТЬ
+    new_text: str,
+    new_markup: InlineKeyboardMarkup
 ) -> None:
     # Ensure message and from_user are present, crucial for callback context
     if not callback_query.message or not callback_query.from_user:
@@ -38,8 +37,7 @@ async def process_setting_update(
         # Send toast only on successful DB update
         await callback_query.answer(success_toast_text, show_alert=False)
 
-        # Теперь вызываем safe_edit_text напрямую с переданными new_text и new_markup
-        await safe_edit_text( # <--- ИЗМЕНЕНО
+        await safe_edit_text(
             message_to_edit=callback_query.message,
             text=new_text,
             reply_markup=new_markup,
@@ -47,7 +45,7 @@ async def process_setting_update(
             log_context="process_setting_update_ui_refresh"
         )
 
-    except SQLAlchemyError as e_db: # Уже изменено в предыдущем шаге
+    except SQLAlchemyError as e_db:
         logger.error(f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
         revert_action() # Revert in-memory change
         try:
@@ -102,6 +100,6 @@ async def safe_edit_text(
     except TelegramAPIError as e:
         current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
         return False
-    except Exception as e: # Оставлено, но с уточнением в логе
-        current_logger.critical(f"UNEXPECTED CRITICAL ERROR editing message{context_for_log}: {e}", exc_info=True) # <--- УТОЧНЕНО
+    except Exception as e:
+        current_logger.critical(f"UNEXPECTED CRITICAL ERROR editing message{context_for_log}: {e}", exc_info=True)
         return False

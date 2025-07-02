@@ -13,9 +13,9 @@ from bot.database.crud import remove_subscriber, delete_user_data_fully
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
-from bot.core.languages import Language # <--- ДОБАВЛЕНО
+from bot.core.languages import Language
 from bot.constants import (
-    DEFAULT_LANGUAGE, # Это уже Language.ENGLISH.value, оставляем
+    DEFAULT_LANGUAGE,
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 
@@ -125,8 +125,6 @@ async def send_telegram_messages_to_list(
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
         reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
-        # tt_user_username_for_markup: str | None = None, # <--- УДАЛИТЬ
-        # tt_user_nickname_for_markup: str | None = None # <--- УДАЛИТЬ
 ):
     """
     Sends messages to a list of chat_ids.

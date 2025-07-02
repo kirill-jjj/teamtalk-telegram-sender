@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Literal # <--- ДОБАВЛЕНО: импортируем Literal
+from typing import Any, Optional, Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from bot.core.languages import Language
@@ -10,7 +10,6 @@ def get_env_file():
     return os.getenv(CONFIG_FILE_ENV_VAR, ".env")
 
 GenderType = Literal["male", "female", "neutral"]
-# LangType = Literal["en", "ru"] # <--- УДАЛИТЬ
 
 class Settings(BaseSettings):
     """
@@ -39,7 +38,7 @@ class Settings(BaseSettings):
 
     GLOBAL_IGNORE_USERNAMES: Optional[str] = None
     DATABASE_FILE: str = "bot_data.db"
-    DEFAULT_LANG: Language = Language.ENGLISH # <--- ИЗМЕНЕНО
+    DEFAULT_LANG: Language = Language.ENGLISH
     GENDER: GenderType = "neutral"
 
     DEEPLINK_TTL_SECONDS: int = 300  # Lifetime of deeplinks in seconds (e.g., for /sub)
