@@ -352,15 +352,21 @@ async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
     _: callable
 ):
-    is_admin = False
+    is_main_tt_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
     admin_username_from_config = app_config.ADMIN_USERNAME
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
-        is_admin = True # This user is the main TeamTalk admin specified in config
+        is_main_tt_admin = True
 
-    # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
-    help_text = build_help_message(_, "teamtalk", is_admin, is_admin)
+    # Вызываем функцию с новыми, понятными именованными аргументами.
+    # Статус админа Telegram здесь нерелевантен.
+    help_text = build_help_message(
+        _,
+        platform="teamtalk",
+        is_tt_server_admin=is_main_tt_admin,
+        is_telegram_bot_admin=False
+    )
     await send_long_tt_reply(tt_message.reply, help_text)
 
 

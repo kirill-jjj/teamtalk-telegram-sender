@@ -53,7 +53,12 @@ def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount
 
     return str(username) if username is not None else ""
 
-def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin: bool) -> str:
+def build_help_message(
+    _: callable,
+    platform: str,
+    is_tt_server_admin: bool,      # <<< ИЗМЕНЕНО: Четкое имя для главного админа TeamTalk
+    is_telegram_bot_admin: bool    # <<< ИЗМЕНЕНО: Четкое имя для админа Telegram-бота
+) -> str:
     """Builds a contextual help message based on platform and user rights."""
     parts = []
     if platform == "telegram":
@@ -62,7 +67,8 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
                        "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
                        "/help - Show this help message.\n"
                        "(Note: `/start` is used to initiate the bot and process deeplinks.)"))
-        if is_admin:
+        # <<< ИЗМЕНЕНО: Используем правильный, понятный флаг
+        if is_telegram_bot_admin:
             parts.append(_("\n<b>Admin Commands:</b>"))
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
                            "/ban - Ban a user from the server (via buttons).\n"
@@ -72,7 +78,8 @@ def build_help_message(_: callable, platform: str, is_admin: bool, is_bot_admin:
         parts.append(_("/sub - Get a link to subscribe to notifications.\n"
                        "/unsub - Get a link to unsubscribe from notifications.\n"
                        "/help - Show help."))
-        if is_bot_admin:
+        # <<< ИЗМЕНЕНО: Используем правильный, понятный флаг
+        if is_tt_server_admin:
             parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):"))
             parts.append(_("/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
                            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
