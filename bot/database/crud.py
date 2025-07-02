@@ -141,46 +141,70 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
     logger.debug(f"Deeplink {token} not found for deletion.")
     return False
 
-async def delete_user_data_fully(session: AsyncSession, telegram_id: int) -> bool:
+async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> tuple[bool, bool]:
     """
-    Deletes all data associated with a given telegram_id in a single transaction.
-    Also removes the user from the in-memory cache upon successful deletion.
+    Deletes UserSettings (and related MutedUser) and SubscribedUser records from the database.
+    Does NOT commit the session.
+    Returns a tuple of booleans: (user_settings_deleted, subscribed_user_deleted)
     """
-    # Import here to avoid circular dependency at module load time
-    from bot.core.user_settings import remove_user_settings_from_cache
+    logger.info(f"Attempting to delete DB data for Telegram ID: {telegram_id}")
 
-    logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id}")
+    user_settings_deleted = False
+    subscribed_user_deleted = False
+
+    # UserSettings also cascades to MutedUser, so no need to explicitly delete MutedUser here
+    user_settings_record = await session.get(UserSettings, telegram_id)
+    if user_settings_record:
+        await session.delete(user_settings_record)
+        user_settings_deleted = True
+        logger.debug(f"Marked UserSettings for deletion for user {telegram_id}.")
+
+    subscribed_user_record = await session.get(SubscribedUser, telegram_id)
+    if subscribed_user_record:
+        await session.delete(subscribed_user_record)
+        subscribed_user_deleted = True
+        logger.debug(f"Marked SubscribedUser for deletion for user {telegram_id}.")
+
+    # The caller (service layer) will be responsible for session.commit()
+    return user_settings_deleted, subscribed_user_deleted
+
+
+async def delete_user_data_fully(session: AsyncSession, telegram_id: int, manage_cache: bool = True) -> bool:
+    """
+    Orchestrates deletion of all data for a user, including DB records and cache entries.
+    This function is now primarily a wrapper that will be replaced by the service layer function.
+    The manage_cache parameter is for transitional purposes.
+    """
+    # This local import is the code smell we are removing.
+    # It will be removed once the service layer is fully integrated.
+    if manage_cache:
+        from bot.core.user_settings import remove_user_settings_from_cache
+
+    logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id} (via old delete_user_data_fully)")
     try:
-        user_settings_record = await session.get(UserSettings, telegram_id)
-        subscribed_user_record = await session.get(SubscribedUser, telegram_id)
-        # Potentially other related data in the future
+        user_settings_deleted, subscribed_user_deleted = await _delete_user_data_from_db(session, telegram_id)
 
-        if not user_settings_record and not subscribed_user_record:
-            logger.info(f"No data found for Telegram ID {telegram_id}. Nothing to delete.")
-            # Ensure cache consistency even if no DB records were found
-            remove_user_settings_from_cache(telegram_id)
-            SUBSCRIBED_USERS_CACHE.discard(telegram_id)
-            return True
-
-        if user_settings_record:
-            await session.delete(user_settings_record)
-            logger.debug(f"Marked UserSettings for deletion for user {telegram_id}.")
-
-        if subscribed_user_record:
-            await session.delete(subscribed_user_record)
-            logger.debug(f"Marked SubscribedUser for deletion for user {telegram_id}.")
-
-        # Add deletion for other related data here if necessary
+        if not user_settings_deleted and not subscribed_user_deleted:
+            logger.info(f"No DB data found for Telegram ID {telegram_id}. Nothing to delete from DB.")
+            if manage_cache:
+                remove_user_settings_from_cache(telegram_id)
+                SUBSCRIBED_USERS_CACHE.discard(telegram_id)
+                logger.debug(f"Caches cleared for {telegram_id} despite no DB data.")
+            return True # Considered success if nothing was there to delete
 
         await session.commit()
+        logger.debug(f"Committed DB deletions for {telegram_id}.")
 
-        # Clear from cache only after the transaction is successfully committed.
-        remove_user_settings_from_cache(telegram_id)
-        SUBSCRIBED_USERS_CACHE.discard(telegram_id)
-        logger.info(f"Successfully deleted all DB data for {telegram_id} and cleared from relevant caches.")
+        if manage_cache:
+            remove_user_settings_from_cache(telegram_id)
+            SUBSCRIBED_USERS_CACHE.discard(telegram_id)
+            logger.info(f"Successfully deleted DB data and cleared caches for {telegram_id}.")
+        else:
+            logger.info(f"Successfully deleted DB data for {telegram_id}. Cache management skipped by caller.")
+
         return True
 
     except SQLAlchemyError as e:
-        logger.error(f"Error during full data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
+        logger.error(f"Error during data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
         await session.rollback()
         return False
