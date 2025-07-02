@@ -121,27 +121,17 @@ async def send_telegram_message_individual(
 
 
 async def send_telegram_messages_to_list(
-    bot_token_to_use: str, # TG_EVENT_TOKEN or TG_BOT_MESSAGE_TOKEN
+    bot_instance_to_use: Bot, # Теперь принимаем сам объект бота
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
         reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
 ):
     """
     Sends messages to a list of chat_ids.
-    Uses the appropriate bot instance based on bot_token_to_use.
+    Uses the provided bot_instance_to_use.
     """
-    # Убедимся, что app_config.TG_EVENT_TOKEN является уникальным маркером,
-    # если он равен None, то это просто пустой токен.
-    if bot_token_to_use == app_config.TG_EVENT_TOKEN:
-        bot_to_use = tg_bot_event
-    elif bot_token_to_use == app_config.TG_BOT_MESSAGE_TOKEN:
-        bot_to_use = tg_bot_message
-    else: # Неизвестный токен
-        logger.error(f"Attempted to use unknown bot token: {bot_token_to_use}")
-        return
-
-    if not bot_to_use: # Если выбранный токен соответствует None Bot
-        logger.error(f"No Telegram bot instance available for token: {bot_token_to_use}")
+    if not bot_instance_to_use:
+        logger.error("No Telegram bot instance provided to send_telegram_messages_to_list.")
         return
 
     online_tt_usernames = {ttstr(user.username) for user in ONLINE_USERS_CACHE.values()}
@@ -164,7 +154,7 @@ async def send_telegram_messages_to_list(
                 individual_tt_user_is_online = True
 
         tasks_list.append(send_telegram_message_individual(
-            bot_instance=bot_to_use,
+            bot_instance=bot_instance_to_use, # Теперь используется напрямую
             chat_id=chat_id,
             language=language,
             reply_markup=current_reply_markup,
