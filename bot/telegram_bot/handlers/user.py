@@ -200,12 +200,17 @@ async def help_command_handler(
     message: Message,
     _: callable
 ):
-    is_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False # This checks if TG user is a bot admin
-    # build_help_message expects: _, platform, is_admin (TT server admin), is_bot_admin (bot admin)
-    # Assuming ADMIN_IDS_CACHE check result means they are a bot admin.
-    # For is_admin (TT server admin status), we don't have that info here directly.
-    # For Telegram platform, is_admin (TT) is likely not relevant.
-    help_text = build_help_message(_, "telegram", is_admin, is_admin) # Passing is_admin for both admin flags
+    # Определяем только тот статус, который нам нужен для Telegram
+    is_telegram_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False
+
+    # Вызываем функцию с новыми, понятными именованными аргументами.
+    # Статус админа TeamTalk здесь нерелевантен, поэтому передаем False.
+    help_text = build_help_message(
+        _,
+        platform="telegram",
+        is_tt_server_admin=False,
+        is_telegram_bot_admin=is_telegram_admin
+    )
     await message.reply(help_text, parse_mode="HTML")
 
 
