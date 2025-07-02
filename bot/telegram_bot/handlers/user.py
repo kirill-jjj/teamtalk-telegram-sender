@@ -163,14 +163,12 @@ async def who_command_handler(
         return
 
     try:
+        # This function works with a local cache, not direct SDK calls here.
         all_users_list = await get_online_teamtalk_users(tt_instance)
-    except PytalkTeamTalkException as e: # More specific for potential issues if get_online_teamtalk_users involves SDK calls
-        logger.error(f"TeamTalk error getting user objects for /who: {e}", exc_info=True)
-        await message.reply(translator.gettext("Error getting users from TeamTalk due to a server communication issue."))
-        return
-    except Exception as e: # General fallback for other unexpected issues (e.g., cache corruption)
-        logger.error(f"Unexpected error getting user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
-        await message.reply(translator.gettext("Error getting users from TeamTalk."))
+    except (AttributeError, TypeError, RuntimeError) as e:
+        # Catch specific errors that might occur if ONLINE_USERS_CACHE is malformed
+        logger.error(f"Error processing ONLINE_USERS_CACHE for /who command: {e}", exc_info=True)
+        await message.reply(translator.gettext("An internal error occurred while retrieving the user list."))
         return
 
     is_caller_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False
