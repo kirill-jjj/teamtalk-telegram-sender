@@ -247,17 +247,7 @@ async def _generate_and_reply_deeplink(
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_tt}")
         except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    except Exception as e:
-        logger.critical(
-            f"Generic CRITICAL error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
-            exc_info=True
-        )
-        try:
-            tt_message.reply(_(error_reply_source))
-        except pytalk.exceptions.TeamTalkException as e_reply_tt_final:
-            logger.error(f"Failed to send generic error reply to TT user {sender_tt_username} via TeamTalk: {e_reply_tt_final}")
-        except Exception as e_reply_generic_fallback:
-            logger.error(f"Failed to send generic error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
+    # БЛОК except Exception as e: ПОЛНОСТЬЮ УДАЛЕН.
 
 
 async def handle_tt_subscribe_command(

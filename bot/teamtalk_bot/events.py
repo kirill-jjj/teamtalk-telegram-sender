@@ -69,11 +69,7 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
             logger.error(f"Pytalk specific error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
                 await asyncio.sleep(60) # Keep a fixed shorter delay for pytalk errors before next full interval
-        except Exception as e:
-            logger.error(f"Error during periodic online users cache synchronization: {e}.", exc_info=True)
-            if tt_instance and tt_instance.connected and tt_instance.logged_in:
-                 await asyncio.sleep(60) # Keep a fixed shorter delay for general errors
-
+        # БЛОК except Exception as e: УДАЛЕН
         await asyncio.sleep(app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
 
 TT_COMMAND_HANDLERS = {
@@ -119,8 +115,7 @@ async def populate_user_accounts_cache(tt_instance):
         logger.error(f"Pytalk PermissionError populating user accounts cache: {e_perm}.", exc_info=True)
     except ValueError as e_val: # ValueError from pytalk.instance
         logger.error(f"ValueError populating user accounts cache (from pytalk): {e_val}.", exc_info=True)
-    except Exception as e: # General fallback
-        logger.error(f"Failed to populate user accounts cache with an unexpected error: {e}.", exc_info=True)
+    # БЛОК except Exception as e: УДАЛЕН
 
 
 async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInstance, channel: PytalkChannel):
