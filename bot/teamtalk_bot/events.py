@@ -184,8 +184,11 @@ async def on_ready():
         tt_bot_module.login_complete_time = None
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated for server: {app_config.HOSTNAME}.")
+    # ------------ ИЗМЕНЕНИЯ ЗДЕСЬ ------------
+    # Конкретизируем обработку ошибок, которые может вызвать add_server (включая connect и login)
     except PytalkPermissionError as e_perm:
         logger.critical(f"Pytalk PermissionError during server connection attempt: {e_perm}.", exc_info=True)
+        # В этом случае реконнект не имеет смысла, так как данные для входа неверны
     except ValueError as e_val:
         logger.critical(f"ValueError (likely invalid server_info) during server connection attempt: {e_val}.", exc_info=True)
     except TimeoutError as e_timeout:
@@ -195,7 +198,7 @@ async def on_ready():
         logger.error(f"Pytalk specific error during server connection attempt: {e_pytalk}.", exc_info=True)
         initiate_reconnect_task(None)
     except Exception as e:
-        logger.error(f"Generic error initiating TeamTalk server connection: {e}.", exc_info=True)
+        logger.critical(f"Generic UNEXPECTED error initiating TeamTalk server connection: {e}.", exc_info=True)
         initiate_reconnect_task(None)
 
 
@@ -250,6 +253,10 @@ async def on_my_login(server: PytalkServer):
             if current_channel_object: # Log current channel if bot is in one
                  logger.info(f"Bot currently in channel '{ttstr(current_channel_object.name)}'. Finalization will occur via on_user_join.")
 
+            # ... (логика, если канал не найден, без изменений) ...
+            pass
+    # ------------ ИЗМЕНЕНИЯ ЗДЕСЬ ------------
+    # Конкретизируем обработку ошибок для операций с каналами
     except PytalkPermissionError as e_perm_join:
         logger.error(f"Pytalk PermissionError joining channel '{target_channel_name_log}': {e_perm_join}.", exc_info=True)
     except ValueError as e_val_join:
@@ -261,7 +268,7 @@ async def on_my_login(server: PytalkServer):
         logger.error(f"Pytalk specific error joining channel '{target_channel_name_log}': {e_pytalk_join}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
     except Exception as e:
-        logger.error(f"Generic error during channel joining phase for '{target_channel_name_log}': {e}.", exc_info=True)
+        logger.critical(f"Generic UNEXPECTED error during channel joining phase for '{target_channel_name_log}': {e}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
 
 
