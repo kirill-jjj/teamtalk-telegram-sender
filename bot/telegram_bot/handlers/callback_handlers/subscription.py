@@ -90,7 +90,6 @@ async def cq_set_subscription_setting(
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
-        new_text=menu_text, # <--- ИЗМЕНЕНО
-        new_markup=updated_builder.as_markup(), # <--- ИЗМЕНЕНО
-        # ui_refresh_callable=refresh_ui_callable # <--- УДАЛИТЬ
+        new_text=menu_text,
+        new_markup=updated_builder.as_markup(),
     )

@@ -12,7 +12,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.telegram_bot.models import SubscriberInfo
 
-from bot.core.languages import Language # <--- ДОБАВЛЕНО
+from bot.core.languages import Language
 from bot.core.enums import (
     AdminAction,
     SettingsNavAction,
@@ -80,11 +80,11 @@ def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("English"),
-        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.ENGLISH.value).pack() # <--- ИЗМЕНЕНО
+        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.ENGLISH.value).pack()
     )
     builder.button(
         text=_("Russian"),
-        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.RUSSIAN.value).pack() # <--- ИЗМЕНЕНО
+        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.RUSSIAN.value).pack()
     )
     builder.button(
         text=_("⬅️ Back to Settings"),

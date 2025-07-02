@@ -221,42 +221,42 @@ async def _generate_and_reply_deeplink(
         # Note: If tt_message.reply fails here, it will go to the outer generic Exception.
         try:
             tt_message.reply(_("Error communicating with Telegram. Please try again later."))
-        except TeamTalkException as e_reply_tg: # <--- ИЗМЕНЕНО: более специфичная ошибка TeamTalk при ответе
+        except TeamTalkException as e_reply_tg:
             logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username}: {e_reply_tg}")
-        except Exception as e_reply_generic_fallback: # Запасной вариант для ошибок tt_message.reply
+        except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    except SQLAlchemyError as e_db: # <--- ДОБАВЛЕНО
+    except SQLAlchemyError as e_db:
         logger.error(
             f"Database error creating deeplink for action {action} for TT user {sender_tt_username}: {e_db}",
             exc_info=True
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_db: # <--- ИЗМЕНЕНО
+        except TeamTalkException as e_reply_db:
             logger.error(f"Failed to send DB error reply to TT user {sender_tt_username}: {e_reply_db}")
-        except Exception as e_reply_generic_fallback: # Запасной вариант
+        except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send DB error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    except TeamTalkException as e_tt: # <--- ДОБАВЛЕНО для других ошибок TeamTalk, например при tt_message.reply
+    except TeamTalkException as e_tt:
         logger.error(
             f"TeamTalk error processing deeplink action {action} for TT user {sender_tt_username}: {e_tt}",
             exc_info=True
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_tt: # <--- ИЗМЕНЕНО
+        except TeamTalkException as e_reply_tt:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username}: {e_reply_tt}")
-        except Exception as e_reply_generic_fallback: # Запасной вариант
+        except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send TT error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
-    except Exception as e: # Общий запасной вариант для других неожиданных ошибок
+    except Exception as e:
         logger.critical(
             f"Generic CRITICAL error processing deeplink action {action} for TT user {sender_tt_username}: {e}",
             exc_info=True
         )
         try:
             tt_message.reply(_(error_reply_source))
-        except TeamTalkException as e_reply_generic: # <--- ИЗМЕНЕНО
+        except TeamTalkException as e_reply_generic:
             logger.error(f"Failed to send generic error reply to TT user {sender_tt_username}: {e_reply_generic}")
-        except Exception as e_reply_generic_fallback: # Запасной вариант
+        except Exception as e_reply_generic_fallback:
             logger.error(f"Failed to send generic error reply to TT user {sender_tt_username} (generic fallback): {e_reply_generic_fallback}")
 
 

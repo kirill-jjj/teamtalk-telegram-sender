@@ -100,12 +100,12 @@ async def _display_internal_user_list(
         await callback_query.answer(_("An error occurred. Please try again."), show_alert=True)
         return
 
-    try: # <--- ДОБАВЛЕНО
+    try:
         statement = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
         results = await session.execute(statement)
         users_to_process = results.scalars().all()
         sorted_items = sorted(list(users_to_process))
-    except SQLAlchemyError as e: # <--- ДОБАВЛЕНО
+    except SQLAlchemyError as e:
         logger.error(f"Database error fetching internal user list for user {user_settings.telegram_id}: {e}", exc_info=True)
         await callback_query.answer(_("An error occurred while loading the list. Please try again later."), show_alert=True)
         return
@@ -339,9 +339,8 @@ async def cq_set_mute_mode_action(
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
-        new_text=menu_text, # <--- ИЗМЕНЕНО
-        new_markup=updated_builder.as_markup(), # <--- ИЗМЕНЕНО
-        # ui_refresh_callable=refresh_ui_callable, # <--- УДАЛИТЬ
+        new_text=menu_text,
+        new_markup=updated_builder.as_markup(),
     )
 
 
