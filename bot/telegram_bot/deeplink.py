@@ -16,6 +16,7 @@ from bot.database.crud import (
     delete_deeplink_by_token,
     # delete_user_data_fully, # No longer used directly
 )
+from bot.database import crud # Added crud import
 from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.services import user_service # Import the new service
 
@@ -98,6 +99,17 @@ async def _handle_subscribe_deeplink(
     payload: str | None, # Expecting TeamTalk username as payload
     user_settings: UserSettings
 ) -> str:
+    # --- Ban Check ---
+    if await crud.is_telegram_id_banned(session, telegram_id):
+        logger.warning(f"Subscription attempt by banned Telegram ID: {telegram_id}")
+        return _("Your Telegram account is banned from using this service.")
+
+    tt_username_from_payload = payload
+    if tt_username_from_payload and await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
+        logger.warning(f"Subscription attempt with banned TeamTalk username: {tt_username_from_payload} by Telegram ID: {telegram_id}")
+        return _("The TeamTalk username '{tt_username}' is banned and cannot be linked.").format(tt_username=tt_username_from_payload)
+    # --- End Ban Check ---
+
     await add_subscriber(session, telegram_id)
     # Simplified log: Avoids confusion about "existing settings" if defaults were just created.
     logger.info(f"User {telegram_id} added to subscribers list.")

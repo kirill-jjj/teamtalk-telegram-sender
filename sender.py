@@ -69,6 +69,7 @@ async def async_main():
         # menu_callback_router will be imported separately to avoid circular if it grows
     )
     from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router # Import the new router
+    from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router # Import new subscriber actions router
 
     try:
         import uvloop
@@ -211,8 +212,12 @@ async def async_main():
     # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
+    # callback_router likely contains general callbacks, subscriber_list_router for pagination/old delete
+    # and subscriber_actions_router for new detailed actions. Order might matter if filters overlap.
+    # For now, adding it along with others.
     dp.include_router(callback_router)
-    dp.include_router(menu_callback_router) # Added menu_callback_router
+    dp.include_router(menu_callback_router)
+    dp.include_router(subscriber_actions_router) # Added subscriber_actions_router
     dp.include_router(catch_all_router)
 
     dp.startup.register(on_startup)
