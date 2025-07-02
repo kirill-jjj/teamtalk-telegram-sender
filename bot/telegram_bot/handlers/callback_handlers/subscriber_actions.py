@@ -22,7 +22,8 @@ from bot.database import crud # For BanList and UserSettings CRUD
 from bot.services import user_service # For deleting user
 from bot.state import ADMIN_IDS_CACHE
 from bot.core.enums import SubscriberListAction # For back button to main list
-from bot.core.utils import get_teamtalk_server_accounts # To list TT accounts for linking
+# Removed: from bot.core.utils import get_teamtalk_server_accounts
+import pytalk # To get UserAccount type for list[pytalk.UserAccount]
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
@@ -246,7 +247,13 @@ async def handle_manage_tt_account(
             await query.answer(_("TeamTalk bot is not connected. Cannot fetch server accounts."), show_alert=True)
             return
 
-        server_accounts = await get_teamtalk_server_accounts(tt_instance)
+        try:
+            # Directly use the SDK method; tt_instance.getUserAccounts() returns a list of UserAccount
+            server_accounts: list[pytalk.UserAccount] = tt_instance.getUserAccounts()
+        except Exception as e:
+            logger.error(f"Error fetching TeamTalk server accounts: {e}")
+            server_accounts = []
+
         if not server_accounts:
             await query.answer(_("No TeamTalk server accounts found or unable to fetch."), show_alert=True)
             return
