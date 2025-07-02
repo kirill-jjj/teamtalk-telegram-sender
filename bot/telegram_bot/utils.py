@@ -150,14 +150,12 @@ async def send_telegram_messages_to_list(
     tasks_list = []
     for chat_id in chat_ids:
         user_settings = USER_SETTINGS_CACHE.get(chat_id)
-            language = user_settings.language.value if user_settings else DEFAULT_LANGUAGE
+        language = user_settings.language.value if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language)
 
         current_reply_markup = None
-            if reply_markup_generator: # <--- ИЗМЕНЕНО: убраны проверки tt_user_username_for_markup и tt_user_nickname_for_markup
+        if reply_markup_generator:
             current_reply_markup = reply_markup_generator(
-                    # tt_user_username_for_markup, # <--- УДАЛИТЬ, если будете вызывать reply_markup_generator
-                    # tt_user_nickname_for_markup, # <--- УДАЛИТЬ, если будете вызывать reply_markup_generator
                 language,
                 chat_id
             )
