@@ -2,6 +2,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import SQLAlchemyError
 
 from bot.models import UserSettings
 
@@ -51,7 +52,7 @@ async def get_or_create_user_settings(telegram_id: int, session: AsyncSession) -
             logger.debug(f"Created default UserSettings row for user {telegram_id} in DB.")
             USER_SETTINGS_CACHE[telegram_id] = new_settings
             return new_settings
-        except Exception as e:
+        except SQLAlchemyError as e:
             await session.rollback()
             logger.error(f"Error creating default settings for user {telegram_id}: {e}", exc_info=True)
             # Return a temporary object in case of an error, so the bot doesn't crash
@@ -67,7 +68,7 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
         await session.refresh(settings, attribute_names=['muted_users_list'])
         USER_SETTINGS_CACHE[settings.telegram_id] = settings
         logger.debug(f"Updated settings for user {settings.telegram_id} in DB and cache.")
-    except Exception as e:
+    except SQLAlchemyError as e:
         await session.rollback()
         logger.error(f"Error updating settings for user {settings.telegram_id} in DB: {e}", exc_info=True)
 

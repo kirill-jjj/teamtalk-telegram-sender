@@ -103,7 +103,7 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
                 logger.debug(f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, length {len(part_to_send_str.encode('utf-8', errors='ignore'))} bytes.")
                 if part_idx < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
-            except Exception as e:
+            except pytalk.exceptions.TeamTalkException as e:
                 logger.error(f"Error sending part {part_idx + 1} of TT message: {e}")
                 break
 
@@ -174,7 +174,7 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
 
             logger.info(f"Old instance {server_host_info} successfully closed and removed (attempt).")
 
-        except Exception as e:
+        except (pytalk.exceptions.TeamTalkException, TimeoutError) as e:
             server_host_info_err = "unknown server"
             if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
                 server_host_info_err = failed_instance.server_info.host
@@ -235,10 +235,10 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                         if last_instance.connected:
                             last_instance.disconnect()
                         last_instance.closeTeamTalk()
-                    except Exception as e_cleanup:
+                except Exception as e_cleanup: # This is a nested cleanup, general Exception is acceptable here
                         logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
 
-        except Exception as e:
+        except (pytalk.exceptions.PermissionError, ValueError, TimeoutError, pytalk.exceptions.TeamTalkException) as e:
             logger.error(f"Critical error during reconnection attempt to {server_info_to_reconnect.host}: {e}", exc_info=True)
             if tt_bot_module.tt_bot.teamtalks and \
                hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \

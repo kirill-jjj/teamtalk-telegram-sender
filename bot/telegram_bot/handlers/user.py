@@ -10,6 +10,7 @@ from bot.core.utils import build_help_message, get_online_teamtalk_users
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
+from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # For /who command
 
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
@@ -163,8 +164,12 @@ async def who_command_handler(
 
     try:
         all_users_list = await get_online_teamtalk_users(tt_instance)
-    except Exception as e:
-        logger.error(f"Failed to get user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
+    except PytalkTeamTalkException as e: # More specific for potential issues if get_online_teamtalk_users involves SDK calls
+        logger.error(f"TeamTalk error getting user objects for /who: {e}", exc_info=True)
+        await message.reply(translator.gettext("Error getting users from TeamTalk due to a server communication issue."))
+        return
+    except Exception as e: # General fallback for other unexpected issues (e.g., cache corruption)
+        logger.error(f"Unexpected error getting user objects from ONLINE_USERS_CACHE for /who: {e}", exc_info=True)
         await message.reply(translator.gettext("Error getting users from TeamTalk."))
         return
 
@@ -214,7 +219,7 @@ async def settings_command_handler(
 
     try:
         await message.delete()
-    except Exception as e:
+    except TelegramAPIError as e:
         logger.warning(f"Could not delete user settings command: {e}")
 
     settings_builder = create_main_settings_keyboard(_)
@@ -224,5 +229,5 @@ async def settings_command_handler(
             text=_("Settings"),
             reply_markup=settings_builder.as_markup()
         )
-    except Exception as e:
+    except TelegramAPIError as e:
         logger.error(f"Could not send settings menu: {e}")
