@@ -81,17 +81,6 @@ async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
         logger.info(f"User {telegram_id} added to SUBSCRIBED_USERS_CACHE.")
     return added
 
-async def remove_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    removed = await _remove_entity(session, SubscribedUser, telegram_id)
-    if removed:
-        SUBSCRIBED_USERS_CACHE.discard(telegram_id)
-        logger.info(f"User {telegram_id} removed from SUBSCRIBED_USERS_CACHE.")
-    # Also remove user settings if they are being fully unsubscribed
-    # This should ideally be part of a higher-level "unsubscribe" operation
-    # For now, just removing from SubscribedUser table and cache.
-    # Full data deletion is handled by delete_user_data_fully.
-    return removed
-
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, SubscribedUser)
 
