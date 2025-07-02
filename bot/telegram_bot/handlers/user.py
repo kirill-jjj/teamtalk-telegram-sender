@@ -202,12 +202,7 @@ async def help_command_handler(
 ):
     is_telegram_admin = message.from_user.id in ADMIN_IDS_CACHE if message.from_user else False
 
-    help_text = build_help_message(
-        _,
-        platform="telegram",
-        is_tt_server_admin=False,
-        is_telegram_bot_admin=is_telegram_admin
-    )
+    help_text = build_help_message(_, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text, parse_mode="HTML")
 
 

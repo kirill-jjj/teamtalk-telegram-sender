@@ -53,13 +53,7 @@ def get_username_as_str(user_or_account: Union[TeamTalkUser, TeamTalkUserAccount
 
     return str(username) if username is not None else ""
 
-def build_help_message(
-    _: callable,
-    platform: str,
-    is_tt_server_admin: bool,
-    is_telegram_bot_admin: bool
-) -> str:
-    """Builds a contextual help message based on platform and user rights."""
+def build_help_message(_: callable, platform: str, is_telegram_admin: bool, is_teamtalk_admin: bool) -> str:
     parts = []
     if platform == "telegram":
         parts.append(_("<b>Available Commands:</b>"))
@@ -67,7 +61,7 @@ def build_help_message(
                        "/settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).\n"
                        "/help - Show this help message.\n"
                        "(Note: `/start` is used to initiate the bot and process deeplinks.)"))
-        if is_telegram_bot_admin:
+        if is_telegram_admin:
             parts.append(_("\n<b>Admin Commands:</b>"))
             parts.append(_("/kick - Kick a user from the server (via buttons).\n"
                            "/ban - Ban a user from the server (via buttons).\n"
@@ -77,7 +71,7 @@ def build_help_message(
         parts.append(_("/sub - Get a link to subscribe to notifications.\n"
                        "/unsub - Get a link to unsubscribe from notifications.\n"
                        "/help - Show help."))
-        if is_tt_server_admin:
+        if is_teamtalk_admin:
             parts.append(_("\nAdmin commands (MAIN_ADMIN from config only):"))
             parts.append(_("/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
                            "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."))
