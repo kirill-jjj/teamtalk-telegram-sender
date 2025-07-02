@@ -5,6 +5,7 @@ from typing import Callable
 from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
+from sqlalchemy.exc import SQLAlchemyError
 
 
 from bot.config import app_config
@@ -38,7 +39,7 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
                     logger.debug(f"User {chat_id} was likely already unsubscribed or not found (remove_subscriber returned False).")
                 USER_SETTINGS_CACHE.pop(chat_id, None)
                 logger.debug(f"Removed user {chat_id} from settings cache.")
-            except Exception as db_err:
+            except SQLAlchemyError as db_err:
                 logger.error(f"Failed to unsubscribe blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
             logger.error(f"Telegram API Forbidden error for chat_id {chat_id}: {error}")
@@ -58,7 +59,7 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
                     logger.debug(f"Removed user {chat_id} from settings cache after chat not found.")
                 else:
                     logger.debug(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
-            except Exception as db_cleanup_err:
+            except SQLAlchemyError as db_cleanup_err:
                 logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
         else:
             logger.error(f"Telegram API BadRequest (non 'chat not found') for chat_id {chat_id}: {error}")
