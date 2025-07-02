@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 from bot.config import app_config
-from bot.database.crud import delete_user_data_fully # Removed remove_subscriber
+from bot.database.crud import delete_user_data_fully
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
@@ -30,19 +30,14 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
     """
     if isinstance(error, TelegramForbiddenError):
         if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
-            # <<< ИЗМЕНЕНО: Обновляем лог, чтобы отразить полное удаление данных
             logger.warning(f"User {chat_id} blocked the bot or is deactivated. Deleting all user data...")
             try:
                 async with SessionFactory() as session:
-                    # <<< ИЗМЕНЕНО: Вызываем правильную, полную функцию удаления
                     success = await delete_user_data_fully(session, chat_id)
                 if success:
-                    # <<< ИЗМЕНЕНО: Обновляем лог
                     logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
                 else:
                     logger.error(f"Failed to delete data for blocked/deactivated user {chat_id}, though an attempt was made.")
-                # <<< УДАЛЕНО: pop из USER_SETTINGS_CACHE теперь происходит внутри delete_user_data_fully,
-                # поэтому дублировать здесь не нужно.
             except SQLAlchemyError as db_err:
                 logger.error(f"Failed to delete data for blocked/deactivated user {chat_id} from DB: {db_err}")
         else:
