@@ -168,43 +168,6 @@ async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> 
     # The caller (service layer) will be responsible for session.commit()
     return user_settings_deleted, subscribed_user_deleted
 
-
-async def delete_user_data_fully(session: AsyncSession, telegram_id: int, manage_cache: bool = True) -> bool:
-    """
-    Orchestrates deletion of all data for a user, including DB records and cache entries.
-    This function is now primarily a wrapper that will be replaced by the service layer function.
-    The manage_cache parameter is for transitional purposes.
-    """
-    # This local import is the code smell we are removing.
-    # It will be removed once the service layer is fully integrated.
-    if manage_cache:
-        from bot.core.user_settings import remove_user_settings_from_cache
-
-    logger.info(f"Attempting to delete all data for Telegram ID: {telegram_id} (via old delete_user_data_fully)")
-    try:
-        user_settings_deleted, subscribed_user_deleted = await _delete_user_data_from_db(session, telegram_id)
-
-        if not user_settings_deleted and not subscribed_user_deleted:
-            logger.info(f"No DB data found for Telegram ID {telegram_id}. Nothing to delete from DB.")
-            if manage_cache:
-                remove_user_settings_from_cache(telegram_id)
-                SUBSCRIBED_USERS_CACHE.discard(telegram_id)
-                logger.debug(f"Caches cleared for {telegram_id} despite no DB data.")
-            return True # Considered success if nothing was there to delete
-
-        await session.commit()
-        logger.debug(f"Committed DB deletions for {telegram_id}.")
-
-        if manage_cache:
-            remove_user_settings_from_cache(telegram_id)
-            SUBSCRIBED_USERS_CACHE.discard(telegram_id)
-            logger.info(f"Successfully deleted DB data and cleared caches for {telegram_id}.")
-        else:
-            logger.info(f"Successfully deleted DB data for {telegram_id}. Cache management skipped by caller.")
-
-        return True
-
-    except SQLAlchemyError as e:
-        logger.error(f"Error during data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
-        await session.rollback()
-        return False
+# The old delete_user_data_fully function has been removed.
+# Its responsibilities are now handled by bot.services.user_service.delete_full_user_profile
+# and the helper _delete_user_data_from_db above.
