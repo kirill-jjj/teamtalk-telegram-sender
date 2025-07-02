@@ -310,7 +310,14 @@ def create_subscriber_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     for subscriber in page_subscribers_info:
-        button_text = _("Delete {user_info}").format(user_info=subscriber.display_name)
+        user_info_parts = [subscriber.display_name]
+        if subscriber.teamtalk_username:
+            # Using a simple format, can be made a translatable string if more complex structure is needed
+            user_info_parts.append(f"TT: {html.escape(subscriber.teamtalk_username)}")
+
+        user_info_str = ", ".join(user_info_parts)
+        button_text = _("Delete {user_info_str}").format(user_info_str=user_info_str)
+
         builder.row(
             InlineKeyboardButton(
                 text=button_text,

@@ -396,10 +396,10 @@ msgstr "Не заблокирован"
 msgid "{username} (Status: {current_status})"
 msgstr "{username} (Статус: {current_status})"
 
-#: bot/telegram_bot/keyboards.py:310
+#: bot/telegram_bot/keyboards.py:317
 #, python-brace-format
-msgid "Delete {user_info}"
-msgstr "Удалить {user_info}"
+msgid "Delete {user_info_str}"
+msgstr "Удалить {user_info_str}"
 
 #: bot/telegram_bot/handlers/admin.py:29
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:65

@@ -61,16 +61,26 @@ async def _get_paginated_subscribers_info(
         return [], current_page_num, total_pages
 
     # Fetch chat info concurrently for the current page's IDs
-    tasks = [bot.get_chat(tg_id) for tg_id in page_ids_to_fetch]
-    chat_results = await asyncio.gather(*tasks, return_exceptions=True)
+    chat_info_tasks = [bot.get_chat(tg_id) for tg_id in page_ids_to_fetch]
+
+    # Fetch UserSettings concurrently for the current page's IDs
+    # Assuming USER_SETTINGS_CACHE is up-to-date or get_or_create_user_settings can be used.
+    # For simplicity here, let's fetch them. If performance is an issue, caching or a more complex query is needed.
+    # We need the UserSettings model for this.
+    from bot.models import UserSettings # Import UserSettings
+    user_settings_tasks = [session.get(UserSettings, tg_id) for tg_id in page_ids_to_fetch]
+
+    chat_results = await asyncio.gather(*chat_info_tasks, return_exceptions=True)
+    user_settings_results = await asyncio.gather(*user_settings_tasks, return_exceptions=True)
 
     page_subscribers_info = []
-    for telegram_id, result in zip(page_ids_to_fetch, chat_results):
+    for i, telegram_id in enumerate(page_ids_to_fetch):
         display_name = str(telegram_id)
-        if isinstance(result, Exception):
-            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id} via asyncio.gather: {result}")
+        chat_result = chat_results[i]
+        if isinstance(chat_result, Exception):
+            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id}: {chat_result}")
         else:
-            chat_info = result
+            chat_info = chat_result
             full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
             username_part = f" (@{chat_info.username})" if chat_info.username else ""
             if full_name:
@@ -78,7 +88,18 @@ async def _get_paginated_subscribers_info(
             elif chat_info.username:
                 display_name = f"@{chat_info.username}"
 
-        page_subscribers_info.append(SubscriberInfo(telegram_id=telegram_id, display_name=display_name))
+        tt_username: str | None = None
+        user_setting_result = user_settings_results[i]
+        if isinstance(user_setting_result, Exception):
+            logger.error(f"Could not fetch user settings for Telegram ID {telegram_id}: {user_setting_result}")
+        elif user_setting_result:
+            tt_username = user_setting_result.teamtalk_username
+
+        page_subscribers_info.append(SubscriberInfo(
+            telegram_id=telegram_id,
+            display_name=display_name,
+            teamtalk_username=tt_username
+        ))
 
     return page_subscribers_info, current_page_num, total_pages
 
