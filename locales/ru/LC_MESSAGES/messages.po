@@ -822,3 +822,7 @@ msgstr "⬅️ Назад к действиям"
 #: bot/telegram_bot/keyboards.py:543
 msgid "⬅️ Back to Manage Account"
 msgstr "⬅️ Назад к управлению аккаунтом"
+
+#: bot/telegram_bot/deeplink.py:107
+msgid "Your Telegram account is banned from using this service."
+msgstr "Ваш Telegram аккаунт заблокирован и не может использовать этот сервис."
