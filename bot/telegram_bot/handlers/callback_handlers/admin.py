@@ -48,8 +48,13 @@ async def _execute_tt_user_action(
     except PytalkException as e:
         logger.error(f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
         return False, _("An error occurred during the action on the user: {error}").format(error=str(e))
+    except (ValueError, TypeError, AttributeError) as e_data:
+        logger.error(f"Data error during '{action}' on TT user ID {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}: {e_data}", exc_info=True)
+        return False, _("An internal data error occurred processing the request.")
     except Exception as e:
-        logger.critical(f"CRITICAL: Unexpected error during '{action}' on TT user ID {user_to_act_on.id}: {e}", exc_info=True)
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        logger.critical(f"CRITICAL: Unexpected error during '{action}' on TT user ID {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}: {e}", exc_info=True)
         return False, _("An unexpected error occurred. Administrator has been notified.")
 
 

@@ -3,6 +3,7 @@ import logging
 from typing import Any, Callable, Coroutine, Optional
 
 from aiogram.types import Message
+from sqlalchemy.exc import SQLAlchemyError # Added for specific exception handling
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
@@ -69,9 +70,14 @@ async def _execute_deeplink_action(
             # Pass user_settings to other handlers
             return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings)
 
+    except (SQLAlchemyError, ValueError) as e_handler:
+        logger.error(f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True)
+        return _("An error occurred processing your request.")
     except Exception as e:
-        logger.error(f"Error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
-        return _("An error occurred.")
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        logger.critical(f"Unexpected critical error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
+        return _("An unexpected critical error occurred.")
 
 
 async def _handle_unsubscribe_deeplink(
