@@ -73,11 +73,7 @@ async def _execute_deeplink_action(
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.error(f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True)
         return _("An error occurred processing your request.")
-    except Exception as e:
-        if isinstance(e, (KeyboardInterrupt, SystemExit)):
-            raise
-        logger.critical(f"Unexpected critical error executing deeplink handler for action '{action_enum_member}', token {token}: {e}", exc_info=True)
-        return _("An unexpected critical error occurred.")
+    # Broad Exception block removed to allow propagation to global error handler
 
 
 async def _handle_unsubscribe_deeplink(
