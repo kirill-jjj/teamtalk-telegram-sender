@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-07-03 08:08+0000\n"
-"PO-Revision-Date: 2025-07-03 08:40+0000\n" # Updated time
+"PO-Revision-Date: 2025-07-03 10:05+0000\n" # Updated revision date
 "Last-Translator: Jules <ai-agent@example.com>\n"
 "Language: uk\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -877,3 +877,8 @@ msgstr "невідоме налаштування"
 #, python-brace-format
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Налаштування підписки оновлено на: {setting_name}"
+
+# Added for global error handler
+#: sender.py:XYZ (line number will be updated by pybabel extract)
+msgid "An unexpected error occurred. The administrator has been notified. Please try again later."
+msgstr "Сталася непередбачена помилка. Адміністратора вже сповіщено. Будь ласка, спробуйте пізніше."

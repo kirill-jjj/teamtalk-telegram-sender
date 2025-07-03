@@ -9,8 +9,8 @@ msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: YOUR@EMAIL.HERE\n"
 "POT-Creation-Date: 2025-07-02 13:30+0000\n"
-"PO-Revision-Date: 2025-07-02 13:30+0000\n"
-"Last-Translator: YOUR NAME <YOUR@EMAIL.HERE>\n"
+"PO-Revision-Date: 2025-07-03 10:10+0000\n" # Updated revision date
+"Last-Translator: Jules <ai-agent@example.com>\n"
 "Language: en\n"
 "Language-Team: English <en@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -19,9 +19,14 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: bot/core/languages.py:0
+#: bot/core/languages.py:49 # Assuming this is the correct reference
 msgid "language_native_name"
 msgstr "English"
+
+# Added for global error handler
+#: sender.py:XYZ (line number will be updated by pybabel extract)
+msgid "An unexpected error occurred. The administrator has been notified. Please try again later."
+msgstr "An unexpected error occurred. The administrator has been notified. Please try again later."
 
 # Add other English msgids here if you want to explicitly define them,
 # otherwise, gettext will fall back to msgid for English.
