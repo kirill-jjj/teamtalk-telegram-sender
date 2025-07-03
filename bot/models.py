@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 
 from bot.core.enums import DeeplinkAction
-from bot.core.languages import DEFAULT_LANGUAGE_CODE # Import DEFAULT_LANGUAGE_CODE
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 
 class NotificationSetting(str, enum.Enum):
@@ -23,7 +23,7 @@ class UserSettings(SQLModel, table=True):
     __tablename__ = "user_settings"
 
     telegram_id: int = Field(default=None, primary_key=True, index=True)
-    language_code: str = Field(default=DEFAULT_LANGUAGE_CODE, nullable=False) # Changed from language: Language
+    language_code: str = Field(default=DEFAULT_LANGUAGE_CODE, nullable=False)
     notification_settings: NotificationSetting = Field(default=NotificationSetting.ALL, nullable=False)
     mute_list_mode: "MuteListMode" = Field(default=MuteListMode.blacklist, nullable=False)
     teamtalk_username: Optional[str] = Field(default=None, index=True)

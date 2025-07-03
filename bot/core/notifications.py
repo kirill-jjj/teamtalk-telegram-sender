@@ -15,7 +15,7 @@ from bot.database.engine import SessionFactory
 from bot.state import SUBSCRIBED_USERS_CACHE
 from bot.models import UserSettings, MutedUser, NotificationSetting, MuteListMode
 from bot.telegram_bot.utils import send_telegram_messages_to_list
-from bot.telegram_bot.bot_instances import tg_bot_event # Added import
+from bot.telegram_bot.bot_instances import tg_bot_event
 from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
@@ -157,7 +157,7 @@ async def send_join_leave_notification_logic(
     server_name = get_effective_server_name(tt_instance, _log_markup_translator)
 
     await send_telegram_messages_to_list(
-        bot_instance_to_use=tg_bot_event, # Теперь передаем сам объект бота
+        bot_instance_to_use=tg_bot_event,
         chat_ids=recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code

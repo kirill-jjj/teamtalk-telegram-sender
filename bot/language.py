@@ -1,6 +1,6 @@
 import gettext
 from pathlib import Path
-from bot.core.languages import DEFAULT_LANGUAGE_CODE # Import DEFAULT_LANGUAGE_CODE
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 LOCALE_DIR = Path(__file__).parent.parent.joinpath("locales")
 DOMAIN = "messages"
@@ -25,11 +25,11 @@ def get_translator(language_code: str = DEFAULT_LANGUAGE_CODE) -> gettext.GNUTra
     except FileNotFoundError:
         # If requested language is not found, try falling back to default
         if language_code != DEFAULT_LANGUAGE_CODE:
-            print(f"Warning: Language '{language_code}' not found. Falling back to default '{DEFAULT_LANGUAGE_CODE}'.") # Replace with logger
+            print(f"Warning: Language '{language_code}' not found. Falling back to default '{DEFAULT_LANGUAGE_CODE}'.")
             return get_translator(DEFAULT_LANGUAGE_CODE) # Recursive call for default
         else:
             # If default language itself is not found, use NullTranslations
-            print(f"Error: Default language '{DEFAULT_LANGUAGE_CODE}' not found. Using NullTranslations.") # Replace with logger
+            print(f"Error: Default language '{DEFAULT_LANGUAGE_CODE}' not found. Using NullTranslations.")
             null_trans = gettext.NullTranslations()
             _TRANSLATOR_CACHE[language_code] = null_trans # Cache NullTranslations for this code
             return null_trans

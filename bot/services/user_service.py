@@ -37,4 +37,3 @@ async def delete_full_user_profile(session: AsyncSession, telegram_id: int) -> b
         await session.rollback()
         logger.error(f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.", exc_info=True)
         return False
-    # Removed broad Exception catch: Other unexpected errors will propagate to the global error handler.

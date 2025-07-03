@@ -1,4 +1,3 @@
-# bot/core/languages.py
 import os
 import gettext
 from typing import List, Dict, TypedDict
@@ -26,7 +25,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
     discovered: List[LanguageInfo] = []
     if not os.path.isdir(locales_path):
         # Log an error or handle missing locales directory
-        print(f"Error: Locales directory not found at {locales_path}") # Replace with logger
+        print(f"Error: Locales directory not found at {locales_path}")
         return discovered
 
     for lang_code in os.listdir(locales_path):
@@ -49,14 +48,14 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
                 if native_name_translated and native_name_translated != "language_native_name":
                     native_name = native_name_translated
                 else:
-                    print(f"Warning: 'language_native_name' not translated for {lang_code}, using code as name.") # Replace with logger
+                    print(f"Warning: 'language_native_name' not translated for {lang_code}, using code as name.")
             except FileNotFoundError:
                 # This means .mo file was found by os.path.isfile but gettext couldn't load it.
                 # This shouldn't typically happen if the .mo check passes.
-                print(f"Warning: Could not load translations for {lang_code} despite .mo file presence.") # Replace with logger
+                print(f"Warning: Could not load translations for {lang_code} despite .mo file presence.")
             except Exception as e:
                 # Catch other potential errors during gettext loading or translation
-                print(f"Error loading native name for {lang_code}: {e}") # Replace with logger
+                print(f"Error loading native name for {lang_code}: {e}")
 
             discovered.append({"code": lang_code, "native_name": native_name})
 
@@ -64,7 +63,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
     if not any(lang['code'] == DEFAULT_LANGUAGE_CODE for lang in discovered):
         # This fallback assumes English is always available and its native name is "English"
         # It's better if "en" is always properly discovered via its .po file.
-        print(f"Warning: Default language '{DEFAULT_LANGUAGE_CODE}' not discovered. Adding manually.") # Replace with logger
+        print(f"Warning: Default language '{DEFAULT_LANGUAGE_CODE}' not discovered. Adding manually.")
         discovered.append({"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}) # Fallback native name
 
     # Sort languages by native name for consistent display in UI
@@ -72,17 +71,3 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
 
     return discovered
 
-# Populate at module load time.
-# This will be replaced by a call from sender.py during startup.
-# For now, this helps with immediate availability for other modules that might import it.
-# However, it's better to explicitly initialize this from the main application entry point.
-# AVAILABLE_LANGUAGES_DATA = discover_languages()
-# print(f"Available languages discovered: {AVAILABLE_LANGUAGES_DATA}") # For debugging, replace with logger
-
-
-# The old Language enum can be removed or kept for specific internal references if needed,
-# but the primary source of languages will be AVAILABLE_LANGUAGES_DATA.
-# For now, let's comment it out to ensure we transition away from it.
-# class Language(str, Enum):
-#     ENGLISH = "en"
-#     RUSSIAN = "ru"

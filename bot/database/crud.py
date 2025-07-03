@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, SQLModel
 
 from bot.core.enums import DeeplinkAction
-from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList # Added BanList import
+from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList
 from bot.config import app_config
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
@@ -169,10 +169,6 @@ async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> 
     # The caller (service layer) will be responsible for session.commit()
     return user_settings_deleted, subscribed_user_deleted
 
-# The old delete_user_data_fully function has been removed.
-# Its responsibilities are now handled by bot.services.user_service.delete_full_user_profile
-# and the helper _delete_user_data_from_db above.
-
 
 # --- BanList CRUD Functions ---
 
@@ -190,7 +186,7 @@ async def add_to_ban_list(
     # or allow multiple ban entries if that's the logic (e.g. different reasons/times)
     # For now, let's assume we add a new entry regardless.
 
-    ban_entry = BanList( # Changed from app_config.BanList
+    ban_entry = BanList(
         telegram_id=telegram_id,
         teamtalk_username=teamtalk_username,
         ban_reason=reason,
@@ -202,28 +198,28 @@ async def add_to_ban_list(
     return added
 
 async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool:
-    ban_entry = await session.get(BanList, ban_id) # Changed from app_config.BanList
+    ban_entry = await session.get(BanList, ban_id)
     removed = await db_remove_generic(session, ban_entry)
     if removed:
         logger.info(f"Removed from ban list by id: {ban_id}")
     return removed
 
 async def is_telegram_id_banned(session: AsyncSession, telegram_id: int) -> bool:
-    statement = select(BanList).where(BanList.telegram_id == telegram_id) # Changed from app_config.BanList
+    statement = select(BanList).where(BanList.telegram_id == telegram_id)
     result = await session.execute(statement)
     return result.scalars().first() is not None
 
 async def is_teamtalk_username_banned(session: AsyncSession, teamtalk_username: str) -> bool:
-    statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username) # Changed from app_config.BanList
+    statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
     result = await session.execute(statement)
     return result.scalars().first() is not None
 
-async def get_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: int) -> list[BanList]: # Changed from app_config.BanList
-    statement = select(BanList).where(BanList.telegram_id == telegram_id) # Changed from app_config.BanList
+async def get_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: int) -> list[BanList]:
+    statement = select(BanList).where(BanList.telegram_id == telegram_id)
     result = await session.execute(statement)
     return result.scalars().all()
 
-async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_username: str) -> list[BanList]: # Changed from app_config.BanList
-    statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username) # Changed from app_config.BanList
+async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_username: str) -> list[BanList]:
+    statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
     result = await session.execute(statement)
     return result.scalars().all()
