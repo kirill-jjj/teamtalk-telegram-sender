@@ -133,7 +133,6 @@ async def handle_subscriber_action(
                 try:
                     # Find user by username and ban. This requires pytalk SDK for ban by username/IP.
                     # For now, we assume ban is DB-side for future /sub checks.
-                    # tt_instance.banUser(user_id, ban_ip=True) # banUser typically needs user_id
                     logger.info(f"Conceptual TeamTalk ban for {tt_username_to_ban} (not implemented in this step)")
                 except Exception as e:
                     logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban}: {e}")

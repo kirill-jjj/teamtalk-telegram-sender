@@ -8,7 +8,6 @@ from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_lan
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
-# Import new language data structures from bot.core.languages
 from bot.core.languages import AVAILABLE_LANGUAGES_DATA, DEFAULT_LANGUAGE_CODE
 from ._helpers import process_setting_update, safe_edit_text
 
@@ -44,7 +43,7 @@ async def cq_set_language(
     if callback_data.lang_code is None:
         # Should not happen if buttons always provide lang_code
         logger.warning("LanguageCallback received with lang_code=None")
-        await callback_query.answer("Invalid language selection.", show_alert=True) # This should be translated
+        await callback_query.answer("Invalid language selection.", show_alert=True)
         return
 
     managed_user_settings = await session.merge(user_settings)
@@ -59,7 +58,7 @@ async def cq_set_language(
     selected_lang_info = next((lang for lang in AVAILABLE_LANGUAGES_DATA if lang["code"] == new_lang_code_str), None)
     if not selected_lang_info:
         logger.error(f"Attempt to set unknown language code: {new_lang_code_str}")
-        await callback_query.answer("Selected language is not available.", show_alert=True) # This should be translated
+        await callback_query.answer("Selected language is not available.", show_alert=True)
         return
 
     new_lang_translator_obj = get_translator(new_lang_code_str)

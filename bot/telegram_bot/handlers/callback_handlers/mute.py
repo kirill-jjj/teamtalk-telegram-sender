@@ -328,11 +328,13 @@ async def cq_set_mute_mode_action(
     mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
 
-    # Подготавливаем текст и разметку здесь
-    # managed_user_settings reflects the new mode because update_logic is called by process_setting_update before UI refresh.
+    # Prepare text and markup for UI refresh.
+    # Note: managed_user_settings already reflects the new mode at this point,
+    # as update_logic (which modifies it) is called by process_setting_update
+    # before its UI refresh logic that uses new_text and new_markup.
     updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings)
     current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.")
-    if managed_user_settings.mute_list_mode == MuteListMode.whitelist: # This will reflect the new mode
+    if managed_user_settings.mute_list_mode == MuteListMode.whitelist:
         current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
     menu_text = f"{_('Manage Mute List')}\n\n{current_mode_desc}"
 
