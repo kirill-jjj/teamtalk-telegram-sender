@@ -155,7 +155,7 @@ async def send_telegram_messages_to_list(
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_instance_to_use, # Теперь используется напрямую
             chat_id=chat_id,
-            language=language,
+            language=language_code, # Corrected variable name
             reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online,
             text=text,
