@@ -26,7 +26,7 @@ from bot.constants import (
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 from aiogram.filters import CommandObject
-from bot.core.languages import Language
+from bot.core.languages import DEFAULT_LANGUAGE_CODE # Changed import
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
@@ -300,14 +300,15 @@ async def on_message(message: TeamTalkMessage):
 
     logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'." )
 
-    bot_reply_language = Language.ENGLISH.value
+    bot_reply_language_code = DEFAULT_LANGUAGE_CODE # Use new constant
     if app_config.TG_ADMIN_CHAT_ID is not None:
         admin_chat_id_int = app_config.TG_ADMIN_CHAT_ID
         admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
         if admin_settings:
-            bot_reply_language = admin_settings.language.value
+            # UserSettings model now has language_code: str
+            bot_reply_language_code = admin_settings.language_code
 
-    translator = get_translator(bot_reply_language)
+    translator = get_translator(bot_reply_language_code)
 
     command_parts = message_content.split(maxsplit=1)
     command_name = command_parts[0].lower()

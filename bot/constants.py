@@ -4,9 +4,9 @@ MUTE_ACTION_UNMUTE = "unmute"
 NOTIFICATION_EVENT_JOIN = "join"
 NOTIFICATION_EVENT_LEAVE = "leave"
 
-from bot.core.languages import Language
+from bot.core.languages import DEFAULT_LANGUAGE_CODE # Changed import
 
-DEFAULT_LANGUAGE = Language.ENGLISH.value
+DEFAULT_LANGUAGE = DEFAULT_LANGUAGE_CODE # Use the new constant
 
 TEAMTALK_PRIVATE_MESSAGE_TYPE = 1
 
