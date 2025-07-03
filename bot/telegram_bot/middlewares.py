@@ -53,7 +53,8 @@ class UserSettingsMiddleware(BaseMiddleware):
             return
 
         data["user_settings"] = user_settings
-        translator = get_translator(user_settings.language)
+    # UserSettings model now has language_code: str
+    translator = get_translator(user_settings.language_code)
         data["_"] = translator.gettext
         data["translator"] = translator
 
