@@ -8,7 +8,7 @@ from bot.core.enums import (
     UserListAction,
     ToggleMuteSpecificAction,
     SubscriberListAction,
-    SubscriberAction, # <-- Добавьте новый Enum
+    SubscriberAction,
     ManageTTAccountAction
 )
 from bot.models import MuteListMode
@@ -90,13 +90,13 @@ class ViewSubscriberCallback(CallbackData, prefix=CB_PREFIX_VIEW_SUB):
 
 # For actions within a subscriber's detail menu
 class SubscriberActionCallback(CallbackData, prefix=CB_PREFIX_SUB_ACTION):
-    action: SubscriberAction  # <-- Укажите тип Enum вместо str
+    action: SubscriberAction
     target_telegram_id: int
     page: int # To return to the main subscriber list page
 
 # For managing a subscriber's TeamTalk account link
 class ManageTTAccountCallback(CallbackData, prefix=CB_PREFIX_MANAGE_TT_ACC):
-    action: ManageTTAccountAction  # <-- Укажите тип Enum
+    action: ManageTTAccountAction
     target_telegram_id: int
     page: int # To return to the main subscriber list page
 

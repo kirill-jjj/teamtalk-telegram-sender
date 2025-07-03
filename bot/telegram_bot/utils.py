@@ -8,14 +8,12 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, Telegra
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import app_config
-# from bot.database.crud import delete_user_data_fully # No longer used directly
-from bot.services import user_service # Import the new service
+from bot.services import user_service
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
-# Removed: from bot.core.languages import Language
 from bot.constants import (
-    DEFAULT_LANGUAGE, # This is now DEFAULT_LANGUAGE_CODE from constants
+    DEFAULT_LANGUAGE,
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 
@@ -119,10 +117,10 @@ async def send_telegram_message_individual(
 
 
 async def send_telegram_messages_to_list(
-    bot_instance_to_use: Bot, # Теперь принимаем сам объект бота
+    bot_instance_to_use: Bot,
     chat_ids: list[int],
     text_generator: Callable[[str], str], # Takes language code, returns text
-        reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
+    reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
 ):
     """
     Sends messages to a list of chat_ids.
@@ -153,9 +151,9 @@ async def send_telegram_messages_to_list(
                 individual_tt_user_is_online = True
 
         tasks_list.append(send_telegram_message_individual(
-            bot_instance=bot_instance_to_use, # Теперь используется напрямую
+            bot_instance=bot_instance_to_use,
             chat_id=chat_id,
-            language=language_code, # Corrected variable name
+            language=language_code,
             reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online,
             text=text,

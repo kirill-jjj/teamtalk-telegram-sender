@@ -12,8 +12,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.telegram_bot.models import SubscriberInfo
 
-# Removed: from bot.core.languages import Language
-# AVAILABLE_LANGUAGES_DATA will be imported locally in create_language_selection_keyboard
 from bot.core.enums import (
     AdminAction,
     SettingsNavAction,
@@ -41,7 +39,7 @@ from bot.telegram_bot.callback_data import (
     ViewSubscriberCallback,
     SubscriberActionCallback,
     ManageTTAccountCallback,
-    LinkTTAccountChosenCallback # Added LinkTTAccountChosenCallback
+    LinkTTAccountChosenCallback
 )
 from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
@@ -412,25 +410,25 @@ def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuil
         callback_data=MenuCallback(command="who").pack()
     )
     builder.button(
-        text=_("⚙️ Settings"),  # Already translatable, but good to confirm
+        text=_("⚙️ Settings"),
         callback_data=MenuCallback(command="settings").pack()
     )
     builder.button(
-        text=_("❓ Help"),  # Already translatable, but good to confirm
+        text=_("❓ Help"),
         callback_data=MenuCallback(command="help").pack()
     )
 
     if is_admin:
         builder.button(
-            text=_("👢 Kick User"),  # Already translatable
+            text=_("👢 Kick User"),
             callback_data=MenuCallback(command="kick").pack()
         )
         builder.button(
-            text=_("🚫 Ban User"),  # Already translatable
+            text=_("🚫 Ban User"),
             callback_data=MenuCallback(command="ban").pack()
         )
         builder.button(
-            text=_("👥 Subscribers"),  # Already translatable
+            text=_("👥 Subscribers"),
             callback_data=MenuCallback(command="subscribers").pack()
         )
 
