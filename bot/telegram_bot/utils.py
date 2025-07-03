@@ -3,7 +3,7 @@ import asyncio
 import pytalk
 from typing import Callable
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -160,3 +160,88 @@ async def send_telegram_messages_to_list(
             parse_mode="HTML"
         ))
     await asyncio.gather(*tasks_list)
+
+
+async def send_or_edit_paginated_list(
+    target: "Message | CallbackQuery", # type: ignore
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    bot: Bot | None = None, # Required if target is Message, for reply
+    **kwargs
+) -> None:
+    """
+    Sends a new message or edits an existing one with paginated content.
+
+    :param target: The aiogram Message or CallbackQuery object.
+    :param text: The text content for the message.
+    :param reply_markup: The InlineKeyboardMarkup for the message.
+    :param bot: The Bot instance, required if target is a Message.
+    :param kwargs: Additional arguments to pass to send_message or edit_message_text.
+    """
+    answered_with_alert = False
+    if hasattr(target, 'message') and target.message: # Handles CallbackQuery
+        try:
+            await target.message.edit_text(
+                text=text,
+                reply_markup=reply_markup,
+                **kwargs
+            )
+        except TelegramBadRequest as e:
+            if "message is not modified" in str(e).lower():
+                logger.debug(f"Message not modified for chat_id {target.message.chat.id}, skipping edit.")
+                # Try to answer the callback query to remove the "loading" state
+                if hasattr(target, 'answer'):
+                    try:
+                        await target.answer()
+                    except Exception as answer_e: # Could be already answered
+                        logger.warning(f"Failed to answer CbQ after 'message not modified': {answer_e}")
+            else: # Other TelegramBadRequest
+                logger.error(f"Error editing message for chat_id {target.message.chat.id}: {e}", exc_info=True)
+                if hasattr(target, 'answer'):
+                    try:
+                        await target.answer("Error updating list.", show_alert=True) # type: ignore
+                        answered_with_alert = True
+                    except Exception as answer_e:
+                        logger.warning(f"Failed to answer CbQ with alert after edit error: {answer_e}")
+        except Exception as e: # Other errors during edit
+            logger.error(f"Generic error editing message for chat_id {target.message.chat.id}: {e}", exc_info=True)
+            if hasattr(target, 'answer'):
+                try:
+                    await target.answer("Error updating list.", show_alert=True) # type: ignore
+                    answered_with_alert = True
+                except Exception as answer_e:
+                    logger.warning(f"Failed to answer CbQ with alert after generic edit error: {answer_e}")
+
+    elif hasattr(target, 'reply') and bot: # Handles Message
+        if target: # Ensure target (Message object) is not None
+            try:
+                await target.reply(
+                    text=text,
+                    reply_markup=reply_markup,
+                    **kwargs
+                )
+            except Exception as e: # Catch potential errors during reply
+                logger.error(f"Error replying to message for chat_id {target.chat.id}: {e}", exc_info=True)
+        else:
+            logger.error("Attempted to reply to a None message object.")
+
+    else:
+        logger.error(
+            "Invalid target type for send_or_edit_paginated_list. "
+            "Must be Message or CallbackQuery. If Message, bot instance must be provided."
+        )
+
+    # If it's a CbQ and edit was successful (or not modified) and we haven't shown an alert
+    if hasattr(target, 'answer') and not answered_with_alert:
+        try:
+            # This might fail if already answered by the "message not modified" block, which is fine.
+            await target.answer() # type: ignore
+        except TelegramAPIError as e:
+            cbq_id = target.id if hasattr(target, 'id') else 'N/A'
+            if "query is too old" in str(e).lower() or "query id is invalid" in str(e).lower():
+                logger.debug(f"CbQ {cbq_id} likely already answered or too old.")
+            else:
+                logger.warning(f"Failed to answer CbQ {cbq_id} at the end of send_or_edit: {e}")
+        except Exception as e:
+            cbq_id = target.id if hasattr(target, 'id') else 'N/A'
+            logger.warning(f"Generic error answering CbQ {cbq_id} at the end of send_or_edit: {e}")

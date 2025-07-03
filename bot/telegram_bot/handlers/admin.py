@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.state import ADMIN_IDS_CACHE
 from bot.core.utils import get_tt_user_display_name, get_online_teamtalk_users
 from bot.telegram_bot.keyboards import create_user_selection_keyboard, create_subscriber_list_keyboard
+from bot.telegram_bot.utils import send_or_edit_paginated_list
+from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware # Import the middleware
 
 from bot.core.enums import AdminAction
 from pytalk.instance import TeamTalkInstance
@@ -15,16 +17,22 @@ from .callback_handlers.subscriber_list import _get_paginated_subscribers_info
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
+# Apply middleware to message handlers on this router that need TT connection
+admin_router.message.middleware(TeamTalkConnectionMiddleware())
 
 
 async def _show_user_buttons(
     message: Message,
     command_type: AdminAction,
     _: callable,
-    tt_instance: TeamTalkInstance | None
+    tt_instance: TeamTalkInstance | None # tt_instance is now guaranteed to be connected by middleware
 ):
-    if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await message.reply(_("TeamTalk bot is not connected."))
+    # Middleware now handles the tt_instance connection check.
+    # We can assert tt_instance is not None if needed for type checkers,
+    # or trust the middleware has done its job.
+    if not tt_instance: # Should not happen if middleware is effective
+        logger.error("tt_instance is None in _show_user_buttons despite middleware.")
+        await message.reply(_("An unexpected error occurred with TeamTalk connection."))
         return
 
     my_user_id = tt_instance.getMyUserID()
@@ -91,7 +99,11 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     )
 
     if total_pages == 0 or not page_subscribers_info:
-        await message.reply(_("No subscribers found."))
+        await send_or_edit_paginated_list(
+            target=message,
+            text=_("No subscribers found."),
+            bot=bot
+        )
         return
 
     keyboard = create_subscriber_list_keyboard(
@@ -101,10 +113,12 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
         total_pages=total_pages
     )
 
-    await message.reply(
-        _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+    await send_or_edit_paginated_list(
+        target=message,
+        text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
             current_page_display=current_page + 1,
             total_pages=total_pages
         ),
-        reply_markup=keyboard
+        reply_markup=keyboard,
+        bot=bot
     )
