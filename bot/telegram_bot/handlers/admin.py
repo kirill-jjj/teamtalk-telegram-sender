@@ -12,7 +12,9 @@ from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware # Import t
 
 from bot.core.enums import AdminAction
 from pytalk.instance import TeamTalkInstance
-from .callback_handlers.subscriber_list import _get_paginated_subscribers_info
+# Removed: from .callback_handlers.subscriber_list import _get_paginated_subscribers_info
+# Added:
+from .callback_handlers.list_utils import _get_paginated_subscribers_info, _show_subscriber_list_page
 
 logger = logging.getLogger(__name__)
 
@@ -94,31 +96,4 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
     Handles the /subscribers command to display a paginated list of subscribed users
     with their names and usernames if available. Admins only.
     """
-    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-        session, bot, requested_page=0
-    )
-
-    if total_pages == 0 or not page_subscribers_info:
-        await send_or_edit_paginated_list(
-            target=message,
-            text=_("No subscribers found."),
-            bot=bot
-        )
-        return
-
-    keyboard = create_subscriber_list_keyboard(
-        _,
-        page_subscribers_info=page_subscribers_info,
-        current_page=current_page,
-        total_pages=total_pages
-    )
-
-    await send_or_edit_paginated_list(
-        target=message,
-        text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-            current_page_display=current_page + 1,
-            total_pages=total_pages
-        ),
-        reply_markup=keyboard,
-        bot=bot
-    )
+    await _show_subscriber_list_page(message, session, bot, _, page=0)

@@ -13,7 +13,7 @@ from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.telegram_bot.utils import send_or_edit_paginated_list
 from bot.core.enums import SubscriberListAction
 from bot.state import ADMIN_IDS_CACHE
-from .list_utils import _get_paginated_subscribers_info # Import from list_utils
+from .list_utils import _get_paginated_subscribers_info, _show_subscriber_list_page # Import from list_utils
 
 logger = logging.getLogger(__name__)
 
@@ -47,31 +47,10 @@ async def handle_subscriber_list_actions(
         else:
             await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True)
 
-        page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-            session, bot, page_from_callback
-        )
-
-        if total_pages == 0 or not page_subscribers_info:
-            await send_or_edit_paginated_list(
-                target=query,
-                text=_("No subscribers found.")
-            )
-        else:
-            new_keyboard = create_subscriber_list_keyboard(
-                _,
-                page_subscribers_info=page_subscribers_info,
-                current_page=current_page,
-                total_pages=total_pages
-            )
-            await send_or_edit_paginated_list(
-                target=query,
-                text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-                    current_page_display=current_page + 1,
-                    total_pages=total_pages
-                ),
-                reply_markup=new_keyboard
-            )
-        # query.answer() is handled by send_or_edit_paginated_list for non-alert answers
+        # Update the list using the new helper function
+        await _show_subscriber_list_page(query, session, bot, _, page=page_from_callback)
+        # query.answer() is handled by send_or_edit_paginated_list (called within _show_subscriber_list_page)
+        # or by the explicit calls to query.answer above for alerts.
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -79,31 +58,10 @@ async def handle_subscriber_list_actions(
             await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
-        page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-            session, bot, requested_page
-        )
-
-        if total_pages == 0 or not page_subscribers_info:
-            await send_or_edit_paginated_list(
-                target=query,
-                text=_("No subscribers found.")
-            )
-        else:
-            keyboard = create_subscriber_list_keyboard(
-                _,
-                page_subscribers_info=page_subscribers_info,
-                current_page=current_page,
-                total_pages=total_pages
-            )
-            await send_or_edit_paginated_list(
-                target=query,
-                text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-                    current_page_display=current_page + 1,
-                    total_pages=total_pages
-                ),
-                reply_markup=keyboard
-            )
-        # query.answer() is handled by send_or_edit_paginated_list for non-alert answers
+        # Update the list using the new helper function
+        await _show_subscriber_list_page(query, session, bot, _, page=requested_page)
+        # query.answer() is handled by send_or_edit_paginated_list (called within _show_subscriber_list_page)
+        # or by the explicit call to query.answer above for the alert.
     else:
         # This case should ideally not be reached if action is always a valid enum member.
         # Logging defensively.

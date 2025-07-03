@@ -93,3 +93,45 @@ async def _get_paginated_subscribers_info(
         ))
 
     return page_subscribers_info, current_page_num, total_pages
+
+
+async def _show_subscriber_list_page(
+    target: "Message | CallbackQuery", # Use quotes for forward reference if Message/CallbackQuery not imported
+    session: AsyncSession,
+    bot: Bot,
+    _: callable,
+    page: int = 0
+):
+    """Fetches and displays a specific page of the subscriber list."""
+    from aiogram.types import Message, CallbackQuery # Local import for type hint
+    from bot.telegram_bot.utils import send_or_edit_paginated_list # Local import
+    from bot.telegram_bot.keyboards import create_subscriber_list_keyboard # Local import
+
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
+        session, bot, requested_page=page
+    )
+
+    if total_pages == 0 or not page_subscribers_info:
+        await send_or_edit_paginated_list(
+            target=target,
+            text=_("No subscribers found."),
+            bot=bot
+        )
+        return
+
+    keyboard = create_subscriber_list_keyboard(
+        _,
+        page_subscribers_info=page_subscribers_info,
+        current_page=current_page,
+        total_pages=total_pages
+    )
+
+    await send_or_edit_paginated_list(
+        target=target,
+        text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+            current_page_display=current_page + 1,
+            total_pages=total_pages
+        ),
+        reply_markup=keyboard,
+        bot=bot
+    )
