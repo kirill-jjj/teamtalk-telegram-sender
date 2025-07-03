@@ -255,10 +255,9 @@ async def on_my_login(server: PytalkServer):
     except TimeoutError as e_timeout_join:
          logger.error(f"TimeoutError during channel operations for '{target_channel_name_log}': {e_timeout_join}.", exc_info=True)
          initiate_reconnect_task(tt_instance)
-    except PytalkException as e_pytalk_join:
+    except TeamTalkException as e_pytalk_join: # Corrected to direct import
         logger.error(f"Pytalk specific error joining channel '{target_channel_name_log}': {e_pytalk_join}.", exc_info=True)
         initiate_reconnect_task(tt_instance)
-    # Removed broad Exception catch here as per audit
 
 
 @tt_bot_module.tt_bot.event
@@ -299,12 +298,11 @@ async def on_message(message: TeamTalkMessage):
 
     logger.debug(f"Received private TT message from {sender_username}: '{message_content[:100]}...'." )
 
-    bot_reply_language_code = DEFAULT_LANGUAGE_CODE # Use new constant
+    bot_reply_language_code = DEFAULT_LANGUAGE_CODE
     if app_config.TG_ADMIN_CHAT_ID is not None:
         admin_chat_id_int = app_config.TG_ADMIN_CHAT_ID
         admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id_int)
         if admin_settings:
-            # UserSettings model now has language_code: str
             bot_reply_language_code = admin_settings.language_code
 
     translator = get_translator(bot_reply_language_code)

@@ -12,11 +12,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # For /who command
 
-from aiogram.exceptions import TelegramAPIError # Added for message deletion
+from aiogram.exceptions import TelegramAPIError
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
 from bot.telegram_bot.models import WhoUser, WhoChannelGroup
-from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_main_menu_keyboard # Added create_main_menu_keyboard
+from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_main_menu_keyboard
 from bot.core.utils import get_tt_user_display_name
 from bot.state import ADMIN_IDS_CACHE
 from bot.constants import (
@@ -245,7 +245,7 @@ async def menu_command_handler(
 
     try:
         await message.answer(
-            text=_("Main Menu:"),  # Ensure this is translatable
+            text=_("Main Menu:"),
             reply_markup=menu_builder.as_markup()
         )
     except TelegramAPIError as e:

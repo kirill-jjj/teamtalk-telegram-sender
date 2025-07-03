@@ -1,5 +1,5 @@
 import logging
-import gettext # Added for type hinting
+import gettext
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -19,7 +19,7 @@ async def menu_who_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     tt_instance: TeamTalkInstance | None,
-    translator: "gettext.GNUTranslations"  # Changed from _: callable
+    translator: "gettext.GNUTranslations"
 ):
     """Handles the 'Who is online?' menu button."""
     if not query.message:
@@ -35,7 +35,7 @@ async def menu_who_handler(
 async def menu_help_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations"  # Changed from _: callable
+    translator: "gettext.GNUTranslations"
 ):
     """Handles the 'Help' menu button."""
     if not query.message:
@@ -50,7 +50,7 @@ async def menu_help_handler(
 async def menu_settings_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations"  # Changed from _: callable
+    translator: "gettext.GNUTranslations"
 ):
     """Handles the 'Settings' menu button."""
     if not query.message:
@@ -65,7 +65,7 @@ async def menu_settings_handler(
 async def menu_kick_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Changed from _: callable
+    translator: "gettext.GNUTranslations",
     tt_instance: TeamTalkInstance | None
 ):
     """Handles the 'Kick User' menu button."""
@@ -81,7 +81,7 @@ async def menu_kick_handler(
 async def menu_ban_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Changed from _: callable
+    translator: "gettext.GNUTranslations",
     tt_instance: TeamTalkInstance | None
 ):
     """Handles the 'Ban User' menu button."""
@@ -99,7 +99,7 @@ async def menu_subscribers_handler(
     callback_data: MenuCallback,
     session: AsyncSession,
     bot: Bot,
-    translator: "gettext.GNUTranslations"  # Changed from _: callable
+    translator: "gettext.GNUTranslations"
 ):
     """Handles the 'Subscribers' menu button."""
     if not query.message:

@@ -3,7 +3,7 @@ import logging
 from typing import Any, Callable, Coroutine, Optional
 
 from aiogram.types import Message
-from sqlalchemy.exc import SQLAlchemyError # Added for specific exception handling
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import DeeplinkAction
@@ -14,9 +14,8 @@ from bot.core.user_settings import (
 from bot.database.crud import (
     add_subscriber,
     delete_deeplink_by_token,
-    # delete_user_data_fully, # No longer used directly
 )
-from bot.database import crud # Added crud import
+from bot.database import crud
 from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.services import user_service # Import the new service
 
@@ -75,7 +74,6 @@ async def _execute_deeplink_action(
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.error(f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True)
         return _("An error occurred processing your request.")
-    # Broad Exception block removed to allow propagation to global error handler
 
 
 async def _handle_unsubscribe_deeplink(

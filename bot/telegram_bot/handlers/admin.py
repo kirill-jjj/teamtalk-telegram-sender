@@ -40,7 +40,6 @@ async def _show_user_buttons(
         return
 
     online_users = await get_online_teamtalk_users(tt_instance)
-    # Self-filtering by user_id has been removed.
 
     if not online_users:
         await message.reply(_("No users online."))
@@ -97,7 +96,7 @@ async def subscribers_command_handler(message: Message, session: AsyncSession, b
 
     keyboard = create_subscriber_list_keyboard(
         _,
-        page_subscribers_info=page_subscribers_info, # Matching the new parameter name
+        page_subscribers_info=page_subscribers_info,
         current_page=current_page,
         total_pages=total_pages
     )

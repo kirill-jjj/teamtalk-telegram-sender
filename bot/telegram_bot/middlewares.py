@@ -9,7 +9,7 @@ from bot.models import SubscribedUser # Keep if other middlewares use it, or rem
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
-from bot.state import SUBSCRIBED_USERS_CACHE # Added cache import
+from bot.state import SUBSCRIBED_USERS_CACHE
 
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,6 @@ class UserSettingsMiddleware(BaseMiddleware):
             return
 
         data["user_settings"] = user_settings
-        # UserSettings model now has language_code: str
         translator = get_translator(user_settings.language_code)
         data["_"] = translator.gettext
         data["translator"] = translator

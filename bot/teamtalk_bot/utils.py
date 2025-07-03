@@ -235,7 +235,7 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                         if last_instance.connected:
                             last_instance.disconnect()
                         last_instance.closeTeamTalk()
-                    except Exception as e_cleanup: # This is a nested cleanup, general Exception is acceptable here
+                    except Exception as e_cleanup:
                         logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
 
         except (pytalk.exceptions.PermissionError, ValueError, TimeoutError, pytalk.exceptions.TeamTalkException) as e:
@@ -249,5 +249,5 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                     if last_instance.connected:
                         last_instance.disconnect()
                     last_instance.closeTeamTalk()
-                except Exception as e_cleanup_exc: # Corrected indentation for this except
+                except Exception as e_cleanup_exc:
                     logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")

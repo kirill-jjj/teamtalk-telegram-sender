@@ -56,10 +56,9 @@ async def process_setting_update(
         return
 
     except TelegramAPIError as e_tg:
-        # Эта ошибка может произойти при вызове answer() или safe_edit_text()
-        # после успешного сохранения в БД. Пользователь мог заблокировать бота.
-        # Поскольку данные уже сохранены, мы просто логируем ошибку.
-        # Откатывать здесь ничего не нужно.
+        # This error can occur during answer() or safe_edit_text() if the user blocked the bot
+        # after settings were successfully saved to the DB.
+        # Since data is already saved, we log the error. No rollback needed here.
         logger.warning(
             f"Telegram API error during UI update for user {callback_query.from_user.id} "
             f"after settings were saved. Error: {e_tg}"
