@@ -27,7 +27,7 @@ from bot.constants import (
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
 from aiogram.filters import CommandObject
-from bot.core.languages import DEFAULT_LANGUAGE_CODE # Changed import
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.teamtalk_bot.utils import (
@@ -137,9 +137,9 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.info(f"Online users cache initialized with {len(ONLINE_USERS_CACHE)} users.")
     except TimeoutError as e_timeout:
         logger.error(f"TimeoutError during initial population of online users cache: {e_timeout}.", exc_info=True)
-    except pytalk.exceptions.TeamTalkException as e_pytalk: # Changed PytalkException to explicit import
+    except TeamTalkException as e_pytalk:
         logger.error(f"Pytalk specific error during initial population of online users cache: {e_pytalk}.", exc_info=True)
-    except (ConnectionError, OSError) as e_net: # Added network errors
+    except (ConnectionError, OSError) as e_net:
         logger.error(f"Network error during initial population of online users cache: {e_net}.", exc_info=True)
     except Exception as e:
         if isinstance(e, (KeyboardInterrupt, SystemExit)):
@@ -161,11 +161,11 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         tt_bot_module.login_complete_time = datetime.utcnow()
         logger.debug(f"TeamTalk status set to: '{app_config.STATUS_TEXT}'.")
         logger.info(f"TeamTalk login sequence finalized at {tt_bot_module.login_complete_time}.")
-    except pytalk.exceptions.PermissionError as e_perm: # Explicit import
+    except PermissionError as e_perm:
         logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}.", exc_info=True)
-    except pytalk.exceptions.TeamTalkException as e_pytalk: # Explicit import
+    except TeamTalkException as e_pytalk:
         logger.error(f"Pytalk specific error setting status for bot: {e_pytalk}.", exc_info=True)
-    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e:
+    except (TeamTalkException, TimeoutError, OSError) as e:
         # Log critical because failure here means bot might not be fully operational or visible as expected.
         logger.critical(f"Error setting status or login_complete_time for bot: {e}.", exc_info=True)
 
@@ -185,18 +185,16 @@ async def on_ready():
         tt_bot_module.login_complete_time = None
         await tt_bot_module.tt_bot.add_server(server_info_obj)
         logger.info(f"Connection process initiated for server: {app_config.HOSTNAME}.")
-    except PytalkPermissionError as e_perm:
+    except PermissionError as e_perm: # Corrected to direct import
         logger.critical(f"Pytalk PermissionError during server connection attempt: {e_perm}.", exc_info=True)
-        # В этом случае реконнект не имеет смысла, так как данные для входа неверны
     except ValueError as e_val:
         logger.critical(f"ValueError (likely invalid server_info) during server connection attempt: {e_val}.", exc_info=True)
     except TimeoutError as e_timeout:
         logger.error(f"TimeoutError during server connection attempt: {e_timeout}.", exc_info=True)
         initiate_reconnect_task(None)
-    except PytalkException as e_pytalk:
+    except TeamTalkException as e_pytalk: # Corrected to direct import
         logger.error(f"Pytalk specific error during server connection attempt: {e_pytalk}.", exc_info=True)
         initiate_reconnect_task(None)
-    # Removed broad Exception catch here as per audit
 
 
 @tt_bot_module.tt_bot.event
@@ -213,9 +211,9 @@ async def on_my_login(server: PytalkServer):
             server_name = ttstr(server_props.server_name)
     except TimeoutError as e_timeout_prop:
         logger.warning(f"TimeoutError getting server properties on login: {e_timeout_prop}.")
-    except pytalk.exceptions.TeamTalkException as e_pytalk_prop: # Explicit import
+    except TeamTalkException as e_pytalk_prop:
         logger.warning(f"Pytalk specific error getting server properties on login: {e_pytalk_prop}.")
-    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError, AttributeError) as e_prop:
+    except (TeamTalkException, TimeoutError, OSError, AttributeError) as e_prop:
              logger.warning(f"Error getting server properties on login: {e_prop}.")
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} (Host: {server.info.host}).")
