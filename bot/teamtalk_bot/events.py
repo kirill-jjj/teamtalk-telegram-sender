@@ -315,8 +315,8 @@ async def on_message(message: TeamTalkMessage):
         if handler:
             if command_name in ["/add_admin", "/remove_admin"]:
                 args_str = command_parts[1] if len(command_parts) > 1 else None
-                command_obj = CommandObject(command=command_name, args=args_str)
-                await handler(message, command=command_obj, session=session, translator=translator)
+                # Pass args_str directly instead of CommandObject
+                await handler(message, args_str=args_str, session=session, translator=translator)
             elif command_name == "/help":
                 _ = translator.gettext
                 await handler(message, _=_)

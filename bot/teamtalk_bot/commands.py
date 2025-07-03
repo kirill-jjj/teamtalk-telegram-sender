@@ -130,7 +130,7 @@ def _create_admin_action_report(
 
 async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
-    command: CommandObject,
+    args_str: Optional[str],
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     crud_function: Callable[[AsyncSession, int], bool],
@@ -142,7 +142,7 @@ async def _manage_admin_ids(
 ):
     """A generic handler for adding or removing admin IDs."""
     _ = translator.gettext
-    args = AdminIdArgs.model_validate(command.args)
+    args = AdminIdArgs.model_validate(args_str) # Use args_str directly
 
     if not args.valid_ids and not args.invalid_entries:
         tt_message.reply(_(prompt_msg_key))
@@ -289,7 +289,7 @@ async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     *,
-    command: CommandObject,
+    args_str: Optional[str], # Changed from command: CommandObject
     session: AsyncSession
 ):
     # Dummy call for pybabel extraction
@@ -299,7 +299,7 @@ async def handle_tt_add_admin_command(
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,
-        command=command,
+        args_str=args_str, # Pass args_str
         session=session,
         translator=translator,
         crud_function=add_admin,
@@ -315,7 +315,7 @@ async def handle_tt_add_admin_command(
 async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations, *,
-    command: CommandObject,
+    args_str: Optional[str], # Changed from command: CommandObject
     session: AsyncSession
 ):
     # Dummy call for pybabel extraction
@@ -325,7 +325,7 @@ async def handle_tt_remove_admin_command(
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,
-        command=command,
+        args_str=args_str, # Pass args_str
         session=session,
         translator=translator,
         crud_function=remove_admin_db,
