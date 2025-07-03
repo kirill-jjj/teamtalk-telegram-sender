@@ -41,3 +41,12 @@ class SubscriberListAction(Enum):
 class DeeplinkAction(Enum):
     SUBSCRIBE = "subscribe"
     UNSUBSCRIBE = "unsubscribe"
+
+class SubscriberAction(str, Enum):
+    DELETE = "delete"
+    BAN = "ban"
+    MANAGE_TT_ACCOUNT = "manage_tt"
+
+class ManageTTAccountAction(str, Enum):
+    UNLINK = "unlink"
+    LINK_NEW = "link_new"

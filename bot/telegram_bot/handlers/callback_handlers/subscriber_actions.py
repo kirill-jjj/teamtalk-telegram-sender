@@ -21,7 +21,7 @@ from bot.models import UserSettings, BanList # For fetching UserSettings, intera
 from bot.database import crud # For BanList and UserSettings CRUD
 from bot.services import user_service # For deleting user
 from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE # Added USER_ACCOUNTS_CACHE
-from bot.core.enums import SubscriberListAction # For back button to main list
+from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction # For back button to main list
 import pytalk # To get UserAccount type for list[pytalk.UserAccount]
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ async def handle_subscriber_action(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    if action == "delete":
+    if action == SubscriberAction.DELETE:
         success = await user_service.delete_full_user_profile(session, target_telegram_id)
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
@@ -120,7 +120,7 @@ async def handle_subscriber_action(
             await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True)
         return # Explicit return after handling delete
 
-    elif action == "ban":
+    elif action == SubscriberAction.BAN:
         user_settings = await session.get(UserSettings, target_telegram_id)
         tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
 
@@ -176,7 +176,7 @@ async def handle_subscriber_action(
             )
         return # Explicit return
 
-    elif action == "manage_tt":
+    elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
         user_settings = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_settings.teamtalk_username if user_settings else None
 
@@ -220,7 +220,7 @@ async def handle_manage_tt_account(
         # Potentially send back to subscriber list or main menu
         return
 
-    if action == "unlink":
+    if action == ManageTTAccountAction.UNLINK:
         if user_settings.teamtalk_username:
             unlinked_tt_username = user_settings.teamtalk_username
             user_settings.teamtalk_username = None
@@ -241,7 +241,7 @@ async def handle_manage_tt_account(
         )
         return # Explicit return
 
-    elif action == "link_new":
+    elif action == ManageTTAccountAction.LINK_NEW:
         if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
             await query.answer(_("TeamTalk bot is not connected. Cannot fetch server accounts."), show_alert=True)
             return

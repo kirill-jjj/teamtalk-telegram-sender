@@ -22,6 +22,7 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
+    TT_CACHE_SYNC_RETRY_DELAY_SECONDS,
 )
 
 from bot.state import ONLINE_USERS_CACHE, USER_ACCOUNTS_CACHE
@@ -70,7 +71,7 @@ async def _periodic_cache_sync(tt_instance: pytalk.instance.TeamTalkInstance):
         except PytalkException as e_pytalk:
             logger.error(f"Pytalk specific error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
             if tt_instance and tt_instance.connected and tt_instance.logged_in:
-                await asyncio.sleep(60) # Keep a fixed shorter delay for pytalk errors before next full interval
+                await asyncio.sleep(TT_CACHE_SYNC_RETRY_DELAY_SECONDS) # Keep a fixed shorter delay for pytalk errors before next full interval
         await asyncio.sleep(app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
 
 TT_COMMAND_HANDLERS = {
