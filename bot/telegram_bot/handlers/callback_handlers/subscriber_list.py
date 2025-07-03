@@ -4,9 +4,8 @@ from aiogram import Router, Bot, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from bot.database.crud import delete_user_data_fully # No longer used directly
 from bot.database.crud import get_all_subscribers_ids
-from bot.services import user_service # Import the new service
+from bot.services import user_service
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.telegram_bot.models import SubscriberInfo

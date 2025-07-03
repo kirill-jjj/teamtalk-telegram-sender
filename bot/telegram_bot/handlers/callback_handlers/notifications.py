@@ -49,10 +49,10 @@ async def cq_toggle_noon_setting_action(
     new_status_display_text = _("Enabled") if not original_noon_status else _("Disabled")
     success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
 
-    # Подготавливаем текст и разметку здесь
-    # user_settings will have the updated value here if update_logic was called before this point by process_setting_update
-    # However, process_setting_update calls update_action *before* calling safe_edit_text (which uses these).
-    # So, create_notification_settings_keyboard will reflect the new state.
+    # Prepare text and markup for UI refresh.
+    # user_settings.not_on_online_enabled is toggled by update_logic within process_setting_update
+    # before this part of the code (which prepares new_text and new_markup) is effectively used by safe_edit_text.
+    # Thus, create_notification_settings_keyboard will be called with the *new* state of user_settings.
     updated_builder = create_notification_settings_keyboard(_, user_settings)
     menu_text = _("Notification Settings")
 

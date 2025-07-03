@@ -77,8 +77,9 @@ async def cq_set_subscription_setting(
     setting_display_name = setting_to_text_map.get(new_setting_enum, _("unknown setting"))
     success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name)
 
-    # Подготавливаем текст и разметку здесь
-    # new_setting_enum already reflects the new state for UI generation before commit by process_setting_update.
+    # Prepare text and markup for UI refresh.
+    # new_setting_enum (which is user_settings.notification_settings after update_logic)
+    # reflects the new state for UI generation. This happens before process_setting_update commits.
     updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
     menu_text = _("Subscription Settings")
 
