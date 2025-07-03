@@ -33,10 +33,12 @@ from bot.core.enums import (
 from bot.models import MuteListMode
 from bot.constants import USERS_PER_PAGE
 from bot.state import USER_ACCOUNTS_CACHE
+from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware # Import middleware
 from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
+mute_router.callback_query.middleware(TeamTalkConnectionMiddleware()) # Apply to all CbQs in this router
 ttstr = pytalk.instance.sdk.ttstr
 
 
@@ -260,7 +262,7 @@ async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     _: callable,
     user_settings: UserSettings,
-    tt_instance: Optional[TeamTalkInstance],
+    tt_instance: TeamTalkInstance, # Now guaranteed by middleware through the handler
     callback_data: ToggleMuteSpecificCallback,
     session: AsyncSession
 ) -> None:
@@ -372,12 +374,11 @@ async def cq_show_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
     user_settings: UserSettings,
-    tt_instance: Optional[TeamTalkInstance],
+    tt_instance: TeamTalkInstance, # Middleware ensures this is valid
 ):
     await callback_query.answer()
-    if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
-        return
+    # tt_instance connection is guaranteed by middleware.
+    # We still need to check USER_ACCOUNTS_CACHE as it's populated separately.
     if not USER_ACCOUNTS_CACHE:
         try:
             await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
@@ -392,13 +393,12 @@ async def cq_paginate_all_accounts_list_action(
     callback_query: CallbackQuery,
     _: callable,
     user_settings: UserSettings,
-    tt_instance: Optional[TeamTalkInstance],
+    tt_instance: TeamTalkInstance, # Middleware ensures this is valid
     callback_data: PaginateUsersCallback,
 ):
     await callback_query.answer()
-    if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-        await callback_query.message.edit_text(_("TeamTalk bot is not connected. Cannot display user list."))
-        return
+    # tt_instance connection is guaranteed by middleware.
+    # We still need to check USER_ACCOUNTS_CACHE.
     if not USER_ACCOUNTS_CACHE:
         try:
             await callback_query.message.edit_text(_("Server user accounts have not been loaded yet. Please try again in a moment."))
@@ -414,7 +414,7 @@ async def cq_toggle_specific_user_mute_action(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    tt_instance: Optional[TeamTalkInstance],
+    tt_instance: TeamTalkInstance, # Middleware ensures this is valid
     callback_data: ToggleMuteSpecificCallback,
 ):
     managed_user_settings = await session.merge(user_settings)

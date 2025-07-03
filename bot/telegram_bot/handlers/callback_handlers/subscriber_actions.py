@@ -20,12 +20,15 @@ from bot.telegram_bot.keyboards import (
 from bot.models import UserSettings, BanList # For fetching UserSettings, interacting with BanList
 from bot.database import crud # For BanList and UserSettings CRUD
 from bot.services import user_service # For deleting user
-from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE # Added USER_ACCOUNTS_CACHE
-from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction # For back button to main list
+from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE
+from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction
+from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware # Import middleware
 import pytalk # To get UserAccount type for list[pytalk.UserAccount]
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
+# Apply to all callback query handlers in this router
+subscriber_actions_router.callback_query.middleware(TeamTalkConnectionMiddleware())
 
 # This router will need to be included in the main dispatcher.
 
@@ -81,8 +84,8 @@ async def handle_subscriber_action(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
-    bot: Bot, # For bot.get_chat if needed, or for TeamTalk actions via tt_instance
-    tt_instance: TeamTalkInstance | None, # For TeamTalk actions
+    bot: Bot, # For bot.get_chat if needed
+    tt_instance: TeamTalkInstance, # Middleware ensures this is valid for actions needing it
     _: callable # Translator
 ):
     if not query.message:
@@ -129,13 +132,20 @@ async def handle_subscriber_action(
         if tt_username_to_ban:
             banned_tt = await crud.add_to_ban_list(session, teamtalk_username=tt_username_to_ban, reason=f"Banned by admin (linked to TG ID: {target_telegram_id})")
             # Optional: Actual TeamTalk server ban via tt_instance if user is online
-            if tt_instance and tt_instance.connected and tt_instance.logged_in:
+            # tt_instance here is from handle_subscriber_action's parameters.
+            # If tt_instance is None (because middleware didn't run for this specific path or it's optional), this check is fine.
+            # However, subscriber_actions_router now has the middleware, so tt_instance should be valid.
+            # Let's change its type hint to non-optional for this handler.
+            if tt_instance: # tt_instance should be valid due to router middleware
                 try:
                     # Find user by username and ban. This requires pytalk SDK for ban by username/IP.
                     # For now, we assume ban is DB-side for future /sub checks.
-                    logger.info(f"Conceptual TeamTalk ban for {tt_username_to_ban} (not implemented in this step)")
+                    logger.info(f"Conceptual TeamTalk server ban for {tt_username_to_ban} (not implemented in this step, tt_instance available)")
                 except Exception as e:
                     logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban}: {e}")
+            else:
+                # This case should ideally not be reached if middleware is correctly applied and tt_instance is made non-optional
+                logger.warning(f"Skipping conceptual TeamTalk ban for {tt_username_to_ban} as tt_instance is None/invalid.")
 
 
         # After banning, also delete their subscription and settings data
@@ -202,7 +212,7 @@ async def handle_manage_tt_account(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     session: AsyncSession,
-    tt_instance: TeamTalkInstance | None, # For listing server accounts
+    tt_instance: TeamTalkInstance, # Middleware ensures this is valid and connected for LINK_NEW
     _: callable
 ):
     if not query.message:
@@ -241,11 +251,8 @@ async def handle_manage_tt_account(
         return # Explicit return
 
     elif action == ManageTTAccountAction.LINK_NEW:
-        if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-            await query.answer(_("TeamTalk bot is not connected. Cannot fetch server accounts."), show_alert=True)
-            return
-
-        # Use USER_ACCOUNTS_CACHE as the source of truth for all server accounts
+        # tt_instance is guaranteed by middleware.
+        # We still need to check USER_ACCOUNTS_CACHE as it's populated separately.
         if not USER_ACCOUNTS_CACHE:
             logger.warning("USER_ACCOUNTS_CACHE is empty while trying to link TT account.")
             await query.answer(_("TeamTalk server accounts cache is not populated. Please try again later."), show_alert=True)

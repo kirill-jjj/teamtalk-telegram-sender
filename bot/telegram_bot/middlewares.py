@@ -98,3 +98,49 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
         logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed (checked via cache). Proceeding.")
         return await handler(event, data)
+
+
+class TeamTalkConnectionMiddleware(BaseMiddleware):
+    """
+    Checks if the TeamTalk instance is connected and logged in.
+    If not, it replies to the user and prevents the handler from executing.
+    This middleware should be registered for specific handlers/routers that require
+    an active TeamTalk connection.
+    """
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
+        event: TelegramObject, # Can be Message or CallbackQuery
+        data: Dict[str, Any],
+    ) -> Any:
+        tt_instance = data.get("tt_instance")
+        translator = data.get("translator") # Assuming UserSettingsMiddleware runs before
+
+        if not translator: # Fallback if UserSettingsMiddleware didn't run or failed
+            translator = get_translator() # Default translator
+
+        _ = translator.gettext
+
+        if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
+            error_message = _("TeamTalk bot is not connected. Please try again later.")
+
+            if isinstance(event, Message):
+                try:
+                    await event.reply(error_message)
+                except Exception as e:
+                    logger.error(f"Error replying to message in TeamTalkConnectionMiddleware: {e}")
+            elif isinstance(event, CallbackQuery):
+                try:
+                    await event.answer(error_message, show_alert=True)
+                except Exception as e:
+                    logger.error(f"Error answering callback query in TeamTalkConnectionMiddleware: {e}")
+            else:
+                logger.warning(f"TeamTalkConnectionMiddleware: Unhandled event type {type(event)}")
+
+            logger.warning(
+                f"TeamTalkConnectionMiddleware: Blocked access for user {data.get('event_from_user', {}).get('id')} "
+                f"due to TeamTalk not being connected/logged in. Event type: {type(event).__name__}"
+            )
+            return None # Stop processing this event
+
+        return await handler(event, data)
