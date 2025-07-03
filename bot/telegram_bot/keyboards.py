@@ -12,7 +12,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.telegram_bot.models import SubscriberInfo
 
-from bot.core.languages import Language
+# Removed: from bot.core.languages import Language
+# AVAILABLE_LANGUAGES_DATA will be imported locally in create_language_selection_keyboard
 from bot.core.enums import (
     AdminAction,
     SettingsNavAction,

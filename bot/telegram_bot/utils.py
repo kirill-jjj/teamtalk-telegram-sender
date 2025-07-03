@@ -13,9 +13,9 @@ from bot.services import user_service # Import the new service
 from bot.database.engine import SessionFactory
 from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.state import ONLINE_USERS_CACHE
-from bot.core.languages import Language
+# Removed: from bot.core.languages import Language
 from bot.constants import (
-    DEFAULT_LANGUAGE,
+    DEFAULT_LANGUAGE, # This is now DEFAULT_LANGUAGE_CODE from constants
 )
 from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 
@@ -136,8 +136,9 @@ async def send_telegram_messages_to_list(
     tasks_list = []
     for chat_id in chat_ids:
         user_settings = USER_SETTINGS_CACHE.get(chat_id)
-        language = user_settings.language.value if user_settings else DEFAULT_LANGUAGE
-        text = text_generator(language)
+        # user_settings.language_code is already a string. DEFAULT_LANGUAGE is also a string code.
+        language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
+        text = text_generator(language_code)
 
         current_reply_markup = None
         if reply_markup_generator:
