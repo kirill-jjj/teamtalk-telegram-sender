@@ -14,7 +14,8 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.keyboards import (
     create_subscriber_action_menu_keyboard,
     create_manage_tt_account_keyboard,
-    create_linkable_tt_account_list_keyboard
+    create_linkable_tt_account_list_keyboard,
+    create_subscriber_list_keyboard # Added direct import
     # We might need create_account_list_keyboard if we adapt it, or a new one
 )
 from bot.models import UserSettings, BanList # For fetching UserSettings, interacting with BanList
@@ -22,8 +23,9 @@ from bot.database import crud # For BanList and UserSettings CRUD
 from bot.services import user_service # For deleting user
 from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE
 from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction
-from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware # Import middleware
+from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware
 import pytalk # To get UserAccount type for list[pytalk.UserAccount]
+from .list_utils import _get_paginated_subscribers_info # Import from list_utils
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
@@ -101,9 +103,7 @@ async def handle_subscriber_action(
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
             # Refresh the main subscriber list
-            # This logic is similar to the original subscriber_list_router delete action
-            from bot.telegram_bot.handlers.callback_handlers.subscriber_list import _get_paginated_subscribers_info, create_subscriber_list_keyboard # Avoid circular import if possible
-
+            # Use top-level imports now
             page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
                 session, bot, return_page
             )
@@ -167,7 +167,7 @@ async def handle_subscriber_action(
         await query.answer(alert_message, show_alert=True)
 
         # Refresh the main subscriber list (same as delete)
-        from bot.telegram_bot.handlers.callback_handlers.subscriber_list import _get_paginated_subscribers_info, create_subscriber_list_keyboard
+        # Use top-level imports now
         page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
             session, bot, return_page
         )
