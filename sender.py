@@ -145,6 +145,11 @@ async def async_main():
         logger.info("Application shutdown sequence complete (on_shutdown).")
 
 
+    # Imports for global_error_handler localization
+    from bot.core.user_settings import USER_SETTINGS_CACHE
+    from bot.language import get_translator
+    from bot.core.languages import DEFAULT_LANGUAGE_CODE
+
     async def global_error_handler(event: ErrorEvent, bot: Bot):
         """
         Global error handler for uncaught exceptions in handlers.
@@ -156,36 +161,72 @@ async def async_main():
 
         if app_config.TG_ADMIN_CHAT_ID:
             try:
+                # Admin error message can remain in a fixed language (e.g., English or Russian)
+                # or be localized based on admin's settings if desired, but that's a separate enhancement.
+                # For now, keeping it simple.
+                admin_error_message_key = "Critical error!" # Assuming this key exists in Russian .po for admin
+                # If we want admin message in Russian (as it was):
+                # admin_translator_for_critical = get_translator('ru') # Or admin's preferred lang
+                # admin_error_text_header = admin_translator_for_critical.gettext("Critical error!")
+                # For simplicity, let's use the hardcoded Russian for admin notification for now,
+                # as the original was in Russian.
                 error_text = (
-                    f"<b>Критическая ошибка!</b>\n"
+                    f"<b>Критическая ошибка!</b>\n" # This is Russian
                     f"<b>Тип ошибки:</b> {type(event.exception).__name__}\n"
-                    f"<b>Сообщение:</b> {escaped_exception_text}" # <-- Use the escaped text
+                    f"<b>Сообщение:</b> {escaped_exception_text}"
                 )
                 await bot.send_message(app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
             except Exception as e:
                 logger.error(f"Could not send critical error message to admin chat: {e}", exc_info=True)
 
-        user_message = "Произошла непредвиденная ошибка. Администратор уже уведомлен. Пожалуйста, попробуйте позже."
         update = event.update
-
         user_id = None
         if update.message and update.message.from_user:
             user_id = update.message.from_user.id
         elif update.callback_query and update.callback_query.from_user:
             user_id = update.callback_query.from_user.id
 
+        lang_code = DEFAULT_LANGUAGE_CODE # Default
+        if user_id:
+            user_settings = USER_SETTINGS_CACHE.get(user_id)
+            if user_settings and user_settings.language_code:
+                lang_code = user_settings.language_code
+            else:
+                logger.warning(f"User settings not found in cache for user {user_id} during error handling. Using default language.")
+        else:
+            logger.warning("User ID not found in error event. Using default language for error message.")
+
+        translator = get_translator(lang_code)
+        # The key for gettext should be the English version or a generic key.
+        # Original Russian: "Произошла непредвиденная ошибка. Администратор уже уведомлен. Пожалуйста, попробуйте позже."
+        # English key: "An unexpected error occurred. The administrator has been notified. Please try again later."
+        user_message_key = "An unexpected error occurred. The administrator has been notified. Please try again later."
+        user_message = translator.gettext(user_message_key)
+
         # Check if the user who caused the error is the admin
         # We need app_config here. It's imported earlier in async_main.
-        if user_id and app_config.TG_ADMIN_CHAT_ID and user_id == app_config.TG_ADMIN_CHAT_ID:
+        if user_id and app_config.TG_ADMIN_CHAT_ID and str(user_id) == str(app_config.TG_ADMIN_CHAT_ID):
             logger.debug("Error originated from admin user. Suppressing generic error message to admin.")
         else:
             try:
-                if update.message:
+                if update.message: # If the update is a Message
                     await update.message.answer(user_message)
-                elif update.callback_query and isinstance(update.callback_query.message, Message):
+                elif update.callback_query and isinstance(update.callback_query.message, Message): # If it's a CallbackQuery with a Message
                     await update.callback_query.message.answer(user_message)
+                # If no direct way to reply (e.g. Poll, or other event types), log it.
+                # It might be possible to use bot.send_message(chat_id=user_id, ...) if user_id is known
+                # but the context (message, callback_query) is missing.
+                elif user_id:
+                     logger.warning(f"Error event for user {user_id} doesn't have a direct reply method (message/callback_query.message). Trying bot.send_message.")
+                     try:
+                         await bot.send_message(chat_id=user_id, text=user_message)
+                     except Exception as direct_send_e:
+                         logger.error(f"Could not send error message directly to user {user_id}: {direct_send_e}", exc_info=True)
+                else:
+                    logger.warning("Error event doesn't have a direct reply method and user_id is unknown.")
+
             except Exception as e:
-                logger.error(f"Could not send error message to user: {e}", exc_info=True)
+                logger.error(f"Could not send error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True)
 
     logger.info("Application starting...")
 
