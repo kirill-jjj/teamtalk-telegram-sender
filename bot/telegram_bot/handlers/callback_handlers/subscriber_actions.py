@@ -34,6 +34,37 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionMiddleware
 
 # This router will need to be included in the main dispatcher.
 
+async def _refresh_and_display_subscriber_list(
+    query: CallbackQuery,
+    session: AsyncSession,
+    bot: Bot,
+    return_page: int,
+    _: callable
+):
+    """Refreshes and displays the subscriber list in the query's message."""
+    if not query.message: # Should ideally be checked by caller too
+        logger.warning("_refresh_and_display_subscriber_list called with no message context.")
+        await query.answer(_("Error: Message context lost."), show_alert=True) # Attempt to notify user
+        return
+
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
+        session, bot, return_page
+    )
+    if total_pages == 0 or not page_subscribers_info:
+        await query.message.edit_text(_("No subscribers found."))
+    else:
+        new_keyboard = create_subscriber_list_keyboard(
+            _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
+        )
+        await query.message.edit_text(
+            _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
+                current_page_display=current_page + 1, total_pages=total_pages
+            ),
+            reply_markup=new_keyboard
+        )
+    # query.answer() is not called here, assuming prior action (delete/ban) did it. Or it's handled by send_or_edit_paginated_list if that was used.
+    # For this refactor, the original calls to query.answer() for delete/ban success/failure remain in the main handler.
+
 @subscriber_actions_router.callback_query(ViewSubscriberCallback.filter(), F.from_user.id.in_(ADMIN_IDS_CACHE))
 async def handle_view_subscriber(
     query: CallbackQuery,
@@ -102,23 +133,7 @@ async def handle_subscriber_action(
         success = await user_service.delete_full_user_profile(session, target_telegram_id)
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
-            # Refresh the main subscriber list
-            # Use top-level imports now
-            page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-                session, bot, return_page
-            )
-            if total_pages == 0 or not page_subscribers_info:
-                await query.message.edit_text(_("No subscribers found."))
-            else:
-                new_keyboard = create_subscriber_list_keyboard(
-                    _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
-                )
-                await query.message.edit_text(
-                    _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-                        current_page_display=current_page + 1, total_pages=total_pages
-                    ),
-                    reply_markup=new_keyboard
-                )
+            await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
         else:
             await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True)
         return # Explicit return after handling delete
@@ -165,24 +180,7 @@ async def handle_subscriber_action(
             alert_message += " " + _("Subscriber data also deleted.")
 
         await query.answer(alert_message, show_alert=True)
-
-        # Refresh the main subscriber list (same as delete)
-        # Use top-level imports now
-        page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-            session, bot, return_page
-        )
-        if total_pages == 0 or not page_subscribers_info:
-            await query.message.edit_text(_("No subscribers found."))
-        else:
-            new_keyboard = create_subscriber_list_keyboard(
-                _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
-            )
-            await query.message.edit_text(
-                _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-                    current_page_display=current_page + 1, total_pages=total_pages
-                ),
-                reply_markup=new_keyboard
-            )
+        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
         return # Explicit return
 
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
