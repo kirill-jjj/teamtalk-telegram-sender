@@ -212,7 +212,12 @@ def _generate_mute_toggle_toast_message(
     current_mode: MuteListMode,
     _: callable
 ) -> str:
-    quoted_username = html.quote(username_to_toggle)
+    # Strip surrounding < > if they exist, before quoting
+    clean_username = username_to_toggle
+    if clean_username.startswith("<") and clean_username.endswith(">"):
+        clean_username = clean_username[1:-1]
+
+    quoted_username = html.quote(clean_username)
     action_text: str
 
     if current_mode == MuteListMode.blacklist:
