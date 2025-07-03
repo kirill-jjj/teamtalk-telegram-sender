@@ -26,3 +26,27 @@ DB_MAIN_NAME = "main"
 WHO_CHANNEL_ID_ROOT = 1
 WHO_CHANNEL_ID_SERVER_ROOT_ALT = 0 # Sometimes used for users not in a specific channel
 WHO_CHANNEL_ID_SERVER_ROOT_ALT2 = -1 # Also seen for users not in a specific channel
+
+
+# --- Parameters ---
+DEEPLINK_TOKEN_LENGTH_BYTES = 16
+
+# --- Timeouts and Delays ---
+TT_CACHE_SYNC_RETRY_DELAY_SECONDS = 60
+
+# --- Callback Prefixes ---
+CB_PREFIX_SETTINGS_NAV = "settings_nav"
+CB_PREFIX_LANG_SET = "lang_set"
+CB_PREFIX_SUB_SET = "sub_set"
+CB_PREFIX_NOTIF_ACTION = "notif_action"
+CB_PREFIX_USER_LIST_NAV = "user_list_nav"
+CB_PREFIX_MUTE_MODE_SET = "mute_mode_set"
+CB_PREFIX_PAGINATE_LIST = "paginate_list"
+CB_PREFIX_TOGGLE_USER_MUTE = "toggle_user_mute"
+CB_PREFIX_ADMIN_ACTION = "admin_action"
+CB_PREFIX_SUB_LIST = "sub_list"
+CB_PREFIX_MAIN_MENU = "main_menu"
+CB_PREFIX_VIEW_SUB = "view_sub"
+CB_PREFIX_SUB_ACTION = "sub_action"
+CB_PREFIX_MANAGE_TT_ACC = "manage_tt_acc"
+CB_PREFIX_LINK_TT_CHOSEN = "link_tt_chosen"

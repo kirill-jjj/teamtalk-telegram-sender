@@ -9,6 +9,7 @@ from bot.core.enums import DeeplinkAction
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList # Added BanList import
 from bot.config import app_config
 from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
+from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ async def create_deeplink(
     payload: str | None = None,
     expected_telegram_id: int | None = None
 ) -> str:
-    token_str = secrets.token_urlsafe(16)
+    token_str = secrets.token_urlsafe(DEEPLINK_TOKEN_LENGTH_BYTES)
     expiry_time = datetime.utcnow() + timedelta(seconds=app_config.DEEPLINK_TTL_SECONDS)
     deeplink_obj = Deeplink(
         token=token_str,

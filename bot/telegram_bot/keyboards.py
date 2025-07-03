@@ -22,7 +22,9 @@ from bot.core.enums import (
     NotificationAction,
     UserListAction,
     ToggleMuteSpecificAction,
-    SubscriberListAction
+    SubscriberListAction,
+    SubscriberAction,
+    ManageTTAccountAction
 )
 from bot.telegram_bot.callback_data import (
     SettingsCallback,
@@ -447,7 +449,7 @@ def create_subscriber_action_menu_keyboard(
     builder.button(
         text=_("🗑️ Delete Subscriber"),
         callback_data=SubscriberActionCallback(
-            action="delete",
+            action=SubscriberAction.DELETE,
             target_telegram_id=target_telegram_id,
             page=page
         ).pack()
@@ -455,7 +457,7 @@ def create_subscriber_action_menu_keyboard(
     builder.button(
         text=_("🚫 Ban User (TG & TT)"),
         callback_data=SubscriberActionCallback(
-            action="ban",
+            action=SubscriberAction.BAN,
             target_telegram_id=target_telegram_id,
             page=page
         ).pack()
@@ -463,7 +465,7 @@ def create_subscriber_action_menu_keyboard(
     builder.button(
         text=_("🔗 Manage TeamTalk Account"),
         callback_data=SubscriberActionCallback(
-            action="manage_tt",
+            action=SubscriberAction.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
             page=page
         ).pack()
@@ -493,7 +495,7 @@ def create_manage_tt_account_keyboard(
         builder.button(
             text=_("🔓 Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),
             callback_data=ManageTTAccountCallback(
-                action="unlink",
+                action=ManageTTAccountAction.UNLINK,
                 target_telegram_id=target_telegram_id,
                 page=page # This 'page' is for returning to subscriber list via action menu
             ).pack()
@@ -502,7 +504,7 @@ def create_manage_tt_account_keyboard(
     builder.button(
         text=_("➕ Link/Change TeamTalk Account"),
         callback_data=ManageTTAccountCallback(
-            action="link_new",
+            action=ManageTTAccountAction.LINK_NEW,
             target_telegram_id=target_telegram_id,
             page=page # This 'page' is for returning to subscriber list via action menu
         ).pack()
@@ -556,7 +558,7 @@ def create_linkable_tt_account_list_keyboard(
     builder.row(InlineKeyboardButton(
         text=_("⬅️ Back to Manage Account"),
         callback_data=SubscriberActionCallback( # This takes us back to the manage_tt action, which will re-render the manage_tt_account_keyboard
-            action="manage_tt",
+            action=SubscriberAction.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
             page=subscriber_list_page
         ).pack()
