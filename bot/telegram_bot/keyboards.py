@@ -81,21 +81,29 @@ def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     return builder
 
 def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
-    """Creates the language selection keyboard."""
+    """Creates the language selection keyboard dynamically."""
+    from bot.core.languages import AVAILABLE_LANGUAGES_DATA # Import here to ensure it's populated
+
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text=_("English"),
-        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.ENGLISH.value).pack()
-    )
-    builder.button(
-        text=_("Russian"),
-        callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=Language.RUSSIAN.value).pack()
-    )
+    if not AVAILABLE_LANGUAGES_DATA:
+        # Fallback or error message if no languages are discovered
+        # This case should ideally be handled by ensuring default lang is always present
+        builder.button(
+            text="No languages available", # This ideally should be translatable too
+            callback_data="noop" # A dummy callback or specific error callback
+        )
+    else:
+        for lang_info in AVAILABLE_LANGUAGES_DATA:
+            builder.button(
+                text=lang_info["native_name"], # Already translated to its native form
+                callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_info["code"]).pack()
+            )
+
     builder.button(
         text=_("⬅️ Back to Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
-    builder.adjust(1)
+    builder.adjust(1) # Adjust based on number of languages, or keep 1 per row
     return builder
 
 def create_subscription_settings_keyboard(

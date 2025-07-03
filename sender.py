@@ -53,6 +53,7 @@ async def async_main():
     from bot.database import crud
     from bot.database.crud import get_all_subscribers_ids
     from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
+    from bot.core.languages import discover_languages, AVAILABLE_LANGUAGES_DATA # Import discovery components
     from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
     from bot.telegram_bot.commands import set_telegram_commands
     from bot.telegram_bot.middlewares import (
@@ -187,6 +188,17 @@ async def async_main():
                 logger.error(f"Could not send error message to user: {e}", exc_info=True)
 
     logger.info("Application starting...")
+
+    # --- Initialize Languages ---
+    logger.info("Discovering available languages...")
+    discovered_langs = discover_languages()
+    AVAILABLE_LANGUAGES_DATA.extend(discovered_langs) # Populate the global list
+    if not AVAILABLE_LANGUAGES_DATA:
+        logger.critical("No languages discovered (not even default). Check locales setup.")
+        # Potentially exit if no languages can be loaded.
+    else:
+        logger.info(f"Available languages loaded: {[lang['code'] for lang in AVAILABLE_LANGUAGES_DATA]}")
+    # --- End Initialize Languages ---
 
     async with SessionFactory() as session:
         db_subscriber_ids = await get_all_subscribers_ids(session)

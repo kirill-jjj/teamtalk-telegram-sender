@@ -8,7 +8,8 @@ from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_lan
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
 from bot.language import get_translator
-from bot.core.languages import Language
+# Import new language data structures from bot.core.languages
+from bot.core.languages import AVAILABLE_LANGUAGES_DATA, DEFAULT_LANGUAGE_CODE
 from ._helpers import process_setting_update, safe_edit_text
 
 logger = logging.getLogger(__name__)
@@ -40,29 +41,40 @@ async def cq_set_language(
     _: callable,
     callback_data: LanguageCallback
 ):
-    managed_user_settings = await session.merge(user_settings)
-    new_lang_code_enum = Language(callback_data.lang_code)
-    original_lang_code_enum = managed_user_settings.language
-
-    if new_lang_code_enum == original_lang_code_enum:
-        await callback_query.answer()
+    if callback_data.lang_code is None:
+        # Should not happen if buttons always provide lang_code
+        logger.warning("LanguageCallback received with lang_code=None")
+        await callback_query.answer("Invalid language selection.", show_alert=True) # This should be translated
         return
 
-    new_lang_translator_obj = get_translator(new_lang_code_enum.value)
+    managed_user_settings = await session.merge(user_settings)
+    new_lang_code_str = callback_data.lang_code # This is now a string e.g. "en", "ru"
+    original_lang_code_str = managed_user_settings.language_code
+
+    if new_lang_code_str == original_lang_code_str:
+        await callback_query.answer() # No change
+        return
+
+    # Validate if the new_lang_code_str is actually one of the discovered languages
+    selected_lang_info = next((lang for lang in AVAILABLE_LANGUAGES_DATA if lang["code"] == new_lang_code_str), None)
+    if not selected_lang_info:
+        logger.error(f"Attempt to set unknown language code: {new_lang_code_str}")
+        await callback_query.answer("Selected language is not available.", show_alert=True) # This should be translated
+        return
+
+    new_lang_translator_obj = get_translator(new_lang_code_str)
 
     def update_logic():
-        managed_user_settings.language = new_lang_code_enum
+        managed_user_settings.language_code = new_lang_code_str
 
     def revert_logic():
-        managed_user_settings.language = original_lang_code_enum
+        managed_user_settings.language_code = original_lang_code_str
 
-    lang_display_map = {
-        Language.ENGLISH: new_lang_translator_obj.gettext("English"),
-        Language.RUSSIAN: new_lang_translator_obj.gettext("Russian"),
-    }
-    lang_name_display = lang_display_map.get(new_lang_code_enum, new_lang_code_enum.value)
+    # Use the native_name from selected_lang_info for the toast message
+    lang_name_display = selected_lang_info["native_name"]
     success_toast_text = new_lang_translator_obj.gettext("Language updated to {lang_name}.").format(lang_name=lang_name_display)
 
+    # After language change, the main settings menu should be rendered using the new language
     main_settings_builder = create_main_settings_keyboard(new_lang_translator_obj.gettext)
     main_settings_text = new_lang_translator_obj.gettext("Settings")
 

@@ -1,0 +1,28 @@
+# English translations for teamtalk-telegram-sender.
+# Copyright (C) 2025 YOUR NAME HERE
+# This file is distributed under the same license as the
+# teamtalk-telegram-sender project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: teamtalk-telegram-sender VERSION\n"
+"Report-Msgid-Bugs-To: YOUR@EMAIL.HERE\n"
+"POT-Creation-Date: 2025-07-02 13:30+0000\n"
+"PO-Revision-Date: 2025-07-02 13:30+0000\n"
+"Last-Translator: YOUR NAME <YOUR@EMAIL.HERE>\n"
+"Language: en\n"
+"Language-Team: English <en@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: bot/core/languages.py:0
+msgid "language_native_name"
+msgstr "English"
+
+# Add other English msgids here if you want to explicitly define them,
+# otherwise, gettext will fall back to msgid for English.
+# For this task, only language_native_name is strictly needed for discovery.
