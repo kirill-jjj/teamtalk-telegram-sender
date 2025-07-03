@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-07-02 13:07+0000\n" # Updated POT date
-"PO-Revision-Date: 2025-07-02 13:10+0000\n" # Updated PO date
+"POT-Creation-Date: 2025-07-02 13:30+0000\n"
+"PO-Revision-Date: 2025-07-02 13:35+0000\n"
 "Last-Translator: Jules <ai-agent@example.com>\n"
 "Language: ru\n"
 "Language-Team: Russian <ru@li.org>\n"
@@ -19,6 +19,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
+
+#: bot/core/languages.py:49
+msgid "language_native_name"
+msgstr "Русский"
 
 #: bot/core/notifications.py:114
 #, python-brace-format
@@ -325,15 +329,24 @@ msgstr "Ошибка: В запросе обратного вызова отсу
 msgid "Please choose your language:"
 msgstr "Пожалуйста, выберите ваш язык:"
 
+#: bot/telegram_bot/handlers/callback_handlers/language.py:45
+msgid "Invalid language selection."
+msgstr "Неверный выбор языка."
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:54
+msgid "Selected language is not available."
+msgstr "Выбранный язык недоступен."
+
 #: bot/telegram_bot/handlers/callback_handlers/language.py:60
 #: bot/telegram_bot/keyboards.py:84
 msgid "English"
-msgstr "English"
+msgstr "English" # This should be "English" for Russian file if it's for the button label, or specific context.
+                 # For native name, it's handled by language_native_name.
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:62
 #: bot/telegram_bot/keyboards.py:88
 msgid "Russian"
-msgstr "Русский"
+msgstr "Русский" # Same as above.
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:65
 #, python-brace-format
@@ -687,8 +700,8 @@ msgid "NOON (Not on Online): {status}"
 msgstr "NOON (Не в сети): {status}"
 
 #: bot/telegram_bot/keyboards.py:144
-msgid "Manage Muted/Allowed Users" # This was the old string, replaced by "Manage Mute List"
-msgstr "Управление блокировками пользователей" # Kept for now, might be unused
+msgid "Manage Muted/Allowed Users"
+msgstr "Управление блокировками пользователей"
 
 #: bot/telegram_bot/keyboards.py:189
 msgid "Blacklist Mode"
