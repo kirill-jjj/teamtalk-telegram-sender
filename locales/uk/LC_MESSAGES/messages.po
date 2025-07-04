@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language-Team: uk <LL@li.org>\n"
@@ -885,3 +885,55 @@ msgstr "невідоме налаштування"
 #, python-brace-format
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Налаштування підписки оновлено на: {setting_name}"
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:114
+msgid "An error occurred during language update. Please try again."
+msgstr "Виникла помилка під час оновлення мови. Будь ласка, спробуйте ще раз."
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:120
+#, python-brace-format
+msgid "Language updated, but commands might not refresh immediately. Error: {error_msg}"
+msgstr "Мову оновлено, але команди можуть оновитися не відразу. Помилка: {error_msg}"
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:139
+msgid "An unexpected error occurred."
+msgstr "Виникла непередбачена помилка."
+
+#: bot/telegram_bot/commands.py:15
+msgid "Show main menu with all commands"
+msgstr "Показати головне меню з усіма командами"
+
+#: bot/telegram_bot/commands.py:16
+msgid "Show online users in TeamTalk"
+msgstr "Показати онлайн користувачів в TeamTalk"
+
+#: bot/telegram_bot/commands.py:17
+msgid "Show this help message"
+msgstr "Показати це довідкове повідомлення"
+
+#: bot/telegram_bot/commands.py:18
+msgid "Access interactive settings menu"
+msgstr "Доступ до інтерактивного меню налаштувань"
+
+#: bot/telegram_bot/commands.py:25
+msgid "Kick TT user (admin, via buttons)"
+msgstr "Кікнути користувача TT (адмін, через кнопки)"
+
+#: bot/telegram_bot/commands.py:26
+msgid "Ban TT user (admin, via buttons)"
+msgstr "Забанити користувача TT (адмін, через кнопки)"
+
+#: bot/telegram_bot/commands.py:27
+msgid "View and manage subscribed users"
+msgstr "Перегляд та керування підписаними користувачами"
+
+#~ msgid "Language updated to {lang_name}."
+#~ msgstr "Мову оновлено на {lang_name}."
+
+#~ msgid ""
+#~ "An unexpected error occurred. The "
+#~ "administrator has been notified. Please "
+#~ "try again later."
+#~ msgstr ""
+#~ "Сталася непередбачена помилка. Адміністратора "
+#~ "сповіщено. Будь ласка, спробуйте пізніше."

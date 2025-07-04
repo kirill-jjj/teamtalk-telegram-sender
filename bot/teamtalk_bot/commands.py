@@ -17,7 +17,8 @@ from bot.config import app_config
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
 from bot.telegram_bot.bot_instances import tg_bot_event
-from bot.telegram_bot.commands import ADMIN_COMMANDS, USER_COMMANDS
+# Import get_admin_commands and get_user_commands instead of static lists
+from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 from bot.teamtalk_bot.utils import send_long_tt_reply
 from bot.core.enums import DeeplinkAction
 
@@ -80,13 +81,17 @@ async def _execute_admin_action_for_id(
     session: AsyncSession,
     telegram_id: int,
     crud_function: Callable[[AsyncSession, int], bool],
-    commands_to_set: list[BotCommand]
+    commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]], # Now a getter function
+    translator: gettext.GNUTranslations # Added translator argument
 ) -> bool:
     """Executes a CRUD function for a single ID and sets Telegram commands on success."""
+    _ = translator.gettext # Get gettext function from translator
     if await crud_function(session, telegram_id):
         try:
+            # Call the getter function to get localized commands
+            commands = commands_to_set_getter(_)
             await tg_bot_event.set_my_commands(
-                commands=commands_to_set,
+                commands=commands, # Pass the result of the getter call
                 scope=BotCommandScopeChat(chat_id=telegram_id)
             )
         except TelegramAPIError as e:
@@ -132,9 +137,9 @@ async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: Optional[str],
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: gettext.GNUTranslations, # translator was already here
     crud_function: Callable[[AsyncSession, int], bool],
-    commands_to_set: list[BotCommand],
+    commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]], # Changed parameter name
     prompt_msg_key: str,
     error_msg_key: str,
     invalid_id_msg_key: str,
@@ -154,7 +159,11 @@ async def _manage_admin_ids(
     for telegram_id in args.valid_ids:
         logger.info(f"Attempting to {crud_function.__name__} for TG ID {telegram_id} by TT admin {ttstr(tt_message.user.username)}.")
         if await _execute_admin_action_for_id(
-            session=session, telegram_id=telegram_id, crud_function=crud_function, commands_to_set=commands_to_set
+            session=session,
+            telegram_id=telegram_id,
+            crud_function=crud_function,
+            commands_to_set_getter=commands_to_set_getter, # Pass the getter
+            translator=translator # Pass the translator
         ):
             success_count += 1
             logger.info(f"Successfully processed {crud_function.__name__} for TG ID {telegram_id} and set commands.")
@@ -301,9 +310,9 @@ async def handle_tt_add_admin_command(
         tt_message=tt_message,
         args_str=args_str, # Pass args_str
         session=session,
-        translator=translator,
+        translator=translator, # Pass translator
         crud_function=add_admin,
-        commands_to_set=ADMIN_COMMANDS,
+        commands_to_set_getter=get_admin_commands, # Pass getter for admin commands
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
@@ -327,9 +336,9 @@ async def handle_tt_remove_admin_command(
         tt_message=tt_message,
         args_str=args_str, # Pass args_str
         session=session,
-        translator=translator,
+        translator=translator, # Pass translator
         crud_function=remove_admin_db,
-        commands_to_set=USER_COMMANDS,
+        commands_to_set_getter=get_user_commands, # Pass getter for user commands
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
         error_msg_key=_("Admin with ID {telegram_id} not found."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
