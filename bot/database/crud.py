@@ -120,8 +120,11 @@ async def create_deeplink(
     if await db_add_generic(session, deeplink_obj):
         logger.debug(f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}")
         return token_str
-    # Consider raising a more specific error or handling it if db_add_generic returns False
-    raise Exception(f"Failed to save deeplink for action {action}")
+    else:
+        # db_add_generic already logs the SQLAlchemyError.
+        # Returning None indicates failure to the caller.
+        logger.error(f"Failed to save deeplink to DB for action {action} (token generation was successful but DB add failed).")
+        return None
 
 
 async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
