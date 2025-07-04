@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2024-01-01 00:00+0000\n"
-"PO-Revision-Date: 2025-07-04 06:05+0500\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2025-07-04 17:00+0500\n"
 "Last-Translator: \n"
 "Language-Team: ru <LL@li.org>\n"
 "Language: ru\n"
@@ -110,15 +110,15 @@ msgstr ""
 "/add_admin <Telegram ID> [<Telegram ID>...] - Добавить админа бота.\n"
 "/remove_admin <Telegram ID> [<Telegram ID>...] - Удалить админа бота."
 
-#: bot/teamtalk_bot/commands.py:72
+#: bot/teamtalk_bot/commands.py:73
 msgid "You do not have permission to use this command."
 msgstr "У вас нет прав на использование этой команды."
 
-#: bot/teamtalk_bot/commands.py:126
+#: bot/teamtalk_bot/commands.py:131
 msgid "No action was performed. Please check the IDs provided."
 msgstr "Никаких действий не выполнено. Пожалуйста, проверьте предоставленные ID."
 
-#: bot/teamtalk_bot/commands.py:167 bot/teamtalk_bot/commands.py:297
+#: bot/teamtalk_bot/commands.py:176 bot/teamtalk_bot/commands.py:306
 #, python-brace-format
 msgid "Successfully added {count} admin."
 msgid_plural "Successfully added {count} admins."
@@ -126,7 +126,7 @@ msgstr[0] "Успешно добавлен {count} администратор."
 msgstr[1] "Успешно добавлено {count} администратора."
 msgstr[2] "Успешно добавлено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:169 bot/teamtalk_bot/commands.py:323
+#: bot/teamtalk_bot/commands.py:178 bot/teamtalk_bot/commands.py:332
 #, python-brace-format
 msgid "Successfully removed {count} admin."
 msgid_plural "Successfully removed {count} admins."
@@ -134,11 +134,11 @@ msgstr[0] "Успешно удален {count} администратор."
 msgstr[1] "Успешно удалено {count} администратора."
 msgstr[2] "Успешно удалено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:223
+#: bot/teamtalk_bot/commands.py:232
 msgid "Error communicating with Telegram. Please try again later."
 msgstr "Произошла ошибка коммуникации с Telegram. Пожалуйста, попробуйте позже."
 
-#: bot/teamtalk_bot/commands.py:265
+#: bot/teamtalk_bot/commands.py:274
 #, python-brace-format
 msgid ""
 "Click this link to subscribe to notifications (link valid for 5 minutes):\n"
@@ -148,11 +148,11 @@ msgstr ""
 "минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:266
+#: bot/teamtalk_bot/commands.py:275
 msgid "An error occurred while processing the subscription request."
 msgstr "Произошла ошибка при обработке запроса на подписку."
 
-#: bot/teamtalk_bot/commands.py:282
+#: bot/teamtalk_bot/commands.py:291
 #, python-brace-format
 msgid ""
 "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
@@ -162,11 +162,11 @@ msgstr ""
 "минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:283
+#: bot/teamtalk_bot/commands.py:292
 msgid "An error occurred while processing the unsubscription request."
 msgstr "Произошла ошибка при обработке запроса на отписку."
 
-#: bot/teamtalk_bot/commands.py:307
+#: bot/teamtalk_bot/commands.py:316
 msgid ""
 "Please provide Telegram IDs after the command. Example: /add_admin 12345678 "
 "98765432"
@@ -174,23 +174,23 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: /add_admin 12345678 "
 "98765432"
 
-#: bot/teamtalk_bot/commands.py:308
+#: bot/teamtalk_bot/commands.py:317
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
 "Пользователь с ID {telegram_id} уже является администратором или не удалось его "
 "добавить."
 
-#: bot/teamtalk_bot/commands.py:309 bot/teamtalk_bot/commands.py:335
+#: bot/teamtalk_bot/commands.py:318 bot/teamtalk_bot/commands.py:344
 #, python-brace-format
 msgid "'{telegram_id_str}' is not a valid numeric Telegram ID."
 msgstr "'{telegram_id_str}' не является допустимым числовым ID Telegram."
 
-#: bot/teamtalk_bot/commands.py:310
+#: bot/teamtalk_bot/commands.py:319
 msgid "Errors:"
 msgstr "Ошибки:"
 
-#: bot/teamtalk_bot/commands.py:333
+#: bot/teamtalk_bot/commands.py:342
 msgid ""
 "Please provide Telegram IDs after the command. Example: /remove_admin 12345678 "
 "98765432"
@@ -198,16 +198,16 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: /remove_admin 12345678 "
 "98765432"
 
-#: bot/teamtalk_bot/commands.py:334
+#: bot/teamtalk_bot/commands.py:343
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found."
 msgstr "Администратор с ID {telegram_id} не найден."
 
-#: bot/teamtalk_bot/commands.py:336
+#: bot/teamtalk_bot/commands.py:345
 msgid "Info/Errors:"
 msgstr "Информация/Ошибки:"
 
-#: bot/teamtalk_bot/commands.py:359
+#: bot/teamtalk_bot/commands.py:368
 msgid ""
 "Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /"
 "help."
@@ -235,6 +235,34 @@ msgstr "Не удалось отправить сообщение: {error}"
 #: bot/teamtalk_bot/utils.py:176
 msgid "Failed to deliver message to Telegram"
 msgstr "Не удалось доставить сообщение в Telegram"
+
+#: bot/telegram_bot/commands.py:15
+msgid "Show main menu with all commands"
+msgstr "Показать главное меню со всеми командами"
+
+#: bot/telegram_bot/commands.py:16
+msgid "Show online users in TeamTalk"
+msgstr "Показать онлайн пользователей в TeamTalk"
+
+#: bot/telegram_bot/commands.py:17
+msgid "Show this help message"
+msgstr "Показать это справочное сообщение"
+
+#: bot/telegram_bot/commands.py:18
+msgid "Access interactive settings menu"
+msgstr "Доступ к интерактивному меню настроек"
+
+#: bot/telegram_bot/commands.py:25
+msgid "Kick TT user (admin, via buttons)"
+msgstr "Кикнуть пользователя TT (админ, через кнопки)"
+
+#: bot/telegram_bot/commands.py:26
+msgid "Ban TT user (admin, via buttons)"
+msgstr "Забанить пользователя TT (админ, через кнопки)"
+
+#: bot/telegram_bot/commands.py:27
+msgid "View and manage subscribed users"
+msgstr "Просмотр и управление подписанными пользователями"
 
 #: bot/telegram_bot/deeplink.py:34
 msgid "Invalid or expired deeplink."
@@ -546,7 +574,6 @@ msgstr "Бот TeamTalk не подключен."
 msgid "An internal error occurred while retrieving the user list."
 msgstr "Произошла внутренняя ошибка при получении списка пользователей."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:78
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:22
 #: bot/telegram_bot/handlers/user.py:223
 msgid "Settings"
@@ -602,14 +629,23 @@ msgstr "Пользователь больше не найден на серве�
 msgid "Success!"
 msgstr "Успешно!"
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:29
+#: bot/telegram_bot/handlers/callback_handlers/language.py:35
 msgid "Please choose your language:"
 msgstr "Пожалуйста, выберите ваш язык:"
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:74
+#: bot/telegram_bot/handlers/callback_handlers/language.py:115
+msgid "An error occurred during language update. Please try again."
+msgstr "Произошла ошибка при обновлении языка. Пожалуйста, попробуйте еще раз."
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:121
 #, python-brace-format
-msgid "Language updated to {lang_name}."
-msgstr "Язык изменён на {lang_name}."
+msgid ""
+"Language updated, but commands might not refresh immediately. Error: {error_msg}"
+msgstr "Язык обновлен, но команды могут обновиться не сразу. Ошибка: {error_msg}"
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:140
+msgid "An unexpected error occurred."
+msgstr "Произошла непредвиденная ошибка."
 
 # | msgid "👥 Subscribers"
 #: bot/telegram_bot/handlers/callback_handlers/list_utils.py:117
@@ -900,54 +936,3 @@ msgstr "неизвестная настройка"
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Настройка подписок обновлена на: {setting_name}"
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:114
-msgid "An error occurred during language update. Please try again."
-msgstr "Произошла ошибка при обновлении языка. Пожалуйста, попробуйте еще раз."
-
-#: bot/telegram_bot/handlers/callback_handlers/language.py:120
-#, python-brace-format
-msgid "Language updated, but commands might not refresh immediately. Error: {error_msg}"
-msgstr "Язык обновлен, но команды могут обновиться не сразу. Ошибка: {error_msg}"
-
-#: bot/telegram_bot/handlers/callback_handlers/language.py:139
-msgid "An unexpected error occurred."
-msgstr "Произошла непредвиденная ошибка."
-
-#: bot/telegram_bot/commands.py:15
-msgid "Show main menu with all commands"
-msgstr "Показать главное меню со всеми командами"
-
-#: bot/telegram_bot/commands.py:16
-msgid "Show online users in TeamTalk"
-msgstr "Показать онлайн пользователей в TeamTalk"
-
-#: bot/telegram_bot/commands.py:17
-msgid "Show this help message"
-msgstr "Показать это справочное сообщение"
-
-#: bot/telegram_bot/commands.py:18
-msgid "Access interactive settings menu"
-msgstr "Доступ к интерактивному меню настроек"
-
-#: bot/telegram_bot/commands.py:25
-msgid "Kick TT user (admin, via buttons)"
-msgstr "Кикнуть пользователя TT (админ, через кнопки)"
-
-#: bot/telegram_bot/commands.py:26
-msgid "Ban TT user (admin, via buttons)"
-msgstr "Забанить пользователя TT (админ, через кнопки)"
-
-#: bot/telegram_bot/commands.py:27
-msgid "View and manage subscribed users"
-msgstr "Просмотр и управление подписанными пользователями"
-
-#~ msgid "Language updated to {lang_name}."
-#~ msgstr "Язык изменён на {lang_name}."
-
-#~ msgid ""
-#~ "An unexpected error occurred. The "
-#~ "administrator has been notified. Please "
-#~ "try again later."
-#~ msgstr ""
-#~ "Произошла непредвиденная ошибка. Администратор "
-#~ "уже уведомлен. Пожалуйста, попробуйте позже."
