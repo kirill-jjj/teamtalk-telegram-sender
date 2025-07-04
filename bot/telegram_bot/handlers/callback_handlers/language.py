@@ -14,7 +14,7 @@ from bot.core.languages import AVAILABLE_LANGUAGES_DATA # DEFAULT_LANGUAGE_CODE 
 from ._helpers import safe_edit_text # process_setting_update is replaced by direct logic
 from bot.telegram_bot.commands import get_user_commands, get_admin_commands # For setting commands
 from bot.state import ADMIN_IDS_CACHE # To check if user is admin
-from bot.database.crud import update_user_settings_in_db # Direct DB update
+from bot.core.user_settings import update_user_settings_in_db # Corrected path to function
 
 logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
