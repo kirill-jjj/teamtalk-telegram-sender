@@ -30,7 +30,7 @@ from bot.logging_setup import setup_logging # Will be called by Application
 # from bot.config import app_config
 
 from bot.database.engine import SessionFactory
-from bot.core.user_settings import load_user_settings_to_cache, USER_SETTINGS_CACHE # USER_SETTINGS_CACHE might be moved to App
+# from bot.core.user_settings import load_user_settings_to_cache, USER_SETTINGS_CACHE # USER_SETTINGS_CACHE might be moved to App # Removed this line
 from bot.database import crud
 # from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # These will be instance vars in Application
 
