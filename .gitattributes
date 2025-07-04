@@ -1,0 +1,5 @@
+# The po-filter defined below requires local git configuration to ignore PO-Revision-Date changes.
+# Run the following commands in your local repository:
+# git config filter.po-filter.clean "sed -E '/^\"PO-Revision-Date:/d'"
+# git config filter.po-filter.smudge "cat"
+*.po filter=po-filter
