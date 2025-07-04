@@ -66,8 +66,10 @@ def _get_user_display_channel_name(
                 is_channel_hidden = True
         except AttributeError:
             logger.warning(f"SDK or ChannelType attribute missing, cannot determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden.")
-        except Exception as e_chan:
-            logger.error(f"Error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}")
+        except TypeError as e_chan_type: # For issues with bitwise operations if channel_type is not an int
+            logger.error(f"TypeError checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan_type}", exc_info=True)
+        except Exception as e_chan: # Fallback for other unexpected errors
+            logger.error(f"Unexpected error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}", exc_info=True)
 
     if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
         if is_caller_admin or not is_channel_hidden:

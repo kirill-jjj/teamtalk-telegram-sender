@@ -196,8 +196,10 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                 # This condition might be hit if shutdown_tt_instance failed catastrophically before this point
                 # or if the instance was already removed by another process.
                 logger.info(f"Old instance {server_host_info} not found in tt_bot.teamtalks for removal, or list does not exist.")
-        except Exception as e_remove: # Catching a broad exception as remove itself could fail if list modified
-            logger.error(f"Error removing instance {server_host_info} from list after shutdown: {e_remove}", exc_info=True)
+        except ValueError as e_remove: # list.remove() raises ValueError if item not found
+            logger.error(f"ValueError removing instance {server_host_info} from list after shutdown: {e_remove}", exc_info=True)
+        except Exception as e_unexpected_remove: # Fallback for truly unexpected errors
+            logger.error(f"Unexpected error removing instance {server_host_info} from list after shutdown: {e_unexpected_remove}", exc_info=True)
 
     tt_bot_module.current_tt_instance = None
     tt_bot_module.login_complete_time = None
@@ -254,8 +256,12 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                         if last_instance.connected:
                             last_instance.disconnect()
                         last_instance.closeTeamTalk()
-                    except Exception as e_cleanup:
-                        logger.error(f"Error cleaning up partially created instance: {e_cleanup}")
+                    except IndexError as e_idx: # For pop()
+                        logger.error(f"IndexError cleaning up partially created instance: {e_idx}", exc_info=True)
+                    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt: # For disconnect/close
+                        logger.error(f"TeamTalk/OS error cleaning up partially created instance: {e_tt}", exc_info=True)
+                    except Exception as e_cleanup: # Fallback for other unexpected errors
+                        logger.error(f"Unexpected error cleaning up partially created instance: {e_cleanup}", exc_info=True)
 
         except (pytalk.exceptions.PermissionError, ValueError, TimeoutError, pytalk.exceptions.TeamTalkException) as e:
             logger.error(f"Critical error during reconnection attempt to {server_info_to_reconnect.host}: {e}", exc_info=True)
@@ -268,5 +274,9 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
                     if last_instance.connected:
                         last_instance.disconnect()
                     last_instance.closeTeamTalk()
-                except Exception as e_cleanup_exc:
-                    logger.error(f"Error cleaning up instance after add_server() exception: {e_cleanup_exc}")
+                except IndexError as e_idx: # For pop()
+                    logger.error(f"IndexError cleaning up instance after add_server() exception: {e_idx}", exc_info=True)
+                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt: # For disconnect/close
+                    logger.error(f"TeamTalk/OS error cleaning up instance after add_server() exception: {e_tt}", exc_info=True)
+                except Exception as e_cleanup_exc: # Fallback for other unexpected errors
+                    logger.error(f"Unexpected error cleaning up instance after add_server() exception: {e_cleanup_exc}", exc_info=True)

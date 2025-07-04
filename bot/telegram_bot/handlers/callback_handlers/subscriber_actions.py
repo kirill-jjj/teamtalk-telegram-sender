@@ -1,6 +1,7 @@
 import logging
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery
+from aiogram.exceptions import TelegramAPIError # Added import
 from sqlalchemy.ext.asyncio import AsyncSession
 from pytalk.instance import TeamTalkInstance # For TeamTalk actions like ban/kick if needed directly
 
@@ -95,8 +96,11 @@ async def handle_view_subscriber(
             chat_info = await query.bot.get_chat(user_to_view.telegram_id)
             # Use the new helper function if chat_info was successfully fetched
             display_name = format_telegram_user_display_name(chat_info)
-        except Exception as e:
-            logger.error(f"Could not fetch chat info for {user_to_view.telegram_id}: {e}")
+        except TelegramAPIError as e_tg:
+            logger.error(f"Could not fetch chat info for {user_to_view.telegram_id} via Telegram API: {e_tg}", exc_info=True)
+            # display_name remains callback_data.telegram_id (as set above)
+        except Exception as e: # Fallback for truly unexpected errors
+            logger.error(f"Unexpected error fetching chat info for {user_to_view.telegram_id}: {e}", exc_info=True)
             # If chat_info fetch fails, display_name remains callback_data.telegram_id (as set above)
             # or potentially format_telegram_user_display_name(None) if we want consistent handling
             # but the original code kept it as the ID.
@@ -160,8 +164,10 @@ async def handle_subscriber_action(
                     # Find user by username and ban. This requires pytalk SDK for ban by username/IP.
                     # For now, we assume ban is DB-side for future /sub checks.
                     logger.info(f"Conceptual TeamTalk server ban for {tt_username_to_ban} (not implemented in this step, tt_instance available)")
-                except Exception as e:
-                    logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban}: {e}")
+                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt: # For future pytalk calls
+                    logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban}: {e_tt}", exc_info=True)
+                except Exception as e: # Fallback for truly unexpected errors if the future code does something else
+                    logger.error(f"Unexpected error during conceptual TeamTalk ban for {tt_username_to_ban}: {e}", exc_info=True)
             else:
                 # This case should ideally not be reached if middleware is correctly applied and tt_instance is made non-optional
                 logger.warning(f"Skipping conceptual TeamTalk ban for {tt_username_to_ban} as tt_instance is None/invalid.")

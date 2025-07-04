@@ -53,9 +53,11 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
                 # This means .mo file was found by os.path.isfile but gettext couldn't load it.
                 # This shouldn't typically happen if the .mo check passes.
                 print(f"Warning: Could not load translations for {lang_code} despite .mo file presence.")
-            except Exception as e:
+            except OSError as ose: # Catch OS-level errors during gettext loading
+                print(f"OSError loading native name for {lang_code}: {ose}")
+            except Exception as e: # Fallback for other truly unexpected errors
                 # Catch other potential errors during gettext loading or translation
-                print(f"Error loading native name for {lang_code}: {e}")
+                print(f"Unexpected error loading native name for {lang_code}: {e}")
 
             discovered.append({"code": lang_code, "native_name": native_name})
 

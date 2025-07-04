@@ -154,8 +154,10 @@ def ensure_message_context(func: Callable):
             if translator_func:
                 try:
                     error_message = translator_func("Error processing command.") # Generic error from menu_callbacks
-                except Exception as e:
-                    logger.error(f"Failed to translate error message in decorator: {e}")
+                except TypeError as te:
+                    logger.error(f"Translator function not callable or wrong arguments in decorator for {func.__name__}: {te}", exc_info=True)
+                except Exception as e: # Fallback for other unexpected errors during translation attempt
+                    logger.error(f"Failed to translate error message in decorator for {func.__name__}: {e}", exc_info=True)
             else: # Fallback if no translator found
                 logger.warning(f"Translator function not found for handler {func.__name__}, using default error message.")
 
