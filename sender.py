@@ -71,6 +71,7 @@ async def async_main():
     )
     from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router # Import the new router
     from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router # Import new subscriber actions router
+    from bot.teamtalk_bot.utils import shutdown_tt_instance # Added for refactoring
 
     try:
         import uvloop
@@ -125,21 +126,9 @@ async def async_main():
         # Disconnect TeamTalk instances (using detailed logic)
         logger.info("Disconnecting TeamTalk instances (on_shutdown)...")
         if tt_bot_module.tt_bot and hasattr(tt_bot_module.tt_bot, 'teamtalks'):
-            ttstr = sdk.ttstr # Define ttstr here if sdk is only imported in async_main
+            # sdk.ttstr is not needed here anymore as it's handled within shutdown_tt_instance
             for tt_instance_item in tt_bot_module.tt_bot.teamtalks:
-                try:
-                    if tt_instance_item.logged_in:
-                        tt_instance_item.logout()
-                        logger.debug(f"Logged out from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
-                    if tt_instance_item.connected:
-                        tt_instance_item.disconnect()
-                        logger.debug(f"Disconnected from TT server: {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
-                    if hasattr(tt_instance_item, 'closeTeamTalk'):
-                        tt_instance_item.closeTeamTalk()
-                    logger.debug(f"Closed TeamTalk instance for {ttstr(tt_instance_item.server_info.host) if tt_instance_item.server_info else 'Unknown Server'} (on_shutdown)")
-                except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e_tt_close:
-                    logger.error(f"Error closing TeamTalk instance during on_shutdown: {e_tt_close}", exc_info=True)
-                # Deliberately not catching generic Exception here to allow critical shutdown errors to propagate
+                await shutdown_tt_instance(tt_instance_item) # Use the new utility function
         else:
             logger.warning("Pytalk bot or 'teamtalks' attribute not found for cleanup during on_shutdown.")
         logger.info("Application shutdown sequence complete (on_shutdown).")
