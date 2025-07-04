@@ -29,7 +29,7 @@ try:
     BASE_DIR = Path(__file__).resolve().parent
     LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
-except NameError:
+except NameError: # Fallback for when __file__ is not defined (e.g., running in an interactive interpreter)
     BASE_DIR = Path.cwd()
     LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"

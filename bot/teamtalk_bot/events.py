@@ -247,8 +247,8 @@ async def on_my_login(server: PytalkServer):
             current_channel_object = tt_instance.get_channel(current_channel_id)
             if current_channel_object: # Log current channel if bot is in one
                  logger.info(f"Bot currently in channel '{ttstr(current_channel_object.name)}'. Finalization will occur via on_user_join.")
-            pass
-    except PytalkPermissionError as e_perm_join:
+            # pass # Explicit pass removed as it's not necessary
+    except pytalk.exceptions.PermissionError as e_perm_join: # Corrected PytalkPermissionError
         logger.error(f"Pytalk PermissionError joining channel '{target_channel_name_log}': {e_perm_join}.", exc_info=True)
     except ValueError as e_val_join:
         logger.error(f"ValueError joining channel '{target_channel_name_log}' (e.g. invalid path/ID): {e_val_join}.", exc_info=True)

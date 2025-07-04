@@ -13,7 +13,7 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # For /who command
 
 from aiogram.exceptions import TelegramAPIError
-from bot.telegram_bot.utils import safe_delete_message # Added import
+from bot.telegram_bot.utils import safe_delete_message
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
 from bot.telegram_bot.models import WhoUser, WhoChannelGroup
