@@ -41,6 +41,7 @@ async def async_main():
     # Imports that depend on configuration
     from aiogram import Bot, Dispatcher, html
     from aiogram.types import ErrorEvent, Message
+    from aiogram.exceptions import TelegramAPIError # Added for specific exception handling in global_error_handler
     from aiogram.utils.callback_answer import CallbackAnswerMiddleware
     from pytalk.implementation.TeamTalkPy import TeamTalk5 as sdk
     import pytalk.exceptions # Added for specific exception handling
@@ -196,8 +197,10 @@ async def async_main():
                     f"<b>Сообщение:</b> {escaped_exception_text}"
                 )
                 await bot.send_message(app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
-            except Exception as e:
-                logger.error(f"Could not send critical error message to admin chat: {e}", exc_info=True)
+            except TelegramAPIError as tg_api_err:
+                logger.error(f"TelegramAPIError sending critical error to admin: {tg_api_err}", exc_info=True)
+            except Exception as e: # Catch any other unexpected error during admin notification
+                logger.error(f"Unexpected error sending critical error message to admin chat: {e}", exc_info=True)
 
         update = event.update
         user_id = None
@@ -240,13 +243,17 @@ async def async_main():
                      logger.warning(f"Error event for user {user_id} doesn't have a direct reply method (message/callback_query.message). Trying bot.send_message.")
                      try:
                          await bot.send_message(chat_id=user_id, text=user_message)
-                     except Exception as direct_send_e:
-                         logger.error(f"Could not send error message directly to user {user_id}: {direct_send_e}", exc_info=True)
+                      except TelegramAPIError as direct_send_tg_err:
+                          logger.error(f"TelegramAPIError sending error message directly to user {user_id}: {direct_send_tg_err}", exc_info=True)
+                      except Exception as direct_send_e: # Unexpected error during direct send
+                          logger.error(f"Unexpected error sending error message directly to user {user_id}: {direct_send_e}", exc_info=True)
                 else:
                     logger.warning("Error event doesn't have a direct reply method and user_id is unknown.")
 
-            except Exception as e:
-                logger.error(f"Could not send error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True)
+            except TelegramAPIError as tg_api_err: # For errors from update.message.answer or update.callback_query.message.answer
+                logger.error(f"TelegramAPIError sending error message to user {user_id if user_id else 'Unknown'}: {tg_api_err}", exc_info=True)
+            except Exception as e: # For other unexpected errors during user notification
+                logger.error(f"Unexpected error sending error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True)
 
     logger.info("Application starting...")
 
