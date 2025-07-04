@@ -428,8 +428,8 @@ msgstr "Не заблокирован"
 
 #: bot/telegram_bot/keyboards.py:295
 #, python-brace-format
-msgid "{username} (Status: {current_status})"
-msgstr "{username} (Статус: {current_status})"
+msgid "{item_display_name} (Status: {status_text})"
+msgstr "{item_display_name} (Статус: {status_text})"
 
 #: bot/telegram_bot/keyboards.py:409
 msgid "ℹ️ Who is online?"
@@ -641,14 +641,12 @@ msgid "Please choose your language:"
 msgstr "Пожалуйста, выберите ваш язык:"
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:52
-#, fuzzy
-#| msgid "Invalid deeplink action."
 msgid "Invalid language selection."
-msgstr "Неверное действие deeplink."
+msgstr "Неверный выбор языка."
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:66
 msgid "Selected language is not available."
-msgstr ""
+msgstr "Выбранный язык недоступен."
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:115
 msgid "An error occurred during language update. Please try again."
