@@ -93,7 +93,8 @@ async def async_main():
         async with SessionFactory() as session:
             db_admin_ids = await crud.get_all_admins_ids(session)
         ADMIN_IDS_CACHE.update(db_admin_ids)
-        await set_telegram_commands(bot, admin_ids=db_admin_ids)
+        # Вызов set_telegram_commands с использованием языка по умолчанию из конфигурации
+        await set_telegram_commands(bot, admin_ids=list(ADMIN_IDS_CACHE), default_language_code=app_config.DEFAULT_LANG)
         logger.debug("Telegram command setup complete (on_startup).")
 
 
