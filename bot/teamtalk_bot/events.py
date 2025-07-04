@@ -165,9 +165,9 @@ async def _finalize_bot_login_sequence(tt_instance: pytalk.instance.TeamTalkInst
         logger.error(f"Pytalk PermissionError setting status for bot: {e_perm}.", exc_info=True)
     except TeamTalkException as e_pytalk:
         logger.error(f"Pytalk specific error setting status for bot: {e_pytalk}.", exc_info=True)
-    except (TeamTalkException, TimeoutError, OSError) as e:
+    except (TimeoutError, OSError) as e: # TeamTalkException is already caught above
         # Log critical because failure here means bot might not be fully operational or visible as expected.
-        logger.critical(f"Error setting status or login_complete_time for bot: {e}.", exc_info=True)
+        logger.critical(f"Network/OS error setting status or login_complete_time for bot: {e}.", exc_info=True)
 
 
 @tt_bot_module.tt_bot.event
@@ -211,10 +211,10 @@ async def on_my_login(server: PytalkServer):
             server_name = ttstr(server_props.server_name)
     except TimeoutError as e_timeout_prop:
         logger.warning(f"TimeoutError getting server properties on login: {e_timeout_prop}.")
-    except TeamTalkException as e_pytalk_prop:
+    except TeamTalkException as e_pytalk_prop: # Catches Pytalk-specific errors including PermissionError if not caught before
         logger.warning(f"Pytalk specific error getting server properties on login: {e_pytalk_prop}.")
-    except (TeamTalkException, TimeoutError, OSError, AttributeError) as e_prop:
-             logger.warning(f"Error getting server properties on login: {e_prop}.")
+    except (OSError, AttributeError) as e_prop: # Catches OS-level network errors or attribute errors from unexpected object structure
+             logger.warning(f"OS/Attribute error getting server properties on login: {e_prop}.")
 
     logger.info(f"Successfully logged in to TeamTalk server: {server_name} (Host: {server.info.host}).")
 

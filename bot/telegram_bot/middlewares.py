@@ -2,6 +2,7 @@ import logging
 from typing import Callable, Coroutine, Any, Dict, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, User
+from aiogram.exceptions import TelegramAPIError # Import for specific exception handling
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,13 +112,17 @@ async def _send_error_response(
     if isinstance(event, Message):
         try:
             await event.reply(text)
-        except Exception as e:
-            logger.error(f"Error replying to message in _send_error_response: {e}")
+        except TelegramAPIError as e:
+            logger.error(f"TelegramAPIError replying to message in _send_error_response: {e}")
+        except Exception as e: # Catch any other unexpected non-API errors
+            logger.error(f"Unexpected error replying to message in _send_error_response: {e}", exc_info=True)
     elif isinstance(event, CallbackQuery):
         try:
             await event.answer(text, show_alert=show_alert_for_callback)
-        except Exception as e:
-            logger.error(f"Error answering callback query in _send_error_response: {e}")
+        except TelegramAPIError as e:
+            logger.error(f"TelegramAPIError answering callback query in _send_error_response: {e}")
+        except Exception as e: # Catch any other unexpected non-API errors
+            logger.error(f"Unexpected error answering callback query in _send_error_response: {e}", exc_info=True)
     else:
         logger.warning(f"_send_error_response: Unhandled event type {type(event)}")
 
