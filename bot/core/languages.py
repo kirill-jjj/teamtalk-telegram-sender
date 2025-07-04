@@ -41,9 +41,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
                 translator = gettext.translation(
                     "messages", localedir=locales_path, languages=[lang_code]
                 )
-                # Ensure the translator is activated for the current thread context
-                # translator.install() # Not ideal here as it might affect global state
-                # Instead, directly use the gettext method from the translator object
+                # Directly use the gettext method from the translator object
                 native_name_translated = translator.gettext("language_native_name")
                 if native_name_translated and native_name_translated != "language_native_name":
                     native_name = native_name_translated

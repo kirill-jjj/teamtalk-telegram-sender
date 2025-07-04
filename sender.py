@@ -152,42 +152,9 @@ async def async_main():
 
         if app_config.TG_ADMIN_CHAT_ID:
             try:
-                # Admin error message can remain in a fixed language (e.g., English or Russian)
-                # or be localized based on admin's settings if desired, but that's a separate enhancement.
-                # For now, keeping it simple.
-                admin_error_message_key = "Critical error!" # Assuming this key exists in Russian .po for admin
-                # If we want admin message in Russian (as it was):
-                # admin_translator_for_critical = get_translator('ru') # Or admin's preferred lang
-                # admin_error_text_header = admin_translator_for_critical.gettext("Critical error!")
-                # For simplicity, let's use the hardcoded Russian for admin notification for now,
-                # as the original was in Russian.
-                # admin_translator_for_critical = get_translator('ru') # Or admin's preferred lang
-                # admin_error_text_header = admin_translator_for_critical.gettext("<b>Critical error!</b>")
-                # Using a fixed key for admin notifications, assuming admin might have their own language preference
-                # or a default like 'ru' or 'en' can be used.
-                # For now, we'll use a key and expect it to be in the .po files.
-                # The original Russian string was "<b>Критическая ошибка!</b>"
-                # The key will be "<b>Critical error!</b>"
-                # We need a translator instance. Since this message is for the admin,
-                # we could use the default language or a specific admin language if configured.
-                # Let's use the default language for now for the admin message header.
-                admin_lang_code = app_config.DEFAULT_LANG # Or a specific admin language setting
-                admin_translator = get_translator(admin_lang_code)
-                # If we specifically want the admin message in Russian, as it was originally:
-                # admin_translator_critical = get_translator('ru')
-                # critical_error_header = admin_translator_critical.gettext("<b>Critical error!</b>")
-                # However, to make it generally localizable, let's use the admin's configured language
-                # or the system default for the error header.
-                # The issue description implies the admin error message itself should be localized.
-                # The original code used a hardcoded Russian string.
-                # We will use a key "<b>Critical error!</b>" and it should be translated to Russian in ru.po
-
-                # For the admin message, we can use a specific translator (e.g. Russian if that's intended)
-                # or use the default language translator. Let's use Russian for the admin error header
-                # as per the original hardcoded string's language.
-                # This means the admin will always see this part in Russian, unless 'ru' translations change.
-                # A better approach might be to use admin's own language preference if available.
-                # For now, sticking to the original intent of a Russian critical error message for admin.
+                # Admin error message is intentionally sent in Russian for now,
+                # based on the original hardcoded string.
+                # A localizable key "<b>Critical error!</b>" is used.
                 admin_critical_translator = get_translator('ru')
                 critical_error_header = admin_critical_translator.gettext("<b>Critical error!</b>")
 

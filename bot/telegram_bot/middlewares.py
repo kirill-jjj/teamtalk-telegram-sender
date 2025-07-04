@@ -6,7 +6,6 @@ from aiogram.exceptions import TelegramAPIError # Import for specific exception 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.models import SubscribedUser # Keep if other middlewares use it, or remove if specific to old sub check
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
