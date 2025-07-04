@@ -1,4 +1,5 @@
 import logging
+from typing import Callable # Added import for Callable
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, BotCommandScopeChat
 from sqlalchemy.ext.asyncio import AsyncSession
