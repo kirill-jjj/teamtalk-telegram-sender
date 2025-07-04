@@ -49,7 +49,7 @@ async def cq_set_language(
 ):
     if callback_data.lang_code is None:
         logger.warning("LanguageCallback received with lang_code=None")
-        await callback_query.answer("Invalid language selection.", show_alert=True)
+        await callback_query.answer(_("Invalid language selection."), show_alert=True)
         return
 
     managed_user_settings = await session.merge(user_settings)
@@ -63,7 +63,7 @@ async def cq_set_language(
     selected_lang_info = next((lang for lang in AVAILABLE_LANGUAGES_DATA if lang["code"] == new_lang_code_str), None)
     if not selected_lang_info:
         logger.error(f"Attempt to set unknown language code: {new_lang_code_str}")
-        await callback_query.answer("Selected language is not available.", show_alert=True)
+        await callback_query.answer(_("Selected language is not available."), show_alert=True)
         return
 
     # Get new translator object for the selected language
