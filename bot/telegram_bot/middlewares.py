@@ -100,6 +100,28 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
+async def _send_error_response(
+    event: TelegramObject,
+    text: str,
+    show_alert_for_callback: bool = True
+) -> None:
+    """
+    Internal helper to send an error response based on event type.
+    """
+    if isinstance(event, Message):
+        try:
+            await event.reply(text)
+        except Exception as e:
+            logger.error(f"Error replying to message in _send_error_response: {e}")
+    elif isinstance(event, CallbackQuery):
+        try:
+            await event.answer(text, show_alert=show_alert_for_callback)
+        except Exception as e:
+            logger.error(f"Error answering callback query in _send_error_response: {e}")
+    else:
+        logger.warning(f"_send_error_response: Unhandled event type {type(event)}")
+
+
 class TeamTalkConnectionMiddleware(BaseMiddleware):
     """
     Checks if the TeamTalk instance is connected and logged in.
@@ -122,20 +144,9 @@ class TeamTalkConnectionMiddleware(BaseMiddleware):
         _ = translator.gettext
 
         if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-            error_message = _("TeamTalk bot is not connected. Please try again later.")
+            error_message_text = _("TeamTalk bot is not connected. Please try again later.")
 
-            if isinstance(event, Message):
-                try:
-                    await event.reply(error_message)
-                except Exception as e:
-                    logger.error(f"Error replying to message in TeamTalkConnectionMiddleware: {e}")
-            elif isinstance(event, CallbackQuery):
-                try:
-                    await event.answer(error_message, show_alert=True)
-                except Exception as e:
-                    logger.error(f"Error answering callback query in TeamTalkConnectionMiddleware: {e}")
-            else:
-                logger.warning(f"TeamTalkConnectionMiddleware: Unhandled event type {type(event)}")
+            await _send_error_response(event, error_message_text, show_alert_for_callback=True)
 
             logger.warning(
                 f"TeamTalkConnectionMiddleware: Blocked access for user {data.get('event_from_user', {}).get('id')} "

@@ -278,3 +278,38 @@ def format_telegram_user_display_name(chat: Chat | None) -> str:
     # If neither full_name nor username is present, display_name remains str(chat.id)
 
     return display_name
+
+
+async def safe_delete_message(message: Message, log_context_message: str = "message") -> bool:
+    """
+    Safely deletes a message, catching TelegramAPIErrors and logging them.
+
+    :param message: The aiogram.types.Message object to delete.
+    :param log_context_message: A string to include in the log message for context
+                                (e.g., "user settings command", "user menu command").
+    :return: True if deletion was successful or if the message was already deleted/not found,
+             False if another TelegramAPIError occurred.
+    """
+    try:
+        await message.delete()
+        return True
+    except TelegramBadRequest as e:
+        # Specific check for errors indicating the message can't be deleted because it's too old,
+        # doesn't exist, or the bot doesn't have rights. These are often not critical failures
+        # for the calling function's flow.
+        if "message to delete not found" in str(e).lower() or \
+           "message can't be deleted" in str(e).lower() or \
+           "message identifier is not specified" in str(e).lower(): # Should not happen with Message obj
+            logger.info(f"Could not delete {log_context_message} (message likely already gone or permissions issue): {e}")
+            return True # Treat as "handled" or "not an issue for caller"
+        else:
+            logger.warning(f"TelegramBadRequest when trying to delete {log_context_message}: {e}")
+            return False # Other bad requests might be more problematic
+    except TelegramAPIError as e:
+        # Catches other errors like Forbidden, etc.
+        logger.warning(f"Could not delete {log_context_message} due to TelegramAPIError: {e}")
+        return False
+    except Exception as e:
+        # Catch any other unexpected error
+        logger.error(f"Unexpected error when trying to delete {log_context_message}: {e}", exc_info=True)
+        return False
