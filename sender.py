@@ -240,13 +240,13 @@ async def async_main():
                 # It might be possible to use bot.send_message(chat_id=user_id, ...) if user_id is known
                 # but the context (message, callback_query) is missing.
                 elif user_id:
-                     logger.warning(f"Error event for user {user_id} doesn't have a direct reply method (message/callback_query.message). Trying bot.send_message.")
-                     try:
-                         await bot.send_message(chat_id=user_id, text=user_message)
-                      except TelegramAPIError as direct_send_tg_err:
-                          logger.error(f"TelegramAPIError sending error message directly to user {user_id}: {direct_send_tg_err}", exc_info=True)
-                      except Exception as direct_send_e: # Unexpected error during direct send
-                          logger.error(f"Unexpected error sending error message directly to user {user_id}: {direct_send_e}", exc_info=True)
+                    logger.warning(f"Error event for user {user_id} doesn't have a direct reply method (message/callback_query.message). Trying bot.send_message.")
+                    try:
+                        await bot.send_message(chat_id=user_id, text=user_message)
+                    except TelegramAPIError as direct_send_tg_err:
+                        logger.error(f"TelegramAPIError sending error message directly to user {user_id}: {direct_send_tg_err}", exc_info=True)
+                    except Exception as direct_send_e: # Unexpected error during direct send
+                        logger.error(f"Unexpected error sending error message directly to user {user_id}: {direct_send_e}", exc_info=True)
                 else:
                     logger.warning("Error event doesn't have a direct reply method and user_id is unknown.")
 
