@@ -147,9 +147,9 @@ async def forward_tt_message_to_telegram_admin(
 
     admin_chat_id = app_config.TG_ADMIN_CHAT_ID
     admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id)
-    admin_language = admin_settings.language if admin_settings else DEFAULT_LANGUAGE
+    admin_language_code = admin_settings.language_code if admin_settings else DEFAULT_LANGUAGE # Use .language_code
 
-    translator = get_translator(admin_language)
+    translator = get_translator(admin_language_code) # Use the corrected variable
     _ = translator.gettext
 
     tt_instance = message.teamtalk_instance
@@ -166,7 +166,7 @@ async def forward_tt_message_to_telegram_admin(
     was_sent: bool = await send_telegram_message_individual(
         bot_instance=tg_bot_message,
         chat_id=admin_chat_id,
-        language=admin_language,
+        language=admin_language_code, # Use the corrected variable
         **content.as_kwargs()
     )
 
