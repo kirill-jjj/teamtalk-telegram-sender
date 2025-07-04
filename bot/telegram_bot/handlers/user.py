@@ -13,6 +13,7 @@ from pytalk.user import User as TeamTalkUser
 from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # For /who command
 
 from aiogram.exceptions import TelegramAPIError
+from bot.telegram_bot.utils import safe_delete_message # Added import
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
 from bot.telegram_bot.models import WhoUser, WhoChannelGroup
@@ -211,10 +212,7 @@ async def settings_command_handler(
     if not message.from_user:
         return
 
-    try:
-        await message.delete()
-    except TelegramAPIError as e:
-        logger.warning(f"Could not delete user settings command: {e}")
+    await safe_delete_message(message, log_context_message="user settings command")
 
     settings_builder = create_main_settings_keyboard(_)
 
@@ -235,10 +233,7 @@ async def menu_command_handler(
     if not message.from_user:
         return
 
-    try:
-        await message.delete()
-    except TelegramAPIError as e:
-        logger.warning(f"Could not delete user menu command: {e}")
+    await safe_delete_message(message, log_context_message="user menu command")
 
     is_admin = message.from_user.id in ADMIN_IDS_CACHE
     menu_builder = create_main_menu_keyboard(_, is_admin)
