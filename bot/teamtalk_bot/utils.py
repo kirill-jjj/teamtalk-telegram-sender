@@ -5,7 +5,7 @@ from aiogram.utils.formatting import Text, Bold
 
 import pytalk
 from pytalk import TeamTalkServerInfo
-from pytalk.instance import TeamTalkInstance
+from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
 from bot.teamtalk_bot import bot_instance as tt_bot_module
 
@@ -23,9 +23,39 @@ from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
+ttstr = sdk.ttstr # Use the imported sdk
 
 RECONNECT_IN_PROGRESS = False
+
+
+async def shutdown_tt_instance(instance: TeamTalkInstance):
+    """Safely shuts down a single TeamTalk instance."""
+    try:
+        # Ensure server_info and host are available for logging, provide default if not
+        host_info = "Unknown Host"
+        if hasattr(instance, 'server_info') and instance.server_info and hasattr(instance.server_info, 'host'):
+            host_info = ttstr(instance.server_info.host)
+
+        if instance.logged_in:
+            logger.debug(f"Logging out from TT instance: {host_info}")
+            instance.logout()
+        if instance.connected:
+            logger.debug(f"Disconnecting from TT instance: {host_info}")
+            instance.disconnect()
+        # Check for closeTeamTalk attribute as it might not always be present
+        # (though in typical TeamTalkInstance it should be)
+        if hasattr(instance, 'closeTeamTalk'):
+            logger.debug(f"Closing TT instance: {host_info}")
+            instance.closeTeamTalk()
+        logger.info(f"Successfully shut down TT instance for host: {host_info}")
+    except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e:
+        # Attempt to get host_info again in case it was not available before error
+        host_info_err = "Unknown Host (during error)"
+        if hasattr(instance, 'server_info') and instance.server_info and hasattr(instance.server_info, 'host'):
+            host_info_err = ttstr(instance.server_info.host)
+        logger.error(f"Error during TT instance shutdown for {host_info_err}: {e}", exc_info=True)
+
+
 
 def initiate_reconnect_task(failed_instance: TeamTalkInstance | None):
     global RECONNECT_IN_PROGRESS
@@ -150,35 +180,24 @@ async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
     global RECONNECT_IN_PROGRESS
 
     if failed_instance:
+        server_host_info = "unknown server"
+        if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
+            server_host_info = ttstr(failed_instance.server_info.host) # Use ttstr here for consistency
+
+        logger.info(f"Shutting down failed instance for server {server_host_info} before attempting reconnect...")
+        await shutdown_tt_instance(failed_instance) # Use the new utility function
+
+        # Attempt to remove the instance from the list after shutdown
         try:
-            server_host_info = "unknown server"
-            if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
-                server_host_info = failed_instance.server_info.host
-            logger.info(f"Closing old instance for server {server_host_info}...")
-
-            if failed_instance.logged_in:
-                logger.debug(f"Attempting logout for instance {server_host_info}")
-                failed_instance.logout()
-            if failed_instance.connected:
-                logger.debug(f"Attempting disconnect for instance {server_host_info}")
-                failed_instance.disconnect()
-
-            logger.debug(f"Attempting closeTeamTalk for instance {server_host_info}")
-            failed_instance.closeTeamTalk()
-
             if hasattr(tt_bot_module.tt_bot, 'teamtalks') and failed_instance in tt_bot_module.tt_bot.teamtalks:
                 tt_bot_module.tt_bot.teamtalks.remove(failed_instance)
-                logger.info(f"Old instance {server_host_info} removed from tt_bot.teamtalks list.")
+                logger.info(f"Old instance {server_host_info} removed from tt_bot.teamtalks list after shutdown.")
             else:
-                logger.info(f"Old instance {server_host_info} not found in tt_bot.teamtalks or list does not exist.")
-
-            logger.info(f"Old instance {server_host_info} successfully closed and removed (attempt).")
-
-        except (pytalk.exceptions.TeamTalkException, TimeoutError) as e:
-            server_host_info_err = "unknown server"
-            if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
-                server_host_info_err = failed_instance.server_info.host
-            logger.error(f"Error closing old instance {server_host_info_err}: {e}", exc_info=True)
+                # This condition might be hit if shutdown_tt_instance failed catastrophically before this point
+                # or if the instance was already removed by another process.
+                logger.info(f"Old instance {server_host_info} not found in tt_bot.teamtalks for removal, or list does not exist.")
+        except Exception as e_remove: # Catching a broad exception as remove itself could fail if list modified
+            logger.error(f"Error removing instance {server_host_info} from list after shutdown: {e_remove}", exc_info=True)
 
     tt_bot_module.current_tt_instance = None
     tt_bot_module.login_complete_time = None
