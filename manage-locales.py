@@ -118,7 +118,7 @@ def update_catalogs() -> None:
         "-i", str(POT_FILE),
         "-d", str(LOCALE_DIR),
         "-D", LOCALE_DOMAIN,
-        "--update-header-comment",
+        # "--update-header-comment", # Removed to prevent PO-Revision-Date changes
         "--previous"
     ]
     run_command(command)
