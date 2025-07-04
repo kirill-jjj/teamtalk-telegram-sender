@@ -7,7 +7,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import html
 import pytalk # For UserAccount type hint
-from typing import Callable, List
+from typing import Callable, List, Any # Added Any for the generic helper
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.telegram_bot.models import SubscriberInfo
@@ -243,33 +243,31 @@ def create_paginated_user_list_keyboard(
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
-    builder = InlineKeyboardBuilder()
 
-    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
+    # Define extractors for the generic helper
+    # For this function, the item in page_items is already the username string.
+    def username_extractor(item: str) -> str:
+        return item
 
-    for idx, username in enumerate(page_items):
-        effectively_muted = _is_username_effectively_muted(username, user_settings, muted_usernames_from_relationship)
+    def display_name_extractor(item: str) -> str:
+        return item
 
-        button_text = _("Unmute {username}").format(username=username) if effectively_muted else _("Mute {username}").format(username=username)
+    # The button text format in the generic helper is "{display_name} (Status: {status_text})".
+    # The original format was "Unmute {username}" or "Mute {username}".
+    # We will rely on the generic helper's new standardized format.
 
-        callback_d = ToggleMuteSpecificCallback(
-            action=ToggleMuteSpecificAction.TOGGLE_USER,
-            user_idx=idx,
-            current_page=current_page,
-            list_type=list_type
-        )
-        builder.button(text=button_text, callback_data=callback_d.pack())
-
-    if page_items:
-        builder.adjust(1)
-
-    _add_pagination_controls(builder, _, current_page, total_pages, list_type, PaginateUsersCallback)
-
-    builder.row(InlineKeyboardButton(
-        text=_("⬅️ Back to Mute Management"),
-        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
-    ))
-    return builder.as_markup()
+    return _create_generic_user_toggle_list_keyboard(
+        _=_,
+        page_items=page_items,
+        current_page=current_page,
+        total_pages=total_pages,
+        user_settings=user_settings,
+        list_type_for_callback=list_type, # list_type is passed in, e.g. UserListAction.LIST_MUTED
+        item_username_extractor=username_extractor,
+        item_display_name_extractor=display_name_extractor,
+        back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
+        back_button_text_key="⬅️ Back to Mute Management"
+    )
 
 def create_account_list_keyboard(
     _: callable,
@@ -279,39 +277,25 @@ def create_account_list_keyboard(
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""
-    builder = InlineKeyboardBuilder()
 
-    # Create a set of muted usernames from the user_settings.muted_users_list relationship
-    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
+    def username_extractor(item: pytalk.UserAccount) -> str:
+        return ttstr(item.username)
 
-    for idx, account_obj in enumerate(page_items):
-        username_str = ttstr(account_obj.username)
-        display_name = username_str
+    def display_name_extractor(item: pytalk.UserAccount) -> str:
+        return ttstr(item.username) # Display name is also the username for this list
 
-        effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
-
-        current_status_text = _("Muted") if effectively_muted else _("Not Muted")
-
-        button_text = _("{username} (Status: {current_status})").format(username=display_name, current_status=current_status_text)
-
-        callback_d = ToggleMuteSpecificCallback(
-        action=ToggleMuteSpecificAction.TOGGLE_USER,
-            user_idx=idx,
-            current_page=current_page,
-        list_type=UserListAction.LIST_ALL_ACCOUNTS
-        )
-        builder.button(text=button_text, callback_data=callback_d.pack())
-
-    if page_items:
-        builder.adjust(1)
-
-    _add_pagination_controls(builder, _, current_page, total_pages, UserListAction.LIST_ALL_ACCOUNTS, PaginateUsersCallback)
-
-    builder.row(InlineKeyboardButton(
-        text=_("⬅️ Back to Mute Management"),
-        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack()
-    ))
-    return builder.as_markup()
+    return _create_generic_user_toggle_list_keyboard(
+        _=_,
+        page_items=page_items,
+        current_page=current_page,
+        total_pages=total_pages,
+        user_settings=user_settings,
+        list_type_for_callback=UserListAction.LIST_ALL_ACCOUNTS,
+        item_username_extractor=username_extractor,
+        item_display_name_extractor=display_name_extractor,
+        back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
+        back_button_text_key="⬅️ Back to Mute Management"
+    )
 
 def create_subscriber_list_keyboard(
     _: Callable,
@@ -476,6 +460,59 @@ def create_subscriber_action_menu_keyboard(
         ).pack()
     )
     builder.adjust(1) # One button per row
+    return builder.as_markup()
+
+# --- Generic Helper for Paginated User Lists with Toggle ---
+def _create_generic_user_toggle_list_keyboard(
+    _: Callable[[str], str],
+    page_items: List[Any],
+    current_page: int,
+    total_pages: int,
+    user_settings: UserSettings,
+    list_type_for_callback: UserListAction,
+    item_username_extractor: Callable[[Any], str],
+    item_display_name_extractor: Callable[[Any], str],
+    back_button_callback_data: str,
+    back_button_text_key: str
+) -> InlineKeyboardMarkup:
+    """
+    Generic helper to create a keyboard for a paginated list of users
+    with mute/unmute toggle buttons.
+    """
+    builder = InlineKeyboardBuilder()
+
+    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
+
+    for idx, item in enumerate(page_items):
+        username_str = item_username_extractor(item)
+        display_name_on_button = item_display_name_extractor(item)
+
+        effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
+        status_text = _("Muted") if effectively_muted else _("Not Muted")
+
+        # Standardized button text
+        button_text = _("{item_display_name} (Status: {status_text})").format(
+            item_display_name=html.escape(display_name_on_button), # Ensure display name is escaped
+            status_text=status_text
+        )
+
+        callback_d = ToggleMuteSpecificCallback(
+            action=ToggleMuteSpecificAction.TOGGLE_USER,
+            user_idx=idx,
+            current_page=current_page,
+            list_type=list_type_for_callback
+        ).pack()
+        builder.button(text=button_text, callback_data=callback_d)
+
+    if page_items:
+        builder.adjust(1)
+
+    _add_pagination_controls(builder, _, current_page, total_pages, list_type_for_callback, PaginateUsersCallback)
+
+    builder.row(InlineKeyboardButton(
+        text=_(back_button_text_key),
+        callback_data=back_button_callback_data
+    ))
     return builder.as_markup()
 
 
