@@ -8,7 +8,6 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-07-04 12:06+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -19,6 +18,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
+
+#: sender.py:191
+msgid "<b>Critical error!</b>"
+msgstr ""
 
 #: bot/core/languages.py:47
 msgid "language_native_name"
@@ -631,6 +634,16 @@ msgstr "Успішно!"
 msgid "Please choose your language:"
 msgstr "Будь ласка, оберіть вашу мову:"
 
+#: bot/telegram_bot/handlers/callback_handlers/language.py:52
+#, fuzzy
+#| msgid "Invalid deeplink action."
+msgid "Invalid language selection."
+msgstr "Недійсна дія deeplink."
+
+#: bot/telegram_bot/handlers/callback_handlers/language.py:66
+msgid "Selected language is not available."
+msgstr ""
+
 #: bot/telegram_bot/handlers/callback_handlers/language.py:115
 msgid "An error occurred during language update. Please try again."
 msgstr "Виникла помилка під час оновлення мови. Будь ласка, спробуйте ще раз."
@@ -930,4 +943,3 @@ msgstr "невідоме налаштування"
 #, python-brace-format
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Налаштування підписки оновлено на: {setting_name}"
-
