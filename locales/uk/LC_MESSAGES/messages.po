@@ -8,16 +8,18 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"PO-Revision-Date: 2025-07-04 03:25+0500\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
-"Language: uk\n"
 "Language-Team: uk <LL@li.org>\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Language: uk\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 "
+"&& (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Generated-By: Babel 2.17.0\n"
+"X-Generator: Poedit 3.6\n"
 
 #: bot/core/languages.py:47
 msgid "language_native_name"
@@ -49,17 +51,17 @@ msgstr "<b>Доступні команди:</b>"
 #: bot/core/utils.py:60
 msgid ""
 "/who - Show online users.\n"
-"/settings - Access the interactive settings menu (language, "
-"notifications, mute lists, NOON feature).\n"
+"/settings - Access the interactive settings menu (language, notifications, mute "
+"lists, NOON feature).\n"
 "/help - Show this help message.\n"
 "(Note: `/start` is used to initiate the bot and process deeplinks.)"
 msgstr ""
 "/who - Показати користувачів онлайн.\n"
-"/settings - Доступ до інтерактивного меню налаштувань (мова, сповіщення, "
-"списки ігнорування, функція NOON).\n"
+"/settings - Доступ до інтерактивного меню налаштувань (мова, сповіщення, списки "
+"ігнорування, функція NOON).\n"
 "/help - Показати це повідомлення.\n"
-"(Примітка: `/start` використовується для запуску бота та обробки "
-"deeplink-посилань.)"
+"(Примітка: `/start` використовується для запуску бота та обробки deeplink-"
+"посилань.)"
 
 #: bot/core/utils.py:65
 msgid ""
@@ -140,12 +142,11 @@ msgstr "Помилка зв'язку з Telegram. Будь ласка, спро�
 #: bot/teamtalk_bot/commands.py:265
 #, python-brace-format
 msgid ""
-"Click this link to subscribe to notifications (link valid for 5 minutes):"
-"\n"
+"Click this link to subscribe to notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
-"Натисніть на це посилання, щоб підписатися на сповіщення (посилання "
-"дійсне 5 хвилин):\n"
+"Натисніть на це посилання, щоб підписатися на сповіщення (посилання дійсне 5 "
+"хвилин):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:266
@@ -155,12 +156,11 @@ msgstr "Сталася помилка під час обробки запиту 
 #: bot/teamtalk_bot/commands.py:282
 #, python-brace-format
 msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 "
-"minutes):\n"
+"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
-"Натисніть на це посилання, щоб відписатися від сповіщень (посилання "
-"дійсне 5 хвилин):\n"
+"Натисніть на це посилання, щоб відписатися від сповіщень (посилання дійсне 5 "
+"хвилин):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:283
@@ -169,18 +169,17 @@ msgstr "Сталася помилка під час обробки запиту 
 
 #: bot/teamtalk_bot/commands.py:307
 msgid ""
-"Please provide Telegram IDs after the command. Example: /add_admin "
-"12345678 98765432"
+"Please provide Telegram IDs after the command. Example: /add_admin 12345678 "
+"98765432"
 msgstr ""
-"Будь ласка, вкажіть ID Telegram після команди. Приклад: /add_admin "
-"12345678 98765432"
+"Будь ласка, вкажіть ID Telegram після команди. Приклад: /add_admin 12345678 "
+"98765432"
 
 #: bot/teamtalk_bot/commands.py:308
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
-"Користувач з ID {telegram_id} вже є адміністратором або не вдалося його "
-"додати."
+"Користувач з ID {telegram_id} вже є адміністратором або не вдалося його додати."
 
 #: bot/teamtalk_bot/commands.py:309 bot/teamtalk_bot/commands.py:335
 #, python-brace-format
@@ -193,11 +192,11 @@ msgstr "Помилки:"
 
 #: bot/teamtalk_bot/commands.py:333
 msgid ""
-"Please provide Telegram IDs after the command. Example: /remove_admin "
-"12345678 98765432"
+"Please provide Telegram IDs after the command. Example: /remove_admin 12345678 "
+"98765432"
 msgstr ""
-"Будь ласка, вкажіть ID Telegram після команди. Приклад: /remove_admin "
-"12345678 98765432"
+"Будь ласка, вкажіть ID Telegram після команди. Приклад: /remove_admin 12345678 "
+"98765432"
 
 #: bot/teamtalk_bot/commands.py:334
 #, python-brace-format
@@ -210,11 +209,11 @@ msgstr "Інформація/Помилки:"
 
 #: bot/teamtalk_bot/commands.py:359
 msgid ""
-"Unknown command. Available commands: /sub, /unsub, /add_admin, "
-"/remove_admin, /help."
+"Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /"
+"help."
 msgstr ""
-"Невідома команда. Доступні команди: /sub, /unsub, /add_admin, "
-"/remove_admin, /help."
+"Невідома команда. Доступні команди: /sub, /unsub, /add_admin, /remove_admin, /"
+"help."
 
 #: bot/teamtalk_bot/utils.py:161
 msgid "Message from server "
@@ -244,8 +243,7 @@ msgstr "Недійсне або прострочене посилання."
 #: bot/telegram_bot/deeplink.py:38
 msgid "This confirmation link was intended for a different Telegram account."
 msgstr ""
-"Це посилання для підтвердження призначене для іншого облікового запису "
-"Telegram."
+"Це посилання для підтвердження призначене для іншого облікового запису Telegram."
 
 #: bot/telegram_bot/deeplink.py:60 bot/telegram_bot/deeplink.py:65
 msgid "Invalid deeplink action."
@@ -271,16 +269,15 @@ msgstr "Ваш обліковий запис Telegram заблоковано д�
 #, python-brace-format
 msgid "The TeamTalk username '{tt_username}' is banned and cannot be linked."
 msgstr ""
-"Ім'я користувача TeamTalk '{tt_username}' заблоковане і не може бути "
-"пов'язане."
+"Ім'я користувача TeamTalk '{tt_username}' заблоковане і не може бути пов'язане."
 
 #: bot/telegram_bot/deeplink.py:122
 msgid ""
-"Error: Missing required information for subscription. Please try the link"
-" again or contact support."
+"Error: Missing required information for subscription. Please try the link again "
+"or contact support."
 msgstr ""
-"Помилка: Відсутня необхідна інформація для підписки. Будь ласка, "
-"спробуйте посилання ще раз або зверніться до підтримки."
+"Помилка: Відсутня необхідна інформація для підписки. Будь ласка, спробуйте "
+"посилання ще раз або зверніться до підтримки."
 
 #: bot/telegram_bot/deeplink.py:129
 msgid "You have successfully subscribed to notifications."
@@ -631,8 +628,7 @@ msgstr "Сталася помилка. Будь ласка, спробуйте �
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:112
 msgid "An error occurred while loading the list. Please try again later."
 msgstr ""
-"Сталася помилка під час завантаження списку. Будь ласка, спробуйте "
-"пізніше."
+"Сталася помилка під час завантаження списку. Будь ласка, спробуйте пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:118
 msgid "Blacklisted Users (Block List)"
@@ -657,8 +653,8 @@ msgstr "Сталася помилка через недійсний режим. 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:149
 msgid "Server user accounts are not loaded yet. Please try again in a moment."
 msgstr ""
-"Облікові записи користувачів сервера ще не завантажені. Будь ласка, "
-"спробуйте за мить."
+"Облікові записи користувачів сервера ще не завантажені. Будь ласка, спробуйте "
+"за мить."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:162
 msgid "All Server Accounts"
@@ -702,20 +698,20 @@ msgstr "Бот TeamTalk відключений. Інтерфейс не вдал
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:293
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:338
 msgid ""
-"Current mode is Blacklist. You receive notifications from everyone except"
-" those on the list."
+"Current mode is Blacklist. You receive notifications from everyone except those "
+"on the list."
 msgstr ""
-"Поточний режим: Чорний список. Ви отримуєте сповіщення від усіх, крім "
-"тих, хто в списку."
+"Поточний режим: Чорний список. Ви отримуєте сповіщення від усіх, крім тих, хто "
+"в списку."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:295
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:340
 msgid ""
-"Current mode is Whitelist. You only receive notifications from users on "
-"the list."
+"Current mode is Whitelist. You only receive notifications from users on the "
+"list."
 msgstr ""
-"Поточний режим: Білий список. Ви отримуєте сповіщення тільки від "
-"користувачів у списку."
+"Поточний режим: Білий список. Ви отримуєте сповіщення тільки від користувачів у "
+"списку."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:330
 msgid "Blacklist"
@@ -733,11 +729,10 @@ msgstr "Режим списку ігнорування змінено на {mode
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:384
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:404
 msgid ""
-"Server user accounts have not been loaded yet. Please try again in a "
-"moment."
+"Server user accounts have not been loaded yet. Please try again in a moment."
 msgstr ""
-"Облікові записи користувачів сервера ще не завантажені. Будь ласка, "
-"спробуйте за мить."
+"Облікові записи користувачів сервера ще не завантажені. Будь ласка, спробуйте "
+"за мить."
 
 #: bot/telegram_bot/handlers/callback_handlers/notifications.py:50
 #, python-brace-format
@@ -821,8 +816,8 @@ msgstr "Акаунт TeamTalk не було прив'язано."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:256
 msgid "TeamTalk server accounts cache is not populated. Please try again later."
 msgstr ""
-"Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, "
-"спробуйте пізніше."
+"Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, спробуйте "
+"пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:262
 msgid "No TeamTalk server accounts found or unable to fetch."
@@ -890,27 +885,3 @@ msgstr "невідоме налаштування"
 #, python-brace-format
 msgid "Subscription setting updated to: {setting_name}"
 msgstr "Налаштування підписки оновлено на: {setting_name}"
-
-#~ msgid "Invalid language selection."
-#~ msgstr "Неправильний вибір мови."
-
-#~ msgid "Selected language is not available."
-#~ msgstr "Обрана мова недоступна."
-
-#~ msgid "TeamTalk bot is not connected. Cannot display user list."
-#~ msgstr "Бот TeamTalk не підключений. Неможливо відобразити список користувачів."
-
-#~ msgid "TeamTalk bot is not connected. Cannot fetch server accounts."
-#~ msgstr ""
-#~ "Бот TeamTalk не підключений. Неможливо "
-#~ "отримати список акаунтів сервера."
-
-# Added for global error handler
-#~ msgid ""
-#~ "An unexpected error occurred. The "
-#~ "administrator has been notified. Please "
-#~ "try again later."
-#~ msgstr ""
-#~ "Сталася непередбачена помилка. Адміністратора "
-#~ "вже сповіщено. Будь ласка, спробуйте "
-#~ "пізніше."
