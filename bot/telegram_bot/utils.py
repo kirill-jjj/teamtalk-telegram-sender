@@ -7,33 +7,41 @@ from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
 
-from bot.config import app_config
-from bot.services import user_service
-from bot.database.engine import SessionFactory
-from bot.core.user_settings import USER_SETTINGS_CACHE
-from bot.state import ONLINE_USERS_CACHE
+# from bot.config import app_config # Not used directly here anymore
+from bot.services import user_service # Keep, used by _handle_telegram_api_error
+# from bot.database.engine import SessionFactory # No longer directly used, app.session_factory is used
+# from bot.core.user_settings import USER_SETTINGS_CACHE # No longer directly used, app.user_settings_cache is used
+# from bot.state import ONLINE_USERS_CACHE # Removed
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
+# from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Bot instances passed as params
+
+# For type hinting app instance
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from sender import Application
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, app: "Application"): # app is now a direct param
     """
-    Handles specific Telegram API errors, performing actions like unsubscribing users
-    or logging detailed error information.
+    Handles specific Telegram API errors.
     """
+    if not app: # Should ideally not happen if called correctly
+        logger.error(f"Telegram API error for chat_id {chat_id} but app context was missing for full cleanup: {error}")
+        return
+
     if isinstance(error, TelegramForbiddenError):
         if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
             logger.warning(f"User {chat_id} blocked the bot or is deactivated. Deleting all user data...")
             try:
-                async with SessionFactory() as session:
-                    success = await user_service.delete_full_user_profile(session, chat_id)
+                async with app.session_factory() as session: # Use app's session_factory
+                    success = await user_service.delete_full_user_profile(session, chat_id, app=app)
                 if success:
-                    logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id} (using user_service).")
+                    logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
                 else:
                     logger.error(f"Failed to delete data for blocked/deactivated user {chat_id}, though an attempt was made.")
             except SQLAlchemyError as db_err:
@@ -45,35 +53,28 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int):
         if "chat not found" in str(error).lower():
             logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {error}")
             try:
-                async with SessionFactory() as session:
-                    delete_success = await user_service.delete_full_user_profile(session, chat_id)
+                async with app.session_factory() as session: # Use app's session_factory
+                    delete_success = await user_service.delete_full_user_profile(session, chat_id, app=app)
                 if delete_success:
-                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found (using user_service).")
+                    logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
                 else:
                     logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
-
-                if USER_SETTINGS_CACHE.pop(chat_id, None): # Remove from cache regardless
-                    logger.debug(f"Removed user {chat_id} from settings cache after chat not found.")
-                else:
-                    logger.debug(f"User {chat_id} was not in settings cache (or already removed) after chat not found.")
             except SQLAlchemyError as db_cleanup_err:
                 logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
         else:
             logger.error(f"Telegram API BadRequest (non 'chat not found') for chat_id {chat_id}: {error}")
 
-    elif isinstance(error, TelegramAPIError): # Catch-all for other TelegramAPIError types
+    elif isinstance(error, TelegramAPIError):
         logger.error(f"Unhandled Telegram API error for chat_id {chat_id}: {error}")
 
-    # Non-TelegramAPIError exceptions are not handled by this function.
-    # The calling function would need a separate except block for those if desired.
 
-
-def _should_send_silently(chat_id: int, tt_user_is_online: bool) -> bool:
+def _should_send_silently(chat_id: int, tt_user_is_online: bool, app: "Application") -> bool:
     """
     Checks if a message to a given chat_id should be sent silently based on
     NOON settings and the provided online status of their linked TeamTalk user.
+    Uses app.user_settings_cache.
     """
-    recipient_settings = USER_SETTINGS_CACHE.get(chat_id)
+    recipient_settings = app.user_settings_cache.get(chat_id)
 
     if (
         recipient_settings and
@@ -93,62 +94,56 @@ async def send_telegram_message_individual(
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_user_is_online: bool = False,
+    app: "Application", # Changed to non-optional
     **kwargs
 ) -> bool:
-    send_silently = _should_send_silently(chat_id, tt_user_is_online)
+    # app is now mandatory
+    send_silently = _should_send_silently(chat_id, tt_user_is_online, app)
 
     try:
         await bot_instance.send_message(
             chat_id=chat_id,
             reply_markup=reply_markup,
             disable_notification=send_silently,
-            **kwargs # Pass kwargs directly
+            **kwargs
         )
         logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}, kwargs used: {kwargs}")
         return True
-
     except TelegramAPIError as e:
-        await _handle_telegram_api_error(e, chat_id)
+        await _handle_telegram_api_error(e, chat_id, app=app) # Pass app to error handler
         return False
-
-    # Non-TelegramAPIError exceptions will propagate if not caught by the caller.
-    # If they were to be caught here and also result in 'False', an outer try-except would be needed.
-    # Based on current structure, only TelegramAPIError results in False from this function.
 
 
 async def send_telegram_messages_to_list(
-    bot_instance_to_use: Bot,
+    bot_instance_to_use: AiogramBot, # Renamed Bot to AiogramBot
     chat_ids: list[int],
-    text_generator: Callable[[str], str], # Takes language code, returns text
+    text_generator: Callable[[str], str],
+    user_settings_cache: dict, # Expect app.user_settings_cache
+    # session_factory: "DbSessionFactory", # No longer needed directly by this func, but by _handle_telegram_api_error via app
+    app: "Application", # Pass Application instance
+    online_users_cache_for_instance: Optional[dict[int, TeamTalkUser]] = None, # For specific instance's online users
     reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
 ):
-    """
-    Sends messages to a list of chat_ids.
-    Uses the provided bot_instance_to_use.
-    """
     if not bot_instance_to_use:
         logger.error("No Telegram bot instance provided to send_telegram_messages_to_list.")
         return
 
-    online_tt_usernames = {ttstr(user.username) for user in ONLINE_USERS_CACHE.values()}
     tasks_list = []
     for chat_id in chat_ids:
-        user_settings = USER_SETTINGS_CACHE.get(chat_id)
-        # user_settings.language_code is already a string. DEFAULT_LANGUAGE is also a string code.
+        user_settings = user_settings_cache.get(chat_id) # Use passed user_settings_cache
         language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language_code)
-
-        current_reply_markup = None
-        if reply_markup_generator:
-            current_reply_markup = reply_markup_generator(
-                language,
-                chat_id
-            )
+        current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
 
         individual_tt_user_is_online = False
-        if user_settings and user_settings.teamtalk_username:
-            if user_settings.teamtalk_username in online_tt_usernames:
-                individual_tt_user_is_online = True
+        if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
+            # Check if the recipient's linked TT username is in the provided online cache for the relevant instance
+            # The key for online_users_cache_for_instance is user_id (int), value is User object.
+            # We need to iterate values to check by username if not already a set of usernames.
+            for tt_user_obj in online_users_cache_for_instance.values():
+                if ttstr(tt_user_obj.username) == user_settings.teamtalk_username:
+                    individual_tt_user_is_online = True
+                    break
 
         tasks_list.append(send_telegram_message_individual(
             bot_instance=bot_instance_to_use,
@@ -156,6 +151,7 @@ async def send_telegram_messages_to_list(
             language=language_code,
             reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online,
+            app=app, # Pass app context down
             text=text,
             parse_mode="HTML"
         ))

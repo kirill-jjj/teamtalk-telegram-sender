@@ -7,8 +7,8 @@ from sqlmodel import select, SQLModel
 
 from bot.core.enums import DeeplinkAction
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList
-from bot.config import app_config
-from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE
+# from bot.config import app_config # Removed global import
+# from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Removed global imports
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 
 logger = logging.getLogger(__name__)
@@ -77,9 +77,9 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]
 
 async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
     added = await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
-    if added:
-        SUBSCRIBED_USERS_CACHE.add(telegram_id)
-        logger.info(f"User {telegram_id} added to SUBSCRIBED_USERS_CACHE.")
+    # Cache update responsibility moved to Application/service layer
+    # if added:
+    #     logger.info(f"User {telegram_id} added to DB (cache update handled elsewhere).")
     return added
 
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
@@ -87,16 +87,16 @@ async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
 
 async def add_admin(session: AsyncSession, telegram_id: int) -> bool:
     added = await _add_entity_if_not_exists(session, Admin, telegram_id)
-    if added:
-        ADMIN_IDS_CACHE.add(telegram_id)
-        logger.info(f"Admin {telegram_id} added to ADMIN_IDS_CACHE.")
+    # Cache update responsibility moved to Application/service layer
+    # if added:
+    #     logger.info(f"Admin {telegram_id} added to DB (cache update handled elsewhere).")
     return added
 
 async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
     removed = await _remove_entity(session, Admin, telegram_id)
-    if removed:
-        ADMIN_IDS_CACHE.discard(telegram_id)
-        logger.info(f"Admin {telegram_id} removed from ADMIN_IDS_CACHE.")
+    # Cache update responsibility moved to Application/service layer
+    # if removed:
+    #     logger.info(f"Admin {telegram_id} removed from DB (cache update handled elsewhere).")
     return removed
 
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
@@ -105,11 +105,12 @@ async def get_all_admins_ids(session: AsyncSession) -> list[int]:
 async def create_deeplink(
     session: AsyncSession,
     action: DeeplinkAction,
+    deeplink_ttl_seconds: int, # Added parameter
     payload: str | None = None,
     expected_telegram_id: int | None = None
-) -> str:
+) -> str | None: # Return type can be None on failure
     token_str = secrets.token_urlsafe(DEEPLINK_TOKEN_LENGTH_BYTES)
-    expiry_time = datetime.utcnow() + timedelta(seconds=app_config.DEEPLINK_TTL_SECONDS)
+    expiry_time = datetime.utcnow() + timedelta(seconds=deeplink_ttl_seconds) # Use passed TTL
     deeplink_obj = Deeplink(
         token=token_str,
         action=action,
