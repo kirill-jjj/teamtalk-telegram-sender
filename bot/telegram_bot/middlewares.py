@@ -1,18 +1,53 @@
 import logging
-from typing import Callable, Coroutine, Any, Dict, Awaitable
+from typing import Callable, Coroutine, Any, Dict, Awaitable, TYPE_CHECKING
+
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery, User
-from aiogram.exceptions import TelegramAPIError # Import for specific exception handling
-from sqlalchemy.orm import sessionmaker
+from aiogram.types import TelegramObject, Message, CallbackQuery, User as AiogramUser # Renamed User to AiogramUser
+from aiogram.exceptions import TelegramAPIError
+from sqlalchemy.orm import sessionmaker # Kept for DbSessionMiddleware type hint
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
-from bot.teamtalk_bot import bot_instance as tt_bot_module
+# Removed: from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
-from bot.state import SUBSCRIBED_USERS_CACHE
+# Removed: from bot.state import SUBSCRIBED_USERS_CACHE
+# Import TeamTalkConnection for type hinting
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
+
+if TYPE_CHECKING:
+    from sender import Application # Import Application for type hinting
 
 logger = logging.getLogger(__name__)
+
+# --- Helper function (can be moved to a utils module if preferred) ---
+async def _send_error_response(
+    event: TelegramObject,
+    text: str,
+    show_alert_for_callback: bool = True
+) -> None:
+    """
+    Internal helper to send an error response based on event type.
+    """
+    if isinstance(event, Message):
+        try:
+            await event.reply(text)
+        except TelegramAPIError as e:
+            logger.error(f"TelegramAPIError replying to message in _send_error_response: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error replying to message in _send_error_response: {e}", exc_info=True)
+    elif isinstance(event, CallbackQuery):
+        try:
+            await event.answer(text, show_alert=show_alert_for_callback)
+        except TelegramAPIError as e:
+            logger.error(f"TelegramAPIError answering callback query in _send_error_response: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error answering callback query in _send_error_response: {e}", exc_info=True)
+    else:
+        logger.warning(f"_send_error_response: Unhandled event type {type(event)}")
+
+
+# --- Existing Middlewares (some adapted) ---
 
 class DbSessionMiddleware(BaseMiddleware):
     def __init__(self, session_factory: sessionmaker): # type: ignore
@@ -36,20 +71,18 @@ class UserSettingsMiddleware(BaseMiddleware):
         event: Message | CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
-        user_obj: User = data["event_from_user"]
+        user_obj: AiogramUser = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
+        app: "Application" = data["app"] # ApplicationMiddleware provides this
 
-        user_settings = USER_SETTINGS_CACHE.get(user_obj.id)
+        # Use app's method to get/create user settings and interact with app's cache
+        user_settings = await app.get_or_create_user_settings(user_obj.id, session_obj)
 
-        if not user_settings:
-            user_settings = await get_or_create_user_settings(user_obj.id, session_obj)
-
-        # It's highly unlikely user_settings would still be None here due to get_or_create_user_settings logic,
-        # but check defensively.
-        if not user_settings:
-            logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            # In this case, we can even not call the handler and just exit,
-            # to avoid further errors.
+        # The app.get_or_create_user_settings method should ideally always return a valid UserSettings object
+        # (even a default transient one if DB fails) or raise a specific exception if it cannot proceed.
+        # For now, we keep the critical log if it somehow still returns None, though this path should be less likely.
+        if not user_settings: # Should ideally not happen if app.get_or_create_user_settings is robust
+            logger.error(f"CRITICAL: get_or_create_user_settings returned None for user {user_obj.id}")
             return
 
         data["user_settings"] = user_settings
@@ -59,17 +92,6 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-class TeamTalkInstanceMiddleware(BaseMiddleware):
-    async def __call__(
-        self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
-        event: TelegramObject,
-        data: dict[str, Any],
-    ) -> Any:
-        actual_tt_instance = tt_bot_module.current_tt_instance
-        data["tt_instance"] = actual_tt_instance
-        return await handler(event, data)
-
 class SubscriptionCheckMiddleware(BaseMiddleware):
     async def __call__(
         self,
@@ -77,85 +99,139 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         event: Message | CallbackQuery,
         data: Dict[str, Any],
     ) -> Any:
-        user: User | None = data.get("event_from_user") # Aiogram 3.x puts it here
+        user: AiogramUser | None = data.get("event_from_user")
+        app: "Application" = data["app"] # Expect ApplicationMiddleware to provide this
 
-        if not user: # Should not happen if events are from users
+        if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
             return await handler(event, data)
 
         telegram_id = user.id
 
-        # Allow /start command with a token (deeplink) to pass without subscription check
         if isinstance(event, Message) and event.text:
             command_parts = event.text.split()
             if command_parts[0].lower() == "/start" and len(command_parts) > 1:
                 logger.debug(f"SubscriptionCheckMiddleware: Allowing /start command with token for user {telegram_id}.")
                 return await handler(event, data)
 
-        if telegram_id not in SUBSCRIBED_USERS_CACHE:
+        if telegram_id not in app.subscribed_users_cache: # Use app's cache
             logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id}.")
-            return  # Simply stop processing, do not reply.
+            # Consider sending a message here if desired behavior changes
+            return
 
-        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed (checked via cache). Proceeding.")
+        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
         return await handler(event, data)
 
 
-async def _send_error_response(
-    event: TelegramObject,
-    text: str,
-    show_alert_for_callback: bool = True
-) -> None:
+# --- New/Refactored Middlewares for Application and TeamTalkConnection ---
+
+class ApplicationMiddleware(BaseMiddleware):
     """
-    Internal helper to send an error response based on event type.
+    Injects the Application instance into the data of each event.
     """
-    if isinstance(event, Message):
-        try:
-            await event.reply(text)
-        except TelegramAPIError as e:
-            logger.error(f"TelegramAPIError replying to message in _send_error_response: {e}")
-        except Exception as e: # Catch any other unexpected non-API errors
-            logger.error(f"Unexpected error replying to message in _send_error_response: {e}", exc_info=True)
-    elif isinstance(event, CallbackQuery):
-        try:
-            await event.answer(text, show_alert=show_alert_for_callback)
-        except TelegramAPIError as e:
-            logger.error(f"TelegramAPIError answering callback query in _send_error_response: {e}")
-        except Exception as e: # Catch any other unexpected non-API errors
-            logger.error(f"Unexpected error answering callback query in _send_error_response: {e}", exc_info=True)
-    else:
-        logger.warning(f"_send_error_response: Unhandled event type {type(event)}")
+    def __init__(self, app_instance: "Application"):
+        super().__init__()
+        self.app_instance = app_instance
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ) -> Any:
+        data["app"] = self.app_instance
+        return await handler(event, data)
 
 
-class TeamTalkConnectionMiddleware(BaseMiddleware):
+class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
     """
-    Checks if the TeamTalk instance is connected and logged in.
+    Injects an active TeamTalkConnection instance into the event data.
+    For now, assumes a single primary connection if multiple exist.
+    This replaces the old TeamTalkInstanceMiddleware.
+    """
+    def __init__(self, default_server_key: str | None = None):
+        super().__init__()
+        self.default_server_key = default_server_key # Optional: key for a default server if multiple
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ) -> Any:
+        app: "Application" = data["app"] # Expect ApplicationMiddleware to run first
+
+        determined_connection: TeamTalkConnection | None = None
+
+        if not app.connections:
+            logger.warning("ActiveTeamTalkConnectionMiddleware: No TeamTalk connections available in Application.")
+            data["tt_connection"] = None
+            return await handler(event, data)
+
+        if self.default_server_key and self.default_server_key in app.connections:
+            determined_connection = app.connections[self.default_server_key]
+        elif app.connections:
+            # Fallback: use the first available connection if no default key or default not found
+            # This is suitable for single-server setups or simple multi-server without specific routing yet
+            determined_connection = next(iter(app.connections.values()))
+            if self.default_server_key: # Log if default was specified but not found
+                 logger.warning(f"ActiveTeamTalkConnectionMiddleware: Default server key '{self.default_server_key}' not found. Falling back to first available connection.")
+            else:
+                 logger.debug(f"ActiveTeamTalkConnectionMiddleware: Using first available connection for {determined_connection.server_info.host if determined_connection else 'N/A'}.")
+
+        if determined_connection:
+            logger.debug(f"ActiveTeamTalkConnectionMiddleware: Providing connection for {determined_connection.server_info.host} to handler.")
+        else:
+            logger.warning("ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk connection to provide.")
+
+        data["tt_connection"] = determined_connection
+        return await handler(event, data)
+
+
+class TeamTalkConnectionCheckMiddleware(BaseMiddleware): # Renamed from TeamTalkConnectionMiddleware to avoid confusion
+    """
+    Checks if the provided TeamTalkConnection (from ActiveTeamTalkConnectionMiddleware)
+    is connected and logged in (ready for use).
     If not, it replies to the user and prevents the handler from executing.
     This middleware should be registered for specific handlers/routers that require
-    an active TeamTalk connection.
+    an active and ready TeamTalk connection.
     """
     async def __call__(
         self,
         handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
-        event: TelegramObject, # Can be Message or CallbackQuery
+        event: TelegramObject,
         data: Dict[str, Any],
     ) -> Any:
-        tt_instance = data.get("tt_instance")
+        # tt_instance = data.get("tt_instance") # Old way
+        tt_connection: TeamTalkConnection | None = data.get("tt_connection")
         translator = data.get("translator") # Assuming UserSettingsMiddleware runs before
 
-        if not translator: # Fallback if UserSettingsMiddleware didn't run or failed
-            translator = get_translator() # Default translator
-
+        if not translator:
+            translator = get_translator()
         _ = translator.gettext
 
-        if not tt_instance or not tt_instance.connected or not tt_instance.logged_in:
-            error_message_text = _("TeamTalk bot is not connected. Please try again later.")
-
+        # Check if a connection object was provided at all
+        if not tt_connection:
+            error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
-
             logger.warning(
-                f"TeamTalkConnectionMiddleware: Blocked access for user {data.get('event_from_user', {}).get('id')} "
-                f"due to TeamTalk not being connected/logged in. Event type: {type(event).__name__}"
+                f"TeamTalkConnectionCheckMiddleware: Blocked access for user {data.get('event_from_user', {}).get('id')} "
+                f"because no TeamTalkConnection object was found in context. Event type: {type(event).__name__}"
             )
-            return None # Stop processing this event
+            return None
 
+        # Check if the provided connection is ready (connected & logged in & finalized)
+        if not tt_connection.is_ready or not tt_connection.is_finalized:
+            error_message_text = _("TeamTalk bot is not connected or not fully initialized. Please try again later.")
+            await _send_error_response(event, error_message_text, show_alert_for_callback=True)
+            logger.warning(
+                f"TeamTalkConnectionCheckMiddleware: Blocked access for user {data.get('event_from_user', {}).get('id')} "
+                f"for server {tt_connection.server_info.host} due to TeamTalk not being ready "
+                f"(connected: {tt_connection.instance.connected if tt_connection.instance else 'N/A'}, "
+                f"logged_in: {tt_connection.instance.logged_in if tt_connection.instance else 'N/A'}, "
+                f"finalized: {tt_connection.is_finalized}). Event type: {type(event).__name__}"
+            )
+            return None
+
+        logger.debug(f"TeamTalkConnectionCheckMiddleware: Access granted for server {tt_connection.server_info.host}. Connection is ready.")
         return await handler(event, data)
