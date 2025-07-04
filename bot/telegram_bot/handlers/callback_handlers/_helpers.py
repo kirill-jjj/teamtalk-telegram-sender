@@ -109,3 +109,65 @@ async def safe_edit_text(
     except TelegramAPIError as e:
         current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
         return False
+
+
+# Decorator for checking query.message context
+import functools
+
+def ensure_message_context(func: Callable):
+    """
+    Decorator to ensure that a callback query handler has a message context.
+    If query.message is None, it logs an error and attempts to answer the callback query.
+    """
+    @functools.wraps(func)
+    async def wrapper(query: CallbackQuery, *args, **kwargs):
+        if not query.message:
+            # Try to get a translator instance from args or kwargs
+            # Common names are '_', 'translator', 'l10n'
+            translator_func = None
+            # Check kwargs first as they are explicit
+            if 'translator' in kwargs:
+                translator_instance = kwargs['translator']
+                if hasattr(translator_instance, 'gettext'):
+                    translator_func = translator_instance.gettext
+                elif callable(translator_instance): # If it's already gettext itself
+                    translator_func = translator_instance
+            elif '_' in kwargs: # Check for common alias '_'
+                 translator_instance = kwargs['_']
+                 if callable(translator_instance): # Assuming _ is gettext
+                     translator_func = translator_instance
+
+            # If not in kwargs, check positional args. This is more fragile.
+            # This requires knowing the typical position of the translator/gettext function.
+            # For this bot, `_` or `translator` is often the last or second to last of the specific args
+            # before `session`, `bot`, `tt_instance` which are often injected.
+            # Let's assume for `menu_callbacks.py` it might be the `translator` kwarg or `_` kwarg.
+            # If a handler doesn't have translator in its signature, this won't find it.
+            # Most menu_callbacks.py handlers use `translator: "gettext.GNUTranslations"`
+            # or `_: callable` (which is `translator.gettext`).
+
+            # Simplified: Try to find `_` or `translator` in kwargs.
+            # If the handler uses positional args for these, this needs adjustment or handlers need standardization.
+            # The `menu_callbacks.py` handlers mostly use `translator` or `_` as keyword args due to type hints.
+
+            error_message = "Error: Message context lost for callback query."
+            if translator_func:
+                try:
+                    error_message = translator_func("Error processing command.") # Generic error from menu_callbacks
+                except Exception as e:
+                    logger.error(f"Failed to translate error message in decorator: {e}")
+            else: # Fallback if no translator found
+                logger.warning(f"Translator function not found for handler {func.__name__}, using default error message.")
+
+
+            logger.error(
+                f"Handler {func.__name__}: query.message is None. Callback data: {query.data}. User: {query.from_user.id}"
+            )
+            try:
+                await query.answer(error_message, show_alert=True)
+            except TelegramAPIError as e:
+                logger.error(f"Failed to answer callback query in decorator for {func.__name__}: {e}")
+            return None # Stop execution of the wrapped function
+
+        return await func(query, *args, **kwargs)
+    return wrapper
