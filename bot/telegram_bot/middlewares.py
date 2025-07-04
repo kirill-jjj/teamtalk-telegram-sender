@@ -7,7 +7,7 @@ from aiogram.exceptions import TelegramAPIError
 from sqlalchemy.orm import sessionmaker # Kept for DbSessionMiddleware type hint
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE
+# from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE # Removed this import
 # Removed: from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
 # Removed: from bot.state import SUBSCRIBED_USERS_CACHE
@@ -73,16 +73,17 @@ class UserSettingsMiddleware(BaseMiddleware):
     ) -> Any:
         user_obj: AiogramUser = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
-        app: "Application" = data["app"] # ApplicationMiddleware provides this
+        app: "Application" = data["app"] # <-- Получаем наш главный класс из data
 
-        # Use app's method to get/create user settings and interact with app's cache
-        user_settings = await app.get_or_create_user_settings(user_obj.id, session_obj)
+        # Получаем настройки из кэша, который теперь является атрибутом app
+        user_settings = app.user_settings_cache.get(user_obj.id)
 
-        # The app.get_or_create_user_settings method should ideally always return a valid UserSettings object
-        # (even a default transient one if DB fails) or raise a specific exception if it cannot proceed.
-        # For now, we keep the critical log if it somehow still returns None, though this path should be less likely.
-        if not user_settings: # Should ideally not happen if app.get_or_create_user_settings is robust
-            logger.error(f"CRITICAL: get_or_create_user_settings returned None for user {user_obj.id}")
+        if not user_settings:
+            # Вызываем метод get_or_create_user_settings из app
+            user_settings = await app.get_or_create_user_settings(user_obj.id, session_obj)
+
+        if not user_settings: # This check is fine, get_or_create_user_settings might return None on DB error
+            logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
             return
 
         data["user_settings"] = user_settings
