@@ -100,7 +100,7 @@ def extract_messages() -> None:
     """Extracts translatable strings into a .pot file."""
     project_version = get_project_version()
     command = [
-        "pybabel", "extract",
+        "uv", "run", "pybabel", "extract",
         "-F", BABEL_CONFIG,
         "-o", str(POT_FILE),
         f"--project={PROJECT_NAME}",
@@ -114,7 +114,7 @@ def extract_messages() -> None:
 def update_catalogs() -> None:
     """Updates .po files based on the .pot template."""
     command = [
-        "pybabel", "update",
+        "uv", "run", "pybabel", "update",
         "-i", str(POT_FILE),
         "-d", str(LOCALE_DIR),
         "-D", LOCALE_DOMAIN,
@@ -127,7 +127,7 @@ def update_catalogs() -> None:
 def compile_catalogs() -> None:
     """Compiles .po files into binary .mo files."""
     command = [
-        "pybabel", "compile",
+        "uv", "run", "pybabel", "compile",
         "-d", str(LOCALE_DIR),
         "-D", LOCALE_DOMAIN,
         "--statistics"
