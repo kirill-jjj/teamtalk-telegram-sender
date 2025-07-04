@@ -92,8 +92,14 @@ def get_project_version() -> str:
     except FileNotFoundError:
         print("⚠️ Warning: pyproject.toml not found. Cannot determine project version.", file=sys.stderr)
         return "UNKNOWN"
-    except Exception as e:
-        print(f"⚠️ Warning: Error reading version from pyproject.toml: {e}", file=sys.stderr)
+    except tomllib.TOMLDecodeError as tde:
+        print(f"⚠️ Warning: Error decoding pyproject.toml: {tde}", file=sys.stderr)
+        return "UNKNOWN"
+    except IOError as ioe:
+        print(f"⚠️ Warning: IOError reading pyproject.toml: {ioe}", file=sys.stderr)
+        return "UNKNOWN"
+    except Exception as e: # Fallback for other unexpected errors
+        print(f"⚠️ Warning: Unexpected error reading version from pyproject.toml: {e}", file=sys.stderr)
         return "UNKNOWN"
 
 def extract_messages() -> None:
@@ -230,8 +236,14 @@ def update_catalogs() -> None:
                 po_file.write_text('\n'.join(processed_lines), encoding='utf-8')
             print(f"   Finished processing {po_file.relative_to(BASE_DIR)}")
 
-        except Exception as e:
-            print(f"❌ Error processing file {po_file.relative_to(BASE_DIR)}: {e}", file=sys.stderr)
+        except IOError as ioe:
+            print(f"❌ IOError processing file {po_file.relative_to(BASE_DIR)}: {ioe}", file=sys.stderr)
+            # import traceback # Add this import at the top of the file if using traceback
+            # traceback.print_exc(file=sys.stderr)
+        except Exception as e: # Fallback for truly unexpected errors during string/list manipulation
+            print(f"❌ Unexpected error processing file {po_file.relative_to(BASE_DIR)}: {e}", file=sys.stderr)
+            # import traceback # Add this import at the top of the file if using traceback
+            # traceback.print_exc(file=sys.stderr)
 
     print("✅ All .po files post-processed.")
 
