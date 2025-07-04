@@ -26,6 +26,7 @@ from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccou
 from bot.telegram_bot.middlewares import TeamTalkConnectionMiddleware
 import pytalk # To get UserAccount type for list[pytalk.UserAccount]
 from .list_utils import _get_paginated_subscribers_info # Import from list_utils
+from bot.telegram_bot.utils import format_telegram_user_display_name
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
@@ -87,19 +88,22 @@ async def handle_view_subscriber(
     # For now, just showing the action menu.
     # Fetching user details to display:
     user_to_view = await session.get(UserSettings, callback_data.telegram_id)
-    display_name = str(callback_data.telegram_id)
+    display_name = str(callback_data.telegram_id) # Default display name
+    chat_info = None
     if user_to_view and user_to_view.telegram_id: # Check if user_to_view is not None
         try:
             chat_info = await query.bot.get_chat(user_to_view.telegram_id)
-            full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
-            username_part = f" (@{chat_info.username})" if chat_info.username else ""
-            if full_name:
-                display_name = f"{full_name}{username_part}"
-            elif chat_info.username:
-                display_name = f"@{chat_info.username}"
+            # Use the new helper function if chat_info was successfully fetched
+            display_name = format_telegram_user_display_name(chat_info)
         except Exception as e:
             logger.error(f"Could not fetch chat info for {user_to_view.telegram_id}: {e}")
-            # display_name remains telegram_id if chat info fails
+            # If chat_info fetch fails, display_name remains callback_data.telegram_id (as set above)
+            # or potentially format_telegram_user_display_name(None) if we want consistent handling
+            # but the original code kept it as the ID.
+            # For safety, if chat_info is None, format_telegram_user_display_name might return "Unknown User"
+            # or str(chat.id) if it received a None chat object that somehow had an id.
+            # Sticking to original fallback:
+            # display_name = str(callback_data.telegram_id) # already set
 
     text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
     if user_to_view and user_to_view.teamtalk_username:

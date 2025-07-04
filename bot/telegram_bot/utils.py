@@ -3,7 +3,7 @@ import asyncio
 import pytalk
 from typing import Callable
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery
+from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -245,3 +245,36 @@ async def send_or_edit_paginated_list(
         except Exception as e:
             cbq_id = target.id if hasattr(target, 'id') else 'N/A'
             logger.warning(f"Generic error answering CbQ {cbq_id} at the end of send_or_edit: {e}")
+
+
+def format_telegram_user_display_name(chat: Chat | None) -> str:
+    """
+    Formats a Telegram user's display name from a Chat object.
+    Returns the Telegram ID as a string if chat object is None or no other info is available.
+    """
+    if not chat:
+        # Fallback for cases where chat might be None, though ideally it's always provided.
+        # Returning "N/A" or an empty string might be alternatives.
+        # For now, let's assume if chat is None, we can't get an ID either, so "Unknown User".
+        # However, the original code defaults to telegram_id if chat fetch fails.
+        # This function expects a Chat object. If it can be None, the caller should handle it
+        # or this function needs a way to get an ID (e.g., pass telegram_id as fallback).
+        # Given the usage context, chat object is usually available.
+        # If chat is None, and we are *only* passed chat, we cannot return chat.id.
+        # Let's stick to the logic: if chat is None, we can't process it.
+        return "Unknown User" # Or raise an error, or handle as per specific app logic.
+
+    # Default to string representation of chat.id if no other name parts are available
+    display_name = str(chat.id)
+
+    # Try to construct a more descriptive name
+    full_name = f"{chat.first_name or ''} {chat.last_name or ''}".strip()
+    username_part = f" (@{chat.username})" if chat.username else ""
+
+    if full_name:
+        display_name = f"{full_name}{username_part}"
+    elif chat.username: # Only username is available
+        display_name = f"@{chat.username}"
+    # If neither full_name nor username is present, display_name remains str(chat.id)
+
+    return display_name

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.crud import get_all_subscribers_ids
 from bot.telegram_bot.models import SubscriberInfo
 from bot.models import UserSettings # For UserSettings model
+from bot.telegram_bot.utils import format_telegram_user_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +67,18 @@ async def _get_paginated_subscribers_info(
 
     page_subscribers_info = []
     for i, telegram_id in enumerate(page_ids_to_fetch):
-        display_name = str(telegram_id)
+        display_name = str(telegram_id) # Default display name
+        chat_info = None
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
             logger.error(f"Could not fetch chat info for Telegram ID {telegram_id}: {chat_result}")
+            # display_name remains str(telegram_id)
         else:
             chat_info = chat_result
-            full_name = f"{chat_info.first_name or ''} {chat_info.last_name or ''}".strip()
-            username_part = f" (@{chat_info.username})" if chat_info.username else ""
-            if full_name:
-                display_name = f"{full_name}{username_part}"
-            elif chat_info.username:
-                display_name = f"@{chat_info.username}"
+            # Use the new helper function if chat_info was successfully fetched
+            display_name = format_telegram_user_display_name(chat_info)
+            # If format_telegram_user_display_name defaults to ID on insufficient info,
+            # it will still be str(telegram_id) if chat_info had no names/username.
 
         tt_username: str | None = None
         user_setting_result = user_settings_results[i]
