@@ -1,13 +1,11 @@
 import asyncio
 import argparse
-import traceback # For detailed error reporting before logger is set up
-import logging # Added for Application class
-from datetime import datetime # Added for Application class Pytalk event handlers
+import traceback
+import logging
+from datetime import datetime
 
-# Standard library imports for Application class
 from typing import Dict, Optional, Any
 
-# SQLAlchemy / SQLModel imports
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -19,30 +17,24 @@ from bot import models as db_models
 from bot.constants import DB_MAIN_NAME
 
 
-# Aiogram imports for Application class
 from aiogram import Bot, Dispatcher, html
-from aiogram.types import ErrorEvent, Message as AiogramMessage # Renamed to avoid conflict
+from aiogram.types import ErrorEvent, Message as AiogramMessage
 from aiogram.exceptions import TelegramAPIError
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
-# Pytalk imports for Application class
 import pytalk
-# Unused Pytalk submodules removed
 
 
-# Application-specific imports
-import gettext # For get_translator method
-from pathlib import Path # For get_translator method
+import gettext
+from pathlib import Path
 
 from bot.logging_setup import setup_logging
 from bot.database import crud
 from bot.core.languages import discover_languages, DEFAULT_LANGUAGE_CODE
 
-# Constants for i18n
 LOCALE_DIR = Path("locales")
 DOMAIN = "messages"
 
-# Telegram specific components to be managed by Application
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
@@ -53,9 +45,8 @@ from bot.telegram_bot.middlewares import (
     TeamTalkConnectionCheckMiddleware
 )
 
-# TeamTalk specific components to be managed by Application
 from bot.teamtalk_bot.connection import TeamTalkConnection
-# Related utils, commands, constants, and logic moved to TeamTalkEventHandler
+# TeamTalk logic is in TeamTalkEventHandler
 
 
 logger = logging.getLogger(__name__)
@@ -76,8 +67,7 @@ class Application:
         self.dp: Dispatcher = Dispatcher()
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
 
-        # Initialize SessionFactory
-        _ = db_models # Ensure db_models import is used
+        _ = db_models
         database_files = {DB_MAIN_NAME: self.app_config.DATABASE_FILE}
         async_engines = {
             db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
@@ -95,8 +85,7 @@ class Application:
         self.available_languages: list = []
 
         self.teamtalk_task: Optional[asyncio.Task] = None
-        # self._register_pytalk_event_handlers() # This is now done by TeamTalkEventHandler
-        from bot.teamtalk_bot.event_handler import TeamTalkEventHandler # Import locally
+        from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
         self.tt_event_handler = TeamTalkEventHandler(self)
 
 
@@ -146,7 +135,6 @@ class Application:
         if cached_settings:
             return cached_settings
 
-        # If not in cache, try DB
         user_settings = await session.get(
             UserSettings,
             telegram_id,
@@ -172,8 +160,6 @@ class Application:
         self.user_settings_cache[telegram_id] = user_settings
         return user_settings
 
-    # TeamTalk event handlers and related private methods (_get_connection_by_instance,
-    # _register_pytalk_event_handlers, etc.) have been moved to TeamTalkEventHandler.
 
     # --- Application Lifecycle Methods ---
     async def _on_startup_logic(self, bot: Bot, dispatcher: Dispatcher):
@@ -194,7 +180,7 @@ class Application:
             db_subscriber_ids = await crud.get_all_subscribers_ids(session)
             self.subscribed_users_cache.update(db_subscriber_ids)
         self.logger.info(f"Admin IDs cache populated from DB with {len(self.admin_ids_cache)} IDs.")
-        self.logger.debug(f"Admin IDs cache populated from DB: {self.admin_ids_cache}") # Log actual IDs at DEBUG
+        self.logger.debug(f"Admin IDs cache populated from DB: {self.admin_ids_cache}")
         self.logger.info(f"Subscribed users cache populated with {len(self.subscribed_users_cache)} IDs.")
 
         await self.load_user_settings_to_app_cache()
@@ -202,7 +188,7 @@ class Application:
         try:
             tg_admin_chat_id_str = self.app_config.TG_ADMIN_CHAT_ID
             if tg_admin_chat_id_str is not None:
-                tg_admin_chat_id = int(tg_admin_chat_id_str) # Явное преобразование в int
+                tg_admin_chat_id = int(tg_admin_chat_id_str)
                 if tg_admin_chat_id not in self.admin_ids_cache:
                     async with self.session_factory() as session:
                         await crud.add_admin(session, tg_admin_chat_id)
@@ -218,7 +204,6 @@ class Application:
         self.logger.info(f"Final admin_ids_cache count after startup: {len(self.admin_ids_cache)}.")
         self.logger.debug(f"Final admin_ids_cache state after startup: {self.admin_ids_cache}")
 
-        # Call set_telegram_commands with only the app instance
         await set_telegram_commands(app=self)
         self.logger.info("Telegram bot commands set.")
 
@@ -262,7 +247,7 @@ class Application:
 
         if self.app_config.TG_ADMIN_CHAT_ID:
             try:
-                admin_critical_translator = self.get_translator('ru') # Changed to self.get_translator
+                admin_critical_translator = self.get_translator('ru')
                 # Вся структура сообщения теперь одна переводимая строка
                 error_text = admin_critical_translator.gettext(
                     "<b>Critical error!</b>\n"
@@ -283,11 +268,11 @@ class Application:
 
         lang_code = DEFAULT_LANGUAGE_CODE
         if user_id:
-            user_settings = self.user_settings_cache.get(user_id) # Access app's cache
+            user_settings = self.user_settings_cache.get(user_id)
             if user_settings and user_settings.language_code:
                 lang_code = user_settings.language_code
 
-        translator = self.get_translator(lang_code) # Changed to self.get_translator
+        translator = self.get_translator(lang_code)
         user_message_key = "An unexpected error occurred. The administrator has been notified. Please try again later."
         user_message_text = translator.gettext(user_message_key)
 
@@ -307,25 +292,20 @@ class Application:
         """Sets up and runs the application."""
         self.logger.info("Application starting...")
 
-        # Initialize Languages
         self.logger.info("Discovering available languages...")
-        # discovered_langs = discover_languages() # Old way
-        # AVAILABLE_LANGUAGES_DATA.clear()
-        # AVAILABLE_LANGUAGES_DATA.extend(discovered_langs)
-        self.available_languages = discover_languages() # New way: assign to instance attribute
+        self.available_languages = discover_languages()
         if not self.available_languages:
             self.logger.critical("No languages discovered. Check locales setup.")
-            return # Or raise
+            return
         else:
             self.logger.info(f"Available languages loaded: {[lang['code'] for lang in self.available_languages]}")
 
-        # Setup Aiogram Dispatcher using the new dedicated function
-        from bot.telegram_bot.setup import setup_telegram_dispatcher # Import here to avoid circularity at module level
+        # Import here to avoid circularity at module level
+        from bot.telegram_bot.setup import setup_telegram_dispatcher
         setup_telegram_dispatcher(self)
 
         self.logger.info("Starting Telegram polling...")
         try:
-            # Pass the event bot instance to start_polling
             await self.dp.start_polling(self.tg_bot_event, allowed_updates=self.dp.resolve_used_update_types(), app=self)
         finally:
             self.logger.info("Application finished.")

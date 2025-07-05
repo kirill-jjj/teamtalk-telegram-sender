@@ -4,11 +4,10 @@ import sys
 import tomllib
 from pathlib import Path
 
-# Constants
 PROJECT_NAME = "teamtalk-telegram-sender"
 COPYRIGHT_HOLDER = "kirill-jjj"
-BABEL_CONFIG = "babel.cfg" # Assumed to be in BASE_DIR
-LOCALE_DOMAIN = "messages" # Domain for .mo files
+BABEL_CONFIG = "babel.cfg"
+LOCALE_DOMAIN = "messages"
 
 try:
     # Correct BASE_DIR to be the project root (parent of the 'scripts' directory)
@@ -22,7 +21,6 @@ except NameError: # Fallback for __file__ not defined
 
 def get_project_version() -> str:
     """Reads the version from pyproject.toml."""
-    # pyproject.toml is in BASE_DIR (project root)
     pyproject_path = BASE_DIR / "pyproject.toml"
     try:
         with open(pyproject_path, "rb") as f:
@@ -45,13 +43,13 @@ def extract():
     version = get_project_version()
     command = [
         "pybabel", "extract",
-        "-F", str(BASE_DIR / BABEL_CONFIG), # Ensure full path to babel.cfg
+        "-F", str(BASE_DIR / BABEL_CONFIG),
         "-o", str(POT_FILE),
         f"--project={PROJECT_NAME}",
         f"--version={version}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
         # Assuming source files are scanned from BASE_DIR
-        ".", # Source path to scan
+        ".",
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
@@ -70,8 +68,8 @@ def update():
     command = [
         "pybabel", "update",
         "-i", str(POT_FILE),
-        "-d", str(LOCALE_DIR), # Directory containing language folders
-        "-D", LOCALE_DOMAIN,   # Domain (usually 'messages')
+        "-d", str(LOCALE_DIR),
+        "-D", LOCALE_DOMAIN,
         "--previous" # Use .po~ backup files
     ]
     print(f"▶️  Executing: {' '.join(command)}")
@@ -89,8 +87,8 @@ def compile_cmd():
     """Compiles .po files into binary .mo files."""
     command = [
         "pybabel", "compile",
-        "-d", str(LOCALE_DIR), # Directory containing language folders
-        "-D", LOCALE_DOMAIN,   # Domain
+        "-d", str(LOCALE_DIR),
+        "-D", LOCALE_DOMAIN,
         "--statistics"
     ]
     print(f"▶️  Executing: {' '.join(command)}")
