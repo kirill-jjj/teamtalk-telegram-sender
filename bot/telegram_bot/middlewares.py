@@ -84,7 +84,32 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         if not user_settings: # This check is fine, get_or_create_user_settings might return None on DB error
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
+            # Send error response before returning
+            await _send_error_response(event, app.get_translator(app.app_config.DEFAULT_LANG).gettext("An error occurred while loading your settings."), show_alert_for_callback=True)
             return
+
+        # IMPORTANT FIX:
+        # Ensure the user_settings object (especially if from cache) is part of the current session
+        # and its muted_users_list relationship is loaded.
+        try:
+            if user_settings not in session_obj:
+                user_settings = await session_obj.merge(user_settings)
+                logger.debug(f"User settings for {user_obj.id} (from cache or newly created by app_method) merged into current session.")
+
+            # Regardless of merge, refresh the specific attribute to ensure it's loaded from DB
+            # in the context of the current session. This handles cases where the cached object
+            # might have an unloaded or stale relationship.
+            await session_obj.refresh(user_settings, attribute_names=['muted_users_list'])
+            logger.debug(f"Refreshed muted_users_list for user {user_obj.id} in current session.")
+        except Exception as refresh_e:
+            logger.error(f"Error refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}", exc_info=True)
+            # If refresh fails, muted_users_list might not be loaded, potentially leading to DetachedInstanceError.
+            # Send an error message to the user and stop processing.
+            error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else app.app_config.DEFAULT_LANG
+            error_message = app.get_translator(error_lang_code).gettext("A database error occurred while loading your settings details.")
+            await _send_error_response(event, error_message, show_alert_for_callback=True)
+            return
+
 
         data["user_settings"] = user_settings
         translator = get_translator(user_settings.language_code)
