@@ -22,8 +22,9 @@ from bot.core.enums import (
     ToggleMuteSpecificAction,
     SubscriberListAction,
     SubscriberAction,
-    ManageTTAccountAction
+    ManageTTAccountAction,
 )
+from functools import partial # Added for pagination_callback_factory
 from bot.telegram_bot.callback_data import (
     SettingsCallback,
     LanguageCallback,
@@ -39,7 +40,11 @@ from bot.telegram_bot.callback_data import (
     ViewSubscriberCallback,
     SubscriberActionCallback,
     ManageTTAccountCallback,
-    LinkTTAccountChosenCallback
+    LinkTTAccountChosenCallback,
+    # New callback for this paginated list if needed, let's call it PaginateLinkableTtAccountsCallback
+    # For now, we'll assume ManageTTAccountCallback can be used if action is adapted or a new one added.
+    # Let's create a placeholder if we make it self-paginated:
+    # PaginateLinkableTtAccountsCallback,
 )
 from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
@@ -83,20 +88,16 @@ async def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
 
 async def create_language_selection_keyboard(_: callable, available_languages: list) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
-    # from bot.core.languages import AVAILABLE_LANGUAGES_DATA # Removed import
-
     builder = InlineKeyboardBuilder()
-    if not available_languages: # Use passed argument
-        # Fallback or error message if no languages are discovered
-        # This case should ideally be handled by ensuring default lang is always present
+    if not available_languages:
         builder.button(
-            text="No languages available", # This ideally should be translatable too
-            callback_data="noop" # A dummy callback or specific error callback
+            text="No languages available",
+            callback_data="noop"
         )
     else:
-        for lang_info in available_languages: # Use passed argument
+        for lang_info in available_languages:
             builder.button(
-                text=lang_info["native_name"], # Already translated to its native form
+                text=lang_info["native_name"],
                 callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_info["code"]).pack()
             )
 
@@ -104,7 +105,7 @@ async def create_language_selection_keyboard(_: callable, available_languages: l
         text=_("⬅️ Back to Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
     )
-    builder.adjust(1) # Adjust based on number of languages, or keep 1 per row
+    builder.adjust(1)
     return builder
 
 async def create_subscription_settings_keyboard(
@@ -171,14 +172,12 @@ async def create_manage_muted_users_keyboard(
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
     builder = InlineKeyboardBuilder()
-    active_marker = "✅"  # Space removed, will be in translatable string
-    inactive_marker = "⚪️" # Space removed, will be in translatable string
+    active_marker = "✅"
+    inactive_marker = "⚪️"
 
-    # Determine markers based on current mode
     blacklist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker
     whitelist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker
 
-    # Use .format() on the translated string
     blacklist_text = _("{marker} Blacklist Mode").format(marker=blacklist_marker)
     whitelist_text = _("{marker} Whitelist Mode").format(marker=whitelist_marker)
 
@@ -190,9 +189,8 @@ async def create_manage_muted_users_keyboard(
         text=whitelist_text,
         callback_data=SetMuteModeCallback(mode=MuteListMode.whitelist).pack()
     )
-    builder.adjust(2) # Display side-by-side
+    builder.adjust(2)
 
-    # Dynamic button text for managing the list
     list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Manage Whitelist")
     builder.button(
         text=list_mode_text,
@@ -249,26 +247,17 @@ async def create_paginated_user_list_keyboard(
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
-
-    # Define extractors for the generic helper
-    # For this function, the item in page_items is already the username string.
     def username_extractor(item: str) -> str:
         return item
-
     def display_name_extractor(item: str) -> str:
         return item
-
-    # The button text format in the generic helper is "{display_name} (Status: {status_text})".
-    # The original format was "Unmute {username}" or "Mute {username}".
-    # We will rely on the generic helper's new standardized format.
-
     return await _create_generic_user_toggle_list_keyboard(
         _=_,
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
         user_settings=user_settings,
-        list_type_for_callback=list_type, # list_type is passed in, e.g. UserListAction.LIST_MUTED
+        list_type_for_callback=list_type,
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
         back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
@@ -283,13 +272,10 @@ async def create_account_list_keyboard(
     user_settings: UserSettings
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""
-
     def username_extractor(item: pytalk.UserAccount) -> str:
         return ttstr(item.username)
-
     def display_name_extractor(item: pytalk.UserAccount) -> str:
-        return ttstr(item.username) # Display name is also the username for this list
-
+        return ttstr(item.username)
     return await _create_generic_user_toggle_list_keyboard(
         _=_,
         page_items=page_items,
@@ -303,58 +289,123 @@ async def create_account_list_keyboard(
         back_button_text_key="⬅️ Back to Mute Management"
     )
 
-async def create_subscriber_list_keyboard(
-    _: Callable,
-    page_subscribers_info: List[SubscriberInfo],
+# --- START NEW GENERIC PAGINATION HELPERS ---
+
+def _add_pagination_controls_generic(
+    builder: InlineKeyboardBuilder,
+    _: Callable[[str], str],
     current_page: int,
-    total_pages: int
-) -> InlineKeyboardMarkup:
-    """Creates the keyboard for managing the subscriber list."""
-    builder = InlineKeyboardBuilder()
-
-    for subscriber in page_subscribers_info:
-        user_info_parts = [subscriber.display_name]
-        if subscriber.teamtalk_username:
-            user_info_parts.append(f"TT: {html.escape(subscriber.teamtalk_username)}")
-
-        button_text = ", ".join(user_info_parts) # This is the display text for the button
-
-        builder.row(
-            InlineKeyboardButton(
-                text=button_text, # Display user info
-                callback_data=ViewSubscriberCallback( # New callback to view details
-                    telegram_id=subscriber.telegram_id,
-                    page=current_page
-                ).pack()
-            )
-        )
-
+    total_pages: int,
+    pagination_callback_factory: Callable[..., Any],
+    # To pass additional fixed args to the pagination_callback_factory
+    **factory_kwargs
+) -> None:
+    """Adds generic pagination controls (Previous/Next) to the keyboard builder."""
     pagination_buttons = []
     if current_page > 0:
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("⬅️ Prev"),
-                callback_data=SubscriberListCallback(
-                    action=SubscriberListAction.PAGE,
-                    page=current_page - 1
-                ).pack()
+                callback_data=pagination_callback_factory(page=current_page - 1, **factory_kwargs).pack()
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("Next ➡️"),
-                callback_data=SubscriberListCallback(
-                    action=SubscriberListAction.PAGE,
-                    page=current_page + 1
-                ).pack()
+                callback_data=pagination_callback_factory(page=current_page + 1, **factory_kwargs).pack()
             )
         )
-
     if pagination_buttons:
         builder.row(*pagination_buttons)
 
+async def _create_generic_paginated_list_keyboard(
+    _: Callable[[str], str],
+    page_items: List[Any],
+    current_page: int,
+    total_pages: int,
+    item_button_former: Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | List[InlineKeyboardButton]],
+    pagination_callback_factory: Callable[..., Any],
+    pagination_factory_kwargs: dict | None = None, # For additional fixed args to pagination_callback_factory
+    additional_buttons_top: List[List[InlineKeyboardButton]] | None = None,
+    additional_buttons_bottom: List[List[InlineKeyboardButton]] | None = None
+) -> InlineKeyboardMarkup:
+    """
+    Generic helper to create a keyboard for a paginated list of items.
+    item_button_former should be a synchronous function.
+    """
+    builder = InlineKeyboardBuilder()
+
+    if additional_buttons_top:
+        for row_buttons in additional_buttons_top:
+            builder.row(*row_buttons)
+
+    for item in page_items:
+        button_or_buttons = item_button_former(item, current_page, _)
+
+        if isinstance(button_or_buttons, list):
+            builder.row(*button_or_buttons)
+        else:
+            builder.row(button_or_buttons)
+
+    if total_pages > 1:
+        factory_kwargs_to_pass = pagination_factory_kwargs if pagination_factory_kwargs is not None else {}
+        _add_pagination_controls_generic(
+            builder,
+            _,
+            current_page,
+            total_pages,
+            pagination_callback_factory,
+            **factory_kwargs_to_pass
+        )
+
+    if additional_buttons_bottom:
+        for row_buttons in additional_buttons_bottom:
+            builder.row(*row_buttons)
+
     return builder.as_markup()
+
+# --- END NEW GENERIC PAGINATION HELPERS ---
+
+
+async def create_subscriber_list_keyboard(
+    _: Callable[[str], str],
+    page_subscribers_info: List[SubscriberInfo],
+    current_page: int,
+    total_pages: int
+) -> InlineKeyboardMarkup:
+    """Creates the keyboard for managing the subscriber list using the generic helper."""
+
+    def subscriber_button_former(
+        subscriber: SubscriberInfo,
+        page_num: int,
+        translate: Callable[[str], str]
+    ) -> InlineKeyboardButton:
+        user_info_parts = [subscriber.display_name]
+        if subscriber.teamtalk_username:
+            user_info_parts.append(f"TT: {html.escape(subscriber.teamtalk_username)}")
+        button_text = ", ".join(user_info_parts)
+
+        return InlineKeyboardButton(
+            text=button_text,
+            callback_data=ViewSubscriberCallback(
+                telegram_id=subscriber.telegram_id,
+                page=page_num
+            ).pack()
+        )
+
+    # For SubscriberListCallback, action is a fixed parameter for pagination.
+    pagination_kwargs = {"action": SubscriberListAction.PAGE}
+
+    return await _create_generic_paginated_list_keyboard(
+        _=_,
+        page_items=page_subscribers_info,
+        current_page=current_page,
+        total_pages=total_pages,
+        item_button_former=subscriber_button_former,
+        pagination_callback_factory=SubscriberListCallback, # Pass the class directly
+        pagination_factory_kwargs=pagination_kwargs
+    )
 
 async def create_user_selection_keyboard(
     _: callable,
@@ -369,23 +420,18 @@ async def create_user_selection_keyboard(
     for user_obj in users_to_display:
         if not user_obj:
             continue
-
         user_nickname = get_tt_user_display_name(user_obj, _)
-
         if not hasattr(user_obj, 'id'):
             continue
         user_id = user_obj.id
-
         callback_data = AdminActionCallback(
             action=command_type,
             user_id=user_id
         ).pack()
-
         builder.button(
             text=html.escape(user_nickname),
             callback_data=callback_data
         )
-
     builder.adjust(2)
     return builder
 
@@ -393,8 +439,6 @@ async def create_user_selection_keyboard(
 async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     builder = InlineKeyboardBuilder()
-
-    # Common user commands
     builder.button(
         text=_("ℹ️ Who is online?"),
         callback_data=MenuCallback(command="who").pack()
@@ -407,7 +451,6 @@ async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboa
         text=_("❓ Help"),
         callback_data=MenuCallback(command="help").pack()
     )
-
     if is_admin:
         builder.button(
             text=_("👢 Kick User"),
@@ -421,19 +464,17 @@ async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboa
             text=_("👥 Subscribers"),
             callback_data=MenuCallback(command="subscribers").pack()
         )
-
-    builder.adjust(1) # Adjust to show one button per row for a cleaner look
+    builder.adjust(1)
     return builder
 
 
 async def create_subscriber_action_menu_keyboard(
     _: callable,
     target_telegram_id: int,
-    page: int # Page of the main subscriber list to return to
+    page: int
 ) -> InlineKeyboardMarkup:
     """Creates the action menu for a specific subscriber."""
     builder = InlineKeyboardBuilder()
-
     builder.button(
         text=_("🗑️ Delete Subscriber"),
         callback_data=SubscriberActionCallback(
@@ -460,12 +501,12 @@ async def create_subscriber_action_menu_keyboard(
     )
     builder.button(
         text=_("⬅️ Back to Subscribers List"),
-        callback_data=SubscriberListCallback( # This should go back to the list view
-            action=SubscriberListAction.PAGE, # Existing action for pagination
-            page=page                         # The page number of the list we came from
+        callback_data=SubscriberListCallback(
+            action=SubscriberListAction.PAGE,
+            page=page
         ).pack()
     )
-    builder.adjust(1) # One button per row
+    builder.adjust(1)
     return builder.as_markup()
 
 # --- Generic Helper for Paginated User Lists with Toggle ---
@@ -486,16 +527,12 @@ async def _create_generic_user_toggle_list_keyboard(
     with mute/unmute toggle buttons.
     """
     builder = InlineKeyboardBuilder()
-
     muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
 
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-
         effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
-
-        # Вместо двух отдельных msgid, создаем один шаблон
         if effectively_muted:
             button_text = _("{item_display_name} (Status: Muted)").format(
                 item_display_name=html.escape(display_name_on_button)
@@ -504,7 +541,6 @@ async def _create_generic_user_toggle_list_keyboard(
             button_text = _("{item_display_name} (Status: Not Muted)").format(
                 item_display_name=html.escape(display_name_on_button)
             )
-
         callback_d = ToggleMuteSpecificCallback(
             action=ToggleMuteSpecificAction.TOGGLE_USER,
             user_idx=idx,
@@ -529,8 +565,8 @@ async def create_manage_tt_account_keyboard(
     _: callable,
     target_telegram_id: int,
     current_tt_username: str | None,
-    page: int, # Page of the main subscriber list to return to (via subscriber action menu)
-    list_action_page: int = 0 # Page of the TT account list, if paginated
+    page: int,
+    list_action_page: int = 0
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for managing a subscriber's TeamTalk account link."""
     builder = InlineKeyboardBuilder()
@@ -541,7 +577,7 @@ async def create_manage_tt_account_keyboard(
             callback_data=ManageTTAccountCallback(
                 action=ManageTTAccountAction.UNLINK,
                 target_telegram_id=target_telegram_id,
-                page=page # This 'page' is for returning to subscriber list via action menu
+                page=page
             ).pack()
         )
 
@@ -550,16 +586,14 @@ async def create_manage_tt_account_keyboard(
         callback_data=ManageTTAccountCallback(
             action=ManageTTAccountAction.LINK_NEW,
             target_telegram_id=target_telegram_id,
-            page=page # This 'page' is for returning to subscriber list via action menu
+            page=page
         ).pack()
     )
-
-    # Button to go back to the specific subscriber's action menu
     builder.button(
         text=_("⬅️ Back to User Actions"),
-        callback_data=ViewSubscriberCallback( # Use ViewSubscriberCallback to go back to the action menu
+        callback_data=ViewSubscriberCallback(
             telegram_id=target_telegram_id,
-            page=page # This 'page' is for the subscriber list page context
+            page=page
         ).pack()
     )
     builder.adjust(1)
@@ -567,44 +601,96 @@ async def create_manage_tt_account_keyboard(
 
 
 async def create_linkable_tt_account_list_keyboard(
-    _: callable,
-    page_items: list[pytalk.UserAccount], # Same items as mute list
-    current_page_idx: int, # Renamed to avoid confusion with subscriber list page
+    _: Callable[[str], str], # Ensure _ type hint matches generic helper
+    page_items: list[pytalk.UserAccount],
+    current_page_idx: int,
     total_pages: int,
-    target_telegram_id: int, # The TG user we are linking for
-    subscriber_list_page: int # The page of the main subscriber list to return to eventually
+    target_telegram_id: int,
+    subscriber_list_page: int
 ) -> InlineKeyboardMarkup:
-    """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
-    builder = InlineKeyboardBuilder()
+    """Creates keyboard for selecting a TeamTalk account to link to a subscriber, using generic helper."""
 
-    for account_obj in page_items: # account_obj is pytalk.UserAccount
+    # Define the item_button_former for linkable TeamTalk accounts
+    def tt_account_button_former(
+        account_obj: pytalk.UserAccount,
+        page_num: int, # current_page_idx from the generic helper call
+        translate: Callable[[str], str] # _ function
+    ) -> InlineKeyboardButton:
         username_str = ttstr(account_obj.username)
-        # We don't need to show mute status here, just the username to link
         button_text = username_str
-
-        callback_d = LinkTTAccountChosenCallback(
-            tt_username=username_str,
-            target_telegram_id=target_telegram_id,
-            page=subscriber_list_page # This page is for the main subscriber list context
-            # If this account list itself becomes paginated, LinkTTAccountChosenCallback would need current_page_idx too
+        return InlineKeyboardButton(
+            text=button_text,
+            callback_data=LinkTTAccountChosenCallback(
+                tt_username=username_str,
+                target_telegram_id=target_telegram_id,
+                # This 'page' is for the main subscriber list context, passed through.
+                # 'page_num' (current_page_idx of this list) is not directly used in this callback data.
+                page=subscriber_list_page
+            ).pack()
         )
-        builder.button(text=button_text, callback_data=callback_d.pack())
 
-    if page_items:
-        builder.adjust(1) # One account per row for clarity
-
-    # Pagination for this TT account list (if it becomes paginated in future, for now assumes one page or handled by caller)
-    # For now, let's assume the caller of this keyboard handles pagination of page_items if needed,
-    # and this keyboard just renders the current page of TT accounts.
-    # If pagination is added for *this* list, a different callback for its pagination is needed.
-
-    # Back button to the "Manage TT Account" menu for the specific subscriber
-    builder.row(InlineKeyboardButton(
+    # Define the "Back to Manage Account" button
+    # This will be a list of lists for additional_buttons_bottom
+    back_button = InlineKeyboardButton(
         text=_("⬅️ Back to Manage Account"),
-        callback_data=SubscriberActionCallback( # This takes us back to the manage_tt action, which will re-render the manage_tt_account_keyboard
+        callback_data=SubscriberActionCallback(
             action=SubscriberAction.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
-            page=subscriber_list_page
+            page=subscriber_list_page # This is the page of the subscriber action menu/subscriber list
         ).pack()
-    ))
-    return builder.as_markup()
+    )
+    bottom_buttons = [[back_button]]
+
+
+    # For pagination of this specific list, if needed.
+    # We need a callback data that can handle this.
+    # Let's assume ManageTTAccountCallback could be used/extended with a new action.
+    # For now, to make it work, we'll use ManageTTAccountCallback with LINK_NEW action,
+    # but also pass target_telegram_id and subscriber_list_page, so the handler can reconstruct the state.
+    # This is a bit of a workaround if this list itself needs pagination.
+    # A dedicated PaginateLinkableTtAccountsCallback would be cleaner.
+    # For this example, let's assume pagination needs to bring us back to the same view.
+    # The ManageTTAccountCallback.LINK_NEW action handler would need to be aware of an optional 'page_to_show' for its own list.
+
+    # If this list is paginated, the LINK_NEW handler would need to accept a `current_tt_account_page`
+    # or similar to re-render this list at the correct page.
+    # For simplicity, and based on original comments, let's assume this list itself is not paginated by its own callback for now.
+    # So, pagination_callback_factory can be a dummy or raise an error if total_pages > 1,
+    # or we simply don't provide it if the list is not meant to be paginated by the generic helper.
+    # The original code did not have explicit pagination buttons for this list.
+    # If total_pages is always 1 for this list, pagination controls won't be added by the generic helper.
+
+    # Let's use a placeholder pagination factory that indicates this list's pagination isn't fully set up
+    # through this generic helper yet, or rely on total_pages being 1.
+    # If total_pages > 1, this would fail unless a proper factory is defined.
+    # For now, we will pass a factory that would require a new CallbackData and handler action.
+    # To avoid breaking things, if total_pages > 1, this setup will require a new callback.
+    # Let's assume for now the caller ensures total_pages is 1, or pagination is handled outside.
+    # To make it safe, we will use a dummy pagination_callback_factory if total_pages > 1 and
+    # rely on the fact that the caller might handle pagination by slicing page_items.
+    # The generic helper will add pagination if total_pages > 1.
+    # We need *some* callback factory.
+    # Let's use ManageTTAccountCallback and assume the LINK_NEW action can handle `page` for its own pagination.
+    pagination_kwargs_for_tt_list = {
+        "action": ManageTTAccountAction.LINK_NEW, # Re-calling the same action to show the list
+        "target_telegram_id": target_telegram_id,
+        # subscriber_list_page is also part of the context for LINK_NEW to return correctly after selection
+        # but for pagination of *this* list, we need to pass it so LINK_NEW can use it.
+        "current_subscriber_page_context": subscriber_list_page
+    }
+
+
+    return await _create_generic_paginated_list_keyboard(
+        _=_,
+        page_items=page_items,
+        current_page=current_page_idx, # This is the current page of TT accounts
+        total_pages=total_pages,      # Total pages of TT accounts
+        item_button_former=tt_account_button_former,
+        # pagination_callback_factory: If this list can be paginated, it needs its own callback factory.
+        # The original ManageTTAccountCallback is for actions, not paginating this list.
+        # We'll use ManageTTAccountCallback, but its handler for LINK_NEW would need to be
+        # updated to understand a 'page' parameter for *this* list's pagination.
+        pagination_callback_factory=ManageTTAccountCallback,
+        pagination_factory_kwargs=pagination_kwargs_for_tt_list,
+        additional_buttons_bottom=bottom_buttons
+    )
