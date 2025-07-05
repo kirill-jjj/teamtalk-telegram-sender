@@ -193,7 +193,8 @@ class Application:
 
             db_subscriber_ids = await crud.get_all_subscribers_ids(session)
             self.subscribed_users_cache.update(db_subscriber_ids)
-        self.logger.info(f"Admin IDs cache populated with {len(self.admin_ids_cache)} IDs.")
+        self.logger.info(f"Admin IDs cache populated from DB with {len(self.admin_ids_cache)} IDs.")
+        self.logger.debug(f"Admin IDs cache populated from DB: {self.admin_ids_cache}") # Log actual IDs at DEBUG
         self.logger.info(f"Subscribed users cache populated with {len(self.subscribed_users_cache)} IDs.")
 
         await self.load_user_settings_to_app_cache()
@@ -207,15 +208,16 @@ class Application:
                     async with self.session_factory() as session:
                         await crud.add_admin(session, tg_admin_chat_id)
                         self.admin_ids_cache.add(tg_admin_chat_id)
-                    self.logger.info(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
+                    self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
                 else:
-                    self.logger.info(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
+                    self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
             else:
                 self.logger.info("TG_ADMIN_CHAT_ID is not set in config, no main admin to add.")
         except (ValueError, TypeError) as e:
             self.logger.error(f"Could not process TG_ADMIN_CHAT_ID from config. It must be a valid integer. Error: {e}")
 
-        self.logger.info(f"Final admin_ids_cache state after startup: {self.admin_ids_cache}")
+        self.logger.info(f"Final admin_ids_cache count after startup: {len(self.admin_ids_cache)}.")
+        self.logger.debug(f"Final admin_ids_cache state after startup: {self.admin_ids_cache}")
         # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         # Call set_telegram_commands with only the app instance
