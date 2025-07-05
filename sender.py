@@ -738,10 +738,13 @@ def main_cli():
     args, _ = parser.parse_known_args()
     os.environ["APP_CONFIG_FILE_PATH"] = args.config
 
-    # Now that env var is set, import app_config
-    from bot.config import app_config as app_config_instance
+    # ИМПОРТИРУЕМ НЕ ОБЪЕКТ, А КЛАСС
+    from bot.config import Settings
 
     try:
+        # СОЗДАЕМ ОБЪЕКТ НАСТРОЕК ЗДЕСЬ, ПОСЛЕ УСТАНОВКИ ENV VAR
+        app_config_instance = Settings()
+
         try:
             import uvloop
             uvloop.install()

@@ -70,4 +70,4 @@ class Settings(BaseSettings):
             return v.lower()
         return v
 
-app_config = Settings()
+# app_config = Settings()  # Instance creation moved to sender.py
