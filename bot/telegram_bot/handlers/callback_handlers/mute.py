@@ -13,7 +13,7 @@ import pytalk
 from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
 
 from bot.models import UserSettings, MutedUser
-from bot.core.user_settings import USER_SETTINGS_CACHE # This is global, might need app.user_settings_cache
+# from bot.core.user_settings import USER_SETTINGS_CACHE # This is global, might need app.user_settings_cache
 from bot.telegram_bot.keyboards import (
     create_manage_muted_users_keyboard,
     create_paginated_user_list_keyboard,
@@ -273,7 +273,7 @@ async def _commit_mute_changes_and_notify(
         # await session.refresh(user_settings, attribute_names=['muted_users_list']) # If needed
 
         # Update the global USER_SETTINGS_CACHE. If this cache moves to app, use app.user_settings_cache
-        USER_SETTINGS_CACHE[user_settings.telegram_id] = user_settings
+        app.user_settings_cache[user_settings.telegram_id] = user_settings # <--- ИСПОЛЬЗУЙ app.user_settings_cache
 
         await callback_query.answer(toast_message, show_alert=False)
         return True
