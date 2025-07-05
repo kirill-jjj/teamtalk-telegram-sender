@@ -9,15 +9,15 @@ from datetime import datetime # Added for Application class Pytalk event handler
 from typing import Dict, Optional, Any
 
 # SQLAlchemy / SQLModel imports
-from sqlalchemy.ext.asyncio import create_async_engine # Added
-from sqlalchemy.orm import sessionmaker # Added
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.models import UserSettings
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
-from bot import models as db_models # Added alias for db models
-from bot.constants import DB_MAIN_NAME # Added
+from bot import models as db_models
+from bot.constants import DB_MAIN_NAME
 
 
 # Aiogram imports for Application class
@@ -37,14 +37,16 @@ from pytalk.enums import Status as PytalkStatus
 
 
 # Application-specific imports
+import gettext # For get_translator method
+from pathlib import Path # For get_translator method
+
 from bot.logging_setup import setup_logging
-# from bot.config import app_config # Config imported in main_cli
-
-# from bot.database.engine import SessionFactory # SessionFactory will be created in Application
 from bot.database import crud
+from bot.core.languages import discover_languages, DEFAULT_LANGUAGE_CODE
 
-from bot.core.languages import discover_languages, AVAILABLE_LANGUAGES_DATA, DEFAULT_LANGUAGE_CODE
-from bot.language import get_translator
+# Constants for i18n
+LOCALE_DIR = Path("locales")
+DOMAIN = "messages"
 
 # Telegram specific components to be managed by Application
 from bot.telegram_bot.commands import set_telegram_commands
@@ -107,32 +109,57 @@ class Application:
         self.dp: Dispatcher = Dispatcher()
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
 
-        # >>> НАЧАЛО НОВОГО БЛОКА <<<
-        # Логика, перенесенная из bot/database/engine.py
-        # Ensure db_models is loaded (it was imported with 'from bot import models as db_models')
-        _ = db_models # This line is to ensure the import is used, preventing linters from removing it if not directly referenced elsewhere yet.
-
+        # Initialize SessionFactory
+        _ = db_models # Ensure db_models import is used
         database_files = {DB_MAIN_NAME: self.app_config.DATABASE_FILE}
         async_engines = {
             db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
             for db_name, db_file in database_files.items()
         }
-        # Создаем и сохраняем фабрику сессий как атрибут класса
         self.session_factory: sessionmaker = sessionmaker(
             async_engines[DB_MAIN_NAME], expire_on_commit=False, class_=AsyncSession
         )
-        # >>> КОНЕЦ НОВОГО БЛОКА <<<
 
-        self.connections: Dict[str, TeamTalkConnection] = {} # Key: server_id (e.g., host:port)
-        # self.session_factory: SessionFactory = SessionFactory # <-- УДАЛИТЬ ЭТУ СТРОКУ
-
+        self.connections: Dict[str, TeamTalkConnection] = {}
         self.subscribed_users_cache: set[int] = set()
         self.admin_ids_cache: set[int] = set()
         self.user_settings_cache: Dict[int, Any] = {}
+        self.translator_cache: dict[str, gettext.GNUTranslations] = {}
+        self.available_languages: list = []
 
         self.teamtalk_task: Optional[asyncio.Task] = None
         self._register_pytalk_event_handlers()
 
+    # --- Language and Translator Methods ---
+    def get_translator(self, language_code: Optional[str] = None) -> gettext.GNUTranslations:
+        """
+        Returns a translator object for the specified language code.
+        Caches translators after first load.
+        Falls back to DEFAULT_LANGUAGE_CODE if the requested language is not found
+        or if the default language itself fails to load (in which case NullTranslations is used).
+        """
+        if language_code is None:
+            language_code = self.app_config.DEFAULT_LANG
+
+        if language_code in self.translator_cache:
+            return self.translator_cache[language_code]
+
+        try:
+            translation = gettext.translation(DOMAIN, localedir=LOCALE_DIR, languages=[language_code])
+            self.translator_cache[language_code] = translation
+            return translation
+        except FileNotFoundError:
+            default_lang_code = self.app_config.DEFAULT_LANG
+            if language_code != default_lang_code:
+                self.logger.warning(f"Language '{language_code}' not found. Falling back to default '{default_lang_code}'.")
+                return self.get_translator(default_lang_code)
+            else:
+                self.logger.error(f"Default language '{default_lang_code}' not found. Using NullTranslations.")
+                null_trans = gettext.NullTranslations()
+                self.translator_cache[language_code] = null_trans
+                return null_trans
+
+    # --- User Settings and Cache ---
     async def load_user_settings_to_app_cache(self):
         """Loads all user settings from DB into the application's cache."""
         async with self.session_factory() as session:
@@ -468,7 +495,7 @@ class Application:
             if admin_settings and admin_settings.language_code:
                 bot_reply_language_code = admin_settings.language_code
 
-        translator = get_translator(bot_reply_language_code)
+        translator = self.get_translator(bot_reply_language_code) # Changed to self.get_translator
         _ = translator.gettext
 
         command_parts = message_content.split(maxsplit=1)
@@ -654,7 +681,7 @@ class Application:
 
         if self.app_config.TG_ADMIN_CHAT_ID:
             try:
-                admin_critical_translator = get_translator('ru') # Assuming admin lang is ru for this
+                admin_critical_translator = self.get_translator('ru') # Changed to self.get_translator
                 critical_error_header = admin_critical_translator.gettext("<b>Critical error!</b>")
                 error_text = (
                     f"{critical_error_header}\n"
@@ -676,7 +703,7 @@ class Application:
             if user_settings and user_settings.language_code:
                 lang_code = user_settings.language_code
 
-        translator = get_translator(lang_code)
+        translator = self.get_translator(lang_code) # Changed to self.get_translator
         user_message_key = "An unexpected error occurred. The administrator has been notified. Please try again later."
         user_message_text = translator.gettext(user_message_key)
 
@@ -698,14 +725,15 @@ class Application:
 
         # Initialize Languages
         self.logger.info("Discovering available languages...")
-        discovered_langs = discover_languages()
-        AVAILABLE_LANGUAGES_DATA.clear() # Clear if populated by module-level import
-        AVAILABLE_LANGUAGES_DATA.extend(discovered_langs)
-        if not AVAILABLE_LANGUAGES_DATA:
+        # discovered_langs = discover_languages() # Old way
+        # AVAILABLE_LANGUAGES_DATA.clear()
+        # AVAILABLE_LANGUAGES_DATA.extend(discovered_langs)
+        self.available_languages = discover_languages() # New way: assign to instance attribute
+        if not self.available_languages:
             self.logger.critical("No languages discovered. Check locales setup.")
             return # Or raise
         else:
-            self.logger.info(f"Available languages loaded: {[lang['code'] for lang in AVAILABLE_LANGUAGES_DATA]}")
+            self.logger.info(f"Available languages loaded: {[lang['code'] for lang in self.available_languages]}")
 
         # Setup Aiogram Dispatcher
         self.dp.update.outer_middleware.register(ApplicationMiddleware(self))

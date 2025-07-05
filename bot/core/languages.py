@@ -13,7 +13,6 @@ class LanguageInfo(TypedDict):
     code: str
     native_name: str
 
-AVAILABLE_LANGUAGES_DATA: List[LanguageInfo] = []
 
 def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
     """

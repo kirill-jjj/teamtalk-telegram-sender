@@ -14,7 +14,6 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 from sqlmodel import select
 
-from bot.language import get_translator
 from bot.models import UserSettings, MutedUser, NotificationSetting, MuteListMode
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 from bot.constants import (
@@ -54,7 +53,8 @@ async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
     session_factory: "DbSessionFactory",
-    subscribed_users_cache: Set[int]
+    subscribed_users_cache: Set[int],
+    app: "Application"
 ) -> list[int]:
     subscriber_ids = list(subscribed_users_cache)
     if not subscriber_ids: return []
@@ -83,10 +83,12 @@ async def _get_recipients_for_notification(
         return result.scalars().all()
 
 
-def _generate_join_leave_notification_text( # No change needed here
-    tt_user: TeamTalkUser, server_name: str, event_type: str, lang_code: str
+def _generate_join_leave_notification_text(
+    tt_user: TeamTalkUser, server_name: str, event_type: str, lang_code: str, app: "Application"
 ) -> str:
-    _ = recipient_translator_func = get_translator(lang_code).gettext
+    # _ = recipient_translator_func = get_translator(lang_code).gettext # Old call
+    recipient_translator = app.get_translator(lang_code)
+    _ = recipient_translator_func = recipient_translator.gettext
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
     notification_template = _("User {user_nickname} joined server {server_name}") if event_type == NOTIFICATION_EVENT_JOIN \
                             else _("User {user_nickname} left server {server_name}")
@@ -101,13 +103,13 @@ async def send_join_leave_notification_logic(
     bot: AiogramBot, # Parameter from Application
     session_factory: "DbSessionFactory", # Parameter from Application
     user_settings_cache: dict[int, UserSettings], # Parameter from Application
-    subscribed_users_cache: Set[int], # Parameter from Application
-    online_users_cache_for_instance: dict[int, "pytalk.user.User"], # Parameter from Application
-    app_config_instance: Any, # Parameter from Application
-    app: "Application" # ADD Application instance itself
+    subscribed_users_cache: Set[int],
+    online_users_cache_for_instance: dict[int, "pytalk.user.User"],
+    app_config_instance: Any,
+    app: "Application"
 ):
-    default_lang_for_markup_and_log = app_config_instance.DEFAULT_LANG # Use passed app_config
-    _log_markup_translator = get_translator(default_lang_for_markup_and_log).gettext
+    default_lang_for_markup_and_log = app_config_instance.DEFAULT_LANG
+    _log_markup_translator = app.get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
 
     user_username = ttstr(tt_user.username)
@@ -124,7 +126,7 @@ async def send_join_leave_notification_logic(
         logger.debug(f"User {user_username} is globally ignored on server {tt_instance.server_info.host}. Skipping {event_type} notification.")
         return
 
-    recipients = await _get_recipients_for_notification(user_username, event_type, session_factory, subscribed_users_cache)
+    recipients = await _get_recipients_for_notification(user_username, event_type, session_factory, subscribed_users_cache, app=app)
 
     if not recipients:
         logger.debug(f"No recipients found for {event_type} event for user {user_username} on server {tt_instance.server_info.host}.")
@@ -167,7 +169,7 @@ async def send_join_leave_notification_logic(
         bot_instance_to_use=bot,
         chat_ids=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
-            tt_user, server_name, event_type, lang_code
+            tt_user, server_name, event_type, lang_code, app=app
         ),
         user_settings_cache=user_settings_cache,
         app=app,
