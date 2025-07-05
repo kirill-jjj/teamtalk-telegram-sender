@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-07-05 13:51+0000\n"
+"POT-Creation-Date: 2025-07-05 14:13+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -115,6 +115,7 @@ msgstr ""
 "/remove_admin <Telegram ID> [<Telegram ID>...] - Видалити адміна бота."
 
 # | msgid "You were not subscribed to notifications."
+# | msgid "You are not authorized for this action."
 #: bot/teamtalk_bot/commands.py:69 bot/telegram_bot/handlers/admin.py:72
 #: bot/telegram_bot/handlers/admin.py:85 bot/telegram_bot/handlers/admin.py:99
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:80
@@ -122,7 +123,6 @@ msgstr ""
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:212
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:284
 #, fuzzy
-#| msgid "You are not authorized for this action."
 msgid "You are not authorized to perform this action."
 msgstr "Ви не були підписані на сповіщення."
 
@@ -329,7 +329,6 @@ msgid "You have successfully subscribed to notifications."
 msgstr "Ви успішно підписалися на сповіщення."
 
 #: bot/telegram_bot/deeplink.py:166
-#: bot/telegram_bot/handlers/callback_handlers/_helpers.py:54
 msgid "An error occurred."
 msgstr "Сталася помилка."
 
@@ -642,6 +641,26 @@ msgstr "Головне меню:"
 msgid "Error: Callback query is missing essential data."
 msgstr "Помилка: У запиті зворотного виклику відсутні необхідні дані."
 
+#: bot/telegram_bot/handlers/callback_handlers/_helpers.py:54
+#: bot/telegram_bot/handlers/callback_handlers/language.py:67
+#: bot/telegram_bot/handlers/callback_handlers/language.py:124
+#: bot/telegram_bot/handlers/callback_handlers/language.py:144
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:87
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:114
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:161
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:255
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:272
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:289
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:459
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:468
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:51
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:84
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:134
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:216
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:288
+msgid "An error occurred. Please try again later."
+msgstr "Сталася помилка. Будь ласка, спробуйте пізніше."
+
 # | msgid "User {user_nickname} kicked from server."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:43
 #, fuzzy, python-brace-format
@@ -724,25 +743,6 @@ msgstr "Будь ласка, оберіть вашу мову:"
 #: bot/telegram_bot/handlers/callback_handlers/language.py:61
 msgid "Invalid language selection."
 msgstr "Невірний вибір мови."
-
-#: bot/telegram_bot/handlers/callback_handlers/language.py:67
-#: bot/telegram_bot/handlers/callback_handlers/language.py:124
-#: bot/telegram_bot/handlers/callback_handlers/language.py:144
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:87
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:114
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:161
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:255
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:272
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:289
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:459
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:468
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:51
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:84
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:134
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:216
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:288
-msgid "An error occurred. Please try again later."
-msgstr "Сталася помилка. Будь ласка, спробуйте пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:81
 msgid "Selected language is not available."

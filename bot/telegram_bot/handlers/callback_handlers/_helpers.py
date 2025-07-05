@@ -51,7 +51,7 @@ async def process_setting_update(
         logger.error(f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
         revert_action()
         try:
-            await callback_query.answer(_("An error occurred."), show_alert=True)
+            await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         except TelegramAPIError as ans_err_revert:
             logger.warning(f"Could not send error alert for DB update failure/revert: {ans_err_revert}")
         return
