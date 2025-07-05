@@ -388,7 +388,7 @@ async def cq_set_mute_mode_action(
         success_toast_text=success_toast_text,
         new_text=menu_text,
         new_markup=updated_builder.as_markup(),
-        app=app # Pass app to process_setting_update if it needs to update app-level caches
+        app=app
     )
 
 

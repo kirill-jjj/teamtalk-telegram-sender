@@ -5,7 +5,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from bot.models import UserSettings
-from bot.core.user_settings import update_user_settings_in_db, USER_SETTINGS_CACHE # Import USER_SETTINGS_CACHE
+from bot.core.user_settings import update_user_settings_in_db # УДАЛИ USER_SETTINGS_CACHE ОТСЮДА
 
 if TYPE_CHECKING:
     from sender import Application # For type hinting app instance
@@ -22,7 +22,7 @@ async def process_setting_update(
     success_toast_text: str,
     new_text: str,
     new_markup: InlineKeyboardMarkup,
-    app: Optional["Application"] = None # Add app as optional param
+    app: "Application" # СДЕЛАЙ ЭТОТ ПАРАМЕТР ОБЯЗАТЕЛЬНЫМ
 ) -> None:
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
@@ -35,16 +35,10 @@ async def process_setting_update(
     update_action()
 
     try:
-        # Pass app to update_user_settings_in_db if it's adapted to use app.user_settings_cache
-        # For now, update_user_settings_in_db updates DB and global USER_SETTINGS_CACHE
         await update_user_settings_in_db(session, user_settings)
 
-        # If USER_SETTINGS_CACHE were part of app, we'd do:
-        # if app:
-        #    app.user_settings_cache[user_settings.telegram_id] = user_settings
-        # else: # Fallback to global if app not provided (though it should be)
-        #    USER_SETTINGS_CACHE[user_settings.telegram_id] = user_settings
-        # For now, update_user_settings_in_db handles the global USER_SETTINGS_CACHE update.
+        # Теперь обнови кэш Application
+        app.user_settings_cache[user_settings.telegram_id] = user_settings
 
         await callback_query.answer(success_toast_text, show_alert=False)
 
