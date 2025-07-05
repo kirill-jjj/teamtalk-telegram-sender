@@ -117,7 +117,7 @@ line-ending = "auto"
 [project.scripts]
 teamtalk-telegram-sender = "sender:main_cli"
 migrate = "scripts.run_alembic:main"
-i18n = "manage_locales:main" # Assuming manage-locales.py is in root
+i18n = "scripts.manage_locales:main"
 
 [tool.pytest.ini_options]
 pythonpath = [
