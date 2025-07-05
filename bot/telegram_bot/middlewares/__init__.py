@@ -244,3 +244,5 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
 
         logger.debug(f"TeamTalkConnectionCheckMiddleware: Access granted for server {tt_connection.server_info.host}. Connection is ready.")
         return await handler(event, data)
+
+from .admin_check import AdminCheckMiddleware
