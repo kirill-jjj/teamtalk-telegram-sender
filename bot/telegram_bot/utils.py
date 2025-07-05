@@ -91,10 +91,10 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, app: "Applicati
 async def send_telegram_message_individual(
     bot_instance: Bot,
     chat_id: int,
+    app: "Application", # Changed to non-optional
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_user_is_online: bool = False,
-    app: "Application", # Changed to non-optional
     **kwargs
 ) -> bool:
     # app is now mandatory
