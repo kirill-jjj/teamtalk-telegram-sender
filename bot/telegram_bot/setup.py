@@ -15,14 +15,14 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware
 )
-from bot.telegram_bot.handlers import (
-    user_commands_router,
-    admin_router,
-    callback_router,
-    catch_all_router,
-    menu_callback_router, # Make sure this is the correct name if it exists
-    subscriber_actions_router # Make sure this is the correct name if it exists
-)
+
+# Direct imports for routers
+from bot.telegram_bot.handlers.user import user_commands_router
+from bot.telegram_bot.handlers.admin import admin_router
+from bot.telegram_bot.handlers.callbacks import callback_router # Assuming this is the correct file for callback_router
+from bot.telegram_bot.handlers.unknown import catch_all_router
+from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router
+from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
 
 
 def setup_telegram_dispatcher(app: "Application"):
