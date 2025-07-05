@@ -1,10 +1,9 @@
 import logging
 import asyncio
 import pytalk
-from pytalk.user import User as TeamTalkUser # ДОБАВЬ ЭТУ СТРОКУ
+from pytalk.user import User as TeamTalkUser
 from typing import Callable, Optional
 from aiogram import Bot
-from aiogram import Bot as AiogramBot # ДОБАВЬ ЭТУ СТРОКУ
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
@@ -225,7 +224,7 @@ async def send_or_edit_paginated_list(
         )
 
     # If it's a CbQ and edit was successful (or not modified) and we haven't shown an alert
-    # ИЗМЕНИТЕ ЭТОТ БЛОК:
+    # MODIFY THIS BLOCK:
     if isinstance(target, CallbackQuery) and not answered_with_alert:
         try:
             # This might fail if already answered by the "message not modified" block, which is fine.

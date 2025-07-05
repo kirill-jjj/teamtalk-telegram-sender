@@ -259,8 +259,8 @@ class Application:
                 critical_error_header = admin_critical_translator.gettext("<b>Critical error!</b>")
                 error_text = (
                     f"{critical_error_header}\n"
-                    f"<b>Тип ошибки:</b> {type(event.exception).__name__}\n"
-                    f"<b>Сообщение:</b> {escaped_exception_text}"
+                    f"<b>Error type:</b> {type(event.exception).__name__}\n"
+                    f"<b>Message:</b> {escaped_exception_text}"
                 )
                 await self.tg_bot_event.send_message(self.app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
             except Exception as e:
@@ -332,11 +332,9 @@ def main_cli():
     )
     args, _ = parser.parse_known_args()
 
-    # ИМПОРТИРУЕМ НЕ ОБЪЕКТ, А КЛАСС
     from bot.config import Settings
 
     try:
-        # СОЗДАЕМ ОБЪЕКТ НАСТРОЕК ЗДЕСЬ, ПЕРЕДАВАЯ ПУТЬ К ФАЙЛУ НАПРЯМУЮ
         app_config_instance = Settings(_env_file=args.config)
 
         try:
