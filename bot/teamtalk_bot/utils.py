@@ -144,13 +144,10 @@ async def forward_tt_message_to_telegram_admin(
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
-    # ПРАВИЛЬНЫЙ СПОСОБ с aiogram 3.x
-    # Импортируем html если еще не импортирован вверху файла
-
     template_text_parts = _("Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}").format(
         server_name=html.escape(server_name_to_display),
         sender_name=html.escape(sender_display),
-        message_content=html.escape(message_content) # Экранируем и основной контент
+        message_content=html.escape(message_content)
     )
 
     was_sent: bool = await send_telegram_message_individual(

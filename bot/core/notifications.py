@@ -87,7 +87,6 @@ async def _get_recipients_for_notification(
 def _generate_join_leave_notification_text(
     tt_user: TeamTalkUser, server_name: str, event_type: str, lang_code: str, app: "Application"
 ) -> str:
-    # _ = recipient_translator_func = get_translator(lang_code).gettext # Old call
     recipient_translator = app.get_translator(lang_code)
     _ = recipient_translator_func = recipient_translator.gettext
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
