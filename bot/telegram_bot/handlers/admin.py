@@ -40,7 +40,7 @@ async def _show_user_buttons(
     my_user_id = tt_instance.getMyUserID()
     if my_user_id is None:
         logger.error(f"[{tt_connection.server_info.host}] Could not get own user ID in _show_user_buttons.")
-        await message.reply(_("An error occurred determining your TeamTalk ID."))
+        await message.reply(_("An error occurred. Please try again later."))
         return
 
     online_users = await get_online_teamtalk_users(tt_instance)

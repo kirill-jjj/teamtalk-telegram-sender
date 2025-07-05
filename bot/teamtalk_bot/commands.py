@@ -202,15 +202,15 @@ async def _generate_and_reply_deeplink(
         tt_message.reply(reply_text)
     except TelegramAPIError as e_tg:
         logger.error(f"Telegram API error processing deeplink action {action} for TT user {sender_tt_username}: {e_tg}", exc_info=True)
-        try: tt_message.reply(_("Error communicating with Telegram. Please try again later."))
+        try: tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply: logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username}: {e_reply}")
     except SQLAlchemyError as e_db:
         logger.error(f"Database error creating deeplink for action {action} for TT user {sender_tt_username}: {e_db}", exc_info=True)
-        try: tt_message.reply(_(error_reply_source))
+        try: tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply: logger.error(f"Failed to send DB error reply to TT user {sender_tt_username}: {e_reply}")
     except TeamTalkException as e_tt:
         logger.error(f"TeamTalk error processing deeplink action {action} for TT user {sender_tt_username}: {e_tt}", exc_info=True)
-        try: tt_message.reply(_(error_reply_source))
+        try: tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply: logger.error(f"Failed to send TT error reply to TT user {sender_tt_username}: {e_reply}")
 
 
@@ -267,7 +267,7 @@ async def handle_tt_add_admin_command(
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
-        header_msg_key=_("Errors:"),
+        header_msg_key=_("Action Results:"),
         app=app # Pass app
     )
 
@@ -290,7 +290,7 @@ async def handle_tt_remove_admin_command(
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
         error_msg_key=_("Admin with ID {telegram_id} not found."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
-        header_msg_key=_("Info/Errors:"),
+        header_msg_key=_("Action Results:"),
         app=app # Pass app
     )
 

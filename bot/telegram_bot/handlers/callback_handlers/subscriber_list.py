@@ -61,4 +61,4 @@ async def handle_subscriber_list_actions(
         await _show_subscriber_list_page(query, session, bot, _, page=requested_page)
     else:
         logger.warning(f"Unhandled SubscriberListAction: {action} from user {query.from_user.id}")
-        await query.answer(_("Unknown action."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)

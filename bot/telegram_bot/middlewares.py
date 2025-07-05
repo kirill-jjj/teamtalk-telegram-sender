@@ -77,7 +77,9 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         if not user_settings:
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            await _send_error_response(event, app.get_translator(app.app_config.DEFAULT_LANG).gettext("An error occurred while loading your settings."), show_alert_for_callback=True)
+            # Use the app's default translator and the unified error message
+            _default_tr = app.get_translator(app.app_config.DEFAULT_LANG).gettext
+            await _send_error_response(event, _default_tr("An error occurred. Please try again later."), show_alert_for_callback=True)
             return
 
         try:
@@ -90,8 +92,9 @@ class UserSettingsMiddleware(BaseMiddleware):
         except Exception as refresh_e:
             logger.error(f"Error refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}", exc_info=True)
             error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else app.app_config.DEFAULT_LANG
-            error_message = app.get_translator(error_lang_code).gettext("A database error occurred while loading your settings details.")
-            await _send_error_response(event, error_message, show_alert_for_callback=True)
+            # Use the unified error message
+            _tr = app.get_translator(error_lang_code).gettext
+            await _send_error_response(event, _tr("An error occurred. Please try again later."), show_alert_for_callback=True)
             return
 
 
