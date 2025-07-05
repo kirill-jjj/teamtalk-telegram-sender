@@ -69,5 +69,3 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.lower()
         return v
-
-# app_config = Settings()  # Instance creation moved to sender.py
