@@ -46,7 +46,7 @@ async def _show_user_buttons(
     online_users = await get_online_teamtalk_users(tt_instance)
 
     if not online_users:
-        await message.reply(_("No users online on TeamTalk server {server_host}.").format(server_host=tt_connection.server_info.host))
+        await message.reply(_("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host))
         return
 
     sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, _).lower())

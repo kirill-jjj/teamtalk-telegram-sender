@@ -267,7 +267,7 @@ async def handle_manage_tt_account(
         return
 
     else:
-        await query.answer(_("Unknown manage account action."), show_alert=True)
+        await query.answer(_("Unknown action."), show_alert=True)
         logger.warning(f"Unknown manage TT account action: {action}")
 
 
