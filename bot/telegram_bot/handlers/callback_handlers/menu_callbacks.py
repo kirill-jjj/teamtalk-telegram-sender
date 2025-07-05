@@ -11,6 +11,8 @@ from .list_utils import _show_subscriber_list_page
 from ..user import who_command_handler, help_command_handler, settings_command_handler
 from ._helpers import ensure_message_context
 from ...middlewares.admin_check import AdminCheckMiddleware
+# Middlewares to apply
+from ...middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.core.enums import AdminAction
@@ -22,8 +24,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
+# Apply TT middlewares to menu_callback_router for 'who' command
+menu_callback_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Added
+
 admin_menu_callback_router = Router(name="admin_menu_callback_router")
 admin_menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
+# Apply TT middlewares to admin_menu_callback_router for 'kick', 'ban' commands
+admin_menu_callback_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+admin_menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Added
 
 
 # --- Хендлеры обычных пользователей ---

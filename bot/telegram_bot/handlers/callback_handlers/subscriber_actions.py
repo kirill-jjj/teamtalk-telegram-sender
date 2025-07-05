@@ -23,7 +23,7 @@ from bot.models import UserSettings, BanList
 from bot.database import crud
 from bot.services import user_service
 from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction
-from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware, ActiveTeamTalkConnectionMiddleware
 import pytalk
 from .list_utils import _get_paginated_subscribers_info
 from bot.telegram_bot.utils import format_telegram_user_display_name
@@ -35,7 +35,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
-subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Existing
 
 
 async def _refresh_and_display_subscriber_list(

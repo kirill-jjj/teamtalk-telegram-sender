@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.utils import get_tt_user_display_name, get_online_teamtalk_users
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
-from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware, ActiveTeamTalkConnectionMiddleware
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 from bot.core.enums import AdminAction
@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
+admin_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+admin_router.message.middleware(TeamTalkConnectionCheckMiddleware()) # Existing
 
 
 async def _show_user_buttons(
