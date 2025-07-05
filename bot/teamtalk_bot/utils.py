@@ -12,7 +12,7 @@ import pytalk
 # from bot.telegram_bot.bot_instances import tg_bot_message
 # from bot.core.user_settings import USER_SETTINGS_CACHE
 # from bot.core.utils import get_effective_server_name, get_tt_user_display_name # Оставь, но убедись, что они используют переданные параметры
-from bot.translations import get_translator
+from bot.language import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
