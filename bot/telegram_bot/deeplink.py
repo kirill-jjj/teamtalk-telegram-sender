@@ -118,6 +118,13 @@ async def _handle_subscribe_deeplink(
     app.subscribed_users_cache.add(telegram_id)
     logger.info(f"User {telegram_id} added to subscribers list and cache.")
 
+    # If the user is an admin in the DB, add them to the admin_ids_cache as well
+    # This handles the case where an admin unsubscribes and then re-subscribes via deeplink
+    admin_record = await session.get(crud.Admin, telegram_id) # Use crud.Admin to access the model
+    if admin_record:
+        app.admin_ids_cache.add(telegram_id)
+        logger.info(f"User {telegram_id} is an admin, added to admin_ids_cache.")
+
     # The user_settings passed in is from middleware, it's already get_or_created.
     current_settings = user_settings
 
