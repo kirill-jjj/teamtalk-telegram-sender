@@ -63,7 +63,7 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
 
 # --- Settings Keyboards ---
 
-def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
+async def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -81,7 +81,7 @@ def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder.adjust(1)
     return builder
 
-def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
+async def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
     from bot.core.languages import AVAILABLE_LANGUAGES_DATA # Import here to ensure it's populated
 
@@ -107,7 +107,7 @@ def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder.adjust(1) # Adjust based on number of languages, or keep 1 per row
     return builder
 
-def create_subscription_settings_keyboard(
+async def create_subscription_settings_keyboard(
     _: callable,
     current_setting: NotificationSetting
 ) -> InlineKeyboardBuilder:
@@ -137,7 +137,7 @@ def create_subscription_settings_keyboard(
     builder.adjust(1)
     return builder
 
-def create_notification_settings_keyboard(
+async def create_notification_settings_keyboard(
     _: callable,
     user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
@@ -163,7 +163,7 @@ def create_notification_settings_keyboard(
     builder.adjust(1)
     return builder
 
-def create_manage_muted_users_keyboard(
+async def create_manage_muted_users_keyboard(
     _: callable,
     user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
@@ -206,7 +206,7 @@ def create_manage_muted_users_keyboard(
 
 # --- Paginated List Keyboards ---
 
-def _add_pagination_controls(
+async def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
     _: callable,
     current_page: int,
@@ -234,7 +234,7 @@ def _add_pagination_controls(
         builder.row(*pagination_buttons)
 
 
-def create_paginated_user_list_keyboard(
+async def create_paginated_user_list_keyboard(
     _: callable,
     page_items: list[str],
     current_page: int,
@@ -269,7 +269,7 @@ def create_paginated_user_list_keyboard(
         back_button_text_key="⬅️ Back to Mute Management"
     )
 
-def create_account_list_keyboard(
+async def create_account_list_keyboard(
     _: callable,
     page_items: list[pytalk.UserAccount],
     current_page: int,
@@ -297,7 +297,7 @@ def create_account_list_keyboard(
         back_button_text_key="⬅️ Back to Mute Management"
     )
 
-def create_subscriber_list_keyboard(
+async def create_subscriber_list_keyboard(
     _: Callable,
     page_subscribers_info: List[SubscriberInfo],
     current_page: int,
@@ -350,7 +350,7 @@ def create_subscriber_list_keyboard(
 
     return builder.as_markup()
 
-def create_user_selection_keyboard(
+async def create_user_selection_keyboard(
     _: callable,
     users_to_display: list[pytalk.user.User],
     command_type: AdminAction
@@ -384,7 +384,7 @@ def create_user_selection_keyboard(
     return builder
 
 
-def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
+async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     builder = InlineKeyboardBuilder()
 
@@ -420,7 +420,7 @@ def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuil
     return builder
 
 
-def create_subscriber_action_menu_keyboard(
+async def create_subscriber_action_menu_keyboard(
     _: callable,
     target_telegram_id: int,
     page: int # Page of the main subscriber list to return to
@@ -463,7 +463,7 @@ def create_subscriber_action_menu_keyboard(
     return builder.as_markup()
 
 # --- Generic Helper for Paginated User Lists with Toggle ---
-def _create_generic_user_toggle_list_keyboard(
+async def _create_generic_user_toggle_list_keyboard(
     _: Callable[[str], str],
     page_items: List[Any],
     current_page: int,
@@ -516,7 +516,7 @@ def _create_generic_user_toggle_list_keyboard(
     return builder.as_markup()
 
 
-def create_manage_tt_account_keyboard(
+async def create_manage_tt_account_keyboard(
     _: callable,
     target_telegram_id: int,
     current_tt_username: str | None,
@@ -557,7 +557,7 @@ def create_manage_tt_account_keyboard(
     return builder.as_markup()
 
 
-def create_linkable_tt_account_list_keyboard(
+async def create_linkable_tt_account_list_keyboard(
     _: callable,
     page_items: list[pytalk.UserAccount], # Same items as mute list
     current_page_idx: int, # Renamed to avoid confusion with subscriber list page

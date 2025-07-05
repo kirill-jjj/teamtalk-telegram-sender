@@ -260,7 +260,7 @@ async def settings_command_handler(
     # This command does not interact with TeamTalk, so tt_connection is not strictly needed here
     # unless settings were to show server-specific info.
     await safe_delete_message(message, log_context_message="user settings command")
-    settings_builder = create_main_settings_keyboard(_)
+    settings_builder = await create_main_settings_keyboard(_)
     try:
         await message.answer(
             text=_("Settings"),
@@ -281,7 +281,7 @@ async def menu_command_handler(
 
     await safe_delete_message(message, log_context_message="user menu command")
     is_admin = message.from_user.id in app.admin_ids_cache # Use app's cache
-    menu_builder = create_main_menu_keyboard(_, is_admin)
+    menu_builder = await create_main_menu_keyboard(_, is_admin)
     try:
         await message.answer(
             text=_("Main Menu:"),

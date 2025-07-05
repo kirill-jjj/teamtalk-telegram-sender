@@ -60,7 +60,7 @@ async def _refresh_and_display_subscriber_list(
     if total_pages == 0 or not page_subscribers_info:
         await query.message.edit_text(_("No subscribers found."))
     else:
-        new_keyboard = create_subscriber_list_keyboard(
+        new_keyboard = await create_subscriber_list_keyboard(
             _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
         )
         await query.message.edit_text(
@@ -87,7 +87,7 @@ async def handle_view_subscriber(
         await query.answer(_("Error: Message context lost."), show_alert=True)
         return
 
-    keyboard = create_subscriber_action_menu_keyboard(
+    keyboard = await create_subscriber_action_menu_keyboard(
         _,
         target_telegram_id=callback_data.telegram_id,
         page=callback_data.page
@@ -182,7 +182,7 @@ async def handle_subscriber_action(
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
         user_settings = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_settings.teamtalk_username if user_settings else None
-        keyboard = create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page)
+        keyboard = await create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page)
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
             reply_markup=keyboard
@@ -235,7 +235,7 @@ async def handle_manage_tt_account(
         else:
             await query.answer(_("No TeamTalk account was linked."), show_alert=True)
 
-        keyboard = create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page)
+        keyboard = await create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page)
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
             reply_markup=keyboard
@@ -253,7 +253,7 @@ async def handle_manage_tt_account(
             await query.answer(_("No TeamTalk server accounts found on {server_host} or unable to fetch.").format(server_host=tt_connection.server_info.host), show_alert=True)
             return
 
-        link_keyboard = create_linkable_tt_account_list_keyboard(
+        link_keyboard = await create_linkable_tt_account_list_keyboard(
             _, page_items=server_accounts, current_page_idx=0, total_pages=1, # Assuming single page for now
             target_telegram_id=target_telegram_id, subscriber_list_page=return_page
         )
@@ -297,7 +297,7 @@ async def handle_link_tt_account_chosen(
         )
         user_s = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_s.teamtalk_username if user_s else None
-        kb = create_manage_tt_account_keyboard(_, target_telegram_id, current_tt_username, return_page)
+        kb = await create_manage_tt_account_keyboard(_, target_telegram_id, current_tt_username, return_page)
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
             reply_markup=kb
@@ -323,7 +323,7 @@ async def handle_link_tt_account_chosen(
         alert_text += " " + _("(Replaced {old_tt_username})").format(old_tt_username=old_tt_username)
     await query.answer(alert_text, show_alert=True)
 
-    keyboard = create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page)
+    keyboard = await create_manage_tt_account_keyboard(_, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page)
     await query.message.edit_text(
          _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
         reply_markup=keyboard

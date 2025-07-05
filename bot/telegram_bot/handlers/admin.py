@@ -57,7 +57,7 @@ async def _show_user_buttons(
         return
 
     sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, _).lower())
-    builder = create_user_selection_keyboard(_, sorted_users, command_type)
+    builder = await create_user_selection_keyboard(_, sorted_users, command_type)
 
     command_text_map = {
         AdminAction.KICK: _("Select a user to kick from {server_host}:").format(server_host=tt_connection.server_info.host),
