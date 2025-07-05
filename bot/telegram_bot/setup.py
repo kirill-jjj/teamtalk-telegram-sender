@@ -44,8 +44,9 @@ def setup_telegram_dispatcher(app: "Application"):
     app.dp.message.middleware(UserSettingsMiddleware())
     app.dp.callback_query.middleware(UserSettingsMiddleware())
 
-    app.dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-    app.dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+    # ActiveTeamTalkConnectionMiddleware will be applied to specific routers
+    # app.dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+    # app.dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
     app.dp.callback_query.middleware(CallbackAnswerMiddleware())
 

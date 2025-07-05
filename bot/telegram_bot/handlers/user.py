@@ -30,9 +30,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sender import Application
 
+# Middlewares to apply
+from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
+# Apply to the whole router. Specific handlers will use or not use tt_connection.
+user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware()) # Added
 
 ttstr = pytalk.instance.sdk.ttstr
 

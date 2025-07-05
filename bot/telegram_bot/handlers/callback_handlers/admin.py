@@ -12,6 +12,10 @@ from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
 from html import escape
 
+# Middlewares to apply
+from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+
+
 # For type hinting app instance
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -19,7 +23,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
-# TeamTalkConnectionCheckMiddleware is assumed to be applied globally or on a parent router.
+admin_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Added
 
 ttstr = pytalk.instance.sdk.ttstr # Keep if get_tt_user_display_name or other utils use it.
 

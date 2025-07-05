@@ -31,7 +31,7 @@ from bot.core.enums import (
 )
 from bot.models import MuteListMode
 from bot.constants import USERS_PER_PAGE
-from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware, ActiveTeamTalkConnectionMiddleware
 from ._helpers import process_setting_update, safe_edit_text
 
 # For type hinting app instance
@@ -41,7 +41,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
-mute_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Apply to all CbQs in this router
+mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
+mute_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Existing
 ttstr = pytalk.instance.sdk.ttstr
 
 
