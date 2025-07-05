@@ -64,7 +64,7 @@ async def cq_set_language(
     # Ensure callback_query.message and callback_query.from_user exist
     if not callback_query.message or not callback_query.from_user:
         logger.warning("cq_set_language: callback_query.message or from_user is None.")
-        await callback_query.answer(_("An error occurred. Please try again."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     managed_user_settings = await session.merge(user_settings)
@@ -121,7 +121,7 @@ async def cq_set_language(
     except SQLAlchemyError as e_db:
         logger.error(f"Failed to update language settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
         managed_user_settings.language_code = original_lang_code_str
-        await callback_query.answer(_("An error occurred during language update. Please try again."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
     except TelegramAPIError as e_tg:
         logger.error(f"Telegram API error setting commands for user {callback_query.from_user.id} after language change: {e_tg}", exc_info=True)
         await callback_query.answer(
@@ -141,4 +141,4 @@ async def cq_set_language(
         logger.error(f"An unexpected error occurred while changing language for user {callback_query.from_user.id}: {e}", exc_info=True)
         if not isinstance(e, (SQLAlchemyError, TelegramAPIError)):
              managed_user_settings.language_code = original_lang_code_str
-        await callback_query.answer(_("An unexpected error occurred."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)

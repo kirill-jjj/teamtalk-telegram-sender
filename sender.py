@@ -205,14 +205,8 @@ class Application:
                 self.admin_ids_cache.add(tg_admin_chat_id)
             self.logger.info(f"Ensured TG_ADMIN_CHAT_ID {tg_admin_chat_id} is admin.")
 
-        async with self.session_factory() as session:
-            await set_telegram_commands(
-                bot=self.tg_bot_event,
-                admin_ids=list(self.admin_ids_cache),
-                default_language_code=self.app_config.DEFAULT_LANG,
-                app=self,
-                session=session
-            )
+        # Call set_telegram_commands with only the app instance
+        await set_telegram_commands(app=self)
         self.logger.info("Telegram bot commands set.")
 
 
@@ -256,11 +250,14 @@ class Application:
         if self.app_config.TG_ADMIN_CHAT_ID:
             try:
                 admin_critical_translator = self.get_translator('ru') # Changed to self.get_translator
-                critical_error_header = admin_critical_translator.gettext("<b>Critical error!</b>")
-                error_text = (
-                    f"{critical_error_header}\n"
-                    f"<b>Error type:</b> {type(event.exception).__name__}\n"
-                    f"<b>Message:</b> {escaped_exception_text}"
+                # Вся структура сообщения теперь одна переводимая строка
+                error_text = admin_critical_translator.gettext(
+                    "<b>Critical error!</b>\n"
+                    "<b>Error type:</b> {error_type}\n"
+                    "<b>Message:</b> {error_message}"
+                ).format(
+                    error_type=type(event.exception).__name__,
+                    error_message=escaped_exception_text
                 )
                 await self.tg_bot_event.send_message(self.app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
             except Exception as e:

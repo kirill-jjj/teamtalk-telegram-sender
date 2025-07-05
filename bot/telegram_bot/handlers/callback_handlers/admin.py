@@ -86,7 +86,7 @@ async def process_user_action_selection(
     # TeamTalkConnectionCheckMiddleware should ensure tt_connection and tt_connection.instance are valid
     if not tt_connection or not tt_connection.instance:
          # This case should ideally be caught by TeamTalkConnectionCheckMiddleware if applied to this router
-         await callback_query.answer(_("TeamTalk bot is not connected or connection is not ready."), show_alert=True)
+         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
          return
 
     tt_instance = tt_connection.instance

@@ -143,10 +143,14 @@ async def forward_tt_message_to_telegram_admin(
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
-    content = Text(
-        _("Message from server "), Bold(server_name_to_display), "\n",
-        _("From "), Bold(sender_display), ":\n\n",
-        message_content
+    # ПРАВИЛЬНЫЙ СПОСОБ с aiogram 3.x
+    # Импортируем html если еще не импортирован вверху файла
+    import html # Убедитесь, что html импортирован
+
+    template_text_parts = _("Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}").format(
+        server_name=html.quote(server_name_to_display),
+        sender_name=html.quote(sender_display),
+        message_content=html.quote(message_content) # Экранируем и основной контент
     )
 
     was_sent: bool = await send_telegram_message_individual(
@@ -154,7 +158,8 @@ async def forward_tt_message_to_telegram_admin(
         chat_id=admin_chat_id,
         language=admin_language_code,
         app=app,
-        **content.as_kwargs()
+        text=template_text_parts, # Передаем отформатированный текст
+        parse_mode="HTML"        # и указываем parse_mode
     )
 
     if was_sent:

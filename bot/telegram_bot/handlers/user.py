@@ -136,12 +136,14 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
     sorted_groups = sorted(grouped_data, key=lambda group: group.channel_name)
     users_word_total = translator.ngettext("user", "users", total_users)
 
-    text_reply_header = translator.gettext("There are {user_count} {users_word} on the server")
     if server_host:
-        text_reply_header += translator.gettext(" {server_host}")
-    text_reply_header += ":\n"
-    text_reply = text_reply_header.format(user_count=total_users, users_word=users_word_total, server_host=server_host or "")
-
+        # Шаблон с именем сервера
+        text_reply_header = translator.gettext("There are {user_count} {users_word} on the server {server_host}:\n")
+        text_reply = text_reply_header.format(user_count=total_users, users_word=users_word_total, server_host=server_host)
+    else:
+        # Шаблон без имени сервера
+        text_reply_header = translator.gettext("There are {user_count} {users_word} on the server:\n")
+        text_reply = text_reply_header.format(user_count=total_users, users_word=users_word_total)
 
     channel_info_parts: list[str] = []
     for group in sorted_groups:
@@ -172,7 +174,7 @@ async def who_command_handler(
         return
 
     if not tt_connection or not tt_connection.instance:
-        await message.reply(translator.gettext("TeamTalk connection is not available at the moment."))
+        await message.reply(translator.gettext("TeamTalk connection is not available. Please try again later."))
         return
 
     tt_instance = tt_connection.instance

@@ -113,7 +113,6 @@ async def create_subscription_settings_keyboard(
 ) -> InlineKeyboardBuilder:
     """Creates the subscription settings keyboard."""
     builder = InlineKeyboardBuilder()
-    active_marker = _("✅ ")
 
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", "all"),
@@ -123,8 +122,11 @@ async def create_subscription_settings_keyboard(
     }
 
     for setting_enum, (text_source, val_str) in settings_map_source.items():
-        prefix = active_marker if current_setting == setting_enum else ""
-        button_text = f"{prefix}{_(text_source)}"
+        if current_setting == setting_enum:
+            button_text = _("✅ {text}").format(text=_(text_source))
+        else:
+            button_text = _(text_source)
+
         builder.button(
             text=button_text,
             callback_data=SubscriptionCallback(action=SubscriptionAction.SET_SUB, setting_value=val_str).pack()
