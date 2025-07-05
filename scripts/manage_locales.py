@@ -11,16 +11,18 @@ BABEL_CONFIG = "babel.cfg" # Assumed to be in BASE_DIR
 LOCALE_DOMAIN = "messages" # Domain for .mo files
 
 try:
-    BASE_DIR = Path(__file__).resolve().parent
-    LOCALE_DIR = BASE_DIR / "locales"
+    # Correct BASE_DIR to be the project root (parent of the 'scripts' directory)
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    LOCALE_DIR = BASE_DIR / "locales" # Now relative to project root
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 except NameError: # Fallback for __file__ not defined
-    BASE_DIR = Path.cwd()
+    BASE_DIR = Path.cwd() # If run directly from project root, cwd() is fine
     LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 
 def get_project_version() -> str:
     """Reads the version from pyproject.toml."""
+    # pyproject.toml is in BASE_DIR (project root)
     pyproject_path = BASE_DIR / "pyproject.toml"
     try:
         with open(pyproject_path, "rb") as f:

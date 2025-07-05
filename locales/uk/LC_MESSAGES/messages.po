@@ -8,6 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-07-05 13:09+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -365,105 +366,109 @@ msgstr "NOON (Не в мережі): {status}"
 msgid "Manage Mute List"
 msgstr "Керування списком ігнорування"
 
-#: bot/telegram_bot/keyboards.py:176
-msgid "Blacklist Mode"
+#: bot/telegram_bot/keyboards.py:180
+#, fuzzy, python-brace-format
+#| msgid "Blacklist Mode"
+msgid "{marker} Blacklist Mode"
 msgstr "Режим чорного списку"
 
-#: bot/telegram_bot/keyboards.py:177
-msgid "Whitelist Mode"
+#: bot/telegram_bot/keyboards.py:181
+#, fuzzy, python-brace-format
+#| msgid "Whitelist Mode"
+msgid "{marker} Whitelist Mode"
 msgstr "Режим білого списку"
 
-#: bot/telegram_bot/keyboards.py:190
+#: bot/telegram_bot/keyboards.py:194
 msgid "Manage Blacklist"
 msgstr "Керувати чорним списком"
 
-#: bot/telegram_bot/keyboards.py:190
+#: bot/telegram_bot/keyboards.py:194
 msgid "Manage Whitelist"
 msgstr "Керувати білим списком"
 
-#: bot/telegram_bot/keyboards.py:197
+#: bot/telegram_bot/keyboards.py:201
 msgid "Mute/Unmute from Server List"
 msgstr "Ігнорувати/Скасувати ігнорування зі списку сервера"
 
-#: bot/telegram_bot/keyboards.py:201
+#: bot/telegram_bot/keyboards.py:205
 msgid "⬅️ Back to Notification Settings"
 msgstr "⬅️ Назад до налаштувань сповіщень"
 
-#: bot/telegram_bot/keyboards.py:222 bot/telegram_bot/keyboards.py:330
+#: bot/telegram_bot/keyboards.py:226 bot/telegram_bot/keyboards.py:334
 msgid "⬅️ Prev"
 msgstr "⬅️ Назад"
 
-#: bot/telegram_bot/keyboards.py:229 bot/telegram_bot/keyboards.py:340
+#: bot/telegram_bot/keyboards.py:233 bot/telegram_bot/keyboards.py:344
 msgid "Next ➡️"
 msgstr "Вперед ➡️"
 
-#: bot/telegram_bot/keyboards.py:393
+#: bot/telegram_bot/keyboards.py:397
 msgid "ℹ️ Who is online?"
 msgstr "ℹ️ Хто в мережі?"
 
-#: bot/telegram_bot/keyboards.py:397
+#: bot/telegram_bot/keyboards.py:401
 msgid "⚙️ Settings"
 msgstr "⚙️ Налаштування"
 
-#: bot/telegram_bot/keyboards.py:401
+#: bot/telegram_bot/keyboards.py:405
 msgid "❓ Help"
 msgstr "❓ Допомога"
 
-#: bot/telegram_bot/keyboards.py:407
+#: bot/telegram_bot/keyboards.py:411
 msgid "👢 Kick User"
 msgstr "👢 Видалити користувача"
 
-#: bot/telegram_bot/keyboards.py:411
+#: bot/telegram_bot/keyboards.py:415
 msgid "🚫 Ban User"
 msgstr "🚫 Забанити користувача"
 
-#: bot/telegram_bot/keyboards.py:415
+#: bot/telegram_bot/keyboards.py:419
 msgid "👥 Subscribers"
 msgstr "👥 Підписники"
 
-#: bot/telegram_bot/keyboards.py:432
+#: bot/telegram_bot/keyboards.py:436
 msgid "🗑️ Delete Subscriber"
 msgstr "🗑️ Видалити підписника"
 
-#: bot/telegram_bot/keyboards.py:440
+#: bot/telegram_bot/keyboards.py:444
 msgid "🚫 Ban User (TG & TT)"
 msgstr "🚫 Забанити (TG та TT)"
 
-#: bot/telegram_bot/keyboards.py:448
+#: bot/telegram_bot/keyboards.py:452
 msgid "🔗 Manage TeamTalk Account"
 msgstr "🔗 Керувати акаунтом TeamTalk"
 
-#: bot/telegram_bot/keyboards.py:456
+#: bot/telegram_bot/keyboards.py:460
 msgid "⬅️ Back to Subscribers List"
 msgstr "⬅️ Назад до списку підписників"
 
-#: bot/telegram_bot/keyboards.py:491
+#: bot/telegram_bot/keyboards.py:495
 msgid "Muted"
 msgstr "Ігнорується"
 
-#: bot/telegram_bot/keyboards.py:491
+#: bot/telegram_bot/keyboards.py:495
 msgid "Not Muted"
 msgstr "Не ігнорується"
 
-#: bot/telegram_bot/keyboards.py:494
+#: bot/telegram_bot/keyboards.py:498
 #, python-brace-format
 msgid "{item_display_name} (Status: {status_text})"
 msgstr "{item_display_name} (Статус: {status_text})"
 
-#: bot/telegram_bot/keyboards.py:531
+#: bot/telegram_bot/keyboards.py:535
 #, python-brace-format
 msgid "🔓 Unlink {current_tt_username}"
 msgstr "🔓 Відв'язати {current_tt_username}"
 
-#: bot/telegram_bot/keyboards.py:540
+#: bot/telegram_bot/keyboards.py:544
 msgid "➕ Link/Change TeamTalk Account"
 msgstr "➕ Прив'язати/Змінити акаунт TeamTalk"
 
-#: bot/telegram_bot/keyboards.py:550
+#: bot/telegram_bot/keyboards.py:554
 msgid "⬅️ Back to User Actions"
 msgstr "⬅️ Назад до дій"
 
-#: bot/telegram_bot/keyboards.py:594
+#: bot/telegram_bot/keyboards.py:598
 msgid "⬅️ Back to Manage Account"
 msgstr "⬅️ Назад до керування акаунтом"
 
