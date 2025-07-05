@@ -198,12 +198,25 @@ class Application:
 
         await self.load_user_settings_to_app_cache()
 
-        tg_admin_chat_id = self.app_config.TG_ADMIN_CHAT_ID
-        if tg_admin_chat_id is not None:
-            async with self.session_factory() as session:
-                await crud.add_admin(session, tg_admin_chat_id)
-                self.admin_ids_cache.add(tg_admin_chat_id)
-            self.logger.info(f"Ensured TG_ADMIN_CHAT_ID {tg_admin_chat_id} is admin.")
+        # --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
+        try:
+            tg_admin_chat_id_str = self.app_config.TG_ADMIN_CHAT_ID
+            if tg_admin_chat_id_str is not None:
+                tg_admin_chat_id = int(tg_admin_chat_id_str) # Явное преобразование в int
+                if tg_admin_chat_id not in self.admin_ids_cache:
+                    async with self.session_factory() as session:
+                        await crud.add_admin(session, tg_admin_chat_id)
+                        self.admin_ids_cache.add(tg_admin_chat_id)
+                    self.logger.info(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
+                else:
+                    self.logger.info(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
+            else:
+                self.logger.info("TG_ADMIN_CHAT_ID is not set in config, no main admin to add.")
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"Could not process TG_ADMIN_CHAT_ID from config. It must be a valid integer. Error: {e}")
+
+        self.logger.info(f"Final admin_ids_cache state after startup: {self.admin_ids_cache}")
+        # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         # Call set_telegram_commands with only the app instance
         await set_telegram_commands(app=self)

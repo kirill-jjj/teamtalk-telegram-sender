@@ -7,7 +7,8 @@ from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
 from bot.core.enums import SettingsNavAction, NotificationAction
-from ._helpers import process_setting_update, safe_edit_text
+from ._helpers import safe_edit_text # Убедитесь, что safe_edit_text импортирован, а process_setting_update больше не нужен для этой функции
+from bot.core.user_settings import update_user_settings_in_db # Импортируем напрямую
 
 logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
@@ -38,34 +39,40 @@ async def cq_toggle_noon_setting_action(
     callback_data: NotificationActionCallback,
     app: "Application"
 ):
+    if not callback_query.message:
+        logger.warning("cq_toggle_noon_setting_action: Callback query is missing message.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
+    # 1. Меняем состояние объекта в памяти
     original_noon_status = user_settings.not_on_online_enabled
+    user_settings.not_on_online_enabled = not original_noon_status
 
-    def update_logic():
-        user_settings.not_on_online_enabled = not original_noon_status
-
-    def revert_logic():
+    # 2. Пытаемся сохранить изменения в БД
+    if not await update_user_settings_in_db(session, user_settings):
+        # Если сохранение не удалось, откатываем изменение в объекте и сообщаем об ошибке
         user_settings.not_on_online_enabled = original_noon_status
+        await callback_query.answer(_("An error occurred while saving. Please try again."), show_alert=True)
+        return
 
-    # Status text is for *after* the toggle
-    new_status_display_text = _("Enabled") if not original_noon_status else _("Disabled")
+    # 3. Обновляем кеш в приложении
+    app.user_settings_cache[user_settings.telegram_id] = user_settings
+    logger.debug(f"NOON setting for user {user_settings.telegram_id} toggled to {user_settings.not_on_online_enabled} and saved to DB/cache.")
+
+    # 4. Готовим текст и клавиатуру с *новым* состоянием
+    new_status_display_text = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
     success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
 
-    # Prepare text and markup for UI refresh.
-    # user_settings.not_on_online_enabled is toggled by update_logic within process_setting_update
-    # before this part of the code (which prepares new_text and new_markup) is effectively used by safe_edit_text.
-    # Thus, create_notification_settings_keyboard will be called with the *new* state of user_settings.
     updated_builder = await create_notification_settings_keyboard(_, user_settings)
     menu_text = _("Notification Settings")
 
-    await process_setting_update(
-        callback_query=callback_query,
-        session=session,
-        user_settings=user_settings,
-        _=_,
-        update_action=update_logic,
-        revert_action=revert_logic,
-        success_toast_text=success_toast_text,
-        new_text=menu_text,
-        new_markup=updated_builder.as_markup(),
-        app=app
+    # 5. Отвечаем на колбэк и обновляем сообщение
+    await callback_query.answer(success_toast_text)
+
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=menu_text,
+        reply_markup=updated_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_toggle_noon_setting_action"
     )
