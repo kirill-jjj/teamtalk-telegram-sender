@@ -169,12 +169,16 @@ async def create_manage_muted_users_keyboard(
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
     builder = InlineKeyboardBuilder()
-    active_marker = "✅ " # As per problem description
-    inactive_marker = "⚪️ " # As per problem description
+    active_marker = "✅"  # Space removed, will be in translatable string
+    inactive_marker = "⚪️" # Space removed, will be in translatable string
 
-    # Radio buttons for mode selection
-    blacklist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker}{_('Blacklist Mode')}"
-    whitelist_text = f"{active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker}{_('Whitelist Mode')}"
+    # Determine markers based on current mode
+    blacklist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker
+    whitelist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker
+
+    # Use .format() on the translated string
+    blacklist_text = _("{marker} Blacklist Mode").format(marker=blacklist_marker)
+    whitelist_text = _("{marker} Whitelist Mode").format(marker=whitelist_marker)
 
     builder.button(
         text=blacklist_text,
