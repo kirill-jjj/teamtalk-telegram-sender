@@ -38,11 +38,13 @@ def main():
     # Формируем команду для alembic
     # Ensure alembic is found, might need to be 'python -m alembic' if not in PATH
     # For now, assume 'alembic' is directly callable.
+    # We will pass the config file via a custom option like --x-env-file
+    # which Alembic makes available in context.config.cmd_opts
     command = [
         "alembic",
-        "-x",
-        f"config_file={config_file}",
-        *cli_args # Передаем все остальные аргументы
+        "--x-env-file",
+        config_file, # The value parsed from --config
+        *cli_args    # Передаем все остальные аргументы (e.g., upgrade head)
     ]
 
     print(f"▶️  Executing: {' '.join(command)}")
