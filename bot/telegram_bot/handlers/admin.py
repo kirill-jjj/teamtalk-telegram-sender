@@ -66,7 +66,6 @@ async def kick_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
 
@@ -77,7 +76,6 @@ async def ban_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
 
@@ -89,5 +87,4 @@ async def subscribers_command_handler(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     await _show_subscriber_list_page(message, session, bot, _, page=0)

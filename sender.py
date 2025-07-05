@@ -199,7 +199,6 @@ class Application:
 
         await self.load_user_settings_to_app_cache()
 
-        # --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
         try:
             tg_admin_chat_id_str = self.app_config.TG_ADMIN_CHAT_ID
             if tg_admin_chat_id_str is not None:
@@ -218,7 +217,6 @@ class Application:
 
         self.logger.info(f"Final admin_ids_cache count after startup: {len(self.admin_ids_cache)}.")
         self.logger.debug(f"Final admin_ids_cache state after startup: {self.admin_ids_cache}")
-        # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         # Call set_telegram_commands with only the app instance
         await set_telegram_commands(app=self)

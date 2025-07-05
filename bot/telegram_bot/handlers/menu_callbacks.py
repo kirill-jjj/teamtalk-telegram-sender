@@ -84,8 +84,6 @@ async def menu_kick_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Admin check is now handled by AdminCheckMiddleware
-    # Прямой вызов нужной функции
     await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection)
     await query.answer()
 
@@ -99,8 +97,6 @@ async def menu_ban_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Admin check is now handled by AdminCheckMiddleware
-    # Прямой вызов нужной функции
     await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection)
     await query.answer()
 
@@ -115,7 +111,5 @@ async def menu_subscribers_handler(
     translator: "gettext.GNUTranslations",
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
-    # Прямой вызов нужной функции
     await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0)
     await query.answer()

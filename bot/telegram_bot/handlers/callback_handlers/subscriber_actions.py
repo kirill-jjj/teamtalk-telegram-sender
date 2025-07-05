@@ -76,7 +76,6 @@ async def handle_view_subscriber(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -123,7 +122,6 @@ async def handle_subscriber_action(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -202,7 +200,6 @@ async def handle_manage_tt_account(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -271,7 +268,6 @@ async def handle_link_tt_account_chosen(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return

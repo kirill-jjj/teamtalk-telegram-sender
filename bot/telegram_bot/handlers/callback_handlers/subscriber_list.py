@@ -30,7 +30,6 @@ async def handle_subscriber_list_actions(
     _: callable,
     app: "Application"
 ):
-    # Admin check is now handled by AdminCheckMiddleware
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
 

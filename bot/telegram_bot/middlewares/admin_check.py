@@ -1,5 +1,3 @@
-# Название файла: bot/telegram_bot/middlewares/admin_check.py
-
 import logging
 from typing import Callable, Coroutine, Any, Dict
 
