@@ -14,7 +14,6 @@ from bot.language import get_translator
 from bot.core.languages import AVAILABLE_LANGUAGES_DATA
 from ._helpers import safe_edit_text
 from bot.telegram_bot.commands import get_user_commands, get_admin_commands
-# from bot.state import ADMIN_IDS_CACHE # Will use app.admin_ids_cache
 from bot.core.user_settings import update_user_settings_in_db
 
 # For type hinting app instance
@@ -28,9 +27,8 @@ language_router = Router(name="callback_handlers.language")
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
-    _: callable, # translator.gettext from UserSettingsMiddleware
+    _: callable,
     callback_data: SettingsCallback
-    # No app or tt_connection needed for just showing this menu
 ):
     await callback_query.answer()
 
@@ -53,10 +51,10 @@ async def cq_show_language_menu(
 async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    user_settings: UserSettings, # Provided by UserSettingsMiddleware
+    user_settings: UserSettings,
     _: Callable[[str], str],
     callback_data: LanguageCallback,
-    app: "Application" # Inject Application instance
+    app: "Application"
 ):
     if callback_data.lang_code is None:
         logger.warning("LanguageCallback received with lang_code=None")
@@ -87,7 +85,7 @@ async def cq_set_language(
     new_gettext_func = new_lang_translator_obj.gettext
 
     managed_user_settings.language_code = new_lang_code_str
-    is_admin = managed_user_settings.telegram_id in app.admin_ids_cache # Use app's cache
+    is_admin = managed_user_settings.telegram_id in app.admin_ids_cache
 
     try:
         await update_user_settings_in_db(session, managed_user_settings)
@@ -100,8 +98,7 @@ async def cq_set_language(
         scope = BotCommandScopeChat(chat_id=callback_query.from_user.id)
         commands_to_set = get_admin_commands(new_gettext_func) if is_admin else get_user_commands(new_gettext_func)
 
-        # Use app's bot instance to set commands
-        active_bot_instance = app.tg_bot_event # Or app.tg_bot_message, depending on which one should set commands
+        active_bot_instance = app.tg_bot_event
         await active_bot_instance.delete_my_commands(scope=scope)
         await active_bot_instance.set_my_commands(commands=commands_to_set, scope=scope)
         logger.info(f"Updated Telegram commands for user {callback_query.from_user.id} to language '{new_lang_code_str}'.")
@@ -118,18 +115,17 @@ async def cq_set_language(
         )
     except SQLAlchemyError as e_db:
         logger.error(f"Failed to update language settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True)
-        managed_user_settings.language_code = original_lang_code_str # Revert in-memory
+        managed_user_settings.language_code = original_lang_code_str
         await callback_query.answer(_("An error occurred during language update. Please try again."), show_alert=True)
     except TelegramAPIError as e_tg:
         logger.error(f"Telegram API error setting commands for user {callback_query.from_user.id} after language change: {e_tg}", exc_info=True)
         await callback_query.answer(
-            # Use new_gettext_func for the alert message if language was successfully saved to DB
             new_gettext_func("Language updated, but commands might not refresh immediately. Error: {error_msg}").format(error_msg=str(e_tg)),
             show_alert=True
         )
         main_settings_builder = await create_main_settings_keyboard(new_gettext_func)
         main_settings_text = new_gettext_func("Settings")
-        await safe_edit_text( # Still attempt to update UI to new language
+        await safe_edit_text(
             message_to_edit=callback_query.message,
             text=main_settings_text,
             reply_markup=main_settings_builder.as_markup(),
@@ -138,6 +134,6 @@ async def cq_set_language(
         )
     except Exception as e:
         logger.error(f"An unexpected error occurred while changing language for user {callback_query.from_user.id}: {e}", exc_info=True)
-        if not isinstance(e, (SQLAlchemyError, TelegramAPIError)): # Revert if not already handled
+        if not isinstance(e, (SQLAlchemyError, TelegramAPIError)):
              managed_user_settings.language_code = original_lang_code_str
         await callback_query.answer(_("An unexpected error occurred."), show_alert=True)
