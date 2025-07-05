@@ -406,7 +406,8 @@ class Application:
                 user_settings_cache=self.user_settings_cache,
                 subscribed_users_cache=self.subscribed_users_cache,
                 online_users_cache_for_instance=connection.online_users_cache,
-                app_config_instance=self.app_config
+                app_config_instance=self.app_config,
+                app=self # PASS Application instance
             )
 
     async def on_pytalk_my_connection_lost(self, server: PytalkServer):
@@ -571,7 +572,8 @@ class Application:
             user_settings_cache=self.user_settings_cache,
             subscribed_users_cache=self.subscribed_users_cache,
             online_users_cache_for_instance=connection.online_users_cache,
-            app_config_instance=self.app_config
+            app_config_instance=self.app_config,
+            app=self # PASS Application instance
         )
 
     async def on_pytalk_user_logout(self, user: PytalkUser):
@@ -590,7 +592,8 @@ class Application:
             user_settings_cache=self.user_settings_cache,
             subscribed_users_cache=self.subscribed_users_cache,
             online_users_cache_for_instance=connection.online_users_cache,
-            app_config_instance=self.app_config
+            app_config_instance=self.app_config,
+            app=self # PASS Application instance
         )
 
     async def on_pytalk_user_update(self, user: PytalkUser):

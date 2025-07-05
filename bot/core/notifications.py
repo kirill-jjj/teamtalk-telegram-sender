@@ -3,6 +3,10 @@ from datetime import datetime, timedelta
 from aiogram import Bot as AiogramBot, html # Renamed Bot
 from typing import TYPE_CHECKING, Optional, Set, Any # Added Set, Any
 
+# Forward reference for Application
+if TYPE_CHECKING:
+    from sender import Application
+
 from sqlalchemy import and_, or_
 
 import pytalk
@@ -103,7 +107,8 @@ async def send_join_leave_notification_logic(
     user_settings_cache: dict[int, UserSettings], # Parameter from Application
     subscribed_users_cache: Set[int], # Parameter from Application
     online_users_cache_for_instance: dict[int, "pytalk.user.User"], # Parameter from Application
-    app_config_instance: Any # Parameter from Application
+    app_config_instance: Any, # Parameter from Application
+    app: "Application" # ADD Application instance itself
 ):
     default_lang_for_markup_and_log = app_config_instance.DEFAULT_LANG # Use passed app_config
     _log_markup_translator = get_translator(default_lang_for_markup_and_log).gettext
@@ -173,6 +178,7 @@ async def send_join_leave_notification_logic(
             tt_user, server_name, event_type, lang_code
         ),
         user_settings_cache=user_settings_cache, # This is app.user_settings_cache passed in
-        app=app_config_instance, # app_config_instance is the 'app' Application object
+        # app=app_config_instance, # This was incorrect, app_config_instance is Settings, not Application
+        app=app, # Pass the actual Application instance
         online_users_cache_for_instance=online_users_cache_for_instance
     )
