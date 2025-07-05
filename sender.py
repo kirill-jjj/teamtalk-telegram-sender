@@ -62,7 +62,7 @@ from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subsc
 from bot.teamtalk_bot.connection import TeamTalkConnection
 # from bot.teamtalk_bot.utils import shutdown_tt_instance # This logic will be in Application/TeamTalkConnection
 from bot.teamtalk_bot.utils import (
-    initiate_reconnect_task as old_initiate_reconnect_task, # Will be adapted or replaced
+    # initiate_reconnect_task as old_initiate_reconnect_task, # <-- УДАЛИ ЭТУ СТРОКУ
     forward_tt_message_to_telegram_admin, # Will be adapted
 )
 from bot.teamtalk_bot.commands import ( # These will be adapted to take app/connection
