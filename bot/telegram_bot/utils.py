@@ -3,7 +3,7 @@ import asyncio
 import pytalk
 from pytalk.user import User as TeamTalkUser
 from typing import Callable, Optional
-from aiogram import Bot
+from aiogram import Bot as AiogramBot # <--- Changed this line
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
@@ -85,7 +85,7 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, app: "Applicati
 
 
 async def send_telegram_message_individual(
-    bot_instance: Bot,
+    bot_instance: AiogramBot, # <--- Changed Bot to AiogramBot here
     chat_id: int,
     app: "Application", # Changed to non-optional
     language: str = DEFAULT_LANGUAGE,
@@ -158,7 +158,7 @@ async def send_or_edit_paginated_list(
     target: "Message | CallbackQuery", # type: ignore
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
-    bot: Bot | None = None, # Required if target is Message, for reply
+    bot: AiogramBot | None = None, # <--- Changed Bot to AiogramBot here
     **kwargs
 ) -> None:
     """
