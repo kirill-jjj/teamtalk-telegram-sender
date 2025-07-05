@@ -28,7 +28,13 @@ def get_admin_commands(_: Callable[[str], str]) -> List[BotCommand]:
     ]
     return get_user_commands(_) + admin_specific
 
-async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language_code: str):
+# Add TYPE_CHECKING and Application import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from sender import Application
+    from sqlalchemy.ext.asyncio import AsyncSession # For session type hint
+
+async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language_code: str, app: "Application", session: "AsyncSession"):
     """
     Устанавливает команды бота для пользователей по умолчанию (все приватные чаты) и для конкретных администраторов.
     Эта функция использует default_language_code для глобальных команд и пытается
@@ -36,9 +42,9 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
     """
     # Локальные импорты для избежания циклических зависимостей
     from bot.language import get_translator
-    from bot.database.engine import SessionFactory
-    from bot.core.user_settings import USER_SETTINGS_CACHE, get_or_create_user_settings
-    from bot.config import app_config # Import app_config for default language fallback
+    # from bot.database.engine import SessionFactory # Removed
+    # from bot.core.user_settings import USER_SETTINGS_CACHE, get_or_create_user_settings # Removed
+    # from bot.config import app_config # Import app_config for default language fallback - will use app.app_config
 
     # 1. Установка команд для всех приватных чатов с использованием языка по умолчанию
     default_translator = get_translator(default_language_code)
@@ -56,30 +62,35 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
 
 
     # 2. Установка команд для каждого чата администратора, локализованных, если возможно
-    async with SessionFactory() as session: # Ensure SessionFactory is used correctly if it's an async context manager
-        for admin_id in admin_ids:
-            admin_lang_code = default_language_code # Fallback to default
-            try:
-                # Попытка получить язык из кеша, затем из БД, затем по умолчанию
-                admin_settings = USER_SETTINGS_CACHE.get(admin_id)
-                if not admin_settings:
-                    # Это может произойти, если кеш не полностью загружен или администратор был только что добавлен
-                    # Ensure get_or_create_user_settings is awaitable and session is passed
-                    admin_settings_from_db = await get_or_create_user_settings(admin_id, session)
-                    if admin_settings_from_db:
-                         admin_settings = admin_settings_from_db
-                         USER_SETTINGS_CACHE[admin_id] = admin_settings_from_db # Update cache
-
-                # Используем язык из настроек администратора или язык по умолчанию из конфигурации
-                if admin_settings and admin_settings.language_code:
-                    admin_lang_code = admin_settings.language_code
-                else:
-                    # If still no specific language, use the app's default language
-                    admin_lang_code = app_config.DEFAULT_LANG
+    # async with SessionFactory() as session: # Session is now passed as an argument
+    for admin_id in admin_ids:
+        admin_lang_code = default_language_code # Fallback to default
+        try:
+            # Попытка получить язык из кеша, затем из БД, затем по умолчанию
+            # admin_settings = USER_SETTINGS_CACHE.get(admin_id) # Use app.user_settings_cache
+            admin_settings = app.user_settings_cache.get(admin_id)
+            if not admin_settings:
+                # Это может произойти, если кеш не полностью загружен или администратор был только что добавлен
+                # Ensure get_or_create_user_settings is awaitable and session is passed
+                # admin_settings_from_db = await get_or_create_user_settings(admin_id, session) # Use app.get_or_create_user_settings
+                admin_settings_from_db = await app.get_or_create_user_settings(admin_id, session)
+                if admin_settings_from_db:
+                     admin_settings = admin_settings_from_db
+                     # USER_SETTINGS_CACHE[admin_id] = admin_settings_from_db # Update cache via app if needed, get_or_create should handle it
+                     app.user_settings_cache[admin_id] = admin_settings_from_db
 
 
-                admin_translator = get_translator(admin_lang_code)
-                admin_commands_localized = get_admin_commands(admin_translator.gettext)
+            # Используем язык из настроек администратора или язык по умолчанию из конфигурации
+            if admin_settings and admin_settings.language_code:
+                admin_lang_code = admin_settings.language_code
+            else:
+                # If still no specific language, use the app's default language
+                # admin_lang_code = app_config.DEFAULT_LANG # Use app.app_config.DEFAULT_LANG
+                admin_lang_code = app.app_config.DEFAULT_LANG
+
+
+            admin_translator = get_translator(admin_lang_code)
+            admin_commands_localized = get_admin_commands(admin_translator.gettext)
                 admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
                 await bot.delete_my_commands(scope=admin_scope) # Delete old commands first
