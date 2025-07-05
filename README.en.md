@@ -70,21 +70,21 @@ source $HOME/.local/bin/env
     uv sync
     ```
     (`uv sync` will create a `.venv` virtual environment if it doesn't exist and install all dependencies. `uv` automatically uses this environment for commands like `uv run`.)
-4.  **Generate Localization Files**: The project uses a gettext-based localization system managed by the `manage-locales.py` script. These commands should be run from the root of the project.
-    *   To extract all translatable strings from the code into a template file (`bot/locales/messages.pot`):
+4.  **Generate Localization Files**: The project uses a gettext-based localization system. To manage localization files, use the following `uv run` commands:
+    *   To extract all translatable strings from the code into a template file (`locales/messages.pot`):
         ```bash
-        uv run manage-locales.py extract
+        uv run i18n extract
         ```
-    *   To create or update language-specific `.po` files (e.g., for Russian `ru` located in `bot/locales/ru/LC_MESSAGES/messages.po`):
+    *   To create or update language-specific `.po` files (e.g., for Russian `ru` located in `locales/ru/LC_MESSAGES/messages.po`):
         ```bash
-        uv run manage-locales.py update
+        uv run i18n update
         ```
-        (The `manage-locales.py` script will dynamically find languages based on subdirectories in `bot/locales/`. If adding a new language, e.g., 'de', first create `bot/locales/de/LC_MESSAGES/` then run this command.)
+        (The `manage_locales.py` script, called via `i18n`, will dynamically find languages based on subdirectories in `locales/`. If adding a new language, e.g., 'de', first create `locales/de/LC_MESSAGES/` then run this command.)
     *   To compile `.po` files into binary `.mo` files used by the bot at runtime:
         ```bash
-        uv run manage-locales.py
+        uv run i18n compile
         ```
-    (Typically, after initial setup, developers will run `uv run manage-locales.py extract` when new text is added, then `uv run manage-locales.py update`, then translate, then `uv run manage-locales.py` to compile.)
+    (Typically, after initial setup, developers will run `uv run i18n extract` when new text is added, then `uv run i18n update`, then translate, then `uv run i18n compile` to compile.)
 5.  **Configure environment variables**: Copy the `.env.example` file to `.env` and fill in your actual configuration values (API tokens, admin IDs, etc.).
     ```bash
     cp .env.example .env
@@ -93,7 +93,7 @@ source $HOME/.local/bin/env
 6.  **Apply database migrations**:
     Before the first run or after updating database models, apply migrations:
     ```bash
-    uv run alembic upgrade head
+    uv run migrate upgrade head
     ```
 7.  **Run the bot**:
     ```bash
@@ -115,66 +115,53 @@ This project uses Alembic to manage database schema changes.
 
 ### Basic Alembic Commands
 
-It is recommended to use the `manage-migrations.py` script for managing database migrations, as it allows easy specification of the configuration file for the database connection. Commands are run using `uv run`.
+Database migrations are managed using the `uv run migrate` command, which wraps Alembic functionality.
 
-*   **Apply Migrations (Recommended Method)**:
+*   **Apply Migrations**:
     To apply all pending migrations to the database (using the default `.env` configuration):
     ```bash
-    uv run manage-migrations.py upgrade head
+    uv run migrate upgrade head
     ```
-    If using a different configuration file (e.g., `prod.env`):
+    If using a different configuration file (e.g., `prod.env`), pass it via the `--config` argument:
     ```bash
-    uv run manage-migrations.py --config prod.env upgrade head
+    uv run migrate --config prod.env upgrade head
     ```
 
-*   **Create a New Revision (Migration) (Recommended Method)**:
-    After modifying models in `bot/models.py`, use `manage-migrations.py` to create a revision:
+*   **Create a New Revision (Migration)**:
+    After modifying models in `bot/models.py`, use the following command to create a revision:
     ```bash
-    uv run manage-migrations.py revision -m "short_description_of_changes" --autogenerate
+    uv run migrate revision -m "short_description_of_changes" --autogenerate
     ```
-    Or with a custom config:
+    With a custom config file:
     ```bash
-    uv run manage-migrations.py --config prod.env revision -m "short_description_of_changes" --autogenerate
+    uv run migrate --config prod.env revision -m "short_description_of_changes" --autogenerate
     ```
     This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect.
-
-You can also run Alembic commands directly if needed, though `manage-migrations.py` is preferred for most cases. `uv` automatically uses the activated virtual environment.
-
-*   **Create a New Revision (Migration) (Direct Alembic Call)**:
-    ```bash
-    uv run alembic revision -m "short_description_of_changes" --autogenerate
-    ```
-
-*   **Apply Migrations (Direct Alembic Call)**:
-    ```bash
-    uv run alembic upgrade head
-    ```
-    When calling `alembic` directly, it will use the database configuration as defined in `alembic/env.py`, which by default reads `.env` (via `bot.config`).
 
 *   **Rollback Migrations**:
     To revert the last applied migration:
     ```bash
-    uv run alembic downgrade -1
+    uv run migrate downgrade -1
     ```
     To downgrade to a specific revision (replace `<revision_id>` with the hash of the desired revision):
     ```bash
-    uv run alembic downgrade <revision_id>
+    uv run migrate downgrade <revision_id>
     ```
     To revert all migrations (returning to an empty database schema):
     ```bash
-    uv run alembic downgrade base
+    uv run migrate downgrade base
     ```
 
 *   **View Current Revision**:
     Shows the current revision of the database.
     ```bash
-    uv run alembic current
+    uv run migrate current
     ```
 
 *   **View Migration History**:
     Shows a list of all migrations and their status.
     ```bash
-    uv run alembic history
+    uv run migrate history
     ```
 
 ## Usage
@@ -220,37 +207,37 @@ Suggestions for improvements and bug reports are welcome! Please create Issues o
 
 ### Working with Translations
 
-This project uses a gettext-based workflow for handling translations, orchestrated with the `manage-locales.py` script and Babel. The localization files are located in the `bot/locales` directory.
+This project uses a gettext-based workflow for handling translations, orchestrated with the `uv run i18n` command and Babel. The localization files are located in the `locales` directory.
 
 1.  **Extract Translatable Strings**:
-    When you add or change any user-facing strings in the Python code that should be translatable (i.e., strings wrapped in `_()`), you need to update the message template file (`messages.pot`).
+    When you add or change any user-facing strings in the Python code that should be translatable (i.e., strings wrapped in `_()`), you need to update the message template file (`locales/messages.pot`).
     ```bash
-    uv run manage-locales.py extract
+    uv run i18n extract
     ```
-    This command scans the codebase (as configured in `babel.cfg`) and updates `bot/locales/messages.pot`.
+    This command scans the codebase (as configured in `babel.cfg`) and updates `locales/messages.pot`.
 
 2.  **Update Language Catalogs (.po files)**:
-    After the `.pot` template is updated, update the language-specific `.po` files for each supported language. The `manage-locales.py` script dynamically detects languages by looking for subdirectories in `bot/locales/`.
+    After the `.pot` template is updated, update the language-specific `.po` files for each supported language. The `uv run i18n update` command (which calls `manage_locales.py`) dynamically detects languages by looking for subdirectories in `locales/`.
     ```bash
-    uv run manage-locales.py update
+    uv run i18n update
     ```
-    This merges new strings from `messages.pot` into each `<lang_code>/LC_MESSAGES/messages.po` file. New strings will be added, and changed strings will be marked as "fuzzy" for review. If you've created a new language directory (e.g., `bot/locales/de/LC_MESSAGES/`), this command will also initialize its `messages.po` file based on the template.
+    This merges new strings from `messages.pot` into each `<lang_code>/LC_MESSAGES/messages.po` file. New strings will be added, and changed strings will be marked as "fuzzy" for review. If you've created a new language directory (e.g., `locales/de/LC_MESSAGES/`), this command will also initialize its `messages.po` file based on the template.
 
 3.  **Translate**:
-    Edit the `.po` files (e.g., `bot/locales/ru/LC_MESSAGES/messages.po`) using your preferred PO editor (like Poedit, OmegaT) or a text editor. For each `msgid` (source string), provide the translation in the `msgstr` field. For entries marked `#, fuzzy`, review the translation against the new `msgid`, correct it if necessary, and then remove the `#, fuzzy` comment.
+    Edit the `.po` files (e.g., `locales/ru/LC_MESSAGES/messages.po`) using your preferred PO editor (like Poedit, OmegaT) or a text editor. For each `msgid` (source string), provide the translation in the `msgstr` field. For entries marked `#, fuzzy`, review the translation against the new `msgid`, correct it if necessary, and then remove the `#, fuzzy` comment.
 
 4.  **Compile Translations (.mo files)**:
     After translating, compile the `.po` files into binary `.mo` files, which are used by the application at runtime.
     ```bash
-    uv run manage-locales.py
+    uv run i18n compile
     ```
-    This command will place `.mo` files in the appropriate `LC_MESSAGES` directory for each language (e.g., `bot/locales/ru/LC_MESSAGES/messages.mo`). The bot will then be able to use these compiled translations based on user language preferences.
+    This command will place `.mo` files in the appropriate `LC_MESSAGES` directory for each language (e.g., `locales/ru/LC_MESSAGES/messages.mo`). The bot will then be able to use these compiled translations based on user language preferences.
 
 **Adding a New Language (e.g., German 'de'):**
-1.  Create the directory structure: `mkdir -p bot/locales/de/LC_MESSAGES/`
-2.  Run `uv run manage-locales.py update`. The `manage-locales.py` script should find 'de' and initialize `bot/locales/de/LC_MESSAGES/messages.po`.
+1.  Create the directory structure: `mkdir -p locales/de/LC_MESSAGES/`
+2.  Run `uv run i18n update`. The command should find 'de' and initialize `locales/de/LC_MESSAGES/messages.po`.
 3.  Translate the new `.po` file.
-4.  Run `uv run manage-locales.py` to compile it.
+4.  Run `uv run i18n compile` to compile it.
 5.  Ensure the language code 'de' is one that users can select in the bot's settings.
 
 ## License
