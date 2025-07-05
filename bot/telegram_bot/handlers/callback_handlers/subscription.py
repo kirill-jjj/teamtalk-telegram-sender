@@ -80,7 +80,7 @@ async def cq_set_subscription_setting(
     # Prepare text and markup for UI refresh.
     # new_setting_enum (which is user_settings.notification_settings after update_logic)
     # reflects the new state for UI generation. This happens before process_setting_update commits.
-    updated_builder = create_subscription_settings_keyboard(_, new_setting_enum)
+    updated_builder = await create_subscription_settings_keyboard(_, new_setting_enum)
     menu_text = _("Subscription Settings")
 
     await process_setting_update(
