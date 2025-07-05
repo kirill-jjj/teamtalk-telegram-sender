@@ -11,6 +11,7 @@ from bot.constants import (
 )
 from bot.telegram_bot.utils import send_telegram_message_individual
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
+import html
 
 
 from pytalk import TeamTalkServerInfo
@@ -145,12 +146,11 @@ async def forward_tt_message_to_telegram_admin(
 
     # ПРАВИЛЬНЫЙ СПОСОБ с aiogram 3.x
     # Импортируем html если еще не импортирован вверху файла
-    import html # Убедитесь, что html импортирован
 
     template_text_parts = _("Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}").format(
-        server_name=html.quote(server_name_to_display),
-        sender_name=html.quote(sender_display),
-        message_content=html.quote(message_content) # Экранируем и основной контент
+        server_name=html.escape(server_name_to_display),
+        sender_name=html.escape(sender_display),
+        message_content=html.escape(message_content) # Экранируем и основной контент
     )
 
     was_sent: bool = await send_telegram_message_individual(

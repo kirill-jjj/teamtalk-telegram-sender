@@ -92,7 +92,7 @@ def _generate_join_leave_notification_text(
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
     notification_template = _("User {user_nickname} joined server {server_name}") if event_type == NOTIFICATION_EVENT_JOIN \
                             else _("User {user_nickname} left server {server_name}")
-    return notification_template.format(user_nickname=html.quote(localized_user_nickname), server_name=html.quote(server_name))
+    return notification_template.format(user_nickname=html.escape(localized_user_nickname), server_name=html.escape(server_name))
 
 
 async def send_join_leave_notification_logic(
