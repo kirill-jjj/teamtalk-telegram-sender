@@ -5,8 +5,7 @@ import os
 def main():
     """Simple proxy script to run alembic with a custom config."""
 
-    # Search for the --config argument
-    config_file = ".env" # Default value
+    config_file = ".env"
     cli_args = sys.argv[1:]
 
     # Ensure the script can find bot.config by adding project root to sys.path
@@ -16,18 +15,14 @@ def main():
         sys.path.insert(0, project_root)
 
     try:
-        # Simple search and extraction of --config
         config_index = cli_args.index("--config")
         if config_index + 1 < len(cli_args):
             config_file = cli_args[config_index + 1]
-            # Remove --config and its value from the list of arguments for alembic
             del cli_args[config_index:config_index + 2]
         else:
-            # Handle case where --config is the last argument without a value
             print("Error: --config option requires a value.", file=sys.stderr)
             sys.exit(1)
     except ValueError:
-        # If --config is not found, the default value is used
         pass
     except IndexError:
         # Should not happen if ValueError is caught first for missing --config
@@ -35,7 +30,6 @@ def main():
         print("Error: Malformed --config option.", file=sys.stderr)
         sys.exit(1)
 
-    # Form the command for alembic
     # Ensure alembic is found, might need to be 'python -m alembic' if not in PATH
     # For now, assume 'alembic' is directly callable.
     # We will pass the config file path via an environment variable
@@ -45,21 +39,18 @@ def main():
 
     print(f"INFO  [run_alembic.py] Setting ALEMBIC_ENV_CONFIG_FILE={config_file}")
 
-    # Remove -x argument, it's not working
     command = [
         "alembic",
-        *cli_args    # Pass all other arguments (e.g., upgrade head)
+        *cli_args
     ]
 
     print(f"▶️  Executing: {' '.join(command)}")
-    # Run the command
     try:
         subprocess.run(command, check=True, env=env_vars)
     except FileNotFoundError:
         print(f"Error: 'alembic' command not found. Make sure Alembic is installed and in your PATH.", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        # Alembic command itself exited with an error
         # No need to print full stack trace, alembic usually gives good errors
         sys.exit(e.returncode)
 
