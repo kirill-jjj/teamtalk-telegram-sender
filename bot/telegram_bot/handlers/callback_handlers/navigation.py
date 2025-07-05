@@ -18,13 +18,14 @@ async def cq_back_to_main_settings_menu(
 ):
     await callback_query.answer()
 
-    main_settings_builder = create_main_settings_keyboard(_)
+    main_settings_builder = await create_main_settings_keyboard(_) # <--- ИСПРАВЛЕНО
     main_settings_text = _("Settings")
 
-    await safe_edit_text(
-        message_to_edit=callback_query.message,
-        text=main_settings_text,
-        reply_markup=main_settings_builder.as_markup(),
-        logger_instance=logger,
-        log_context="cq_back_to_main_settings_menu"
-    )
+    if callback_query.message: # Добавим проверку, что message существует
+        await safe_edit_text(
+            message_to_edit=callback_query.message,
+            text=main_settings_text,
+            reply_markup=main_settings_builder.as_markup(),
+            logger_instance=logger,
+            log_context="cq_back_to_main_settings_menu"
+        )
