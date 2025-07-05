@@ -35,14 +35,19 @@ def process_revision_directives(context, revision, directives):
 
 
 def get_db_url():
-    # Attempt to get config file from custom --x-env-file option
-    config_file_source = "cmd_opts.x_env_file"
-    config_file = getattr(context.config.cmd_opts, 'x_env_file', None)
+    # Log all attributes passed via -x
+    if hasattr(context.config, 'attributes') and context.config.attributes:
+        print(f"INFO  [alembic.env] Attributes passed via -x: {context.config.attributes}")
+    else:
+        print(f"INFO  [alembic.env] No attributes found passed via -x.")
+
+    # Attempt to get 'config_file' from -x attributes
+    config_file_source = "context.config.attributes['config_file']"
+    config_file = context.config.attributes.get('config_file')
 
     if not config_file:
-        # Fallback to default if --x-env-file was not provided
-        config_file = ".env"
-        config_file_source = "default .env"
+        config_file = ".env" # Значение по умолчанию, если ничего не передано
+        config_file_source = "default .env (fallback)"
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
