@@ -67,7 +67,7 @@ async def kick_command_handler(
     tt_connection: TeamTalkConnection | None
 ):
     # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.info(f"/kick: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
+    logger.debug(f"/kick: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
@@ -82,7 +82,7 @@ async def ban_command_handler(
     tt_connection: TeamTalkConnection | None
 ):
     # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.info(f"/ban: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
+    logger.debug(f"/ban: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
@@ -98,7 +98,7 @@ async def subscribers_command_handler(
     app: "Application"
 ):
     # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.info(f"/subscribers: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
+    logger.debug(f"/subscribers: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
