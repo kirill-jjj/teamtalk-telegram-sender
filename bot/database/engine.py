@@ -1,20 +1,19 @@
+# bot/database/engine.py
+
+# Этот файл теперь может быть почти пустым или содержать только
+# общие связанные с базой данных утилиты, если они появятся.
+# На данный момент, после переноса логики, он может даже не понадобиться.
+# Давайте пока оставим его пустым, чтобы не ломать другие импорты.
+
+# В качестве альтернативы, чтобы не удалять файл полностью,
+# можно оставить импорты, которые могут использоваться для type hinting.
 import logging
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
-
-from bot.config import app_config
-from bot.constants import DB_MAIN_NAME
-
+from sqlalchemy.ext.asyncio import create_async_engine # noqa
+from sqlalchemy.orm import sessionmaker # noqa
+from sqlmodel.ext.asyncio.session import AsyncSession # noqa
+from bot.constants import DB_MAIN_NAME # noqa
 from bot import models  # noqa
 
 logger = logging.getLogger(__name__)
 
-DATABASE_FILES = {DB_MAIN_NAME: app_config.DATABASE_FILE}
-async_engines = {
-    db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
-    for db_name, db_file in DATABASE_FILES.items()
-}
-SessionFactory = sessionmaker(
-    async_engines[DB_MAIN_NAME], expire_on_commit=False, class_=AsyncSession
-)
+# Весь код создания движка и сессии отсюда УДАЛЯЕМ.

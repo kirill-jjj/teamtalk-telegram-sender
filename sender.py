@@ -9,11 +9,15 @@ from datetime import datetime # Added for Application class Pytalk event handler
 from typing import Dict, Optional, Any
 
 # SQLAlchemy / SQLModel imports
+from sqlalchemy.ext.asyncio import create_async_engine # Added
+from sqlalchemy.orm import sessionmaker # Added
 from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.models import UserSettings
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
+from bot import models as db_models # Added alias for db models
+from bot.constants import DB_MAIN_NAME # Added
 
 
 # Aiogram imports for Application class
@@ -36,7 +40,7 @@ from pytalk.enums import Status as PytalkStatus
 from bot.logging_setup import setup_logging
 # from bot.config import app_config # Config imported in main_cli
 
-from bot.database.engine import SessionFactory
+# from bot.database.engine import SessionFactory # SessionFactory will be created in Application
 from bot.database import crud
 
 from bot.core.languages import discover_languages, AVAILABLE_LANGUAGES_DATA, DEFAULT_LANGUAGE_CODE
@@ -103,8 +107,24 @@ class Application:
         self.dp: Dispatcher = Dispatcher()
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
 
+        # >>> НАЧАЛО НОВОГО БЛОКА <<<
+        # Логика, перенесенная из bot/database/engine.py
+        # Ensure db_models is loaded (it was imported with 'from bot import models as db_models')
+        _ = db_models # This line is to ensure the import is used, preventing linters from removing it if not directly referenced elsewhere yet.
+
+        database_files = {DB_MAIN_NAME: self.app_config.DATABASE_FILE}
+        async_engines = {
+            db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
+            for db_name, db_file in database_files.items()
+        }
+        # Создаем и сохраняем фабрику сессий как атрибут класса
+        self.session_factory: sessionmaker = sessionmaker(
+            async_engines[DB_MAIN_NAME], expire_on_commit=False, class_=AsyncSession
+        )
+        # >>> КОНЕЦ НОВОГО БЛОКА <<<
+
         self.connections: Dict[str, TeamTalkConnection] = {} # Key: server_id (e.g., host:port)
-        self.session_factory: SessionFactory = SessionFactory
+        # self.session_factory: SessionFactory = SessionFactory # <-- УДАЛИТЬ ЭТУ СТРОКУ
 
         self.subscribed_users_cache: set[int] = set()
         self.admin_ids_cache: set[int] = set()
