@@ -36,7 +36,7 @@ async def cq_toggle_noon_setting_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: NotificationActionCallback,
-    app: "Application" # <--- Убедись, что этот аргумент присутствует
+    app: "Application"
 ):
     original_noon_status = user_settings.not_on_online_enabled
 
@@ -67,5 +67,5 @@ async def cq_toggle_noon_setting_action(
         success_toast_text=success_toast_text,
         new_text=menu_text,
         new_markup=updated_builder.as_markup(),
-        app=app # <--- Убедись, что app передается
+        app=app
     )

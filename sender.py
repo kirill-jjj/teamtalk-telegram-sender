@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.models import UserSettings
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
-from sqlalchemy.orm import selectinload # IMPORT selectinload
+from sqlalchemy.orm import selectinload
 
 
 # Aiogram imports for Application class
@@ -33,29 +33,25 @@ from pytalk.enums import Status as PytalkStatus
 
 
 # Application-specific imports
-from bot.logging_setup import setup_logging # Will be called by Application
-# Config needs to be imported after env var is set, handled in main_cli
-# from bot.config import app_config
+from bot.logging_setup import setup_logging
+# from bot.config import app_config # Config imported in main_cli
 
 from bot.database.engine import SessionFactory
-# from bot.core.user_settings import load_user_settings_to_cache, USER_SETTINGS_CACHE # USER_SETTINGS_CACHE might be moved to App # Removed this line
 from bot.database import crud
-# from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # These will be instance vars in Application
 
 from bot.core.languages import discover_languages, AVAILABLE_LANGUAGES_DATA, DEFAULT_LANGUAGE_CODE
-from bot.language import get_translator # For global error handler
+from bot.language import get_translator
 
 # Telegram specific components to be managed by Application
-from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # These will be initialized in Application
+from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
-    # TeamTalkInstanceMiddleware, # To be replaced/updated
     SubscriptionCheckMiddleware,
-    ApplicationMiddleware, # Now created
-    ActiveTeamTalkConnectionMiddleware, # Now created
-    TeamTalkConnectionCheckMiddleware # Corrected name
+    ApplicationMiddleware,
+    ActiveTeamTalkConnectionMiddleware,
+    TeamTalkConnectionCheckMiddleware
 )
 from bot.telegram_bot.handlers import (
     user_commands_router,
@@ -68,12 +64,10 @@ from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subsc
 
 # TeamTalk specific components to be managed by Application
 from bot.teamtalk_bot.connection import TeamTalkConnection
-# from bot.teamtalk_bot.utils import shutdown_tt_instance # This logic will be in Application/TeamTalkConnection
 from bot.teamtalk_bot.utils import (
-    # initiate_reconnect_task as old_initiate_reconnect_task, # <-- УДАЛИ ЭТУ СТРОКУ
-    forward_tt_message_to_telegram_admin, # Will be adapted
+    forward_tt_message_to_telegram_admin,
 )
-from bot.teamtalk_bot.commands import ( # These will be adapted to take app/connection
+from bot.teamtalk_bot.commands import (
     handle_tt_subscribe_command,
     handle_tt_unsubscribe_command,
     handle_tt_add_admin_command,
@@ -87,17 +81,17 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
-    TT_CACHE_SYNC_RETRY_DELAY_SECONDS, # Used in original _periodic_cache_sync
+    TT_CACHE_SYNC_RETRY_DELAY_SECONDS,
 )
-from bot.core.notifications import send_join_leave_notification_logic # Will be adapted
+from bot.core.notifications import send_join_leave_notification_logic
 
 
-logger = logging.getLogger(__name__) # Define logger at module level for Application class
+logger = logging.getLogger(__name__)
 
 class Application:
     def __init__(self, app_config_instance):
         self.app_config = app_config_instance
-        self.logger = setup_logging() # Setup logging once
+        self.logger = setup_logging()
 
         self.tg_bot_event: Bot = Bot(token=self.app_config.TG_EVENT_TOKEN)
         self.tg_bot_message: Optional[Bot] = None
@@ -115,17 +109,13 @@ class Application:
 
         self.subscribed_users_cache: set[int] = set()
         self.admin_ids_cache: set[int] = set()
-        self.user_settings_cache: Dict[int, Any] = {} # Initialize as empty dict, Any for UserSettings model for now
+        self.user_settings_cache: Dict[int, Any] = {}
 
         self.teamtalk_task: Optional[asyncio.Task] = None
         self._register_pytalk_event_handlers()
 
-    async def load_user_settings_to_app_cache(self): # New method
+    async def load_user_settings_to_app_cache(self):
         """Loads all user settings from DB into the application's cache."""
-        # This replaces global load_user_settings_to_cache
-        # It directly populates self.user_settings_cache
-        # This method in bot.core.user_settings loaded into global USER_SETTINGS_CACHE
-        # We need to replicate that logic here for self.user_settings_cache
         async with self.session_factory() as session:
             stmt = select(UserSettings)
             result = await session.execute(stmt)
@@ -134,26 +124,23 @@ class Application:
                 self.user_settings_cache[setting.telegram_id] = setting
             self.logger.info(f"Loaded {len(self.user_settings_cache)} user settings into app cache.")
 
-    async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings: # New method
+    async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings:
         """Gets user settings from app cache or DB, creates if not exists."""
-        # This replaces global get_or_create_user_settings
-        # It uses self.user_settings_cache and self.session_factory
         cached_settings = self.user_settings_cache.get(telegram_id)
         if cached_settings:
             return cached_settings
 
         # If not in cache, try DB
-        # This logic is from the original bot.core.user_settings.get_or_create_user_settings
         user_settings = await session.get(
             UserSettings,
             telegram_id,
-            options=[selectinload(UserSettings.muted_users_list)] # EAGER LOAD muted_users_list
+            options=[selectinload(UserSettings.muted_users_list)]
         )
         if not user_settings:
             self.logger.info(f"No settings found for user {telegram_id}, creating new ones.")
             user_settings = UserSettings(
                 telegram_id=telegram_id,
-                language_code=self.app_config.DEFAULT_LANG # Use app_config for default
+                language_code=self.app_config.DEFAULT_LANG
             )
             session.add(user_settings)
             try:
@@ -163,13 +150,10 @@ class Application:
             except SQLAlchemyError as e:
                 await session.rollback()
                 self.logger.error(f"Database error creating settings for user {telegram_id}: {e}", exc_info=True)
-                # Should return a default transient UserSettings object or raise
-                # For now, consistent with original, it might return None if commit fails,
-                # but better to return a default or raise.
-                # Let's return a default non-persistent object on error.
+                # Return a default non-persistent object on error.
                 return UserSettings(telegram_id=telegram_id, language_code=self.app_config.DEFAULT_LANG)
 
-        self.user_settings_cache[telegram_id] = user_settings # Add to cache
+        self.user_settings_cache[telegram_id] = user_settings
         return user_settings
 
     def _get_connection_by_instance(self, tt_instance: pytalk.instance.TeamTalkInstance) -> Optional[TeamTalkConnection]:
@@ -181,14 +165,10 @@ class Application:
 
     def _get_connection_by_server_info(self, server_info: pytalk.TeamTalkServerInfo) -> Optional[TeamTalkConnection]:
         # Assuming server_info.host and server_info.tcp_port can uniquely identify a connection
-        # This might need adjustment if server_info objects are not stable references or lack unique IDs
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         return self.connections.get(server_key)
 
     def _register_pytalk_event_handlers(self):
-        # Manually register methods as event handlers for self.tt_bot
-        # This is instead of using @self.tt_bot.event decorator inside __init__
-        # which can be problematic.
         event_handlers = {
             'on_ready': self.on_pytalk_ready,
             'on_my_login': self.on_pytalk_my_login,
@@ -207,27 +187,24 @@ class Application:
             setattr(self.tt_bot, event_name, self.tt_bot.event(handler_method))
         self.logger.info("Pytalk event handlers registered.")
 
-    # --- Pytalk Event Handlers (Migrated and adapted) ---
+    # --- Pytalk Event Handlers ---
     async def on_pytalk_ready(self):
         """
         Called when self.tt_bot.run() is effectively started.
-        This is where we'd initiate connections to configured TeamTalk servers.
+        Initiates connections to configured TeamTalk servers.
         """
         self.logger.info("Pytalk Bot is ready. Initializing TeamTalk connections...")
-        # For now, assuming a single server configuration from app_config
-        # In a multi-server setup, this would iterate over a list of server configs
-
-        # Create pytalk.TeamTalkServerInfo from app_config
+        # Assuming a single server configuration from app_config for now.
         server_config = self.app_config
         pytalk_server_info = pytalk.TeamTalkServerInfo(
             host=server_config.HOSTNAME,
             tcp_port=server_config.PORT,
-            udp_port=server_config.PORT, # Assuming UDP port is same as TCP, adjust if different field in config
+            udp_port=server_config.PORT,
             username=server_config.USERNAME,
             password=server_config.PASSWORD,
             encrypted=server_config.ENCRYPTED,
             nickname=server_config.NICKNAME,
-            join_channel_id=int(server_config.CHANNEL) if server_config.CHANNEL.isdigit() else -1, # Basic parsing
+            join_channel_id=int(server_config.CHANNEL) if server_config.CHANNEL.isdigit() else -1,
             join_channel_password=server_config.CHANNEL_PASSWORD or ""
         )
 
@@ -235,18 +212,18 @@ class Application:
 
         if server_key in self.connections:
             self.logger.warning(f"Connection for {server_key} already exists. Reconnecting.")
-            await self.connections[server_key].disconnect_instance() # Clean up old one
+            await self.connections[server_key].disconnect_instance()
 
         connection = TeamTalkConnection(
             server_info=pytalk_server_info,
             pytalk_bot=self.tt_bot,
             session_factory=self.session_factory,
-            app_config=self.app_config # Pass app_config
+            app_config=self.app_config
         )
         self.connections[server_key] = connection
 
         self.logger.info(f"Attempting to connect TeamTalkConnection for {server_key}...")
-        if not await connection.connect(): # connect() now adds server to tt_bot and gets instance
+        if not await connection.connect():
             self.logger.error(f"Failed to initiate connection for {server_key} via TeamTalkConnection.connect().")
         else:
             self.logger.info(f"TeamTalkConnection for {server_key} initiated. Waiting for login events.")
@@ -259,8 +236,8 @@ class Application:
             self.logger.error(f"on_pytalk_my_login: Received login event for unknown instance: {tt_instance}. Server: {server.info.host}")
             return
 
-        connection.login_complete_time = None # Reset this, will be set after channel join
-        connection.mark_finalized(False) # Mark as not finalized until channel join and cache tasks start
+        connection.login_complete_time = None
+        connection.mark_finalized(False)
 
         server_name_display = "Unknown Server"
         try:
@@ -274,7 +251,7 @@ class Application:
 
         # Attempt to join the configured channel
         try:
-            channel_id_or_path = self.app_config.CHANNEL # From main app_config for this connection
+            channel_id_or_path = self.app_config.CHANNEL
             channel_password = self.app_config.CHANNEL_PASSWORD or ""
             target_channel_name_log = channel_id_or_path
 
@@ -282,11 +259,10 @@ class Application:
 
             if channel_id_or_path.isdigit():
                 final_channel_id = int(channel_id_or_path)
-                # Optionally, resolve and log channel name if ID is given
                 chan_obj_log = tt_instance.get_channel(final_channel_id)
                 if chan_obj_log:
                     target_channel_name_log = pytalk.instance.sdk.ttstr(chan_obj_log.name)
-            else: # Path based channel
+            else:
                 channel_obj = tt_instance.get_channel_from_path(channel_id_or_path)
                 if channel_obj:
                     final_channel_id = channel_obj.id
@@ -296,16 +272,11 @@ class Application:
 
             if final_channel_id != -1:
                 self.logger.info(f"[{connection.server_info.host}] Attempting to join channel: '{target_channel_name_log}' (Resolved ID: {final_channel_id}).")
-                # join_channel_by_id is synchronous in pytalk
                 tt_instance.join_channel_by_id(final_channel_id, password=channel_password)
-                # Successful join will trigger on_pytalk_user_join for the bot itself,
-                # which will then call _finalize_bot_login_sequence for this connection.
             else:
-                self.logger.warning(f"[{connection.server_info.host}] Could not resolve channel '{channel_id_or_path}'. Bot remains in default channel. Finalization may occur if already in target.")
-                # If bot is already in the target channel (e.g. default channel is target), on_user_join might not fire for bot.
-                # We might need to check current channel and finalize if it matches.
+                self.logger.warning(f"[{connection.server_info.host}] Could not resolve channel '{channel_id_or_path}'. Bot remains in default channel.")
                 current_bot_channel_id = tt_instance.getMyCurrentChannelID()
-                if current_bot_channel_id == final_channel_id or (final_channel_id == -1 and current_bot_channel_id is not None): # or if no specific channel was required and bot is in some channel
+                if current_bot_channel_id == final_channel_id or (final_channel_id == -1 and current_bot_channel_id is not None):
                      self.logger.info(f"[{connection.server_info.host}] Bot already in a channel or no specific channel join needed. Attempting to finalize.")
                      current_channel_obj = tt_instance.get_channel(current_bot_channel_id)
                      if current_channel_obj:
@@ -315,7 +286,7 @@ class Application:
 
         except PytalkPermissionError as e_perm_join:
             self.logger.error(f"[{connection.server_info.host}] Pytalk PermissionError joining channel '{target_channel_name_log}': {e_perm_join}.", exc_info=True)
-        except ValueError as e_val_join: # E.g. invalid path/ID
+        except ValueError as e_val_join:
             self.logger.error(f"[{connection.server_info.host}] ValueError joining channel '{target_channel_name_log}': {e_val_join}.", exc_info=True)
         except TimeoutError as e_timeout_join:
             self.logger.error(f"[{connection.server_info.host}] TimeoutError during channel operations for '{target_channel_name_log}': {e_timeout_join}.", exc_info=True)
@@ -354,21 +325,17 @@ class Application:
         except Exception as e:
             self.logger.error(f"[{connection.server_info.host}] Error during initial online users cache population: {e}", exc_info=True)
 
-        # Start background tasks (periodic sync, populate accounts) for this connection
         connection.start_background_tasks()
 
         try:
-            # Use PytalkStatus helper for status
             gender = self.app_config.GENDER.lower()
-            base_status = PytalkStatus.online # Default to online
-
-            status_val = PytalkStatus.online.neutral # Default
+            status_val = PytalkStatus.online.neutral
             if gender == "male": status_val = PytalkStatus.online.male
             elif gender == "female": status_val = PytalkStatus.online.female
 
             tt_instance.change_status(status_val, self.app_config.STATUS_TEXT)
             connection.login_complete_time = datetime.utcnow()
-            connection.mark_finalized(True) # Mark as finalized
+            connection.mark_finalized(True)
             self.logger.debug(f"[{connection.server_info.host}] TeamTalk status set to: '{self.app_config.STATUS_TEXT}'.")
             self.logger.info(f"[{connection.server_info.host}] TeamTalk login sequence finalized at {connection.login_complete_time}.")
         except Exception as e:
@@ -393,30 +360,25 @@ class Application:
             return
 
         if user.id == my_user_id:
-            # This is the bot itself joining the channel, finalize its setup for this connection
             if not connection.is_finalized:
                 await self._finalize_bot_login_sequence(connection, channel)
             else:
                 self.logger.info(f"[{connection.server_info.host}] Bot re-joined channel {pytalk.instance.sdk.ttstr(channel.name)}, already finalized.")
         else:
-            # This is another user joining a channel.
-            # Per new requirements, DO NOT send notification here.
-            # Notification is sent only on on_pytalk_user_login.
+            # Notification for other users joining a channel is handled by on_pytalk_user_login.
             pass
 
     async def on_pytalk_my_connection_lost(self, server: PytalkServer):
-        # server object here is PytalkServer, its server.teamtalk_instance is the one that got lost
         tt_instance = server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
 
         if not connection:
             self.logger.error(f"on_pytalk_my_connection_lost: Received event for unknown instance: {tt_instance}. Server host from event: {server.info.host if server and server.info else 'Unknown'}")
-            # Try to find by server_info if instance lookup failed (e.g. instance object changed)
             if server and server.info:
                  connection = self._get_connection_by_server_info(server.info)
                  if not connection:
                      self.logger.error(f"Still could not find connection for lost server {server.info.host}:{server.info.tcp_port}")
-                     return # Cannot proceed without a connection object
+                     return
                  else:
                      self.logger.warning(f"Found connection for {server.info.host} via server_info after instance lookup failed for connection_lost.")
             else:
@@ -428,9 +390,8 @@ class Application:
 
         connection.mark_finalized(False)
         connection.login_complete_time = None
-        await connection.stop_background_tasks() # Stop tasks for this connection
+        await connection.stop_background_tasks()
 
-        # Initiate reconnect for this specific connection
         await self._initiate_reconnect_for_connection(connection)
 
     async def _initiate_reconnect_for_connection(self, connection: TeamTalkConnection):
@@ -442,31 +403,13 @@ class Application:
         server_key = f"{connection.server_info.host}:{connection.server_info.tcp_port}"
         self.logger.info(f"[{server_key}] Starting reconnection logic.")
 
-        # Simple retry loop for now, could use exponential backoff later
-        # This should not block other operations of the Application.
-        # It might be better to schedule this as a separate task if it involves long waits.
-        # For now, direct await for simplicity in the event handler flow.
-
-        # Ensure old instance is cleaned up from pytalk_bot.teamtalks if necessary
-        # Pytalk itself might handle this, or we might need to remove and re-add.
-        # Current pytalk_bot.add_server appends. If an old instance for same server exists and is problematic,
-        # it should be handled. For now, we assume pytalk_bot handles replacing/managing its internal list,
-        # or that a new `connect()` call on TeamTalkConnection will manage it.
-        # The `connection.connect()` itself calls `pytalk_bot.add_server`.
-
-        await connection.disconnect_instance() # Ensure clean state before reconnect
+        await connection.disconnect_instance()
 
         self.logger.info(f"[{server_key}] Attempting to re-establish connection...")
         if await connection.connect():
-            self.logger.info(f"[{server_key}] Reconnect attempt initiated (add_server called). Waiting for login events.")
-            # Login and channel join will be handled by on_pytalk_my_login and on_pytalk_user_join
+            self.logger.info(f"[{server_key}] Reconnect attempt initiated. Waiting for login events.")
         else:
-            self.logger.error(f"[{server_key}] Failed to re-initiate connection via connection.connect(). Will rely on next on_ready or manual trigger.")
-            # Consider scheduling a delayed retry here if connect() fails immediately
-            # For now, this means it won't auto-retry if the add_server step fails.
-            # A more robust solution would involve a retry loop for connection.connect() itself.
-            # This is simplified from the original global `initiate_reconnect_task`.
-            # A proper replacement for `initiate_reconnect_task` would be a persistent task per connection.
+            self.logger.error(f"[{server_key}] Failed to re-initiate connection via connection.connect().")
 
     async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel):
         tt_instance = channel_obj.teamtalk
@@ -482,17 +425,16 @@ class Application:
         connection.mark_finalized(False)
         connection.login_complete_time = None
         await connection.stop_background_tasks()
-        await self._initiate_reconnect_for_connection(connection) # Reconnect this specific connection
+        await self._initiate_reconnect_for_connection(connection)
 
     async def on_pytalk_message(self, message: TeamTalkMessage):
-        tt_instance = message.teamtalk_instance # All message types should have this
+        tt_instance = message.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
 
         if not connection or not connection.instance:
             self.logger.error(f"on_pytalk_message: Received message for unknown or uninitialized instance. Message from: {message.from_id}")
             return
 
-        # Ignore messages from self or not private
         if (message.from_id == connection.instance.getMyUserID() or
                 message.type != TEAMTALK_PRIVATE_MESSAGE_TYPE):
             return
@@ -501,8 +443,6 @@ class Application:
         message_content = message.content.strip()
         self.logger.debug(f"[{connection.server_info.host}] Received private TT message from {sender_username}: '{message_content[:100]}...'.")
 
-        # Determine reply language (e.g., admin's preferred language)
-        # This part needs access to user_settings_cache, which is self.user_settings_cache
         bot_reply_language_code = DEFAULT_LANGUAGE_CODE
         if self.app_config.TG_ADMIN_CHAT_ID:
             admin_settings = self.user_settings_cache.get(self.app_config.TG_ADMIN_CHAT_ID)
@@ -510,12 +450,11 @@ class Application:
                 bot_reply_language_code = admin_settings.language_code
 
         translator = get_translator(bot_reply_language_code)
-        _ = translator.gettext # For handlers that expect _
+        _ = translator.gettext
 
         command_parts = message_content.split(maxsplit=1)
         command_name = command_parts[0].lower()
 
-        # Adapted TT_COMMAND_HANDLERS logic
         tt_command_handlers = {
             "/sub": handle_tt_subscribe_command,
             "/unsub": handle_tt_unsubscribe_command,
@@ -527,25 +466,19 @@ class Application:
 
         async with self.session_factory() as session:
             if handler:
-                # Adapt handler calls to pass necessary context like connection, app, session, _
-                # This is a significant change for these handlers.
-                # For now, let's assume they will be refactored to accept `app` or `connection`.
-                # Example: await handler(message, app=self, connection=connection, session=session, translator=translator)
-                # The original handlers took specific arguments. We need to map them.
                 args_str = command_parts[1] if len(command_parts) > 1 else None
                 if command_name in ["/add_admin", "/remove_admin"]:
                     await handler(message, args_str=args_str, session=session, translator=translator, app=self, connection=connection)
                 elif command_name == "/help":
-                    await handler(message, _=_, app=self, connection=connection) # Original took message, _
-                else: # /sub, /unsub
+                    await handler(message, _=_, app=self, connection=connection)
+                else:
                     await handler(message, session=session, _=_, app=self, connection=connection)
             elif message_content.startswith("/"):
-                await handle_tt_unknown_command(message, _, connection=connection) # Pass connection
+                await handle_tt_unknown_command(message, _, connection=connection)
             else:
-                # forward_tt_message_to_telegram_admin needs tg_bot and admin_chat_id from app_config
                 await forward_tt_message_to_telegram_admin(
                     message=message,
-                    app=self, # Pass the Application instance (self)
+                    app=self,
                     server_host_for_display=connection.server_info.host
                 )
 
@@ -555,10 +488,9 @@ class Application:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection: return
         connection.update_caches_on_event("user_login", user)
-        # Notification logic
         await send_join_leave_notification_logic(
             event_type=NOTIFICATION_EVENT_JOIN,
-            tt_user=user, # Corrected argument name from 'user' to 'tt_user'
+            tt_user=user,
             tt_instance=connection.instance,
             login_complete_time=connection.login_complete_time,
             bot=self.tg_bot_event,
@@ -575,10 +507,9 @@ class Application:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection: return
         connection.update_caches_on_event("user_logout", user)
-        # Notification logic
         await send_join_leave_notification_logic(
             event_type=NOTIFICATION_EVENT_LEAVE,
-            tt_user=user, # Corrected argument name from 'user' to 'tt_user'
+            tt_user=user,
             tt_instance=connection.instance,
             login_complete_time=connection.login_complete_time,
             bot=self.tg_bot_event,
@@ -587,7 +518,7 @@ class Application:
             subscribed_users_cache=self.subscribed_users_cache,
             online_users_cache_for_instance=connection.online_users_cache,
             app_config_instance=self.app_config,
-            app=self # PASS Application instance
+            app=self
         )
 
     async def on_pytalk_user_update(self, user: PytalkUser):
@@ -597,26 +528,9 @@ class Application:
         connection.update_caches_on_event("user_update", user)
 
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount):
-        # UserAccount events might not directly provide the teamtalk_instance.
-        # We might need to assume it's for all connections or find a way to associate.
-        # For now, update all connections. This is a simplification.
-        # A better approach: if pytalk.UserAccount has a reference to its server/instance.
-        # Assuming account object might have `account.teamtalk_instance` or similar if library supports it.
-        # If not, this event applies globally or needs routing if different servers have different accounts.
-        # The provided pytalk docs don't show teamtalk_instance on UserAccount events.
-        # For now, iterate and update all, or pick a "primary" if that concept exists.
-        # Let's assume for now these events are instance-specific if `account.teamtalk_instance` is available.
-        # If `account.teamtalk_instance` is NOT available, these caches might need to be global in App,
-        # or we only handle them for a "primary" connection.
-        # The problem states `user_accounts_cache` is per-connection. So the event *must* be attributable.
-        # Checking `pytalk/instance.py` for `CLIENTEVENT_CMD_USERACCOUNT_NEW` dispatch.
-        # It dispatches `TeamTalkUserAccount(self, msg.useraccount)`. `TeamTalkUserAccount` constructor takes `teamtalk_instance`.
-        # So, `account.teamtalk_instance` SHOULD be available.
-
         tt_instance = getattr(account, 'teamtalk_instance', None)
         if not tt_instance:
              self.logger.warning(f"on_pytalk_user_account_new: No teamtalk_instance found on account object. Cannot route event. Account: {account.username}")
-             # Fallback: update all connections if no instance info
              for conn_key, conn_val in self.connections.items():
                  conn_val.update_caches_on_event("user_account_new", account)
              return
@@ -642,22 +556,17 @@ class Application:
         connection.update_caches_on_event("user_account_remove", account)
 
     # --- Application Lifecycle Methods ---
-    async def _on_startup_logic(self, bot: Bot, dispatcher: Dispatcher): # bot and dispatcher are TG bot/dp
-        """Internal logic for startup, similar to old on_startup."""
+    async def _on_startup_logic(self, bot: Bot, dispatcher: Dispatcher):
+        """Internal logic for startup."""
         self.logger.info("Application startup: Initializing TeamTalk components...")
 
-        # Start the main Pytalk event processing loop
-        # self.tt_bot._async_setup_hook() should be called by pytalk itself if needed
-        # The old code did: teamtalk_task = asyncio.create_task(tt_bot_module.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
-        # self.tt_bot.run() is blocking. self.tt_bot._start() is the async version.
         if self.teamtalk_task is None or self.teamtalk_task.done():
-            await self.tt_bot._async_setup_hook() # Ensure tt_bot has loop
+            await self.tt_bot._async_setup_hook()
             self.teamtalk_task = asyncio.create_task(self.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
             self.logger.info("Pytalk main event loop task started.")
         else:
             self.logger.info("Pytalk main event loop task already running.")
 
-        # Load global caches (admin_ids, subscribed_users)
         async with self.session_factory() as session:
             db_admin_ids = await crud.get_all_admins_ids(session)
             self.admin_ids_cache.update(db_admin_ids)
@@ -667,38 +576,30 @@ class Application:
         self.logger.info(f"Admin IDs cache populated with {len(self.admin_ids_cache)} IDs.")
         self.logger.info(f"Subscribed users cache populated with {len(self.subscribed_users_cache)} IDs.")
 
-        await self.load_user_settings_to_app_cache() # Use app's method
-        # self.logger.info("User settings cache populated.") # Logging is inside the method
+        await self.load_user_settings_to_app_cache()
 
-        # Add configured admin from TG_ADMIN_CHAT_ID
         tg_admin_chat_id = self.app_config.TG_ADMIN_CHAT_ID
         if tg_admin_chat_id is not None:
             async with self.session_factory() as session:
-                await crud.add_admin(session, tg_admin_chat_id) # Ensures admin is in DB
-                self.admin_ids_cache.add(tg_admin_chat_id) # Also add to cache
+                await crud.add_admin(session, tg_admin_chat_id)
+                self.admin_ids_cache.add(tg_admin_chat_id)
             self.logger.info(f"Ensured TG_ADMIN_CHAT_ID {tg_admin_chat_id} is admin.")
 
-        # Set Telegram commands
-        # await set_telegram_commands(self.tg_bot_event, admin_ids=list(self.admin_ids_cache), default_language_code=self.app_config.DEFAULT_LANG)
-        # Pass app and session to set_telegram_commands
-        async with self.session_factory() as session: # Create a session for set_telegram_commands
+        async with self.session_factory() as session:
             await set_telegram_commands(
                 bot=self.tg_bot_event,
                 admin_ids=list(self.admin_ids_cache),
                 default_language_code=self.app_config.DEFAULT_LANG,
-                app=self, # Pass self (the Application instance)
-                session=session # Pass the created session
+                app=self,
+                session=session
             )
         self.logger.info("Telegram bot commands set.")
 
-        # The on_pytalk_ready event will handle connecting to TeamTalk servers.
-        # It's triggered by tt_bot._start() eventually.
 
     async def _on_shutdown_logic(self, dispatcher: Dispatcher):
-        """Internal logic for shutdown, similar to old on_shutdown."""
+        """Internal logic for shutdown."""
         self.logger.warning('Application shutting down...')
 
-        # Cancel Pytalk main event loop task
         if self.teamtalk_task and not self.teamtalk_task.done():
             self.logger.info("Cancelling Pytalk main event loop task...")
             self.teamtalk_task.cancel()
@@ -713,22 +614,13 @@ class Application:
         else:
             self.logger.info("No Pytalk main event loop task found to cancel.")
 
-        # Disconnect all TeamTalkConnection instances
         self.logger.info("Disconnecting TeamTalk instances...")
         for conn_key, connection in self.connections.items():
             self.logger.info(f"Shutting down connection for {conn_key}...")
-            await connection.disconnect_instance() # This handles logout, disconnect, task cleanup
+            await connection.disconnect_instance()
         self.logger.info("All TeamTalk connections processed for shutdown.")
 
-        # Pytalk's own cleanup (closing sockets etc.) should be handled by tt_bot when its loop ends
-        # or if it has an explicit close/cleanup method.
-        # The old code iterated tt_bot_module.tt_bot.teamtalks and called shutdown_tt_instance.
-        # Our connection.disconnect_instance() covers the instance-specific parts.
-        # We might need a self.tt_bot.close() or similar if pytalk lib requires it.
-        # For now, assume cancelling _start() is enough for pytalk's bot object.
 
-
-        # Close Telegram bot sessions
         if hasattr(self.tg_bot_event, 'session') and self.tg_bot_event.session:
             await self.tg_bot_event.session.close()
         if self.tg_bot_message and hasattr(self.tg_bot_message, 'session') and self.tg_bot_message.session and self.tg_bot_message is not self.tg_bot_event:
@@ -736,7 +628,7 @@ class Application:
         self.logger.info("Telegram bot sessions closed.")
         self.logger.info("Application shutdown sequence complete.")
 
-    async def _global_error_handler(self, event: ErrorEvent, bot: Bot): # bot is tg_bot_event
+    async def _global_error_handler(self, event: ErrorEvent, bot: Bot):
         """Global error handler for uncaught exceptions in Aiogram handlers."""
         escaped_exception_text = html.quote(str(event.exception))
         self.logger.critical(f"Unhandled exception in Aiogram handler: {event.exception}", exc_info=True)
@@ -797,32 +689,20 @@ class Application:
             self.logger.info(f"Available languages loaded: {[lang['code'] for lang in AVAILABLE_LANGUAGES_DATA]}")
 
         # Setup Aiogram Dispatcher
-        # Order of middleware registration matters.
-        # ApplicationMiddleware should be early, especially if others depend on `data["app"]`.
-        self.dp.update.outer_middleware.register(ApplicationMiddleware(self)) # Inject app instance
+        self.dp.update.outer_middleware.register(ApplicationMiddleware(self))
         self.dp.update.outer_middleware.register(DbSessionMiddleware(self.session_factory))
 
-        # Middlewares that depend on `data["app"]` or `data["session"]`
         self.dp.message.middleware(SubscriptionCheckMiddleware())
         self.dp.callback_query.middleware(SubscriptionCheckMiddleware())
 
         self.dp.message.middleware(UserSettingsMiddleware())
         self.dp.callback_query.middleware(UserSettingsMiddleware())
 
-        # Middleware to provide a TeamTalkConnection
-        # For now, no default_server_key, so it picks the first available connection.
-        # This is suitable for the current single-server setup.
         self.dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
         self.dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
-        # CallbackAnswerMiddleware should be last among general purpose callback query middlewares
         self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-        # TeamTalkConnectionCheckMiddleware should be registered on specific routers/handlers
-        # that require a fully active TT connection, not globally unless all handlers need it.
-        # For now, I will register it globally for message and callback_query events
-        # as most commands will likely interact with TeamTalk.
-        # This can be refined later to be router-specific.
         self.dp.message.middleware(TeamTalkConnectionCheckMiddleware())
         self.dp.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 
@@ -863,11 +743,9 @@ def main_cli():
     from bot.config import app_config as app_config_instance
 
     try:
-        # uvloop installation attempt (optional)
         try:
             import uvloop
             uvloop.install()
-            # Logger is not set up yet globally, print for now or log in app init
             print("uvloop installed and used.")
         except ImportError:
             print("uvloop not found, using default asyncio event loop.")
@@ -878,7 +756,6 @@ def main_cli():
     except (KeyboardInterrupt, SystemExit):
         print("Bot stopped by user.")
     except (ValueError, KeyError) as config_error:
-        # This might catch errors from Pydantic model validation in app_config_instance
         print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.")
         traceback.print_exc()
     except Exception as e:

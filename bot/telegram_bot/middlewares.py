@@ -4,14 +4,10 @@ from typing import Callable, Coroutine, Any, Dict, Awaitable, TYPE_CHECKING
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, User as AiogramUser # Renamed User to AiogramUser
 from aiogram.exceptions import TelegramAPIError
-from sqlalchemy.orm import sessionmaker # Kept for DbSessionMiddleware type hint
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from bot.core.user_settings import get_or_create_user_settings, USER_SETTINGS_CACHE # Removed this import
-# Removed: from bot.teamtalk_bot import bot_instance as tt_bot_module
 from bot.language import get_translator
-# Removed: from bot.state import SUBSCRIBED_USERS_CACHE
-# Import TeamTalkConnection for type hinting
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
@@ -73,38 +69,27 @@ class UserSettingsMiddleware(BaseMiddleware):
     ) -> Any:
         user_obj: AiogramUser = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
-        app: "Application" = data["app"] # <-- Получаем наш главный класс из data
+        app: "Application" = data["app"]
 
-        # Получаем настройки из кэша, который теперь является атрибутом app
         user_settings = app.user_settings_cache.get(user_obj.id)
 
         if not user_settings:
-            # Вызываем метод get_or_create_user_settings из app
             user_settings = await app.get_or_create_user_settings(user_obj.id, session_obj)
 
-        if not user_settings: # This check is fine, get_or_create_user_settings might return None on DB error
+        if not user_settings:
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            # Send error response before returning
             await _send_error_response(event, app.get_translator(app.app_config.DEFAULT_LANG).gettext("An error occurred while loading your settings."), show_alert_for_callback=True)
             return
 
-        # IMPORTANT FIX:
-        # Ensure the user_settings object (especially if from cache) is part of the current session
-        # and its muted_users_list relationship is loaded.
         try:
             if user_settings not in session_obj:
                 user_settings = await session_obj.merge(user_settings)
-                logger.debug(f"User settings for {user_obj.id} (from cache or newly created by app_method) merged into current session.")
+                logger.debug(f"User settings for {user_obj.id} merged into current session.")
 
-            # Regardless of merge, refresh the specific attribute to ensure it's loaded from DB
-            # in the context of the current session. This handles cases where the cached object
-            # might have an unloaded or stale relationship.
             await session_obj.refresh(user_settings, attribute_names=['muted_users_list'])
             logger.debug(f"Refreshed muted_users_list for user {user_obj.id} in current session.")
         except Exception as refresh_e:
             logger.error(f"Error refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}", exc_info=True)
-            # If refresh fails, muted_users_list might not be loaded, potentially leading to DetachedInstanceError.
-            # Send an error message to the user and stop processing.
             error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else app.app_config.DEFAULT_LANG
             error_message = app.get_translator(error_lang_code).gettext("A database error occurred while loading your settings details.")
             await _send_error_response(event, error_message, show_alert_for_callback=True)
@@ -126,7 +111,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         user: AiogramUser | None = data.get("event_from_user")
-        app: "Application" = data["app"] # Expect ApplicationMiddleware to provide this
+        app: "Application" = data["app"]
 
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
@@ -185,7 +170,7 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any],
     ) -> Any:
-        app: "Application" = data["app"] # Expect ApplicationMiddleware to run first
+        app: "Application" = data["app"]
 
         determined_connection: TeamTalkConnection | None = None
 
@@ -197,10 +182,8 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         if self.default_server_key and self.default_server_key in app.connections:
             determined_connection = app.connections[self.default_server_key]
         elif app.connections:
-            # Fallback: use the first available connection if no default key or default not found
-            # This is suitable for single-server setups or simple multi-server without specific routing yet
             determined_connection = next(iter(app.connections.values()))
-            if self.default_server_key: # Log if default was specified but not found
+            if self.default_server_key:
                  logger.warning(f"ActiveTeamTalkConnectionMiddleware: Default server key '{self.default_server_key}' not found. Falling back to first available connection.")
             else:
                  logger.debug(f"ActiveTeamTalkConnectionMiddleware: Using first available connection for {determined_connection.server_info.host if determined_connection else 'N/A'}.")
@@ -214,7 +197,7 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
-class TeamTalkConnectionCheckMiddleware(BaseMiddleware): # Renamed from TeamTalkConnectionMiddleware to avoid confusion
+class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
     """
     Checks if the provided TeamTalkConnection (from ActiveTeamTalkConnectionMiddleware)
     is connected and logged in (ready for use).
@@ -228,15 +211,13 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware): # Renamed from TeamTalk
         event: TelegramObject,
         data: Dict[str, Any],
     ) -> Any:
-        # tt_instance = data.get("tt_instance") # Old way
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
-        translator = data.get("translator") # Assuming UserSettingsMiddleware runs before
+        translator = data.get("translator")
 
         if not translator:
             translator = get_translator()
         _ = translator.gettext
 
-        # Check if a connection object was provided at all
         if not tt_connection:
             error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
@@ -246,7 +227,6 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware): # Renamed from TeamTalk
             )
             return None
 
-        # Check if the provided connection is ready (connected & logged in & finalized)
         if not tt_connection.is_ready or not tt_connection.is_finalized:
             error_message_text = _("TeamTalk bot is not connected or not fully initialized. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)

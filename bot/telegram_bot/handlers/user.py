@@ -6,20 +6,17 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.utils import build_help_message, get_online_teamtalk_users # get_online_teamtalk_users might need tt_connection.instance
+from bot.core.utils import build_help_message, get_online_teamtalk_users
 import pytalk
-# from pytalk.instance import TeamTalkInstance # Will use tt_connection.instance
 from pytalk.user import User as TeamTalkUser
-# from pytalk.exceptions import TeamTalkException as PytalkTeamTalkException # Not used
 
 from aiogram.exceptions import TelegramAPIError
 from bot.telegram_bot.utils import safe_delete_message
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.models import UserSettings
-from bot.telegram_bot.models import WhoUser, WhoChannelGroup # Used by helpers
+from bot.telegram_bot.models import WhoUser, WhoChannelGroup
 from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_main_menu_keyboard
 from bot.core.utils import get_tt_user_display_name
-# from bot.state import ADMIN_IDS_CACHE # Will use app.admin_ids_cache
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -35,11 +32,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
-# Note: TeamTalkConnectionCheckMiddleware is applied globally in Application setup for now.
-# If some user commands don't need TT connection, this router could have it applied selectively,
-# or the global middleware in Application could be removed and added per-router.
 
-ttstr = pytalk.instance.sdk.ttstr # Keep for _get_user_display_channel_name
+ttstr = pytalk.instance.sdk.ttstr
 
 
 @user_commands_router.message(Command("start"))
@@ -49,30 +43,22 @@ async def start_command_handler(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    app: "Application" # Added app for potential future use, though not used in this handler yet
+    app: "Application"
 ):
     if not message.from_user:
         return
 
     token = command.args
     if token:
-        # handle_deeplink_payload might need app or tt_connection if it interacts with them
-        # For now, assuming its existing signature is sufficient or it will be adapted separately.
-        await handle_deeplink_payload(message, token, session, _, user_settings, app) # Pass app
+        await handle_deeplink_payload(message, token, session, _, user_settings, app)
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
 
-
-# _get_user_display_channel_name and _group_users_for_who_command are helper functions for "who"
-# They don't directly take `app` or `tt_connection` but are called by `who_command_handler`
-# which will provide necessary parts like `is_caller_admin` (derived from `app.admin_ids_cache`)
-# and `tt_instance` (from `tt_connection.instance`).
 
 def _get_user_display_channel_name(
     user_obj: TeamTalkUser,
     is_caller_admin: bool,
     translator: "gettext.GNUTranslations"
-    # No direct change here, but caller `who_command_handler` will pass correct `is_caller_admin`
 ) -> str:
     channel_obj = user_obj.channel
     user_display_channel_name = ""
@@ -110,10 +96,9 @@ def _get_user_display_channel_name(
 
 def _group_users_for_who_command(
     users: list[TeamTalkUser],
-    bot_user_id: int | None, # Bot user ID can be None if not found
+    bot_user_id: int | None,
     is_caller_admin: bool,
     translator: "gettext.GNUTranslations"
-    # No direct change here, but caller `who_command_handler` passes correct args
 ) -> tuple[list[WhoChannelGroup], int]:
     channels_display_data: dict[str, list[str]] = {}
     users_added_to_groups_count = 0
@@ -179,16 +164,14 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
-    translator: "gettext.GNUTranslations", # Comes from UserSettingsMiddleware
-    app: "Application", # Comes from ApplicationMiddleware
-    tt_connection: TeamTalkConnection | None # Comes from ActiveTeamTalkConnectionMiddleware
-                                         # Checked by TeamTalkConnectionCheckMiddleware
+    translator: "gettext.GNUTranslations",
+    app: "Application",
+    tt_connection: TeamTalkConnection | None
 ):
     if not message.from_user:
         return
 
-    # TeamTalkConnectionCheckMiddleware should ensure tt_connection and tt_connection.instance are valid
-    if not tt_connection or not tt_connection.instance: # Should ideally not be hit if middleware is correct
+    if not tt_connection or not tt_connection.instance:
         await message.reply(translator.gettext("TeamTalk connection is not available at the moment."))
         return
 
@@ -196,25 +179,20 @@ async def who_command_handler(
     server_host_for_log_and_display = tt_connection.server_info.host
 
     try:
-        # Use connection's cache or fetch via its instance
-        # get_online_teamtalk_users helper should be adapted if it used global state.
-        # Assuming get_online_teamtalk_users now correctly uses tt_instance passed to it.
         all_users_list = await get_online_teamtalk_users(tt_instance)
-    except Exception as e: # Catch a broader range of exceptions during user list retrieval
+    except Exception as e:
         logger.error(f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}", exc_info=True)
         await message.reply(translator.gettext("An internal error occurred while retrieving the user list."))
         return
 
     is_caller_admin = message.from_user.id in app.admin_ids_cache
     bot_user_id = tt_instance.getMyUserID()
-    # bot_user_id can be None if not logged in, but middleware should prevent that state.
 
-    if bot_user_id is None: # Defensive check
+    if bot_user_id is None:
         logger.error(f"Could not get bot's own user ID from TeamTalk instance on server {server_host_for_log_and_display}.")
         await message.reply(translator.gettext("An error occurred while processing your request."))
         return
 
-    # Run blocking synchronous code in a separate thread
     grouped_data, total_users_to_display = await asyncio.to_thread(
         _group_users_for_who_command,
         all_users_list,
@@ -233,17 +211,13 @@ async def who_command_handler(
 @user_commands_router.message(Command("help"))
 async def help_command_handler(
     message: Message,
-    _: callable, # Translator function
-    app: "Application" # Get app instance
+    _: callable,
+    app: "Application"
 ):
-    if not message.from_user: # Should not happen for user commands
+    if not message.from_user:
         return
 
-    is_telegram_admin = message.from_user.id in app.admin_ids_cache # Use app's cache
-
-    # build_help_message might need adaptation if it relies on global state for TT admin check
-    # For now, is_teamtalk_admin is passed as False. If needed, it could check tt_connection.instance.is_admin()
-    # This would require tt_connection to be passed here, and this command to have TT conn check middleware.
+    is_telegram_admin = message.from_user.id in app.admin_ids_cache
     help_text = build_help_message(_, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text, parse_mode="HTML")
 
@@ -252,13 +226,11 @@ async def help_command_handler(
 async def settings_command_handler(
     message: Message,
     _: callable,
-    app: "Application" # Added app for future use or consistency
+    app: "Application"
 ):
     if not message.from_user:
         return
 
-    # This command does not interact with TeamTalk, so tt_connection is not strictly needed here
-    # unless settings were to show server-specific info.
     await safe_delete_message(message, log_context_message="user settings command")
     settings_builder = await create_main_settings_keyboard(_)
     try:
@@ -274,13 +246,13 @@ async def settings_command_handler(
 async def menu_command_handler(
     message: Message,
     _: callable,
-    app: "Application" # Get app instance
+    app: "Application"
 ):
     if not message.from_user:
         return
 
     await safe_delete_message(message, log_context_message="user menu command")
-    is_admin = message.from_user.id in app.admin_ids_cache # Use app's cache
+    is_admin = message.from_user.id in app.admin_ids_cache
     menu_builder = await create_main_menu_keyboard(_, is_admin)
     try:
         await message.answer(

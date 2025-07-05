@@ -22,9 +22,8 @@ from bot.telegram_bot.keyboards import (
 from bot.models import UserSettings, BanList
 from bot.database import crud
 from bot.services import user_service
-# from bot.state import ADMIN_IDS_CACHE, USER_ACCOUNTS_CACHE # Will use app/tt_connection caches
 from bot.core.enums import SubscriberListAction, SubscriberAction, ManageTTAccountAction
-from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware # Corrected middleware
+from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware
 import pytalk
 from .list_utils import _get_paginated_subscribers_info
 from bot.telegram_bot.utils import format_telegram_user_display_name
@@ -42,20 +41,18 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddl
 async def _refresh_and_display_subscriber_list(
     query: CallbackQuery,
     session: AsyncSession,
-    bot: AiogramBot, # Use aliased Bot
+    bot: AiogramBot,
     return_page: int,
     _: callable,
-    app: "Application" # Pass app if needed by underlying functions like _get_paginated_subscribers_info
+    app: "Application"
 ):
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
         await query.answer(_("Error: Message context lost."), show_alert=True)
         return
 
-    # _get_paginated_subscribers_info now takes app if it needs app.subscribed_users_cache
-    # For now, it uses crud.get_all_subscribers_ids(session)
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-        session, bot, return_page # Pass app if _get_paginated_subscribers_info is changed
+        session, bot, return_page
     )
     if total_pages == 0 or not page_subscribers_info:
         await query.message.edit_text(_("No subscribers found."))
@@ -77,7 +74,7 @@ async def handle_view_subscriber(
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
     _: callable,
-    app: "Application" # Inject app
+    app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
         await query.answer(_("You are not authorized for this action."), show_alert=True)
@@ -120,10 +117,10 @@ async def handle_subscriber_action(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
-    bot: AiogramBot, # This is app.tg_bot_event or app.tg_bot_message
-    tt_connection: TeamTalkConnection | None, # From middleware, checked by TeamTalkConnectionCheckMiddleware
+    bot: AiogramBot,
+    tt_connection: TeamTalkConnection | None,
     _: callable,
-    app: "Application" # Inject app
+    app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
         await query.answer(_("You are not authorized for this action."), show_alert=True)
@@ -138,7 +135,6 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        # user_service.delete_full_user_profile might need app if it updates app-level caches
         success = await user_service.delete_full_user_profile(session, target_telegram_id, app=app)
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
@@ -155,9 +151,9 @@ async def handle_subscriber_action(
         banned_tt = False
         if tt_username_to_ban:
             banned_tt = await crud.add_to_ban_list(session, teamtalk_username=tt_username_to_ban, reason=f"Banned by admin (linked to TG ID: {target_telegram_id})")
-            if tt_connection and tt_connection.instance : # tt_connection should be valid due to router middleware
+            if tt_connection and tt_connection.instance :
                 try:
-                    # Conceptual: Actual TT server ban would happen here using tt_connection.instance
+                    # Conceptual: Actual TT server ban would happen here.
                     logger.info(f"Conceptual TeamTalk server ban for {tt_username_to_ban} on {tt_connection.server_info.host} (not implemented in this step)")
                 except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt:
                     logger.error(f"Error during conceptual TeamTalk ban for {tt_username_to_ban} on {tt_connection.server_info.host}: {e_tt}", exc_info=True)
@@ -166,7 +162,7 @@ async def handle_subscriber_action(
             else:
                 logger.warning(f"Skipping conceptual TeamTalk ban for {tt_username_to_ban} as tt_connection or its instance is None/invalid.")
 
-        await user_service.delete_full_user_profile(session, target_telegram_id, app=app) # Pass app
+        await user_service.delete_full_user_profile(session, target_telegram_id, app=app)
 
         ban_messages = []
         if banned_tg: ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
@@ -201,9 +197,9 @@ async def handle_manage_tt_account(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     session: AsyncSession,
-    tt_connection: TeamTalkConnection | None, # From middleware
+    tt_connection: TeamTalkConnection | None,
     _: callable,
-    app: "Application" # Inject app
+    app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
         await query.answer(_("You are not authorized for this action."), show_alert=True)
@@ -229,7 +225,6 @@ async def handle_manage_tt_account(
             user_settings.not_on_online_confirmed = False
             await session.commit()
             await session.refresh(user_settings)
-            # Update global USER_SETTINGS_CACHE. If app-managed, use app.user_settings_cache
             app.user_settings_cache[user_settings.telegram_id] = user_settings
             await query.answer(_("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True)
         else:
@@ -243,7 +238,7 @@ async def handle_manage_tt_account(
         return
 
     elif action == ManageTTAccountAction.LINK_NEW:
-        if not tt_connection or not tt_connection.user_accounts_cache: # Checked by middleware, but defensive
+        if not tt_connection or not tt_connection.user_accounts_cache:
             logger.warning("USER_ACCOUNTS_CACHE is empty or tt_connection not available for LINK_NEW.")
             await query.answer(_("TeamTalk server accounts cache is not populated or connection error. Please try again later."), show_alert=True)
             return
@@ -254,7 +249,7 @@ async def handle_manage_tt_account(
             return
 
         link_keyboard = await create_linkable_tt_account_list_keyboard(
-            _, page_items=server_accounts, current_page_idx=0, total_pages=1, # Assuming single page for now
+            _, page_items=server_accounts, current_page_idx=0, total_pages=1,
             target_telegram_id=target_telegram_id, subscriber_list_page=return_page
         )
         await query.message.edit_text(
@@ -276,7 +271,7 @@ async def handle_link_tt_account_chosen(
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,
     _: callable,
-    app: "Application" # Inject app
+    app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
         await query.answer(_("You are not authorized for this action."), show_alert=True)
@@ -314,7 +309,6 @@ async def handle_link_tt_account_chosen(
     user_settings.not_on_online_confirmed = False
     await session.commit()
     await session.refresh(user_settings)
-    # Update global USER_SETTINGS_CACHE. If app-managed, use app.user_settings_cache
     app.user_settings_cache[user_settings.telegram_id] = user_settings
 
 

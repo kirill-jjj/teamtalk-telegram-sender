@@ -7,8 +7,6 @@ from sqlmodel import select, SQLModel
 
 from bot.core.enums import DeeplinkAction
 from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList
-# from bot.config import app_config # Removed global import
-# from bot.state import SUBSCRIBED_USERS_CACHE, ADMIN_IDS_CACHE # Removed global imports
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 
 logger = logging.getLogger(__name__)
@@ -76,28 +74,16 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]
         return []
 
 async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
-    added = await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
-    # Cache update responsibility moved to Application/service layer
-    # if added:
-    #     logger.info(f"User {telegram_id} added to DB (cache update handled elsewhere).")
-    return added
+    return await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
 
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, SubscribedUser)
 
 async def add_admin(session: AsyncSession, telegram_id: int) -> bool:
-    added = await _add_entity_if_not_exists(session, Admin, telegram_id)
-    # Cache update responsibility moved to Application/service layer
-    # if added:
-    #     logger.info(f"Admin {telegram_id} added to DB (cache update handled elsewhere).")
-    return added
+    return await _add_entity_if_not_exists(session, Admin, telegram_id)
 
 async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
-    removed = await _remove_entity(session, Admin, telegram_id)
-    # Cache update responsibility moved to Application/service layer
-    # if removed:
-    #     logger.info(f"Admin {telegram_id} removed from DB (cache update handled elsewhere).")
-    return removed
+    return await _remove_entity(session, Admin, telegram_id)
 
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, Admin)
@@ -105,12 +91,12 @@ async def get_all_admins_ids(session: AsyncSession) -> list[int]:
 async def create_deeplink(
     session: AsyncSession,
     action: DeeplinkAction,
-    deeplink_ttl_seconds: int, # Added parameter
+    deeplink_ttl_seconds: int,
     payload: str | None = None,
     expected_telegram_id: int | None = None
-) -> str | None: # Return type can be None on failure
+) -> str | None:
     token_str = secrets.token_urlsafe(DEEPLINK_TOKEN_LENGTH_BYTES)
-    expiry_time = datetime.utcnow() + timedelta(seconds=deeplink_ttl_seconds) # Use passed TTL
+    expiry_time = datetime.utcnow() + timedelta(seconds=deeplink_ttl_seconds)
     deeplink_obj = Deeplink(
         token=token_str,
         action=action,
@@ -122,21 +108,17 @@ async def create_deeplink(
         logger.debug(f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}")
         return token_str
     else:
-        # db_add_generic already logs the SQLAlchemyError.
-        # Returning None indicates failure to the caller.
-        logger.error(f"Failed to save deeplink to DB for action {action} (token generation was successful but DB add failed).")
+        logger.error(f"Failed to save deeplink to DB for action {action}.")
         return None
 
 
 async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
-    # session.get is simpler for PK lookups with SQLModel
     deeplink_obj = await session.get(Deeplink, token)
     if deeplink_obj:
         if deeplink_obj.expiry_time < datetime.utcnow():
             logger.warning(f"Deeplink {token} expired. Deleting.")
-            # db_remove_generic expects the model instance itself
             await db_remove_generic(session, deeplink_obj)
-            return None # Return None as it's expired and deleted
+            return None
     return deeplink_obj
 
 async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
@@ -157,7 +139,6 @@ async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> 
     user_settings_deleted = False
     subscribed_user_deleted = False
 
-    # UserSettings also cascades to MutedUser, so no need to explicitly delete MutedUser here
     user_settings_record = await session.get(UserSettings, telegram_id)
     if user_settings_record:
         await session.delete(user_settings_record)
@@ -170,7 +151,6 @@ async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> 
         subscribed_user_deleted = True
         logger.debug(f"Marked SubscribedUser for deletion for user {telegram_id}.")
 
-    # The caller (service layer) will be responsible for session.commit()
     return user_settings_deleted, subscribed_user_deleted
 
 
@@ -186,15 +166,10 @@ async def add_to_ban_list(
         logger.error("Attempted to add to ban list without telegram_id or teamtalk_username.")
         return False
 
-    # Check if a similar ban already exists to avoid duplicates if desired,
-    # or allow multiple ban entries if that's the logic (e.g. different reasons/times)
-    # For now, let's assume we add a new entry regardless.
-
     ban_entry = BanList(
         telegram_id=telegram_id,
         teamtalk_username=teamtalk_username,
-        ban_reason=reason,
-        # banned_at is default_factory
+        ban_reason=reason
     )
     added = await db_add_generic(session, ban_entry)
     if added:
