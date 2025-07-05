@@ -36,9 +36,13 @@ def process_revision_directives(context, revision, directives):
 
 def get_db_url():
     # Получаем путь к конфигу из аргументов, переданных через `alembic -x`
+    config_file_source = "argument -x config_file"
     config_file = context.config.get_main_option('config_file')
     if not config_file:
         config_file = ".env" # Значение по умолчанию, если ничего не передано
+        config_file_source = "default .env"
+
+    print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
     # Чтобы импортировать Settings, нам нужно временно добавить текущую директорию в path
     import sys
@@ -49,7 +53,9 @@ def get_db_url():
     app_config = Settings(_env_file=config_file)
 
     db_path = os.path.abspath(app_config.DATABASE_FILE)
-    return f"sqlite+aiosqlite:///{db_path}"
+    db_url = f"sqlite+aiosqlite:///{db_path}"
+    print(f"INFO  [alembic.env] Using database URL: {db_url} (from DATABASE_FILE='{app_config.DATABASE_FILE}')")
+    return db_url
 
 
 def run_migrations_offline() -> None:
