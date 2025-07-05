@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import pytalk
-from typing import Callable
+from typing import Callable, Optional
 from aiogram import Bot
 from aiogram import Bot as AiogramBot # ДОБАВЬ ЭТУ СТРОКУ
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
