@@ -53,7 +53,7 @@ async def _execute_deeplink_action(
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
     token: str,
-    app: "Application" # ADD THIS ARGUMENT
+    app: "Application"
 ) -> str:
     """
     Executes the action specified by the deeplink object and returns a reply text.
@@ -71,10 +71,8 @@ async def _execute_deeplink_action(
 
     try:
         if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-            # Pass app to _handle_unsubscribe_deeplink
             return await handler_func(session, telegram_id, _, app=app)
         else:
-            # Pass user_settings and app to other handlers (e.g. _handle_subscribe_deeplink)
             return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings, app=app)
 
     except (SQLAlchemyError, ValueError) as e_handler:
@@ -86,10 +84,8 @@ async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    app: "Application" # ADD THIS ARGUMENT
-    # user_settings is not needed for unsubscribe action as per current logic
+    app: "Application"
 ) -> str:
-    # user_service.delete_full_user_profile already takes app for cache updates
     if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, app=app):
         logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink (using user_service).")
         return _("You have successfully unsubscribed from notifications.")
@@ -104,7 +100,7 @@ async def _handle_subscribe_deeplink(
     _: callable,
     payload: str | None, # Expecting TeamTalk username as payload
     user_settings: UserSettings,
-    app: "Application" # ADD THIS ARGUMENT
+    app: "Application"
 ) -> str:
     # --- Ban Check ---
     if await crud.is_telegram_id_banned(session, telegram_id):
@@ -163,7 +159,7 @@ async def handle_deeplink_payload(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    app: "Application" # ADD THIS ARGUMENT
+    app: "Application"
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
@@ -182,10 +178,10 @@ async def handle_deeplink_payload(
         session,
         message_from_user_id,
         _,
-        deeplink_obj, # This is DeeplinkModel instance
-        user_settings, # This is UserSettings SQLModel instance
+        deeplink_obj,
+        user_settings,
         token,
-        app=app # PASS app HERE
+        app=app
     )
 
     await message.reply(reply_text)

@@ -4,11 +4,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import TYPE_CHECKING
 
 from bot.database import crud
-# from bot.core.user_settings import remove_user_settings_from_cache # Will use app.remove_user_settings_from_cache
-# from bot.state import SUBSCRIBED_USERS_CACHE # Will use app.subscribed_users_cache
 
 if TYPE_CHECKING:
-    from sender import Application # For type hinting app instance
+    from sender import Application
 
 logger = logging.getLogger(__name__)
 
