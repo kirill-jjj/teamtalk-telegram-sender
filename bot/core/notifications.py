@@ -172,8 +172,7 @@ async def send_join_leave_notification_logic(
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code
         ),
-        user_settings_cache=user_settings_cache,
-        session_factory=session_factory,
-        # online_tt_usernames=online_usernames_for_noon_check # Pass this if send_telegram_messages_to_list needs it
-        # For now, NOON logic is handled above, so send_telegram_messages_to_list doesn't need this set.
+        user_settings_cache=user_settings_cache, # This is app.user_settings_cache passed in
+        app=app_config_instance, # app_config_instance is the 'app' Application object
+        online_users_cache_for_instance=online_users_cache_for_instance
     )

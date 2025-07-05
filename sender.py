@@ -235,7 +235,8 @@ class Application:
         connection = TeamTalkConnection(
             server_info=pytalk_server_info,
             pytalk_bot=self.tt_bot,
-            session_factory=self.session_factory
+            session_factory=self.session_factory,
+            app_config=self.app_config # Pass app_config
         )
         self.connections[server_key] = connection
 
@@ -668,7 +669,16 @@ class Application:
             self.logger.info(f"Ensured TG_ADMIN_CHAT_ID {tg_admin_chat_id} is admin.")
 
         # Set Telegram commands
-        await set_telegram_commands(self.tg_bot_event, admin_ids=list(self.admin_ids_cache), default_language_code=self.app_config.DEFAULT_LANG)
+        # await set_telegram_commands(self.tg_bot_event, admin_ids=list(self.admin_ids_cache), default_language_code=self.app_config.DEFAULT_LANG)
+        # Pass app and session to set_telegram_commands
+        async with self.session_factory() as session: # Create a session for set_telegram_commands
+            await set_telegram_commands(
+                bot=self.tg_bot_event,
+                admin_ids=list(self.admin_ids_cache),
+                default_language_code=self.app_config.DEFAULT_LANG,
+                app=self, # Pass self (the Application instance)
+                session=session # Pass the created session
+            )
         self.logger.info("Telegram bot commands set.")
 
         # The on_pytalk_ready event will handle connecting to TeamTalk servers.
