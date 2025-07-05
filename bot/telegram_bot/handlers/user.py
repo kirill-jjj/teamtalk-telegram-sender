@@ -184,7 +184,7 @@ async def who_command_handler(
         all_users_list = await get_online_teamtalk_users(tt_instance)
     except Exception as e:
         logger.error(f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}", exc_info=True)
-        await message.reply(translator.gettext("An internal error occurred while retrieving the user list."))
+        await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
     is_caller_admin = message.from_user.id in app.admin_ids_cache
@@ -192,7 +192,7 @@ async def who_command_handler(
 
     if bot_user_id is None:
         logger.error(f"Could not get bot's own user ID from TeamTalk instance on server {server_host_for_log_and_display}.")
-        await message.reply(translator.gettext("An error occurred while processing your request."))
+        await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
     grouped_data, total_users_to_display = await asyncio.to_thread(

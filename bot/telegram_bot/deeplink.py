@@ -77,7 +77,7 @@ async def _execute_deeplink_action(
 
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.error(f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True)
-        return _("An error occurred processing your request.")
+        return _("An error occurred. Please try again later.")
 
 
 async def _handle_unsubscribe_deeplink(
@@ -163,7 +163,7 @@ async def handle_deeplink_payload(
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
-        await message.reply(_("An error occurred."))
+        await message.reply(_("An error occurred. Please try again later."))
         return
 
     message_from_user_id = message.from_user.id

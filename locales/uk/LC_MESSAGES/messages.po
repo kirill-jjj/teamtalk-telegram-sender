@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-07-05 14:13+0000\n"
+"POT-Creation-Date: 2025-07-05 14:27+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -146,9 +146,30 @@ msgstr[0] "Успішно видалено {count} адміністратора.
 msgstr[1] "Успішно видалено {count} адміністраторів."
 msgstr[2] "Успішно видалено {count} адміністраторів."
 
-#: bot/teamtalk_bot/commands.py:205
-msgid "Error communicating with Telegram. Please try again later."
-msgstr "Помилка зв'язку з Telegram. Будь ласка, спробуйте пізніше."
+#: bot/teamtalk_bot/commands.py:205 bot/teamtalk_bot/commands.py:209
+#: bot/teamtalk_bot/commands.py:213 bot/telegram_bot/deeplink.py:80
+#: bot/telegram_bot/deeplink.py:166 bot/telegram_bot/handlers/admin.py:43
+#: bot/telegram_bot/handlers/callback_handlers/_helpers.py:54
+#: bot/telegram_bot/handlers/callback_handlers/language.py:67
+#: bot/telegram_bot/handlers/callback_handlers/language.py:124
+#: bot/telegram_bot/handlers/callback_handlers/language.py:144
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:87
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:114
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:161
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:255
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:272
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:289
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:459
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:468
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:51
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:84
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:134
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:216
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:288
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:64
+#: bot/telegram_bot/handlers/user.py:187 bot/telegram_bot/handlers/user.py:195
+msgid "An error occurred. Please try again later."
+msgstr "Сталася помилка. Будь ласка, спробуйте пізніше."
 
 #: bot/teamtalk_bot/commands.py:229
 #, python-brace-format
@@ -200,9 +221,9 @@ msgstr ""
 msgid "'{telegram_id_str}' is not a valid numeric Telegram ID."
 msgstr "'{telegram_id_str}' не є дійсним числовим ID Telegram."
 
-#: bot/teamtalk_bot/commands.py:270
-msgid "Errors:"
-msgstr "Помилки:"
+#: bot/teamtalk_bot/commands.py:270 bot/teamtalk_bot/commands.py:293
+msgid "Action Results:"
+msgstr ""
 
 #: bot/teamtalk_bot/commands.py:290
 msgid ""
@@ -216,10 +237,6 @@ msgstr ""
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found."
 msgstr "Адміністратора з ID {telegram_id} не знайдено."
-
-#: bot/teamtalk_bot/commands.py:293
-msgid "Info/Errors:"
-msgstr "Інформація/Помилки:"
 
 #: bot/teamtalk_bot/commands.py:323
 msgid ""
@@ -293,10 +310,6 @@ msgstr ""
 msgid "Invalid deeplink action."
 msgstr "Недійсна дія deeplink."
 
-#: bot/telegram_bot/deeplink.py:80
-msgid "An error occurred processing your request."
-msgstr "Сталася помилка під час обробки вашого запиту."
-
 #: bot/telegram_bot/deeplink.py:91
 msgid "You have successfully unsubscribed from notifications."
 msgstr "Ви успішно відписалися від сповіщень."
@@ -327,10 +340,6 @@ msgstr ""
 #: bot/telegram_bot/deeplink.py:137
 msgid "You have successfully subscribed to notifications."
 msgstr "Ви успішно підписалися на сповіщення."
-
-#: bot/telegram_bot/deeplink.py:166
-msgid "An error occurred."
-msgstr "Сталася помилка."
 
 #: bot/telegram_bot/keyboards.py:70
 msgid "Language"
@@ -483,23 +492,9 @@ msgstr "⬅️ Назад до дій"
 msgid "⬅️ Back to Manage Account"
 msgstr "⬅️ Назад до керування акаунтом"
 
-# | msgid "An error occurred processing your request."
-#: bot/telegram_bot/middlewares.py:80
-#, fuzzy
-msgid "An error occurred while loading your settings."
-msgstr "Сталася помилка під час обробки вашого запиту."
-
-# | msgid "An error occurred while loading the list. Please try again later."
-#: bot/telegram_bot/middlewares.py:93
-#, fuzzy
-msgid "A database error occurred while loading your settings details."
-msgstr ""
-"Сталася помилка під час завантаження списку. Будь ласка, спробуйте "
-"пізніше."
-
 # | msgid "TeamTalk server accounts cache is not populated. Please try again
 # | later."
-#: bot/telegram_bot/middlewares.py:222
+#: bot/telegram_bot/middlewares.py:225
 #, fuzzy
 msgid "TeamTalk service is currently unavailable. Please try again later."
 msgstr ""
@@ -509,7 +504,7 @@ msgstr ""
 # | msgid "TeamTalk server accounts cache is not populated. Please try again
 # | later."
 # | msgid "TeamTalk bot is not connected. Please try again later."
-#: bot/telegram_bot/middlewares.py:231
+#: bot/telegram_bot/middlewares.py:234
 #, fuzzy
 msgid ""
 "TeamTalk bot is not connected or not fully initialized. Please try again "
@@ -529,12 +524,6 @@ msgid "TeamTalk connection is not available. Please try again later."
 msgstr ""
 "Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, "
 "спробуйте пізніше."
-
-# | msgid "An error occurred processing your request."
-#: bot/telegram_bot/handlers/admin.py:43
-#, fuzzy
-msgid "An error occurred determining your TeamTalk ID."
-msgstr "Сталася помилка під час обробки вашого запиту."
 
 #: bot/telegram_bot/handlers/admin.py:49
 #, python-brace-format
@@ -618,16 +607,6 @@ msgstr "На сервері зараз {user_count} {users_word}:\n"
 msgid " and "
 msgstr " та "
 
-#: bot/telegram_bot/handlers/user.py:187
-msgid "An internal error occurred while retrieving the user list."
-msgstr "Сталася внутрішня помилка під час отримання списку користувачів."
-
-# | msgid "An error occurred processing your request."
-#: bot/telegram_bot/handlers/user.py:195
-#, fuzzy
-msgid "An error occurred while processing your request."
-msgstr "Сталася помилка під час обробки вашого запиту."
-
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:22
 #: bot/telegram_bot/handlers/user.py:240
 msgid "Settings"
@@ -640,26 +619,6 @@ msgstr "Головне меню:"
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:30
 msgid "Error: Callback query is missing essential data."
 msgstr "Помилка: У запиті зворотного виклику відсутні необхідні дані."
-
-#: bot/telegram_bot/handlers/callback_handlers/_helpers.py:54
-#: bot/telegram_bot/handlers/callback_handlers/language.py:67
-#: bot/telegram_bot/handlers/callback_handlers/language.py:124
-#: bot/telegram_bot/handlers/callback_handlers/language.py:144
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:87
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:114
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:161
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:255
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:272
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:289
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:459
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:468
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:51
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:84
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:134
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:216
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:288
-msgid "An error occurred. Please try again later."
-msgstr "Сталася помилка. Будь ласка, спробуйте пізніше."
 
 # | msgid "User {user_nickname} kicked from server."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:43
@@ -675,7 +634,6 @@ msgstr "Користувача {user_nickname} забанено та видал�
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:51
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:197
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:64
 msgid "Unknown action."
 msgstr "Невідома дія."
 
@@ -1145,3 +1103,39 @@ msgstr "Налаштування підписки оновлено на: {settin
 
 #~ msgid "Error: Message context lost."
 #~ msgstr "Помилка: Втрачено контекст повідомлення."
+
+#~ msgid "Error communicating with Telegram. Please try again later."
+#~ msgstr "Помилка зв'язку з Telegram. Будь ласка, спробуйте пізніше."
+
+#~ msgid "Errors:"
+#~ msgstr "Помилки:"
+
+#~ msgid "Info/Errors:"
+#~ msgstr "Інформація/Помилки:"
+
+#~ msgid "An error occurred processing your request."
+#~ msgstr "Сталася помилка під час обробки вашого запиту."
+
+#~ msgid "An error occurred."
+#~ msgstr "Сталася помилка."
+
+# | msgid "An error occurred processing your request."
+#~ msgid "An error occurred while loading your settings."
+#~ msgstr "Сталася помилка під час обробки вашого запиту."
+
+# | msgid "An error occurred while loading the list. Please try again later."
+#~ msgid "A database error occurred while loading your settings details."
+#~ msgstr ""
+#~ "Сталася помилка під час завантаження "
+#~ "списку. Будь ласка, спробуйте пізніше."
+
+# | msgid "An error occurred processing your request."
+#~ msgid "An error occurred determining your TeamTalk ID."
+#~ msgstr "Сталася помилка під час обробки вашого запиту."
+
+#~ msgid "An internal error occurred while retrieving the user list."
+#~ msgstr "Сталася внутрішня помилка під час отримання списку користувачів."
+
+# | msgid "An error occurred processing your request."
+#~ msgid "An error occurred while processing your request."
+#~ msgstr "Сталася помилка під час обробки вашого запиту."
