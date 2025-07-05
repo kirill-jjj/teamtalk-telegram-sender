@@ -3,6 +3,7 @@ import asyncio
 import pytalk
 from typing import Callable
 from aiogram import Bot
+from aiogram import Bot as AiogramBot # ДОБАВЬ ЭТУ СТРОКУ
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
