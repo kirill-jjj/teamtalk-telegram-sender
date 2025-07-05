@@ -32,7 +32,7 @@ async def _show_user_buttons(
 ):
     if not tt_connection or not tt_connection.instance:
         logger.error("tt_connection or its instance is None in _show_user_buttons.")
-        await message.reply(_("TeamTalk connection is not available."))
+        await message.reply(_("TeamTalk connection is not available. Please try again later."))
         return
 
     tt_instance = tt_connection.instance
@@ -69,7 +69,7 @@ async def kick_command_handler(
     tt_connection: TeamTalkConnection | None
 ):
     if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to use this command."))
+        await message.reply(_("You are not authorized to perform this action."))
         return
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
@@ -82,7 +82,7 @@ async def ban_command_handler(
     tt_connection: TeamTalkConnection | None
 ):
     if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to use this command."))
+        await message.reply(_("You are not authorized to perform this action."))
         return
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
@@ -96,6 +96,6 @@ async def subscribers_command_handler(
     app: "Application"
 ):
     if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to use this command."))
+        await message.reply(_("You are not authorized to perform this action."))
         return
     await _show_subscriber_list_page(message, session, bot, _, page=0)

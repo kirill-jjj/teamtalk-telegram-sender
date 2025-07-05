@@ -84,7 +84,7 @@ async def _display_paginated_list_ui(
     # Ensure callback_query.message is not None
     if not callback_query.message:
         logger.warning(f"Cannot display paginated list for '{header_text_key}', callback_query.message is None.")
-        await callback_query.answer(_("Error displaying list."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     keyboard_markup = await keyboard_factory(
@@ -111,7 +111,7 @@ async def _display_internal_user_list(
 ):
     if not session:
         logger.error("Session not provided to _display_internal_user_list")
-        await callback_query.answer(_("An error occurred. Please try again."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     try:
@@ -158,7 +158,7 @@ async def _display_all_server_accounts_list(
 ):
     if not callback_query.message:
         logger.warning("_display_all_server_accounts_list: callback_query.message is None.")
-        await callback_query.answer(_("Error displaying accounts."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     user_accounts_cache = tt_connection.user_accounts_cache
@@ -286,7 +286,7 @@ async def _refresh_mute_related_ui(
 
     if not callback_query.message:
         logger.warning("_refresh_mute_related_ui: callback_query.message is None. Cannot refresh UI.")
-        await callback_query.answer(_("Error refreshing UI."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     # >>>>> ADD THESE LINES HERE <<<<<
@@ -326,7 +326,10 @@ async def cq_show_manage_muted_menu(
     current_mode_text = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.") \
                         if user_settings.mute_list_mode == MuteListMode.blacklist \
                         else _("Current mode is Whitelist. You only receive notifications from users on the list.")
-    full_text = f"{_('Manage Mute List')}\n\n{current_mode_text}"
+
+    full_text = _("Manage Mute List\n\n{current_mode_description}").format(
+        current_mode_description=current_mode_text
+    )
 
     if not callback_query.message:
         logger.warning("cq_show_manage_muted_menu: callback_query.message is None.")
@@ -366,7 +369,10 @@ async def cq_set_mute_mode_action(
     new_current_mode_desc = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.") \
                             if new_mode == MuteListMode.blacklist \
                             else _("Current mode is Whitelist. You only receive notifications from users on the list.")
-    menu_text = f"{_('Manage Mute List')}\n\n{new_current_mode_desc}"
+
+    menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
+        current_mode_description=new_current_mode_desc
+    )
     updated_builder = await create_manage_muted_users_keyboard(_, managed_user_settings)
 
 
@@ -417,7 +423,7 @@ async def cq_show_all_accounts_list_action(
 ):
     await callback_query.answer()
     if not tt_connection:
-        await callback_query.answer(_("TeamTalk connection not available."), show_alert=True)
+        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
     await _display_all_server_accounts_list(callback_query, _, user_settings, tt_connection, 0)
@@ -433,7 +439,7 @@ async def cq_paginate_all_accounts_list_action(
 ):
     await callback_query.answer()
     if not tt_connection:
-        await callback_query.answer(_("TeamTalk connection not available."), show_alert=True)
+        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
     await _display_all_server_accounts_list(callback_query, _, user_settings, tt_connection, callback_data.page)
@@ -450,7 +456,7 @@ async def cq_toggle_specific_user_mute_action(
     app: "Application"
 ):
     if not tt_connection:
-         await callback_query.answer(_("TeamTalk connection error."), show_alert=True)
+         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
          return
 
     managed_user_settings = await session.merge(user_settings)
@@ -459,7 +465,7 @@ async def cq_toggle_specific_user_mute_action(
     )
 
     if not username_to_toggle:
-        await callback_query.answer(_("Could not identify user to toggle. Please try again."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     action_to_take, was_added_to_list = _plan_mute_toggle_action(username_to_toggle, managed_user_settings)

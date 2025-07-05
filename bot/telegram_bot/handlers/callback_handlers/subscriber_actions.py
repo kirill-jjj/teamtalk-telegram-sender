@@ -48,7 +48,7 @@ async def _refresh_and_display_subscriber_list(
 ):
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
-        await query.answer(_("Error: Message context lost."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
@@ -77,11 +77,11 @@ async def handle_view_subscriber(
     app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(_("You are not authorized for this action."), show_alert=True)
+        await query.answer(_("You are not authorized to perform this action."), show_alert=True)
         return
 
     if not query.message:
-        await query.answer(_("Error: Message context lost."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     keyboard = await create_subscriber_action_menu_keyboard(
@@ -103,9 +103,13 @@ async def handle_view_subscriber(
         except Exception as e:
             logger.error(f"Unexpected error fetching chat info for {user_to_view.telegram_id}: {e}", exc_info=True)
 
-    text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
     if user_to_view and user_to_view.teamtalk_username:
-        text += _("\nLinked TeamTalk account: {tt_username}").format(tt_username=user_to_view.teamtalk_username)
+        text = _("Actions for subscriber: {display_name}\nLinked TeamTalk account: {tt_username}").format(
+            display_name=display_name,
+            tt_username=user_to_view.teamtalk_username
+        )
+    else:
+        text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
 
     await query.message.edit_text(text, reply_markup=keyboard)
     await query.answer()
@@ -123,11 +127,11 @@ async def handle_subscriber_action(
     app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(_("You are not authorized for this action."), show_alert=True)
+        await query.answer(_("You are not authorized to perform this action."), show_alert=True)
         return
 
     if not query.message:
-        await query.answer(_("Error: Message context lost."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     action = callback_data.action
@@ -168,8 +172,11 @@ async def handle_subscriber_action(
         if banned_tg: ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
         if tt_username_to_ban and banned_tt: ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
 
-        alert_message = " ".join(ban_messages) if ban_messages else _("User already banned or error occurred.")
-        if ban_messages: alert_message += " " + _("Subscriber data also deleted.")
+        alert_message = " ".join(ban_messages)
+        if alert_message:
+            alert_message = _("{ban_report} Subscriber data also deleted.").format(ban_report=alert_message)
+        else:
+            alert_message = _("User already banned or error occurred.")
 
         await query.answer(alert_message, show_alert=True)
         await _refresh_and_display_subscriber_list(query, session, bot, return_page, _, app)
@@ -202,11 +209,11 @@ async def handle_manage_tt_account(
     app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(_("You are not authorized for this action."), show_alert=True)
+        await query.answer(_("You are not authorized to perform this action."), show_alert=True)
         return
 
     if not query.message:
-        await query.answer(_("Error: Message context lost."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     action = callback_data.action
@@ -274,11 +281,11 @@ async def handle_link_tt_account_chosen(
     app: "Application"
 ):
     if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(_("You are not authorized for this action."), show_alert=True)
+        await query.answer(_("You are not authorized to perform this action."), show_alert=True)
         return
 
     if not query.message:
-        await query.answer(_("Error: Message context lost."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     target_telegram_id = callback_data.target_telegram_id

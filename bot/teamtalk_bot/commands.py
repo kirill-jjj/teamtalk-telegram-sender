@@ -66,7 +66,7 @@ def is_tt_admin(func):
 
         if not admin_username or username != admin_username:
             logger.warning(f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}.")
-            tt_message.reply(_("You do not have permission to use this command."))
+            tt_message.reply(_("You are not authorized to perform this action."))
             return None
         return await func(tt_message, *args, **kwargs)
     return wrapper
