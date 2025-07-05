@@ -10,6 +10,7 @@ from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
 from bot.telegram_bot.callback_data import AdminActionCallback
 from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
+from html import escape
 
 # For type hinting app instance
 from typing import TYPE_CHECKING
@@ -34,7 +35,7 @@ async def _execute_tt_user_action(
     Returns a tuple of (success_boolean, message_string).
     """
     user_nickname = get_tt_user_display_name(user_to_act_on, _)
-    quoted_nickname = html.escape(user_nickname)
+    quoted_nickname = escape(user_nickname)
 
     try:
         if action == AdminAction.KICK:
