@@ -230,7 +230,8 @@ async def send_or_edit_paginated_list(
         )
 
     # If it's a CbQ and edit was successful (or not modified) and we haven't shown an alert
-    if hasattr(target, 'answer') and not answered_with_alert:
+    # ИЗМЕНИТЕ ЭТОТ БЛОК:
+    if isinstance(target, CallbackQuery) and not answered_with_alert:
         try:
             # This might fail if already answered by the "message not modified" block, which is fine.
             await target.answer() # type: ignore
