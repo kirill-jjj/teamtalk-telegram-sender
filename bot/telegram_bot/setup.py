@@ -14,7 +14,7 @@ from bot.telegram_bot.middlewares import (
     ApplicationMiddleware,
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware,
-    AdminCheckMiddleware  # Убедимся, что этот импорт тоже корректен
+    AdminCheckMiddleware
 )
 
 # Роутеры
