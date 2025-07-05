@@ -113,7 +113,7 @@ def _group_users_for_who_command(
             channels_display_data[user_display_channel_name] = []
 
         user_nickname = get_tt_user_display_name(user_obj, translator) # This helper is fine
-        channels_display_data[user_display_channel_name].append(html.quote(user_nickname))
+        channels_display_data[user_display_channel_name].append(html.escape(user_nickname))
         users_added_to_groups_count += 1
 
     result_groups = [

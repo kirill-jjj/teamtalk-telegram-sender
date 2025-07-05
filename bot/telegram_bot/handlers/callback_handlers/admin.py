@@ -34,7 +34,7 @@ async def _execute_tt_user_action(
     Returns a tuple of (success_boolean, message_string).
     """
     user_nickname = get_tt_user_display_name(user_to_act_on, _)
-    quoted_nickname = html.quote(user_nickname)
+    quoted_nickname = html.escape(user_nickname)
 
     try:
         if action == AdminAction.KICK:
