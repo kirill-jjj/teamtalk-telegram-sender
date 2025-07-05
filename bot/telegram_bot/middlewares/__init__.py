@@ -127,12 +127,22 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
                 logger.debug(f"SubscriptionCheckMiddleware: Allowing /start command with token for user {telegram_id}.")
                 return await handler(event, data)
 
+        # Log cache state specifically for callback queries before the check
+        if isinstance(event, CallbackQuery):
+            logger.info(f"[CACHE_DEBUG] SubscriptionCheckMiddleware (CallbackQuery) for user {telegram_id}:")
+            logger.info(f"[CACHE_DEBUG] Current app.subscribed_users_cache: {list(app.subscribed_users_cache)}") # Log a copy
+            is_in_cache = telegram_id in app.subscribed_users_cache
+            logger.info(f"[CACHE_DEBUG] Result of 'telegram_id in app.subscribed_users_cache': {is_in_cache}")
+
         if telegram_id not in app.subscribed_users_cache: # Use app's cache
-            logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id}.")
+            logger.info(f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id} (Event type: {type(event).__name__}).")
             # Consider sending a message here if desired behavior changes
+            # If it's a callback, Aiogram might just ignore it if middleware returns None,
+            # or the "insufficient permissions" might be a default from elsewhere if no handler is reached.
+            # If it's a message, it's just ignored.
             return
 
-        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding.")
+        logger.debug(f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. Proceeding (Event type: {type(event).__name__}).")
         return await handler(event, data)
 
 
