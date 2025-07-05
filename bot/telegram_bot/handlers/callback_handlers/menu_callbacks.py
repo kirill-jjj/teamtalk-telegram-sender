@@ -6,10 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 # Импортируем бизнес-логику напрямую, а не через хендлеры
-from bot.telegram_bot.handlers.admin import _show_user_buttons
-from bot.telegram_bot.handlers.callback_handlers.list_utils import _show_subscriber_list_page
-from bot.telegram_bot.handlers.user import who_command_handler, help_command_handler, settings_command_handler
-from bot.telegram_bot.handlers.callback_handlers._helpers import ensure_message_context
+from ..admin import _show_user_buttons
+from .list_utils import _show_subscriber_list_page
+from ..user import who_command_handler, help_command_handler, settings_command_handler
+from ._helpers import ensure_message_context
+from ...middlewares.admin_check import AdminCheckMiddleware
 
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.core.enums import AdminAction
@@ -75,7 +76,7 @@ async def menu_settings_handler(
 
 # --- Хендлеры администратора ---
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
+@menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"), middlewares=[AdminCheckMiddleware()])
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
@@ -88,7 +89,7 @@ async def menu_kick_handler(
     await query.answer()
 
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"))
+@menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"), middlewares=[AdminCheckMiddleware()])
 @ensure_message_context
 async def menu_ban_handler(
     query: CallbackQuery,
@@ -101,7 +102,7 @@ async def menu_ban_handler(
     await query.answer()
 
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"))
+@menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"), middlewares=[AdminCheckMiddleware()])
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,

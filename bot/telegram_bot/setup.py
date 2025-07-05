@@ -23,7 +23,6 @@ from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 # --- ИСПРАВЛЕННЫЙ ИМПОРТ ---
-from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router
 # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
 
@@ -54,16 +53,16 @@ def setup_telegram_dispatcher(app: "Application"):
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
     # --- ИСПРАВЛЕНИЕ ЗДЕСЬ, чтобы защитить кнопки админа в меню ---
-    menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
+    # menu_callback_router.callback_query.middleware(AdminCheckMiddleware()) # Removed: Handled by main callback_router or within menu_callbacks itself
     # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 
     # Подключение роутеров
     app.dp.include_router(user_commands_router)
     app.dp.include_router(admin_router)
-    app.dp.include_router(callback_router)
+    app.dp.include_router(callback_router) # menu_callback_router is now included here
     # --- ИСПРАВЛЕННЫЙ РОУТЕР ---
-    app.dp.include_router(menu_callback_router)
+    # app.dp.include_router(menu_callback_router) # Removed: Handled by main callback_router
     # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
     app.dp.include_router(subscriber_actions_router)
     app.dp.include_router(catch_all_router)
