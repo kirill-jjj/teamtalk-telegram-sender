@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import pytalk
+from pytalk.user import User as TeamTalkUser # ДОБАВЬ ЭТУ СТРОКУ
 from typing import Callable, Optional
 from aiogram import Bot
 from aiogram import Bot as AiogramBot # ДОБАВЬ ЭТУ СТРОКУ
