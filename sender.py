@@ -397,7 +397,16 @@ class Application:
             # This is another user joining a channel
             # The send_join_leave_notification_logic needs to be called with the correct connection context
             await send_join_leave_notification_logic(
-                NOTIFICATION_EVENT_JOIN, user, connection.instance, connection.login_complete_time, self.tg_bot_event, self.session_factory, self.user_settings_cache
+                event_type=NOTIFICATION_EVENT_JOIN,
+                tt_user=user,
+                tt_instance=connection.instance,
+                login_complete_time=connection.login_complete_time,
+                bot=self.tg_bot_event,
+                session_factory=self.session_factory,
+                user_settings_cache=self.user_settings_cache,
+                subscribed_users_cache=self.subscribed_users_cache,
+                online_users_cache_for_instance=connection.online_users_cache,
+                app_config_instance=self.app_config
             )
 
     async def on_pytalk_my_connection_lost(self, server: PytalkServer):
@@ -539,7 +548,11 @@ class Application:
                 await handle_tt_unknown_command(message, _, connection=connection) # Pass connection
             else:
                 # forward_tt_message_to_telegram_admin needs tg_bot and admin_chat_id from app_config
-                await forward_tt_message_to_telegram_admin(message, self.tg_bot_event, self.app_config, connection.server_info.host)
+                await forward_tt_message_to_telegram_admin(
+                    message=message,
+                    app=self, # Pass the Application instance (self)
+                    server_host_for_display=connection.server_info.host
+                )
 
 
     async def on_pytalk_user_login(self, user: PytalkUser):
@@ -550,7 +563,7 @@ class Application:
         # Notification logic
         await send_join_leave_notification_logic(
             event_type=NOTIFICATION_EVENT_JOIN,
-            user=user,
+            tt_user=user, # Corrected argument name from 'user' to 'tt_user'
             tt_instance=connection.instance,
             login_complete_time=connection.login_complete_time,
             bot=self.tg_bot_event,
@@ -569,7 +582,7 @@ class Application:
         # Notification logic
         await send_join_leave_notification_logic(
             event_type=NOTIFICATION_EVENT_LEAVE,
-            user=user,
+            tt_user=user, # Corrected argument name from 'user' to 'tt_user'
             tt_instance=connection.instance,
             login_complete_time=connection.login_complete_time,
             bot=self.tg_bot_event,
