@@ -29,7 +29,7 @@ async def cq_show_subscriptions_menu(
     await callback_query.answer()
 
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_builder = create_subscription_settings_keyboard(_, current_notification_setting)
+    subscription_settings_builder = await create_subscription_settings_keyboard(_, current_notification_setting)
 
     await safe_edit_text(
         message_to_edit=callback_query.message,
