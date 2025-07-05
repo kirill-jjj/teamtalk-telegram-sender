@@ -1,7 +1,6 @@
 from typing import Any, Optional, Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 GenderType = Literal["male", "female", "neutral"]
 
@@ -32,7 +31,7 @@ class Settings(BaseSettings):
 
     GLOBAL_IGNORE_USERNAMES: Optional[str] = None
     DATABASE_FILE: str = "bot_data.db"
-    DEFAULT_LANG: str = DEFAULT_LANGUAGE_CODE
+    DEFAULT_LANG: str
     GENDER: GenderType = "neutral"
 
     DEEPLINK_TTL_SECONDS: int = 300  # Lifetime of deeplinks in seconds (e.g., for /sub)
