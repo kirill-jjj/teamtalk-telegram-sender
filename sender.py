@@ -1,5 +1,4 @@
 import asyncio
-import os
 import argparse
 import traceback # For detailed error reporting before logger is set up
 import logging # Added for Application class
@@ -332,14 +331,13 @@ def main_cli():
         help="Path to the configuration file (e.g., .env, prod.env). Defaults to '.env'",
     )
     args, _ = parser.parse_known_args()
-    os.environ["APP_CONFIG_FILE_PATH"] = args.config
 
     # ИМПОРТИРУЕМ НЕ ОБЪЕКТ, А КЛАСС
     from bot.config import Settings
 
     try:
-        # СОЗДАЕМ ОБЪЕКТ НАСТРОЕК ЗДЕСЬ, ПОСЛЕ УСТАНОВКИ ENV VAR
-        app_config_instance = Settings()
+        # СОЗДАЕМ ОБЪЕКТ НАСТРОЕК ЗДЕСЬ, ПЕРЕДАВАЯ ПУТЬ К ФАЙЛУ НАПРЯМУЮ
+        app_config_instance = Settings(_env_file=args.config)
 
         try:
             import uvloop
