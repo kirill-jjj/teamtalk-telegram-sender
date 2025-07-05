@@ -20,7 +20,6 @@ from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 # Direct imports for routers
 from bot.telegram_bot.handlers.user import user_commands_router
 from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callback_handlers.settings import settings_router
 from bot.telegram_bot.handlers.callback_handlers.notifications import notifications_router
 from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
 from bot.telegram_bot.handlers.callback_handlers.subscriber_list import subscriber_list_router
@@ -66,7 +65,6 @@ def setup_telegram_dispatcher(app: "Application"):
     app.dp.include_router(error_handler_router)
     app.dp.include_router(user_commands_router)
     app.dp.include_router(admin_router)
-    app.dp.include_router(settings_router)
     app.dp.include_router(notifications_router)
     app.dp.include_router(admin_actions_router)
     app.dp.include_router(subscriber_list_router)
