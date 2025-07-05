@@ -53,14 +53,6 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware
 )
-from bot.telegram_bot.handlers import (
-    user_commands_router,
-    admin_router,
-    callback_router,
-    catch_all_router
-)
-from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router
-from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
 
 # TeamTalk specific components to be managed by Application
 from bot.teamtalk_bot.connection import TeamTalkConnection
