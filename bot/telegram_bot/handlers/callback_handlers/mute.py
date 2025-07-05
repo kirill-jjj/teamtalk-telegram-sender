@@ -289,6 +289,19 @@ async def _refresh_mute_related_ui(
         await callback_query.answer(_("Error refreshing UI."), show_alert=True)
         return
 
+    # >>>>> ДОБАВЬТЕ ЭТИ СТРОКИ ЗДЕСЬ <<<<<
+    try:
+        # Принудительно обновляем user_settings и "жадно" загружаем связь muted_users_list
+        # перед тем, как передать объект дальше для отрисовки UI.
+        await session.refresh(user_settings, attribute_names=['muted_users_list'])
+        logger.debug(f"Explicitly refreshed muted_users_list for user {user_settings.telegram_id} before UI refresh.")
+    except Exception as e:
+        logger.error(f"Failed to refresh user_settings relations for {user_settings.telegram_id}: {e}", exc_info=True)
+        # Если не удалось обновить, лучше прервать, чтобы не вызвать креш дальше
+        await callback_query.answer(_("A database error occurred while refreshing the list."), show_alert=True)
+        return
+    # >>>>> КОНЕЦ ИЗМЕНЕНИЙ <<<<<
+
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_connection and tt_connection.instance and tt_connection.instance.connected and tt_connection.instance.logged_in:
             await _display_all_server_accounts_list(callback_query, _, user_settings, tt_connection, current_page_for_refresh)
