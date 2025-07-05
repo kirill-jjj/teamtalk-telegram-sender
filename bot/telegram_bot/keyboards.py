@@ -81,12 +81,12 @@ async def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     builder.adjust(1)
     return builder
 
-async def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuilder:
+async def create_language_selection_keyboard(_: callable, available_languages: list) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
-    from bot.core.languages import AVAILABLE_LANGUAGES_DATA # Import here to ensure it's populated
+    # from bot.core.languages import AVAILABLE_LANGUAGES_DATA # Removed import
 
     builder = InlineKeyboardBuilder()
-    if not AVAILABLE_LANGUAGES_DATA:
+    if not available_languages: # Use passed argument
         # Fallback or error message if no languages are discovered
         # This case should ideally be handled by ensuring default lang is always present
         builder.button(
@@ -94,7 +94,7 @@ async def create_language_selection_keyboard(_: callable) -> InlineKeyboardBuild
             callback_data="noop" # A dummy callback or specific error callback
         )
     else:
-        for lang_info in AVAILABLE_LANGUAGES_DATA:
+        for lang_info in available_languages: # Use passed argument
             builder.button(
                 text=lang_info["native_name"], # Already translated to its native form
                 callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_info["code"]).pack()

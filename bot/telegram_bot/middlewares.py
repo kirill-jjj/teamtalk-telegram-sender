@@ -7,7 +7,6 @@ from aiogram.exceptions import TelegramAPIError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.language import get_translator
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
@@ -97,7 +96,7 @@ class UserSettingsMiddleware(BaseMiddleware):
 
 
         data["user_settings"] = user_settings
-        translator = get_translator(user_settings.language_code)
+        translator = app.get_translator(user_settings.language_code)
         data["_"] = translator.gettext
         data["translator"] = translator
 
@@ -212,10 +211,11 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
+        app: "Application" = data["app"] # Ensure app is available
         translator = data.get("translator")
 
         if not translator:
-            translator = get_translator()
+            translator = app.get_translator()
         _ = translator.gettext
 
         if not tt_connection:

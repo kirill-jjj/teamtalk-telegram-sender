@@ -40,11 +40,8 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
     Эта функция использует default_language_code для глобальных команд и пытается
     локализовать команды администратора на основе их индивидуальных настроек языка, если таковые имеются.
     """
-    # Локальные импорты для избежания циклических зависимостей
-    from bot.language import get_translator
-
     # 1. Установка команд для всех приватных чатов с использованием языка по умолчанию
-    default_translator = get_translator(default_language_code)
+    default_translator = app.get_translator(default_language_code)
     user_commands_default_lang = get_user_commands(default_translator.gettext)
     default_scope = BotCommandScopeAllPrivateChats()
     try:
@@ -86,7 +83,7 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
                 admin_lang_code = app.app_config.DEFAULT_LANG
 
 
-            admin_translator = get_translator(admin_lang_code)
+            admin_translator = app.get_translator(admin_lang_code)
             admin_commands_localized = get_admin_commands(admin_translator.gettext)
             admin_scope = BotCommandScopeChat(chat_id=admin_id)
 

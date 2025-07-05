@@ -4,7 +4,6 @@ from typing import Callable, TYPE_CHECKING
 from aiogram.utils.formatting import Text, Bold
 
 import pytalk
-from bot.language import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
@@ -135,9 +134,9 @@ async def forward_tt_message_to_telegram_admin(
 
     admin_chat_id = app.app_config.TG_ADMIN_CHAT_ID
     admin_settings = app.user_settings_cache.get(admin_chat_id)
-    admin_language_code = admin_settings.language_code if admin_settings else DEFAULT_LANGUAGE
+    admin_language_code = admin_settings.language_code if admin_settings else app.app_config.DEFAULT_LANG
 
-    translator = get_translator(admin_language_code)
+    translator = app.get_translator(admin_language_code)
     _ = translator.gettext
 
     server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, app.app_config)
