@@ -1,32 +1,31 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sender import Application # Assuming sender.py is in the root and Application is defined there
+    from sender import Application
 
-# Import necessary Aiogram components, middlewares, and routers
-# These will be based on what's currently in Application.run()
+# Aiogram компоненты
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
+# Middlewares
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
     SubscriptionCheckMiddleware,
     ApplicationMiddleware,
     ActiveTeamTalkConnectionMiddleware,
-    TeamTalkConnectionCheckMiddleware
+    TeamTalkConnectionCheckMiddleware,
+    AdminCheckMiddleware  # Убедимся, что этот импорт тоже корректен
 )
-from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 
-# Direct imports for routers
+# Роутеры
 from bot.telegram_bot.handlers.user import user_commands_router
 from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callback_handlers.notifications import notifications_router
-from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
-from bot.telegram_bot.handlers.callback_handlers.subscriber_list import subscriber_list_router
+from bot.telegram_bot.handlers.callbacks import callback_router
+from bot.telegram_bot.handlers.unknown import catch_all_router
+# --- ИСПРАВЛЕННЫЙ ИМПОРТ ---
+from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router
+# --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
-from bot.telegram_bot.handlers.callback_handlers.main_menu import main_menu_router
-from bot.telegram_bot.handlers.callback_handlers.language_selection import language_router
-from bot.telegram_bot.handlers.error_handler import router as error_handler_router
 
 
 def setup_telegram_dispatcher(app: "Application"):
@@ -36,7 +35,7 @@ def setup_telegram_dispatcher(app: "Application"):
     """
     app.logger.info("Setting up Telegram dispatcher...")
 
-    # Register middlewares
+    # Регистрация Middlewares
     app.dp.update.outer_middleware.register(ApplicationMiddleware(app))
     app.dp.update.outer_middleware.register(DbSessionMiddleware(app.session_factory))
 
@@ -51,28 +50,25 @@ def setup_telegram_dispatcher(app: "Application"):
 
     app.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    app.dp.message.middleware(TeamTalkConnectionCheckMiddleware()) # This was present in my read version
-    app.dp.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # This was present in my read version
-
-    # Apply AdminCheckMiddleware to specific routers
+    # Middleware для проверки админа на конкретных роутерах
     admin_router.message.middleware(AdminCheckMiddleware())
-    admin_actions_router.callback_query.middleware(AdminCheckMiddleware())
-    subscriber_list_router.callback_query.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
-    main_menu_router.callback_query.middleware(AdminCheckMiddleware())
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ, чтобы защитить кнопки админа в меню ---
+    menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
+    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
-    # Include routers
-    app.dp.include_router(error_handler_router)
+
+    # Подключение роутеров
     app.dp.include_router(user_commands_router)
     app.dp.include_router(admin_router)
-    app.dp.include_router(notifications_router)
-    app.dp.include_router(admin_actions_router)
-    app.dp.include_router(subscriber_list_router)
+    app.dp.include_router(callback_router)
+    # --- ИСПРАВЛЕННЫЙ РОУТЕР ---
+    app.dp.include_router(menu_callback_router)
+    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
     app.dp.include_router(subscriber_actions_router)
-    app.dp.include_router(main_menu_router)
-    app.dp.include_router(language_router)
+    app.dp.include_router(catch_all_router)
 
-    # Register lifecycle and error handlers
+    # Регистрация хуков жизненного цикла и обработчика ошибок
     app.dp.startup.register(app._on_startup_logic)
     app.dp.shutdown.register(app._on_shutdown_logic)
     app.dp.errors.register(app._global_error_handler)
