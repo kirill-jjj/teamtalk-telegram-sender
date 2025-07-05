@@ -35,18 +35,17 @@ def process_revision_directives(context, revision, directives):
 
 
 def get_db_url():
-    # Log all attributes passed via -x
-    if hasattr(context.config, 'attributes') and context.config.attributes:
-        print(f"INFO  [alembic.env] Attributes passed via -x: {context.config.attributes}")
+    # Attempt to get config file from ALEMBIC_ENV_CONFIG_FILE environment variable
+    env_var_name = "ALEMBIC_ENV_CONFIG_FILE"
+    config_file = os.environ.get(env_var_name)
+    config_file_source = f"environment variable {env_var_name}"
+
+    if config_file:
+        print(f"INFO  [alembic.env] Found config file specified in environment variable {env_var_name}: '{config_file}'")
     else:
-        print(f"INFO  [alembic.env] No attributes found passed via -x.")
-
-    # Attempt to get 'config_file' from -x attributes
-    config_file_source = "context.config.attributes['config_file']"
-    config_file = context.config.attributes.get('config_file')
-
-    if not config_file:
-        config_file = ".env" # Значение по умолчанию, если ничего не передано
+        print(f"INFO  [alembic.env] Environment variable {env_var_name} not set.")
+        # Fallback to default if environment variable is not set
+        config_file = ".env"
         config_file_source = "default .env (fallback)"
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
