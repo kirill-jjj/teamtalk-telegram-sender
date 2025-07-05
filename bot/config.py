@@ -1,13 +1,7 @@
-import os
 from typing import Any, Optional, Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
-
-CONFIG_FILE_ENV_VAR = "APP_CONFIG_FILE_PATH"
-
-def get_env_file():
-    return os.getenv(CONFIG_FILE_ENV_VAR, ".env")
 
 GenderType = Literal["male", "female", "neutral"]
 
@@ -47,7 +41,7 @@ class Settings(BaseSettings):
     ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
 
     model_config = SettingsConfigDict(
-            env_file=get_env_file(),
+            env_file=".env",  # Default value if _env_file is not provided
             env_file_encoding='utf-8',
             extra='ignore'
         )
