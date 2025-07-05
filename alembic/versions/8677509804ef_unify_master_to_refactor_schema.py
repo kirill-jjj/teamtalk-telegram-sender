@@ -21,14 +21,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """
-    Эта функция обновляет схему базы данных из состояния ветки 'master'
-    до состояния ветки 'refactor', сохраняя все данные.
+    This function updates the database schema from the 'master' branch state
+    to the 'refactor' branch state, preserving all data.
     """
     print("Starting upgrade from 'master' schema to 'refactor' schema...")
 
-    # --- Изменение 1: Преобразование `muted_users` (строка) в отдельную таблицу `MutedUser` ---
+    # --- Change 1: Convert `muted_users` (string) to a separate `MutedUser` table ---
     print("Step 1/5: Converting muted_users string to a dedicated MutedUser table...")
-    # 1.1. Создаем новую таблицу `muted_users`
+    # 1.1. Create a new table `muted_users`
     muted_users_table = op.create_table('muted_users',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('muted_teamtalk_username', sa.String(), nullable=False),
@@ -39,7 +39,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_muted_users_muted_teamtalk_username'), 'muted_users', ['muted_teamtalk_username'], unique=False)
     print("  - Table 'muted_users' created.")
 
-    # 1.2. Миграция данных из старого столбца `muted_users` в новую таблицу
+    # 1.2. Migrate data from the old `muted_users` column to the new table
     conn = op.get_bind()
     results = conn.execute(sa.text("SELECT telegram_id, muted_users FROM user_settings")).fetchall()
     users_to_insert = []
@@ -56,13 +56,13 @@ def upgrade() -> None:
         op.bulk_insert(muted_users_table, users_to_insert)
         print(f"  - Migrated {len(users_to_insert)} muted user entries.")
 
-    # 1.3. Удаляем старый столбец `muted_users`, используя batch mode для SQLite
+    # 1.3. Drop the old `muted_users` column, using batch mode for SQLite
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.drop_column('muted_users')
     print("  - Dropped old 'muted_users' column from 'user_settings'.")
 
 
-    # --- Изменение 2: Замена `mute_all` (bool) на `mute_list_mode` (string) ---
+    # --- Change 2: Replace `mute_all` (bool) with `mute_list_mode` (string) ---
     print("Step 2/5: Replacing 'mute_all' boolean with 'mute_list_mode' string...")
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.add_column(sa.Column('mute_list_mode', sa.String(), nullable=False, server_default='blacklist'))
@@ -89,14 +89,14 @@ def upgrade() -> None:
     print("  - Dropped old 'mute_all' column.")
 
 
-    # --- Изменение 3: Переименование столбца `language` в `language_code` ---
+    # --- Change 3: Rename `language` column to `language_code` ---
     print("Step 3/5: Renaming 'language' column to 'language_code'...")
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.alter_column('language', new_column_name='language_code', existing_type=sa.String())
     print("  - Column renamed.")
 
 
-    # --- Изменение 4: Создание новой таблицы `BanList` ---
+    # --- Change 4: Create new `BanList` table ---
     print("Step 4/5: Creating 'ban_list' table...")
     op.create_table('ban_list',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -116,25 +116,25 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """
-    Эта функция откатывает изменения, возвращая схему к состоянию ветки 'master'.
-    Полезна для тестирования или в случае проблем.
+    This function rolls back the changes, returning the schema to the 'master' branch state.
+    Useful for testing or in case of problems.
     """
     print("Starting downgrade from 'refactor' schema to 'master' schema...")
 
-    # --- Откат 4: Удаление `BanList` ---
+    # --- Rollback 4: Drop `BanList` table ---
     print("Step 1/4: Dropping 'ban_list' table...")
     op.drop_index(op.f('ix_ban_list_teamtalk_username'), table_name='ban_list')
     op.drop_index(op.f('ix_ban_list_telegram_id'), table_name='ban_list')
     op.drop_table('ban_list')
     print("  - Table 'ban_list' dropped.")
 
-    # --- Откат 3: Переименование `language_code` обратно в `language` ---
+    # --- Rollback 3: Rename `language_code` back to `language` ---
     print("Step 2/4: Renaming 'language_code' back to 'language'...")
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.alter_column('language_code', new_column_name='language', existing_type=sa.String())
     print("  - Column renamed.")
 
-    # --- Откат 2: Возвращение `mute_all` ---
+    # --- Rollback 2: Revert `mute_list_mode` to `mute_all` ---
     print("Step 3/4: Reverting 'mute_list_mode' to 'mute_all'...")
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.add_column(sa.Column('mute_all', sa.BOOLEAN(), nullable=False, server_default=sa.false()))
@@ -160,14 +160,14 @@ def downgrade() -> None:
         batch_op.drop_column('mute_list_mode')
     print("  - Dropped 'mute_list_mode' column.")
 
-    # --- Откат 1: Возвращение `muted_users` (строка) ---
+    # --- Rollback 1: Revert MutedUser table to 'muted_users' string ---
     print("Step 4/4: Reverting MutedUser table to 'muted_users' string...")
     with op.batch_alter_table('user_settings', schema=None) as batch_op:
         batch_op.add_column(sa.Column('muted_users', sa.VARCHAR(), nullable=False, server_default=''))
     print("  - Added back 'muted_users' column.")
 
     conn = op.get_bind()
-    # GROUP_CONCAT — специфичная для SQLite функция, которая отлично подходит для этой задачи.
+    # GROUP_CONCAT is an SQLite-specific function that is well-suited for this task.
     query = sa.text("""
         UPDATE user_settings
         SET muted_users = (
