@@ -7,7 +7,6 @@ import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException
 from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
 
-# from bot.state import ADMIN_IDS_CACHE # Will use app.admin_ids_cache
 from bot.telegram_bot.callback_data import AdminActionCallback
 from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name

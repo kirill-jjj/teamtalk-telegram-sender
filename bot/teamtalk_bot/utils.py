@@ -1,17 +1,9 @@
 import logging
 import asyncio
-from typing import Callable, TYPE_CHECKING # Добавь TYPE_CHECKING для подсказки типа
+from typing import Callable, TYPE_CHECKING
 from aiogram.utils.formatting import Text, Bold
 
 import pytalk
-# УДАЛИ СЛЕДУЮЩУЮ СТРОКУ:
-# from bot.teamtalk_bot import bot_instance as tt_bot_module
-
-# УДАЛИ СЛЕДУЮЩИЕ СТРОКИ ИМПОРТА ГЛОБАЛЬНЫХ ЗАВИСИМОСТЕЙ (app_config, tg_bot_message, USER_SETTINGS_CACHE):
-# from bot.config import app_config
-# from bot.telegram_bot.bot_instances import tg_bot_message
-# from bot.core.user_settings import USER_SETTINGS_CACHE
-# from bot.core.utils import get_effective_server_name, get_tt_user_display_name # Оставь, но убедись, что они используют переданные параметры
 from bot.language import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
@@ -26,29 +18,17 @@ from pytalk import TeamTalkServerInfo
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
 
-# Добавь импорт Application для Type Hinting
 if TYPE_CHECKING:
     from sender import Application
-    from bot.teamtalk_bot.connection import TeamTalkConnection # Для подсказки типа connection
+    from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
 ttstr = sdk.ttstr
 
-# Глобальная переменная RECONNECT_IN_PROGRESS также должна быть удалена
-# и её логика перемещена в класс Application (если она нужна для предотвращения множественных реконнектов)
-# Или, если она служит для конкретного инстанса, в TeamTalkConnection.
-# Удаляем: RECONNECT_IN_PROGRESS = False
 
-
-async def shutdown_tt_instance(instance: TeamTalkInstance) -> None: # Добавь Type Hint для возвращаемого значения
+async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
     """Safely shuts down a single TeamTalk instance."""
-    # Эта функция сейчас не использует глобальных переменных, поэтому она может остаться как есть
-    # Но если RECONNECT_IN_PROGRESS выше удалена, то она не должна быть глобальной
-    # Эта функция вызывается из Application._on_shutdown_logic или Application._initiate_reconnect_for_connection
-    # И ей не нужен "app" или "connection", только "instance".
-    # Логика RECONNECT_IN_PROGRESS должна быть в Application._initiate_reconnect_for_connection
     try:
-        # Ensure server_info and host are available for logging, provide default if not
         host_info = "Unknown Host"
         if hasattr(instance, 'server_info') and instance.server_info and hasattr(instance.server_info, 'host'):
             host_info = ttstr(instance.server_info.host)
@@ -72,9 +52,6 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None: # Добав
             host_info_err = ttstr(instance.server_info.host)
         logger.error(f"Error during TT instance shutdown for {host_info_err}: {e}", exc_info=True)
 
-# Логика initiate_reconnect_task должна быть перемещена в метод класса Application
-# УДАЛИ: initiate_reconnect_task
-# УДАЛИ: _tt_reconnect
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     parts_to_send_list = []
@@ -149,41 +126,35 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    app: "Application", # Добавь app как обязательный аргумент
-    server_host_for_display: str # Добавь host, так как app_config больше не глобальный
+    app: "Application",
+    server_host_for_display: str # This is passed but get_effective_server_name is used below
 ):
-    # Замени все использования app_config, tg_bot_message, USER_SETTINGS_CACHE
-    # на app.app_config, app.tg_bot_message, app.user_settings_cache
     if not app.app_config.TG_ADMIN_CHAT_ID or not app.tg_bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
     admin_chat_id = app.app_config.TG_ADMIN_CHAT_ID
-    admin_settings = app.user_settings_cache.get(admin_chat_id) # Используй app.user_settings_cache
+    admin_settings = app.user_settings_cache.get(admin_chat_id)
     admin_language_code = admin_settings.language_code if admin_settings else DEFAULT_LANGUAGE
 
     translator = get_translator(admin_language_code)
     _ = translator.gettext
 
-    # tt_instance = message.teamtalk_instance # Уже есть в message
-    # server_name = get_effective_server_name(message.teamtalk_instance, _, app.app_config) # Передаем app.app_config
-    # Вместо server_host_for_display можно использовать get_effective_server_name, если он более точен
     server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, app.app_config)
-
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
     content = Text(
-        _("Message from server "), Bold(server_name_to_display), "\n", # Используем server_name_to_display
+        _("Message from server "), Bold(server_name_to_display), "\n",
         _("From "), Bold(sender_display), ":\n\n",
         message_content
     )
 
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=app.tg_bot_message, # Используй app.tg_bot_message
+        bot_instance=app.tg_bot_message,
         chat_id=admin_chat_id,
         language=admin_language_code,
-        app=app, # Передаем app
+        app=app,
         **content.as_kwargs()
     )
 

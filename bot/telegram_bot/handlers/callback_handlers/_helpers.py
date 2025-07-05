@@ -5,10 +5,10 @@ from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from bot.models import UserSettings
-from bot.core.user_settings import update_user_settings_in_db # УДАЛИ USER_SETTINGS_CACHE ОТСЮДА
+from bot.core.user_settings import update_user_settings_in_db
 
 if TYPE_CHECKING:
-    from sender import Application # For type hinting app instance
+    from sender import Application
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ async def process_setting_update(
     success_toast_text: str,
     new_text: str,
     new_markup: InlineKeyboardMarkup,
-    app: "Application" # СДЕЛАЙ ЭТОТ ПАРАМЕТР ОБЯЗАТЕЛЬНЫМ
+    app: "Application"
 ) -> None:
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
@@ -36,10 +36,7 @@ async def process_setting_update(
 
     try:
         await update_user_settings_in_db(session, user_settings)
-
-        # Теперь обнови кэш Application
         app.user_settings_cache[user_settings.telegram_id] = user_settings
-
         await callback_query.answer(success_toast_text, show_alert=False)
 
         await safe_edit_text(
