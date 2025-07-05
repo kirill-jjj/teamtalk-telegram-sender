@@ -91,14 +91,14 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
 
             admin_translator = get_translator(admin_lang_code)
             admin_commands_localized = get_admin_commands(admin_translator.gettext)
-                admin_scope = BotCommandScopeChat(chat_id=admin_id)
+            admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
-                await bot.delete_my_commands(scope=admin_scope) # Delete old commands first
-                await bot.set_my_commands(commands=admin_commands_localized, scope=admin_scope)
-                logger.info(f"Успешно установлены команды администратора для admin_id {admin_id} в области {admin_scope!r} (язык: {admin_lang_code}).")
-            except TelegramAPIError as e:
-                logger.error(f"Не удалось установить команды администратора Telegram для admin_id {admin_id}, области {admin_scope!r}: {e}")
-            except Exception as e:
+            await bot.delete_my_commands(scope=admin_scope) # Delete old commands first
+            await bot.set_my_commands(commands=admin_commands_localized, scope=admin_scope)
+            logger.info(f"Успешно установлены команды администратора для admin_id {admin_id} в области {admin_scope!r} (язык: {admin_lang_code}).")
+        except TelegramAPIError as e:
+            logger.error(f"Не удалось установить команды администратора Telegram для admin_id {admin_id}, области {admin_scope!r}: {e}")
+        except Exception as e:
                 logger.error(f"Произошла непредвиденная ошибка при установке команд администратора для admin_id {admin_id}: {e}", exc_info=True)
 
 async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int):
