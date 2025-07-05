@@ -8,6 +8,13 @@ from datetime import datetime # Added for Application class Pytalk event handler
 # Standard library imports for Application class
 from typing import Dict, Optional, Any
 
+# SQLAlchemy / SQLModel imports
+from sqlmodel.ext.asyncio.session import AsyncSession # ДОБАВЬ ЭТУ СТРОКУ
+from bot.models import UserSettings # Add this for type hinting
+from sqlalchemy.exc import SQLAlchemyError # Add this for exception handling
+from sqlmodel import select # Add this for DB operations
+
+
 # Aiogram imports for Application class
 from aiogram import Bot, Dispatcher, html
 from aiogram.types import ErrorEvent, Message as AiogramMessage # Renamed to avoid conflict
