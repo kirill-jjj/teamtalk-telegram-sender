@@ -206,7 +206,7 @@ def create_manage_muted_users_keyboard(
 
 # --- Paginated List Keyboards ---
 
-def _add_pagination_controls(
+async def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
     _: callable,
     current_page: int,
@@ -234,7 +234,7 @@ def _add_pagination_controls(
         builder.row(*pagination_buttons)
 
 
-def create_paginated_user_list_keyboard(
+async def create_paginated_user_list_keyboard(
     _: callable,
     page_items: list[str],
     current_page: int,
@@ -269,7 +269,7 @@ def create_paginated_user_list_keyboard(
         back_button_text_key="⬅️ Back to Mute Management"
     )
 
-def create_account_list_keyboard(
+async def create_account_list_keyboard(
     _: callable,
     page_items: list[pytalk.UserAccount],
     current_page: int,
@@ -463,7 +463,7 @@ def create_subscriber_action_menu_keyboard(
     return builder.as_markup()
 
 # --- Generic Helper for Paginated User Lists with Toggle ---
-def _create_generic_user_toggle_list_keyboard(
+async def _create_generic_user_toggle_list_keyboard(
     _: Callable[[str], str],
     page_items: List[Any],
     current_page: int,
