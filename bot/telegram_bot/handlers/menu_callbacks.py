@@ -84,11 +84,7 @@ async def menu_kick_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Правильная проверка прав пользователя, нажавшего на кнопку
-    if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(translator.gettext("You are not authorized to perform this action."), show_alert=True)
-        return
-
+    # Admin check is now handled by AdminCheckMiddleware
     # Прямой вызов нужной функции
     await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection)
     await query.answer()
@@ -103,11 +99,7 @@ async def menu_ban_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # Правильная проверка прав пользователя, нажавшего на кнопку
-    if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(translator.gettext("You are not authorized to perform this action."), show_alert=True)
-        return
-
+    # Admin check is now handled by AdminCheckMiddleware
     # Прямой вызов нужной функции
     await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection)
     await query.answer()
@@ -123,11 +115,7 @@ async def menu_subscribers_handler(
     translator: "gettext.GNUTranslations",
     app: "Application"
 ):
-    # Правильная проверка прав пользователя, нажавшего на кнопку
-    if query.from_user.id not in app.admin_ids_cache:
-        await query.answer(translator.gettext("You are not authorized to perform this action."), show_alert=True)
-        return
-
+    # Admin check is now handled by AdminCheckMiddleware
     # Прямой вызов нужной функции
     await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0)
     await query.answer()
