@@ -45,9 +45,9 @@ from bot.telegram_bot.middlewares import (
     UserSettingsMiddleware,
     # TeamTalkInstanceMiddleware, # To be replaced/updated
     SubscriptionCheckMiddleware,
-    # ApplicationMiddleware, # To be created
-    # ActiveTeamTalkConnectionMiddleware, # To be created/updated
-    TeamTalkConnectionMiddleware # Existing middleware to check connectivity, will be adapted
+    ApplicationMiddleware, # Now created
+    ActiveTeamTalkConnectionMiddleware, # Now created
+    TeamTalkConnectionCheckMiddleware # Corrected name
 )
 from bot.telegram_bot.handlers import (
     user_commands_router,
