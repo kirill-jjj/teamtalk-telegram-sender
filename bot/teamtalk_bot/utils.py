@@ -1,35 +1,52 @@
 import logging
 import asyncio
-from typing import Callable
+from typing import Callable, TYPE_CHECKING # Добавь TYPE_CHECKING для подсказки типа
 from aiogram.utils.formatting import Text, Bold
 
 import pytalk
-from pytalk import TeamTalkServerInfo
-from pytalk.instance import TeamTalkInstance, sdk
-from pytalk.message import Message as TeamTalkMessage
-from bot.teamtalk_bot import bot_instance as tt_bot_module
+# УДАЛИ СЛЕДУЮЩУЮ СТРОКУ:
+# from bot.teamtalk_bot import bot_instance as tt_bot_module
 
-from bot.config import app_config
-from bot.language import get_translator
+# УДАЛИ СЛЕДУЮЩИЕ СТРОКИ ИМПОРТА ГЛОБАЛЬНЫХ ЗАВИСИМОСТЕЙ (app_config, tg_bot_message, USER_SETTINGS_CACHE):
+# from bot.config import app_config
+# from bot.telegram_bot.bot_instances import tg_bot_message
+# from bot.core.user_settings import USER_SETTINGS_CACHE
+# from bot.core.utils import get_effective_server_name, get_tt_user_display_name # Оставь, но убедись, что они используют переданные параметры
+from bot.translations import get_translator
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
     DEFAULT_LANGUAGE
 )
 from bot.telegram_bot.utils import send_telegram_message_individual
-from bot.telegram_bot.bot_instances import tg_bot_message
-from bot.core.user_settings import USER_SETTINGS_CACHE
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 
 
+from pytalk import TeamTalkServerInfo
+from pytalk.instance import TeamTalkInstance, sdk
+from pytalk.message import Message as TeamTalkMessage
+
+# Добавь импорт Application для Type Hinting
+if TYPE_CHECKING:
+    from sender import Application
+    from bot.teamtalk_bot.connection import TeamTalkConnection # Для подсказки типа connection
+
 logger = logging.getLogger(__name__)
-ttstr = sdk.ttstr # Use the imported sdk
+ttstr = sdk.ttstr
 
-RECONNECT_IN_PROGRESS = False
+# Глобальная переменная RECONNECT_IN_PROGRESS также должна быть удалена
+# и её логика перемещена в класс Application (если она нужна для предотвращения множественных реконнектов)
+# Или, если она служит для конкретного инстанса, в TeamTalkConnection.
+# Удаляем: RECONNECT_IN_PROGRESS = False
 
 
-async def shutdown_tt_instance(instance: TeamTalkInstance):
+async def shutdown_tt_instance(instance: TeamTalkInstance) -> None: # Добавь Type Hint для возвращаемого значения
     """Safely shuts down a single TeamTalk instance."""
+    # Эта функция сейчас не использует глобальных переменных, поэтому она может остаться как есть
+    # Но если RECONNECT_IN_PROGRESS выше удалена, то она не должна быть глобальной
+    # Эта функция вызывается из Application._on_shutdown_logic или Application._initiate_reconnect_for_connection
+    # И ей не нужен "app" или "connection", только "instance".
+    # Логика RECONNECT_IN_PROGRESS должна быть в Application._initiate_reconnect_for_connection
     try:
         # Ensure server_info and host are available for logging, provide default if not
         host_info = "Unknown Host"
@@ -55,17 +72,9 @@ async def shutdown_tt_instance(instance: TeamTalkInstance):
             host_info_err = ttstr(instance.server_info.host)
         logger.error(f"Error during TT instance shutdown for {host_info_err}: {e}", exc_info=True)
 
-
-
-def initiate_reconnect_task(failed_instance: TeamTalkInstance | None):
-    global RECONNECT_IN_PROGRESS
-    if RECONNECT_IN_PROGRESS:
-        logger.info("Reconnection process already running. New task not created.")
-        return
-
-    RECONNECT_IN_PROGRESS = True
-    asyncio.create_task(_tt_reconnect(failed_instance))
-
+# Логика initiate_reconnect_task должна быть перемещена в метод класса Application
+# УДАЛИ: initiate_reconnect_task
+# УДАЛИ: _tt_reconnect
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     parts_to_send_list = []
@@ -139,34 +148,42 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 
 async def forward_tt_message_to_telegram_admin(
-    message: TeamTalkMessage
+    message: TeamTalkMessage,
+    app: "Application", # Добавь app как обязательный аргумент
+    server_host_for_display: str # Добавь host, так как app_config больше не глобальный
 ):
-    if not app_config.TG_ADMIN_CHAT_ID or not tg_bot_message:
+    # Замени все использования app_config, tg_bot_message, USER_SETTINGS_CACHE
+    # на app.app_config, app.tg_bot_message, app.user_settings_cache
+    if not app.app_config.TG_ADMIN_CHAT_ID or not app.tg_bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = app_config.TG_ADMIN_CHAT_ID
-    admin_settings = USER_SETTINGS_CACHE.get(admin_chat_id)
-    admin_language_code = admin_settings.language_code if admin_settings else DEFAULT_LANGUAGE # Use .language_code
+    admin_chat_id = app.app_config.TG_ADMIN_CHAT_ID
+    admin_settings = app.user_settings_cache.get(admin_chat_id) # Используй app.user_settings_cache
+    admin_language_code = admin_settings.language_code if admin_settings else DEFAULT_LANGUAGE
 
-    translator = get_translator(admin_language_code) # Use the corrected variable
+    translator = get_translator(admin_language_code)
     _ = translator.gettext
 
-    tt_instance = message.teamtalk_instance
-    server_name = get_effective_server_name(tt_instance, _)
-    sender_display = get_tt_user_display_name(message.user, _) # Assumes _ is the correct translator for user's name context
+    # tt_instance = message.teamtalk_instance # Уже есть в message
+    # server_name = get_effective_server_name(message.teamtalk_instance, _, app.app_config) # Передаем app.app_config
+    # Вместо server_host_for_display можно использовать get_effective_server_name, если он более точен
+    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, app.app_config)
+
+    sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
     content = Text(
-        _("Message from server "), Bold(server_name), "\n",
+        _("Message from server "), Bold(server_name_to_display), "\n", # Используем server_name_to_display
         _("From "), Bold(sender_display), ":\n\n",
         message_content
     )
 
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=tg_bot_message,
+        bot_instance=app.tg_bot_message, # Используй app.tg_bot_message
         chat_id=admin_chat_id,
-        language=admin_language_code, # Use the corrected variable
+        language=admin_language_code,
+        app=app, # Передаем app
         **content.as_kwargs()
     )
 
@@ -174,109 +191,3 @@ async def forward_tt_message_to_telegram_admin(
         message.reply(_("Message sent to Telegram successfully."))
     else:
         message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram")))
-
-
-async def _tt_reconnect(failed_instance: TeamTalkInstance | None):
-    global RECONNECT_IN_PROGRESS
-
-    if failed_instance:
-        server_host_info = "unknown server"
-        if hasattr(failed_instance, 'server_info') and failed_instance.server_info and hasattr(failed_instance.server_info, 'host'):
-            server_host_info = ttstr(failed_instance.server_info.host) # Use ttstr here for consistency
-
-        logger.info(f"Shutting down failed instance for server {server_host_info} before attempting reconnect...")
-        await shutdown_tt_instance(failed_instance) # Use the new utility function
-
-        # Attempt to remove the instance from the list after shutdown
-        try:
-            if hasattr(tt_bot_module.tt_bot, 'teamtalks') and failed_instance in tt_bot_module.tt_bot.teamtalks:
-                tt_bot_module.tt_bot.teamtalks.remove(failed_instance)
-                logger.info(f"Old instance {server_host_info} removed from tt_bot.teamtalks list after shutdown.")
-            else:
-                # This condition might be hit if shutdown_tt_instance failed catastrophically before this point
-                # or if the instance was already removed by another process.
-                logger.info(f"Old instance {server_host_info} not found in tt_bot.teamtalks for removal, or list does not exist.")
-        except ValueError as e_remove: # list.remove() raises ValueError if item not found
-            logger.error(f"ValueError removing instance {server_host_info} from list after shutdown: {e_remove}", exc_info=True)
-        except Exception as e_unexpected_remove: # Fallback for truly unexpected errors
-            logger.error(f"Unexpected error removing instance {server_host_info} from list after shutdown: {e_unexpected_remove}", exc_info=True)
-
-    tt_bot_module.current_tt_instance = None
-    tt_bot_module.login_complete_time = None
-    if failed_instance and hasattr(failed_instance, '_periodic_sync_task_running'):
-        failed_instance._periodic_sync_task_running = False
-
-    server_info_to_reconnect = None
-    if failed_instance and hasattr(failed_instance, 'server_info') and failed_instance.server_info:
-        server_info_to_reconnect = failed_instance.server_info
-        logger.info(f"Using server_info from failed_instance: {server_info_to_reconnect.host}")
-    elif app_config.HOSTNAME and app_config.PORT and app_config.USERNAME and app_config.PASSWORD:
-        server_info_to_reconnect = TeamTalkServerInfo(
-            host=app_config.HOSTNAME,
-            tcp_port=app_config.PORT,
-            udp_port=app_config.PORT,
-            username=app_config.USERNAME,
-            password=app_config.PASSWORD,
-            encrypted=app_config.ENCRYPTED,
-            nickname=app_config.NICKNAME
-        )
-        logger.info(f"Constructed server_info from app_config for reconnection: {server_info_to_reconnect.host}")
-    else:
-        logger.error("Cannot determine server information for reconnection. Reconnection stopped.")
-        RECONNECT_IN_PROGRESS = False
-        return
-
-    while True:
-        logger.info(f"Next reconnection attempt to {server_info_to_reconnect.host} in {app_config.TT_RECONNECT_RETRY_SECONDS} seconds...")
-        await asyncio.sleep(app_config.TT_RECONNECT_RETRY_SECONDS)
-
-        try:
-            logger.info(f"Attempting to create new TeamTalk instance for {server_info_to_reconnect.host}...")
-            await tt_bot_module.tt_bot.add_server(server_info_to_reconnect)
-
-            await asyncio.sleep(app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS)
-
-            if tt_bot_module.current_tt_instance and \
-               tt_bot_module.current_tt_instance.connected and \
-               tt_bot_module.current_tt_instance.logged_in and \
-               hasattr(tt_bot_module.current_tt_instance.server_info, 'host') and \
-               tt_bot_module.current_tt_instance.server_info.host == server_info_to_reconnect.host:
-                logger.info(f"Reconnection to {server_info_to_reconnect.host} successful!")
-                RECONNECT_IN_PROGRESS = False
-                return
-            else:
-                logger.warning(f"Reconnection attempt to {server_info_to_reconnect.host} failed, instance not ready or not the correct one.")
-                if tt_bot_module.tt_bot.teamtalks and \
-                   hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
-                   tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host and \
-                   not (tt_bot_module.tt_bot.teamtalks[-1].connected and tt_bot_module.tt_bot.teamtalks[-1].logged_in):
-                    logger.warning(f"Removing failed/partially created instance attempt for {server_info_to_reconnect.host} from tt_bot.teamtalks")
-                    try:
-                        last_instance = tt_bot_module.tt_bot.teamtalks.pop()
-                        if last_instance.connected:
-                            last_instance.disconnect()
-                        last_instance.closeTeamTalk()
-                    except IndexError as e_idx: # For pop()
-                        logger.error(f"IndexError cleaning up partially created instance: {e_idx}", exc_info=True)
-                    except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt: # For disconnect/close
-                        logger.error(f"TeamTalk/OS error cleaning up partially created instance: {e_tt}", exc_info=True)
-                    except Exception as e_cleanup: # Fallback for other unexpected errors
-                        logger.error(f"Unexpected error cleaning up partially created instance: {e_cleanup}", exc_info=True)
-
-        except (pytalk.exceptions.PermissionError, ValueError, TimeoutError, pytalk.exceptions.TeamTalkException) as e:
-            logger.error(f"Critical error during reconnection attempt to {server_info_to_reconnect.host}: {e}", exc_info=True)
-            if tt_bot_module.tt_bot.teamtalks and \
-               hasattr(tt_bot_module.tt_bot.teamtalks[-1].server_info, 'host') and \
-               tt_bot_module.tt_bot.teamtalks[-1].server_info.host == server_info_to_reconnect.host:
-                logger.warning(f"Removing instance for {server_info_to_reconnect.host} from tt_bot.teamtalks due to add_server() exception.")
-                try:
-                    last_instance = tt_bot_module.tt_bot.teamtalks.pop()
-                    if last_instance.connected:
-                        last_instance.disconnect()
-                    last_instance.closeTeamTalk()
-                except IndexError as e_idx: # For pop()
-                    logger.error(f"IndexError cleaning up instance after add_server() exception: {e_idx}", exc_info=True)
-                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt: # For disconnect/close
-                    logger.error(f"TeamTalk/OS error cleaning up instance after add_server() exception: {e_tt}", exc_info=True)
-                except Exception as e_cleanup_exc: # Fallback for other unexpected errors
-                    logger.error(f"Unexpected error cleaning up instance after add_server() exception: {e_cleanup_exc}", exc_info=True)
