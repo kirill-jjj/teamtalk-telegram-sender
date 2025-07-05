@@ -120,7 +120,7 @@ async def _show_subscriber_list_page(
         )
         return
 
-    keyboard = create_subscriber_list_keyboard(
+    keyboard = await create_subscriber_list_keyboard(
         _,
         page_subscribers_info=page_subscribers_info,
         current_page=current_page,

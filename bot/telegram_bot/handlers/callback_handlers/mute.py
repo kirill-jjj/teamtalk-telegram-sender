@@ -90,7 +90,7 @@ async def _display_paginated_list_ui(
         await callback_query.answer(_("Error displaying list."), show_alert=True)
         return
 
-    keyboard_markup = keyboard_factory(
+    keyboard_markup = await keyboard_factory(
         _=_, page_items=page_slice, current_page=current_page_idx, total_pages=total_pages, **keyboard_factory_kwargs
     )
 
@@ -327,7 +327,7 @@ async def cq_show_manage_muted_menu(
     callback_data: NotificationActionCallback # Parameter for consistency, though not used
 ):
     await callback_query.answer()
-    manage_muted_builder = create_manage_muted_users_keyboard(_, user_settings)
+    manage_muted_builder = await create_manage_muted_users_keyboard(_, user_settings)
 
     current_mode_text = _("Current mode is Blacklist. You receive notifications from everyone except those on the list.") \
                         if user_settings.mute_list_mode == MuteListMode.blacklist \
@@ -375,7 +375,12 @@ async def cq_set_mute_mode_action(
                             else _("Current mode is Whitelist. You only receive notifications from users on the list.")
     menu_text = f"{_('Manage Mute List')}\n\n{new_current_mode_desc}"
     # Keyboard based on the new mode
-    updated_builder = create_manage_muted_users_keyboard(_, managed_user_settings, new_mode_for_ui=new_mode)
+     # The create_manage_muted_users_keyboard doesn't take new_mode_for_ui, it reads from user_settings directly.
+     # The update_logic will set the mode on managed_user_settings before this keyboard is created if success.
+     # However, process_setting_update calls update_action *before* safe_edit_text.
+     # So, when create_manage_muted_users_keyboard is called by process_setting_update (via new_markup),
+ медицинского_user_settings will already have the new mode.
+    updated_builder = await create_manage_muted_users_keyboard(_, managed_user_settings)
 
 
     await process_setting_update(
