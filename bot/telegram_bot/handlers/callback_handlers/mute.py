@@ -379,7 +379,7 @@ async def cq_set_mute_mode_action(
      # The update_logic will set the mode on managed_user_settings before this keyboard is created if success.
      # However, process_setting_update calls update_action *before* safe_edit_text.
      # So, when create_manage_muted_users_keyboard is called by process_setting_update (via new_markup),
- медицинского_user_settings will already have the new mode.
+     # managed_user_settings will already have the new mode.
     updated_builder = await create_manage_muted_users_keyboard(_, managed_user_settings)
 
 
