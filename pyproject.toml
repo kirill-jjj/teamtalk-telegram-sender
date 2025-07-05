@@ -52,7 +52,7 @@ Repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Issues = "https://github.com/kirill-jjj/teamtalk-telegram-sender/issues"
 
 [tool.setuptools]
-packages = ["bot"]
+packages = find: {include = ["bot*", "scripts*"]}
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
