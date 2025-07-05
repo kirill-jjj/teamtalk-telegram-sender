@@ -12,7 +12,7 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from sqlmodel import SQLModel  # noqa: E402
-from bot.config import app_config  # noqa: E402
+# from bot.config import app_config # noqa: E402 # <-- MODIFIED: Commented out/removed
 # Import models here for Alembic 'autogenerate' support
 from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401, E402
 
@@ -35,7 +35,19 @@ def process_revision_directives(context, revision, directives):
 
 
 def get_db_url():
-    # Construct an absolute path to the database file
+    # Получаем путь к конфигу из аргументов, переданных через `alembic -x`
+    config_file = context.config.get_main_option('config_file')
+    if not config_file:
+        config_file = ".env" # Значение по умолчанию, если ничего не передано
+
+    # Чтобы импортировать Settings, нам нужно временно добавить текущую директорию в path
+    import sys
+    sys.path.insert(0, '.')
+    from bot.config import Settings
+
+    # Создаем экземпляр настроек, используя нужный файл
+    app_config = Settings(_env_file=config_file)
+
     db_path = os.path.abspath(app_config.DATABASE_FILE)
     return f"sqlite+aiosqlite:///{db_path}"
 
