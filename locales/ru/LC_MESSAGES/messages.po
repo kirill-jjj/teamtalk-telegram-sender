@@ -8,24 +8,22 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: \n"
 "PO-Revision-Date: 2025-07-05 13:04+0500\n"
 "Last-Translator: \n"
-"Language-Team: ru <LL@li.org>\n"
 "Language: ru\n"
+"Language-Team: ru <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 "
-"&& (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Generated-By: Babel 2.17.0\n"
-"X-Generator: Poedit 3.6\n"
 
-#: sender.py:260
+#: sender.py:259
 msgid "<b>Critical error!</b>"
 msgstr "<b>Критическая ошибка!</b>"
 
-#: bot/core/languages.py:44
+#: bot/core/languages.py:47
 msgid "language_native_name"
 msgstr "Русский"
 
@@ -51,16 +49,17 @@ msgstr "<b>Доступные команды:</b>"
 #: bot/core/utils.py:55
 msgid ""
 "/who - Show online users.\n"
-"/settings - Access the interactive settings menu (language, notifications, mute "
-"lists, NOON feature).\n"
+"/settings - Access the interactive settings menu (language, "
+"notifications, mute lists, NOON feature).\n"
 "/help - Show this help message.\n"
 "(Note: `/start` is used to initiate the bot and process deeplinks.)"
 msgstr ""
 "/who - Показать онлайн пользователей.\n"
-"/settings - Доступ к интерактивному меню настроек (язык, уведомления, списки "
-"мьютов, функция NOON).\n"
+"/settings - Доступ к интерактивному меню настроек (язык, уведомления, "
+"списки мьютов, функция NOON).\n"
 "/help - Показать это сообщение.\n"
-"(Примечание: `/start` используется для запуска бота и обработки deeplink-ссылок.)"
+"(Примечание: `/start` используется для запуска бота и обработки "
+"deeplink-ссылок.)"
 
 #: bot/core/utils.py:60
 msgid ""
@@ -141,11 +140,12 @@ msgstr "Произошла ошибка коммуникации с Telegram. П
 #: bot/teamtalk_bot/commands.py:229
 #, python-brace-format
 msgid ""
-"Click this link to subscribe to notifications (link valid for 5 minutes):\n"
+"Click this link to subscribe to notifications (link valid for 5 minutes):"
+"\n"
 "{deeplink_url}"
 msgstr ""
-"Нажмите на эту ссылку, чтобы подписаться на уведомления (ссылка действительна 5 "
-"минут):\n"
+"Нажмите на эту ссылку, чтобы подписаться на уведомления (ссылка "
+"действительна 5 минут):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:230
@@ -155,11 +155,12 @@ msgstr "Произошла ошибка при обработке запроса
 #: bot/teamtalk_bot/commands.py:246
 #, python-brace-format
 msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
+"Click this link to unsubscribe from notifications (link valid for 5 "
+"minutes):\n"
 "{deeplink_url}"
 msgstr ""
-"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка действительна 5 "
-"минут):\n"
+"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка "
+"действительна 5 минут):\n"
 "{deeplink_url}"
 
 #: bot/teamtalk_bot/commands.py:247
@@ -168,18 +169,18 @@ msgstr "Произошла ошибка при обработке запроса
 
 #: bot/teamtalk_bot/commands.py:267
 msgid ""
-"Please provide Telegram IDs after the command. Example: /add_admin 12345678 "
-"98765432"
+"Please provide Telegram IDs after the command. Example: /add_admin "
+"12345678 98765432"
 msgstr ""
-"Пожалуйста, укажите ID Telegram после команды. Пример: /add_admin 12345678 "
-"98765432"
+"Пожалуйста, укажите ID Telegram после команды. Пример: /add_admin "
+"12345678 98765432"
 
 #: bot/teamtalk_bot/commands.py:268
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
-"Пользователь с ID {telegram_id} уже является администратором или не удалось его "
-"добавить."
+"Пользователь с ID {telegram_id} уже является администратором или не "
+"удалось его добавить."
 
 #: bot/teamtalk_bot/commands.py:269 bot/teamtalk_bot/commands.py:292
 #, python-brace-format
@@ -192,11 +193,11 @@ msgstr "Ошибки:"
 
 #: bot/teamtalk_bot/commands.py:290
 msgid ""
-"Please provide Telegram IDs after the command. Example: /remove_admin 12345678 "
-"98765432"
+"Please provide Telegram IDs after the command. Example: /remove_admin "
+"12345678 98765432"
 msgstr ""
-"Пожалуйста, укажите ID Telegram после команды. Пример: /remove_admin 12345678 "
-"98765432"
+"Пожалуйста, укажите ID Telegram после команды. Пример: /remove_admin "
+"12345678 98765432"
 
 #: bot/teamtalk_bot/commands.py:291
 #, python-brace-format
@@ -209,11 +210,11 @@ msgstr "Информация/Ошибки:"
 
 #: bot/teamtalk_bot/commands.py:323
 msgid ""
-"Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /"
-"help."
+"Unknown command. Available commands: /sub, /unsub, /add_admin, "
+"/remove_admin, /help."
 msgstr ""
-"Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, /"
-"remove_admin, /help."
+"Неизвестная команда. Доступные команды: /sub, /unsub, /add_admin, "
+"/remove_admin, /help."
 
 #: bot/teamtalk_bot/utils.py:147
 msgid "Message from server "
@@ -299,15 +300,16 @@ msgstr "Ваш Telegram аккаунт заблокирован и не може
 #, python-brace-format
 msgid "The TeamTalk username '{tt_username}' is banned and cannot be linked."
 msgstr ""
-"Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть привязано."
+"Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть "
+"привязано."
 
 #: bot/telegram_bot/deeplink.py:128
 msgid ""
-"Error: Missing required information for subscription. Please try the link again "
-"or contact support."
+"Error: Missing required information for subscription. Please try the link"
+" again or contact support."
 msgstr ""
-"Ошибка: Отсутствует необходимая информация для подписки. Пожалуйста, попробуйте "
-"перейти по ссылке еще раз или обратитесь в поддержку."
+"Ошибка: Отсутствует необходимая информация для подписки. Пожалуйста, "
+"попробуйте перейти по ссылке еще раз или обратитесь в поддержку."
 
 #: bot/telegram_bot/deeplink.py:137
 msgid "You have successfully subscribed to notifications."
@@ -489,7 +491,8 @@ msgstr "Сервис TeamTalk в данный момент недоступен.
 # | msgid "TeamTalk bot is not connected. Please try again later."
 #: bot/telegram_bot/middlewares.py:231
 msgid ""
-"TeamTalk bot is not connected or not fully initialized. Please try again later."
+"TeamTalk bot is not connected or not fully initialized. Please try again "
+"later."
 msgstr ""
 "Бот TeamTalk не подключен или не полностью инициализирован. Пожалуйста, "
 "попробуйте позже."
@@ -640,24 +643,28 @@ msgstr "Неизвестное действие."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:55
 #, python-brace-format
 msgid ""
-"The bot lacks permissions on the TeamTalk server {server_host} to perform this "
-"action."
+"The bot lacks permissions on the TeamTalk server {server_host} to perform"
+" this action."
 msgstr ""
-"У бота недостаточно прав на сервере {server_host} для выполнения этого действия."
+"У бота недостаточно прав на сервере {server_host} для выполнения этого "
+"действия."
 
 # | msgid "An error occurred during the action on the user: {error}"
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:58
 #, python-brace-format
 msgid ""
-"An error occurred on server {server_host} during the action on the user: {error}"
+"An error occurred on server {server_host} during the action on the user: "
+"{error}"
 msgstr ""
-"Произошла ошибка при действии с пользователем на сервере {server_host}: {error}"
+"Произошла ошибка при действии с пользователем на сервере {server_host}: "
+"{error}"
 
 # | msgid "An internal data error occurred processing the request."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:61
 #, python-brace-format
 msgid ""
-"An internal data error occurred processing the request for server {server_host}."
+"An internal data error occurred processing the request for server "
+"{server_host}."
 msgstr ""
 "Произошла внутренняя ошибка данных при обработке запроса для сервера "
 "{server_host}."
@@ -667,11 +674,11 @@ msgstr ""
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:64
 #, python-brace-format
 msgid ""
-"A network or system error occurred with server {server_host}. Administrator has "
-"been notified."
+"A network or system error occurred with server {server_host}. "
+"Administrator has been notified."
 msgstr ""
-"На сервере {server_host} произошла сетевая или системная ошибка. Администратор "
-"уже уведомлен."
+"На сервере {server_host} произошла сетевая или системная ошибка. "
+"Администратор уже уведомлен."
 
 # | msgid "Error: Message context lost."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:79
@@ -795,11 +802,11 @@ msgstr "Ошибка отображения аккаунтов."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:169
 #, python-brace-format
 msgid ""
-"Server user accounts are not loaded yet for {server_host}. Please try again in a "
-"moment."
+"Server user accounts are not loaded yet for {server_host}. Please try "
+"again in a moment."
 msgstr ""
-"Список пользователей сервера еще не загружен для {server_host}. Пожалуйста, "
-"попробуйте через несколько секунд."
+"Список пользователей сервера еще не загружен для {server_host}. "
+"Пожалуйста, попробуйте через несколько секунд."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:183
 msgid "All Server Accounts"
@@ -859,19 +866,20 @@ msgstr "Бот TeamTalk отключен, поэтому не удалось п�
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:326
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:366
 msgid ""
-"Current mode is Blacklist. You receive notifications from everyone except those "
-"on the list."
+"Current mode is Blacklist. You receive notifications from everyone except"
+" those on the list."
 msgstr ""
-"Текущий режим: Черный список. Вы получаете уведомления от всех, кроме тех, кто в "
-"списке."
+"Текущий режим: Черный список. Вы получаете уведомления от всех, кроме "
+"тех, кто в списке."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:328
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:368
 msgid ""
-"Current mode is Whitelist. You only receive notifications from users on the list."
+"Current mode is Whitelist. You only receive notifications from users on "
+"the list."
 msgstr ""
-"Текущий режим: Белый список. Вы получаете уведомления только от пользователей в "
-"списке."
+"Текущий режим: Белый список. Вы получаете уведомления только от "
+"пользователей в списке."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:363
 msgid "Blacklist"
@@ -989,8 +997,8 @@ msgstr "Аккаунт TeamTalk не был привязан."
 # | later."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:243
 msgid ""
-"TeamTalk server accounts cache is not populated or connection error. Please try "
-"again later."
+"TeamTalk server accounts cache is not populated or connection error. "
+"Please try again later."
 msgstr ""
 "Кэш учетных записей сервера TeamTalk не заполнен или произошла ошибка "
 "соединения. Пожалуйста, попробуйте позже."
@@ -1000,17 +1008,18 @@ msgstr ""
 #, python-brace-format
 msgid "No TeamTalk server accounts found on {server_host} or unable to fetch."
 msgstr ""
-"Учетные записи на сервере TeamTalk {server_host} не найдены, либо не удалось их "
-"получить."
+"Учетные записи на сервере TeamTalk {server_host} не найдены, либо не "
+"удалось их получить."
 
 # | msgid "Select a TeamTalk account to link to subscriber {telegram_id}:"
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:256
 #, python-brace-format
 msgid ""
-"Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:"
+"Select a TeamTalk account from {server_host} to link to subscriber "
+"{telegram_id}:"
 msgstr ""
-"Выберите учетную запись TeamTalk с сервера {server_host}, чтобы привязать ее к "
-"подписчику {telegram_id}:"
+"Выберите учетную запись TeamTalk с сервера {server_host}, чтобы привязать"
+" ее к подписчику {telegram_id}:"
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:263
 msgid "Unknown manage account action."
@@ -1020,7 +1029,8 @@ msgstr "Неизвестное действие по управлению акк
 #, python-brace-format
 msgid "This TeamTalk username ({tt_username}) is banned and cannot be linked."
 msgstr ""
-"Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть привязано."
+"Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть "
+"привязано."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:315
 #, python-brace-format

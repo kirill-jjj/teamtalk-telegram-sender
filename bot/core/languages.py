@@ -16,56 +16,46 @@ class LanguageInfo(TypedDict):
 
 def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
     """
-    Scans the locales directory to find available languages and their native names.
-    A language is considered available if a subdirectory with its code exists
-    and contains the compiled LC_MESSAGES/messages.mo file,
-    and if its messages.po contains a translation for "language_native_name".
+    Scans the locales directory for translated languages and always includes English as the base language.
     """
-    discovered: List[LanguageInfo] = []
+    # 1. Начинаем список с английского языка, который является исходным.
+    #    Его нативное имя - это не "перевод", а метаданные.
+    discovered: List[LanguageInfo] = [
+        {"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}
+    ]
+
+    discovered_codes = {DEFAULT_LANGUAGE_CODE}
+
     if not os.path.isdir(locales_path):
-        # Log an error or handle missing locales directory
-        print(f"Error: Locales directory not found at {locales_path}")
+        print(f"Warning: Locales directory not found at {locales_path}. Only English will be available.")
         return discovered
 
+    # 2. Ищем и добавляем все остальные переведенные языки.
     for lang_code in os.listdir(locales_path):
+        if lang_code in discovered_codes:
+            continue # Пропускаем, если это 'en' (которого уже не должно быть)
+
         lang_path = os.path.join(locales_path, lang_code)
         mo_file_path = os.path.join(lang_path, "LC_MESSAGES", "messages.mo")
 
         if os.path.isdir(lang_path) and os.path.isfile(mo_file_path):
-            native_name = lang_code # Default to lang_code
+            native_name = lang_code
             try:
-                # Temporarily load translator for this language to get its native name
-                # Note: gettext.translation might be slow if called many times.
-                # Consider optimizing if startup time becomes an issue with many languages.
                 translator = gettext.translation(
                     "messages", localedir=locales_path, languages=[lang_code]
                 )
-                # Directly use the gettext method from the translator object
                 native_name_translated = translator.gettext("language_native_name")
                 if native_name_translated and native_name_translated != "language_native_name":
                     native_name = native_name_translated
                 else:
                     print(f"Warning: 'language_native_name' not translated for {lang_code}, using code as name.")
-            except FileNotFoundError:
-                # This means .mo file was found by os.path.isfile but gettext couldn't load it.
-                # This shouldn't typically happen if the .mo check passes.
-                print(f"Warning: Could not load translations for {lang_code} despite .mo file presence.")
-            except OSError as ose: # Catch OS-level errors during gettext loading
-                print(f"OSError loading native name for {lang_code}: {ose}")
-            except Exception as e: # Fallback for other truly unexpected errors
-                # Catch other potential errors during gettext loading or translation
-                print(f"Unexpected error loading native name for {lang_code}: {e}")
+            except Exception as e:
+                print(f"Warning: Could not load native name for {lang_code}: {e}")
 
             discovered.append({"code": lang_code, "native_name": native_name})
+            discovered_codes.add(lang_code)
 
-    # Ensure default language is present if discovered, or add it manually as a fallback
-    if not any(lang['code'] == DEFAULT_LANGUAGE_CODE for lang in discovered):
-        # This fallback assumes English is always available and its native name is "English"
-        # It's better if "en" is always properly discovered via its .po file.
-        print(f"Warning: Default language '{DEFAULT_LANGUAGE_CODE}' not discovered. Adding manually.")
-        discovered.append({"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}) # Fallback native name
-
-    # Sort languages by native name for consistent display in UI
+    # 3. Сортируем итоговый список для красивого отображения в меню.
     discovered.sort(key=lambda x: x["native_name"])
 
     return discovered

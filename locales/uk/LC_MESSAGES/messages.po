@@ -19,11 +19,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: sender.py:260
+#: sender.py:259
 msgid "<b>Critical error!</b>"
 msgstr ""
 
-#: bot/core/languages.py:44
+#: bot/core/languages.py:47
 msgid "language_native_name"
 msgstr "Українська"
 
@@ -467,24 +467,24 @@ msgstr "⬅️ Назад до дій"
 msgid "⬅️ Back to Manage Account"
 msgstr "⬅️ Назад до керування акаунтом"
 
+# | msgid "An error occurred processing your request."
 #: bot/telegram_bot/middlewares.py:80
 #, fuzzy
-#| msgid "An error occurred processing your request."
 msgid "An error occurred while loading your settings."
 msgstr "Сталася помилка під час обробки вашого запиту."
 
+# | msgid "An error occurred while loading the list. Please try again later."
 #: bot/telegram_bot/middlewares.py:93
 #, fuzzy
-#| msgid "An error occurred while loading the list. Please try again later."
 msgid "A database error occurred while loading your settings details."
 msgstr ""
 "Сталася помилка під час завантаження списку. Будь ласка, спробуйте "
 "пізніше."
 
+# | msgid "TeamTalk server accounts cache is not populated. Please try again
+# | later."
 #: bot/telegram_bot/middlewares.py:222
 #, fuzzy
-#| msgid "TeamTalk server accounts cache is not populated. Please try again
-#| later."
 msgid "TeamTalk service is currently unavailable. Please try again later."
 msgstr ""
 "Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, "
@@ -492,23 +492,23 @@ msgstr ""
 
 # | msgid "TeamTalk server accounts cache is not populated. Please try again
 # | later."
+# | msgid "TeamTalk bot is not connected. Please try again later."
 #: bot/telegram_bot/middlewares.py:231
 #, fuzzy
-#| msgid "TeamTalk bot is not connected. Please try again later."
 msgid ""
 "TeamTalk bot is not connected or not fully initialized. Please try again "
 "later."
 msgstr "Бот TeamTalk не підключений. Будь ласка, спробуйте пізніше."
 
+# | msgid "Selected language is not available."
 #: bot/telegram_bot/handlers/admin.py:35
 #, fuzzy
-#| msgid "Selected language is not available."
 msgid "TeamTalk connection is not available."
 msgstr "Обрана мова недоступна."
 
+# | msgid "An error occurred processing your request."
 #: bot/telegram_bot/handlers/admin.py:43
 #, fuzzy
-#| msgid "An error occurred processing your request."
 msgid "An error occurred determining your TeamTalk ID."
 msgstr "Сталася помилка під час обробки вашого запиту."
 
@@ -517,15 +517,15 @@ msgstr "Сталася помилка під час обробки вашого 
 msgid "No users online on TeamTalk server {server_host}."
 msgstr ""
 
+# | msgid "Select a user to kick:"
 #: bot/telegram_bot/handlers/admin.py:56
 #, fuzzy, python-brace-format
-#| msgid "Select a user to kick:"
 msgid "Select a user to kick from {server_host}:"
 msgstr "Виберіть користувача для видалення:"
 
+# | msgid "Select a user to ban:"
 #: bot/telegram_bot/handlers/admin.py:57
 #, fuzzy, python-brace-format
-#| msgid "Select a user to ban:"
 msgid "Select a user to ban from {server_host}:"
 msgstr "Виберіть користувача для бану:"
 
@@ -533,10 +533,10 @@ msgstr "Виберіть користувача для бану:"
 msgid "Select a user:"
 msgstr "Виберіть користувача:"
 
+# | msgid "You do not have permission to use this command."
 #: bot/telegram_bot/handlers/admin.py:72 bot/telegram_bot/handlers/admin.py:85
 #: bot/telegram_bot/handlers/admin.py:99
 #, fuzzy
-#| msgid "You do not have permission to use this command."
 msgid "You are not authorized to use this command."
 msgstr "У вас немає дозволу на використання цієї команди."
 
@@ -565,9 +565,9 @@ msgstr "в кореневому каналі"
 msgid "in unknown location"
 msgstr "в невідомому місці"
 
+# | msgid "No users found online."
 #: bot/telegram_bot/handlers/user.py:131
 #, fuzzy
-#| msgid "No users found online."
 msgid "No users found online"
 msgstr "Користувачів онлайн не знайдено."
 
@@ -583,9 +583,9 @@ msgstr[0] "користувач"
 msgstr[1] "користувачі"
 msgstr[2] "користувачів"
 
+# | msgid "There are {user_count} {users_word} on the server:\n"
 #: bot/telegram_bot/handlers/user.py:139
 #, fuzzy, python-brace-format
-#| msgid "There are {user_count} {users_word} on the server:\n"
 msgid "There are {user_count} {users_word} on the server"
 msgstr "На сервері зараз {user_count} {users_word}:\n"
 
@@ -606,9 +606,9 @@ msgstr ""
 msgid "An internal error occurred while retrieving the user list."
 msgstr "Сталася внутрішня помилка під час отримання списку користувачів."
 
+# | msgid "An error occurred processing your request."
 #: bot/telegram_bot/handlers/user.py:193
 #, fuzzy
-#| msgid "An error occurred processing your request."
 msgid "An error occurred while processing your request."
 msgstr "Сталася помилка під час обробки вашого запиту."
 
@@ -625,15 +625,15 @@ msgstr "Головне меню:"
 msgid "Error: Callback query is missing essential data."
 msgstr "Помилка: У запиті зворотного виклику відсутні необхідні дані."
 
+# | msgid "User {user_nickname} kicked from server."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:43
 #, fuzzy, python-brace-format
-#| msgid "User {user_nickname} kicked from server."
 msgid "User {user_nickname} kicked from server {server_host}."
 msgstr "Користувача {user_nickname} видалено з сервера."
 
+# | msgid "User {user_nickname} banned and kicked from server."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:48
 #, fuzzy, python-brace-format
-#| msgid "User {user_nickname} banned and kicked from server."
 msgid "User {user_nickname} banned and kicked from server {server_host}."
 msgstr "Користувача {user_nickname} забанено та видалено з сервера."
 
@@ -643,45 +643,47 @@ msgstr "Користувача {user_nickname} забанено та видал�
 msgid "Unknown action."
 msgstr "Невідома дія."
 
+# | msgid "The bot lacks permissions on the TeamTalk server to perform this
+# | action."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:55
 #, fuzzy, python-brace-format
-#| msgid "The bot lacks permissions on the TeamTalk server to perform this
-#| action."
 msgid ""
 "The bot lacks permissions on the TeamTalk server {server_host} to perform"
 " this action."
 msgstr "У бота недостатньо прав на сервері TeamTalk для виконання цієї дії."
 
+# | msgid "An error occurred during the action on the user: {error}"
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:58
 #, fuzzy, python-brace-format
-#| msgid "An error occurred during the action on the user: {error}"
 msgid ""
 "An error occurred on server {server_host} during the action on the user: "
 "{error}"
 msgstr "Сталася помилка під час дії з користувачем: {error}"
 
+# | msgid "An internal data error occurred processing the request."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:61
 #, fuzzy, python-brace-format
-#| msgid "An internal data error occurred processing the request."
 msgid ""
 "An internal data error occurred processing the request for server "
 "{server_host}."
 msgstr "Сталася внутрішня помилка обробки даних під час обробки запиту."
 
+# | msgid "A network or system error occurred. Administrator has been
+# notified."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:64
 #, fuzzy, python-brace-format
-#| msgid "A network or system error occurred. Administrator has been notified."
 msgid ""
 "A network or system error occurred with server {server_host}. "
 "Administrator has been notified."
 msgstr "Сталася мережева або системна помилка. Адміністратора сповіщено."
 
+# | msgid "Error: Message context lost."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:79
 #, fuzzy
-#| msgid "Error: Message context lost."
 msgid "Error: Message context not found."
 msgstr "Помилка: Втрачено контекст повідомлення."
 
+# | msgid "You were not subscribed to notifications."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:83
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:80
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:126
@@ -689,19 +691,18 @@ msgstr "Помилка: Втрачено контекст повідомленн
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:277
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:34
 #, fuzzy
-#| msgid "You were not subscribed to notifications."
 msgid "You are not authorized for this action."
 msgstr "Ви не були підписані на сповіщення."
 
+# | msgid "TeamTalk bot is not connected."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:89
 #, fuzzy
-#| msgid "TeamTalk bot is not connected."
 msgid "TeamTalk bot is not connected or connection is not ready."
 msgstr "Бот TeamTalk не підключений."
 
+# | msgid "User not found on server anymore."
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:97
 #, fuzzy, python-brace-format
-#| msgid "User not found on server anymore."
 msgid "User not found on server {server_host} anymore."
 msgstr "Користувача більше не знайдено на сервері."
 
@@ -726,11 +727,11 @@ msgstr "Сталася помилка. Будь ласка, спробуйте �
 msgid "Selected language is not available."
 msgstr "Обрана мова недоступна."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:119
+#: bot/telegram_bot/handlers/callback_handlers/language.py:124
 msgid "An error occurred during language update. Please try again."
 msgstr "Виникла помилка під час оновлення мови. Будь ласка, спробуйте ще раз."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:139
+#: bot/telegram_bot/handlers/callback_handlers/language.py:144
 msgid "An unexpected error occurred."
 msgstr "Виникла непередбачена помилка."
 
@@ -750,9 +751,9 @@ msgstr "Ось список підписників. Сторінка {current_pa
 msgid "Page {current_page}/{total_pages}"
 msgstr "Сторінка {current_page}/{total_pages}"
 
+# | msgid "Unknown Server"
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:79
 #, fuzzy, python-brace-format
-#| msgid "Unknown Server"
 msgid " on {server_host}"
 msgstr "Невідомий сервер"
 
@@ -790,10 +791,10 @@ msgstr "Сталася помилка через недійсний режим. 
 msgid "Error displaying accounts."
 msgstr ""
 
+# | msgid "Server user accounts are not loaded yet. Please try again in a
+# | moment."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:169
 #, fuzzy, python-brace-format
-#| msgid "Server user accounts are not loaded yet. Please try again in a
-#| moment."
 msgid ""
 "Server user accounts are not loaded yet for {server_host}. Please try "
 "again in a moment."
@@ -835,21 +836,21 @@ msgstr "{username} було {action}."
 msgid "An error occurred. Please try again later."
 msgstr "Сталася помилка. Будь ласка, спробуйте пізніше."
 
+# | msgid "Error processing command."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:289
 #, fuzzy
-#| msgid "Error processing command."
 msgid "Error refreshing UI."
 msgstr "Помилка обробки команди."
 
+# | msgid "An internal error occurred while retrieving the user list."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:301
 #, fuzzy
-#| msgid "An internal error occurred while retrieving the user list."
 msgid "A database error occurred while refreshing the list."
 msgstr "Сталася внутрішня помилка під час отримання списку користувачів."
 
+# | msgid "TeamTalk bot is disconnected. UI could not be refreshed."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:309
 #, fuzzy
-#| msgid "TeamTalk bot is disconnected. UI could not be refreshed."
 msgid "TeamTalk bot is disconnected. UI could not be fully refreshed."
 msgstr "Бот TeamTalk відключений. Інтерфейс не вдалося оновити."
 
@@ -884,22 +885,22 @@ msgstr "Білий список"
 msgid "Mute list mode set to {mode}."
 msgstr "Режим списку ігнорування змінено на {mode}."
 
+# | msgid "Selected language is not available."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:420
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:436
 #, fuzzy
-#| msgid "Selected language is not available."
 msgid "TeamTalk connection not available."
 msgstr "Обрана мова недоступна."
 
+# | msgid "TeamTalk bot is not connected."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:453
 #, fuzzy
-#| msgid "TeamTalk bot is not connected."
 msgid "TeamTalk connection error."
 msgstr "Бот TeamTalk не підключений."
 
+# | msgid "An error occurred. Please try again."
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:462
 #, fuzzy
-#| msgid "An error occurred. Please try again."
 msgid "Could not identify user to toggle. Please try again."
 msgstr "Сталася помилка. Будь ласка, спробуйте ще раз."
 
@@ -982,10 +983,10 @@ msgstr "Акаунт TeamTalk {tt_username} відв'язано."
 msgid "No TeamTalk account was linked."
 msgstr "Акаунт TeamTalk не було прив'язано."
 
+# | msgid "TeamTalk server accounts cache is not populated. Please try again
+# | later."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:243
 #, fuzzy
-#| msgid "TeamTalk server accounts cache is not populated. Please try again
-#| later."
 msgid ""
 "TeamTalk server accounts cache is not populated or connection error. "
 "Please try again later."
@@ -993,15 +994,15 @@ msgstr ""
 "Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, "
 "спробуйте пізніше."
 
+# | msgid "No TeamTalk server accounts found or unable to fetch."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:248
 #, fuzzy, python-brace-format
-#| msgid "No TeamTalk server accounts found or unable to fetch."
 msgid "No TeamTalk server accounts found on {server_host} or unable to fetch."
 msgstr "Облікові записи сервера TeamTalk не знайдено або не вдалося їх отримати."
 
+# | msgid "Select a TeamTalk account to link to subscriber {telegram_id}:"
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:256
 #, fuzzy, python-brace-format
-#| msgid "Select a TeamTalk account to link to subscriber {telegram_id}:"
 msgid ""
 "Select a TeamTalk account from {server_host} to link to subscriber "
 "{telegram_id}:"
