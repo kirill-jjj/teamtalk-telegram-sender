@@ -1,5 +1,5 @@
 import logging
-from aiogram import Router, Bot as AiogramBot, F # Renamed Bot
+from aiogram import Router, Bot as AiogramBot, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,6 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.core.enums import AdminAction
 from .callback_handlers.list_utils import _show_subscriber_list_page
 
-# For type hinting app instance
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sender import Application
@@ -20,7 +19,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-# Apply middleware to message handlers on this router that need TT connection check
 admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
@@ -68,6 +66,8 @@ async def kick_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
+    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
+    logger.info(f"/kick: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
@@ -81,6 +81,8 @@ async def ban_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
+    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
+    logger.info(f"/ban: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
@@ -95,6 +97,8 @@ async def subscribers_command_handler(
     _: callable,
     app: "Application"
 ):
+    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
+    logger.info(f"/subscribers: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
     if message.from_user.id not in app.admin_ids_cache:
         await message.reply(_("You are not authorized to perform this action."))
         return
