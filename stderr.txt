@@ -1,4 +1,0 @@
-   Building teamtalk-telegram-sender @ file:///app
-      Built teamtalk-telegram-sender @ file:///app
-Uninstalled 12 packages in 188ms
-Installed 12 packages in 26ms
