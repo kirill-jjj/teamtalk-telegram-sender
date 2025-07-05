@@ -9,10 +9,11 @@ from datetime import datetime # Added for Application class Pytalk event handler
 from typing import Dict, Optional, Any
 
 # SQLAlchemy / SQLModel imports
-from sqlmodel.ext.asyncio.session import AsyncSession # ДОБАВЬ ЭТУ СТРОКУ
-from bot.models import UserSettings # Add this for type hinting
-from sqlalchemy.exc import SQLAlchemyError # Add this for exception handling
-from sqlmodel import select # Add this for DB operations
+from sqlmodel.ext.asyncio.session import AsyncSession
+from bot.models import UserSettings
+from sqlalchemy.exc import SQLAlchemyError
+from sqlmodel import select
+from sqlalchemy.orm import selectinload # IMPORT selectinload
 
 
 # Aiogram imports for Application class
@@ -143,7 +144,11 @@ class Application:
 
         # If not in cache, try DB
         # This logic is from the original bot.core.user_settings.get_or_create_user_settings
-        user_settings = await session.get(UserSettings, telegram_id)
+        user_settings = await session.get(
+            UserSettings,
+            telegram_id,
+            options=[selectinload(UserSettings.muted_users_list)] # EAGER LOAD muted_users_list
+        )
         if not user_settings:
             self.logger.info(f"No settings found for user {telegram_id}, creating new ones.")
             user_settings = UserSettings(
