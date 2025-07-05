@@ -42,9 +42,6 @@ async def set_telegram_commands(bot: Bot, admin_ids: List[int], default_language
     """
     # Локальные импорты для избежания циклических зависимостей
     from bot.language import get_translator
-    # from bot.database.engine import SessionFactory # Removed
-    # from bot.core.user_settings import USER_SETTINGS_CACHE, get_or_create_user_settings # Removed
-    # from bot.config import app_config # Import app_config for default language fallback - will use app.app_config
 
     # 1. Установка команд для всех приватных чатов с использованием языка по умолчанию
     default_translator = get_translator(default_language_code)
