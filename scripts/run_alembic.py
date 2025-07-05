@@ -38,19 +38,23 @@ def main():
     # Формируем команду для alembic
     # Ensure alembic is found, might need to be 'python -m alembic' if not in PATH
     # For now, assume 'alembic' is directly callable.
-    # We will pass the config file via the -x option, e.g., -x config_file=test.env
-    # This is the standard way to pass arbitrary key-value pairs to env.py
+    # We will pass the config file path via an environment variable
+    # as -x attributes are not reliably being passed through.
+    env_vars = os.environ.copy()
+    env_vars["ALEMBIC_ENV_CONFIG_FILE"] = config_file
+
+    print(f"INFO  [run_alembic.py] Setting ALEMBIC_ENV_CONFIG_FILE={config_file}")
+
+    # Remove -x argument, it's not working
     command = [
         "alembic",
-        "-x",
-        f"config_file={config_file}", # The value parsed from --config
         *cli_args    # Передаем все остальные аргументы (e.g., upgrade head)
     ]
 
     print(f"▶️  Executing: {' '.join(command)}")
     # Запускаем команду
     try:
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, env=env_vars)
     except FileNotFoundError:
         print(f"Error: 'alembic' command not found. Make sure Alembic is installed and in your PATH.", file=sys.stderr)
         sys.exit(1)
