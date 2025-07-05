@@ -118,8 +118,8 @@ class Application:
         """Loads all user settings from DB into the application's cache."""
         async with self.session_factory() as session:
             stmt = select(UserSettings)
-            result = await session.execute(stmt)
-            all_settings = result.scalars().all()
+            result = await session.exec(stmt)
+            all_settings = result.all()
             for setting in all_settings:
                 self.user_settings_cache[setting.telegram_id] = setting
             self.logger.info(f"Loaded {len(self.user_settings_cache)} user settings into app cache.")

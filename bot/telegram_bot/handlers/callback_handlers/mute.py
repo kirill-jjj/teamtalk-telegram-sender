@@ -116,9 +116,9 @@ async def _display_internal_user_list(
 
     try:
         statement = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
-        results = await session.execute(statement)
+        results = await session.exec(statement)
         # Ensure usernames are strings, not SQLModel rows or other objects if not already
-        users_to_process = [str(username) for username in results.scalars().all()]
+        users_to_process = [str(username) for username in results.all()]
         sorted_items = sorted(users_to_process)
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching internal user list for user {user_settings.telegram_id}: {e}", exc_info=True)
@@ -209,8 +209,8 @@ async def _get_username_to_toggle_from_callback(
             return ttstr(username) if isinstance(username, bytes) else str(username)
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         statement = select(MutedUser.muted_teamtalk_username).where(MutedUser.user_settings_telegram_id == user_settings.telegram_id)
-        results = await session.execute(statement)
-        relevant_usernames = sorted([str(uname) for uname in results.scalars().all()])
+        results = await session.exec(statement)
+        relevant_usernames = sorted([str(uname) for uname in results.all()])
         page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]
