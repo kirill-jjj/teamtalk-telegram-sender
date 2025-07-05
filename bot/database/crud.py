@@ -67,8 +67,8 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]
     table_name = model_class.__tablename__
     try:
         statement = select(model_class.telegram_id) # type: ignore
-        result = await session.execute(statement)
-        return result.scalars().all()
+        result = await session.exec(statement)
+        return result.all()
     except SQLAlchemyError as e:
         logger.error(f"Error getting all IDs from {table_name}: {e}", exc_info=True)
         return []
@@ -185,20 +185,20 @@ async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool
 
 async def is_telegram_id_banned(session: AsyncSession, telegram_id: int) -> bool:
     statement = select(BanList).where(BanList.telegram_id == telegram_id)
-    result = await session.execute(statement)
-    return result.scalars().first() is not None
+    result = await session.exec(statement)
+    return result.first() is not None
 
 async def is_teamtalk_username_banned(session: AsyncSession, teamtalk_username: str) -> bool:
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
-    result = await session.execute(statement)
-    return result.scalars().first() is not None
+    result = await session.exec(statement)
+    return result.first() is not None
 
 async def get_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: int) -> list[BanList]:
     statement = select(BanList).where(BanList.telegram_id == telegram_id)
-    result = await session.execute(statement)
-    return result.scalars().all()
+    result = await session.exec(statement)
+    return result.all()
 
 async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_username: str) -> list[BanList]:
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
-    result = await session.execute(statement)
-    return result.scalars().all()
+    result = await session.exec(statement)
+    return result.all()
