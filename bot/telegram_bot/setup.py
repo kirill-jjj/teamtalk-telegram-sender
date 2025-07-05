@@ -15,14 +15,22 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware
 )
+from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 
 # Direct imports for routers
 from bot.telegram_bot.handlers.user import user_commands_router
 from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callbacks import callback_router # Assuming this is the correct file for callback_router
-from bot.telegram_bot.handlers.unknown import catch_all_router
-from bot.telegram_bot.handlers.menu_callbacks import menu_callback_router
+# Specific callback routers based on user's more complete setup.py
+from bot.telegram_bot.handlers.callback_handlers.settings import settings_router
+from bot.telegram_bot.handlers.callback_handlers.notifications import notifications_router
+from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
+from bot.telegram_bot.handlers.callback_handlers.subscriber_list import subscriber_list_router
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
+from bot.telegram_bot.handlers.callback_handlers.main_menu import main_menu_router # Renamed from menu_callbacks
+from bot.telegram_bot.handlers.callback_handlers.language_selection import language_router
+# Error handler
+from bot.telegram_bot.handlers.error_handler import router as error_handler_router
+# Note: Removed callback_router and catch_all_router as they seem superseded by specific ones
 
 
 def setup_telegram_dispatcher(app: "Application"):
@@ -47,16 +55,29 @@ def setup_telegram_dispatcher(app: "Application"):
 
     app.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    app.dp.message.middleware(TeamTalkConnectionCheckMiddleware())
-    app.dp.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+    app.dp.message.middleware(TeamTalkConnectionCheckMiddleware()) # This was present in my read version
+    app.dp.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # This was present in my read version
 
-    # Include routers
+    # Apply AdminCheckMiddleware to specific routers
+    admin_router.message.middleware(AdminCheckMiddleware())
+    admin_actions_router.callback_query.middleware(AdminCheckMiddleware()) # from user's more complete setup.py
+    subscriber_list_router.callback_query.middleware(AdminCheckMiddleware()) # from user's more complete setup.py
+    subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
+    main_menu_router.callback_query.middleware(AdminCheckMiddleware()) # Renamed from menu_callback_router, from user's setup.py
+
+    # Include routers - aligning with user's more complete list
+    app.dp.include_router(error_handler_router) # from user's more complete setup.py
     app.dp.include_router(user_commands_router)
     app.dp.include_router(admin_router)
-    app.dp.include_router(callback_router)
-    app.dp.include_router(menu_callback_router)
+    app.dp.include_router(settings_router) # from user's more complete setup.py
+    app.dp.include_router(notifications_router) # from user's more complete setup.py
+    app.dp.include_router(admin_actions_router) # from user's more complete setup.py
+    app.dp.include_router(subscriber_list_router) # from user's more complete setup.py
     app.dp.include_router(subscriber_actions_router)
-    app.dp.include_router(catch_all_router)
+    app.dp.include_router(main_menu_router) # Renamed from menu_callback_router
+    app.dp.include_router(language_router) # from user's more complete setup.py
+    # app.dp.include_router(callback_router) # This generic one might be replaced by specific callback routers
+    # app.dp.include_router(catch_all_router) # Assuming error_handler_router covers this or it's separate
 
     # Register lifecycle and error handlers
     app.dp.startup.register(app._on_startup_logic)

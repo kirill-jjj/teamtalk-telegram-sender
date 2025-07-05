@@ -66,11 +66,7 @@ async def kick_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.debug(f"/kick: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
-    if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to perform this action."))
-        return
+    # Admin check is now handled by AdminCheckMiddleware
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
 
@@ -81,11 +77,7 @@ async def ban_command_handler(
     app: "Application",
     tt_connection: TeamTalkConnection | None
 ):
-    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.debug(f"/ban: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
-    if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to perform this action."))
-        return
+    # Admin check is now handled by AdminCheckMiddleware
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
 
@@ -97,9 +89,5 @@ async def subscribers_command_handler(
     _: callable,
     app: "Application"
 ):
-    # --- ДИАГНОСТИЧЕСКИЙ ЛОГ ---
-    logger.debug(f"/subscribers: Admin check for user {message.from_user.id}. Current admin cache: {app.admin_ids_cache}")
-    if message.from_user.id not in app.admin_ids_cache:
-        await message.reply(_("You are not authorized to perform this action."))
-        return
+    # Admin check is now handled by AdminCheckMiddleware
     await _show_subscriber_list_page(message, session, bot, _, page=0)
