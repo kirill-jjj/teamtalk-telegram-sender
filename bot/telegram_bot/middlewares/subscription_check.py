@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Dict, Awaitable, TYPE_CHECKING
+from typing import Callable, Dict, Awaitable, TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery, User as AiogramUser
