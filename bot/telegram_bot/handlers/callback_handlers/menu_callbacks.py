@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
+admin_menu_callback_router = Router(name="admin_menu_callback_router")
+admin_menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
 
 
 # --- Хендлеры обычных пользователей ---
@@ -76,7 +78,7 @@ async def menu_settings_handler(
 
 # --- Хендлеры администратора ---
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"), middlewares=[AdminCheckMiddleware()])
+@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
@@ -89,7 +91,7 @@ async def menu_kick_handler(
     await query.answer()
 
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"), middlewares=[AdminCheckMiddleware()])
+@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"))
 @ensure_message_context
 async def menu_ban_handler(
     query: CallbackQuery,
@@ -102,7 +104,7 @@ async def menu_ban_handler(
     await query.answer()
 
 
-@menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"), middlewares=[AdminCheckMiddleware()])
+@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"))
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,
