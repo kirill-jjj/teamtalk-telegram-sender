@@ -20,7 +20,7 @@ async def cq_show_notifications_menu(
     callback_data: SettingsCallback
 ):
     await callback_query.answer()
-    notification_settings_builder = create_notification_settings_keyboard(_, user_settings)
+    notification_settings_builder = await create_notification_settings_keyboard(_, user_settings)
     await safe_edit_text(
         message_to_edit=callback_query.message,
         text=_("Notification Settings"),
@@ -54,7 +54,7 @@ async def cq_toggle_noon_setting_action(
     # user_settings.not_on_online_enabled is toggled by update_logic within process_setting_update
     # before this part of the code (which prepares new_text and new_markup) is effectively used by safe_edit_text.
     # Thus, create_notification_settings_keyboard will be called with the *new* state of user_settings.
-    updated_builder = create_notification_settings_keyboard(_, user_settings)
+    updated_builder = await create_notification_settings_keyboard(_, user_settings)
     menu_text = _("Notification Settings")
 
     await process_setting_update(

@@ -34,7 +34,7 @@ async def cq_show_language_menu(
 ):
     await callback_query.answer()
 
-    language_menu_builder = create_language_selection_keyboard(_)
+    language_menu_builder = await create_language_selection_keyboard(_)
 
     # Ensure callback_query.message exists before trying to edit
     if not callback_query.message:
@@ -106,7 +106,7 @@ async def cq_set_language(
         await active_bot_instance.set_my_commands(commands=commands_to_set, scope=scope)
         logger.info(f"Updated Telegram commands for user {callback_query.from_user.id} to language '{new_lang_code_str}'.")
 
-        main_settings_builder = create_main_settings_keyboard(new_gettext_func)
+        main_settings_builder = await create_main_settings_keyboard(new_gettext_func)
         main_settings_text = new_gettext_func("Settings")
 
         await safe_edit_text(
@@ -127,7 +127,7 @@ async def cq_set_language(
             new_gettext_func("Language updated, but commands might not refresh immediately. Error: {error_msg}").format(error_msg=str(e_tg)),
             show_alert=True
         )
-        main_settings_builder = create_main_settings_keyboard(new_gettext_func)
+        main_settings_builder = await create_main_settings_keyboard(new_gettext_func)
         main_settings_text = new_gettext_func("Settings")
         await safe_edit_text( # Still attempt to update UI to new language
             message_to_edit=callback_query.message,
