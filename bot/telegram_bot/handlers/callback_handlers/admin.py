@@ -52,16 +52,16 @@ async def _execute_tt_user_action(
 
     except PytalkPermissionError as e:
         logger.error(f"PermissionError during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}")
-        return False, _("The bot lacks permissions on the TeamTalk server {server_host} to perform this action.").format(server_host=server_host)
+        return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
     except PytalkException as e:
         logger.error(f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}", exc_info=True)
-        return False, _("An error occurred on server {server_host} during the action on the user: {error}").format(server_host=server_host, error=str(e))
+        return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
     except (ValueError, TypeError, AttributeError) as e_data: # Includes issues if user_to_act_on is somehow invalid
         logger.error(f"Data error during '{action}' on TT user (ID: {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}) on server {server_host}: {e_data}", exc_info=True)
-        return False, _("An internal data error occurred processing the request for server {server_host}.").format(server_host=server_host)
+        return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
     except (TimeoutError, OSError) as e_net: # Network or OS level errors
         logger.critical(f"CRITICAL: Network/OS error during '{action}' on TT user (ID: {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}) on server {server_host}: {e_net}", exc_info=True)
-        return False, _("A network or system error occurred with server {server_host}. Administrator has been notified.").format(server_host=server_host)
+        return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
 
 
 @admin_actions_router.callback_query(

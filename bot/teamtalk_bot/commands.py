@@ -227,7 +227,7 @@ async def handle_tt_subscribe_command(
         action=DeeplinkAction.SUBSCRIBE, payload=sender_tt_username,
         success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_("Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"),
-        error_reply_source=_("An error occurred while processing the subscription request."),
+        error_reply_source=_("An error occurred. Please try again later."), # Unified
         app=app # Pass app
     )
 
@@ -244,7 +244,7 @@ async def handle_tt_unsubscribe_command(
         action=DeeplinkAction.UNSUBSCRIBE, payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_("Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"),
-        error_reply_source=_("An error occurred while processing the unsubscription request."),
+        error_reply_source=_("An error occurred. Please try again later."), # Unified
         app=app # Pass app
     )
 

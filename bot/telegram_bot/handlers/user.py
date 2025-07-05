@@ -127,23 +127,39 @@ def _group_users_for_who_command(
 
 
 def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, translator: "gettext.GNUTranslations", server_host: str | None) -> str:
+    _ = translator.gettext
+    ngettext = translator.ngettext
+
     if total_users == 0:
-        no_users_text = translator.gettext("No users found online")
+        no_users_text = _("No users found online")
         if server_host:
-            no_users_text += translator.gettext(" on server {server_host}").format(server_host=server_host)
-        return no_users_text + "."
+            # Используем отдельный msgid для случая с именем сервера
+            no_users_text = _("No users found online on server {server_host}.").format(server_host=server_host)
+        else:
+            no_users_text = _("No users found online.")
+        return no_users_text
 
     sorted_groups = sorted(grouped_data, key=lambda group: group.channel_name)
-    users_word_total = translator.ngettext("user", "users", total_users)
 
+    # --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+    # Мы используем ngettext для всей фразы.
+    # Babel извлечет две строки: единственного и множественного числа.
+    # В .po файле у вас будет возможность задать все три формы для славянских языков.
     if server_host:
-        # Шаблон с именем сервера
-        text_reply_header = translator.gettext("There are {user_count} {users_word} on the server {server_host}:\n")
-        text_reply = text_reply_header.format(user_count=total_users, users_word=users_word_total, server_host=server_host)
+        header_template = ngettext(
+            "There is {user_count} user on the server {server_host}:\n",
+            "There are {user_count} users on the server {server_host}:\n",
+            total_users
+        )
+        text_reply = header_template.format(user_count=total_users, server_host=server_host)
     else:
-        # Шаблон без имени сервера
-        text_reply_header = translator.gettext("There are {user_count} {users_word} on the server:\n")
-        text_reply = text_reply_header.format(user_count=total_users, users_word=users_word_total)
+        header_template = ngettext(
+            "There is {user_count} user on the server:\n",
+            "There are {user_count} users on the server:\n",
+            total_users
+        )
+        text_reply = header_template.format(user_count=total_users)
+    # --- КОНЕЦ КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
 
     channel_info_parts: list[str] = []
     for group in sorted_groups:

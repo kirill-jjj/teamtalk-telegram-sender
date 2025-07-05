@@ -494,13 +494,16 @@ async def _create_generic_user_toggle_list_keyboard(
         display_name_on_button = item_display_name_extractor(item)
 
         effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
-        status_text = _("Muted") if effectively_muted else _("Not Muted")
 
-        # Standardized button text
-        button_text = _("{item_display_name} (Status: {status_text})").format(
-            item_display_name=html.escape(display_name_on_button), # Ensure display name is escaped
-            status_text=status_text
-        )
+        # Вместо двух отдельных msgid, создаем один шаблон
+        if effectively_muted:
+            button_text = _("{item_display_name} (Status: Muted)").format(
+                item_display_name=html.escape(display_name_on_button)
+            )
+        else:
+            button_text = _("{item_display_name} (Status: Not Muted)").format(
+                item_display_name=html.escape(display_name_on_button)
+            )
 
         callback_d = ToggleMuteSpecificCallback(
             action=ToggleMuteSpecificAction.TOGGLE_USER,
