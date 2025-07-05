@@ -10,8 +10,7 @@ from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_language_selection_keyboard
 from bot.telegram_bot.callback_data import SettingsCallback, LanguageCallback
 from bot.core.enums import SettingsNavAction, LanguageAction
-# from bot.language import get_translator # Moved to Application class
-from bot.core.languages import AVAILABLE_LANGUAGES_DATA # This will be refactored in Part 2
+# from bot.core.languages import AVAILABLE_LANGUAGES_DATA # No longer needed
 from ._helpers import safe_edit_text
 from bot.telegram_bot.commands import get_user_commands, get_admin_commands
 from bot.core.user_settings import update_user_settings_in_db
@@ -29,11 +28,11 @@ async def cq_show_language_menu(
     callback_query: CallbackQuery,
     _: callable,
     callback_data: SettingsCallback,
-    app: "Application" # Added app to access app.available_languages
+    app: "Application"
 ):
     await callback_query.answer()
 
-    language_menu_builder = await create_language_selection_keyboard(_, available_languages=app.available_languages) # Pass app.available_languages
+    language_menu_builder = await create_language_selection_keyboard(_, available_languages=app.available_languages)
 
     # Ensure callback_query.message exists before trying to edit
     if not callback_query.message:
@@ -76,15 +75,13 @@ async def cq_set_language(
         await callback_query.answer()
         return
 
-    # selected_lang_info = next((lang for lang in AVAILABLE_LANGUAGES_DATA if lang["code"] == new_lang_code_str), None) # Old way
-    selected_lang_info = next((lang for lang in app.available_languages if lang["code"] == new_lang_code_str), None) # New way
+    selected_lang_info = next((lang for lang in app.available_languages if lang["code"] == new_lang_code_str), None)
     if not selected_lang_info:
         logger.error(f"Attempt to set unknown language code: {new_lang_code_str}")
         await callback_query.answer(_("Selected language is not available."), show_alert=True)
         return
 
-    # new_lang_translator_obj = get_translator(new_lang_code_str) # Old call
-    new_lang_translator_obj = app.get_translator(new_lang_code_str) # New call
+    new_lang_translator_obj = app.get_translator(new_lang_code_str)
     new_gettext_func = new_lang_translator_obj.gettext
 
     managed_user_settings.language_code = new_lang_code_str
