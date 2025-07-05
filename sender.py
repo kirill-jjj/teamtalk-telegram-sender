@@ -394,21 +394,10 @@ class Application:
             else:
                 self.logger.info(f"[{connection.server_info.host}] Bot re-joined channel {pytalk.instance.sdk.ttstr(channel.name)}, already finalized.")
         else:
-            # This is another user joining a channel
-            # The send_join_leave_notification_logic needs to be called with the correct connection context
-            await send_join_leave_notification_logic(
-                event_type=NOTIFICATION_EVENT_JOIN,
-                tt_user=user,
-                tt_instance=connection.instance,
-                login_complete_time=connection.login_complete_time,
-                bot=self.tg_bot_event,
-                session_factory=self.session_factory,
-                user_settings_cache=self.user_settings_cache,
-                subscribed_users_cache=self.subscribed_users_cache,
-                online_users_cache_for_instance=connection.online_users_cache,
-                app_config_instance=self.app_config,
-                app=self # PASS Application instance
-            )
+            # This is another user joining a channel.
+            # Per new requirements, DO NOT send notification here.
+            # Notification is sent only on on_pytalk_user_login.
+            pass
 
     async def on_pytalk_my_connection_lost(self, server: PytalkServer):
         # server object here is PytalkServer, its server.teamtalk_instance is the one that got lost
