@@ -9,7 +9,7 @@ version = "0.1.0"
 description = "A bot that bridges TeamTalk 5 server events (user join/leave) to Telegram notifications and forwards PMs."
 readme = "README.md"
 requires-python = ">=3.11, <3.13"
-license = {text = "GNU General Public License v3.0"}
+license = {file = "LICENSE"}
 authors = [
     {name = "kirill-jjj", email = "kirillkolovi@gmail.com"},
 ]
@@ -51,8 +51,9 @@ Homepage = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Issues = "https://github.com/kirill-jjj/teamtalk-telegram-sender/issues"
 
-[tool.setuptools]
-packages = ["bot", "scripts"]
+[tool.setuptools.packages.find]
+where = ["."]  # Search for packages in the root directory
+exclude = ["tests*"] # Exclude test packages
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -84,7 +85,13 @@ indent-width = 4
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity checks (`C901`) by default.
-select = ["E4", "E7", "E9", "F"]
+# E, W: pycodestyle errors and warnings
+# F: Pyflakes errors
+# I: import sorting (isort)
+# C4: useful simplifications (e.g., dict(a=1) instead of {"a": 1})
+# B: bugbear (potential bug detection)
+# UP: auto-update syntax to newer Python versions
+select = ["E", "W", "F", "I", "C4", "B", "UP"]
 ignore = []
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -108,7 +115,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [project.scripts]
-teamtalk-telegram-sender = "bot.main:main"
+teamtalk-telegram-sender = "sender:main_cli"
 migrate = "scripts.run_alembic:main"
 i18n = "manage_locales:main" # Assuming manage-locales.py is in root
 
