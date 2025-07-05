@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-07-05 14:44+0000\n"
+"POT-Creation-Date: 2025-07-05 14:57+0000\n"
 "PO-Revision-Date: 2025-07-04 06:07+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -517,10 +517,12 @@ msgstr ""
 "Кеш облікових записів сервера TeamTalk не заповнений. Будь ласка, "
 "спробуйте пізніше."
 
-#: bot/telegram_bot/handlers/admin.py:49
-#, python-brace-format
-msgid "No users online on TeamTalk server {server_host}."
-msgstr ""
+# | msgid "User not found on server anymore."
+# | msgid "User not found on server {server_host} anymore."
+#: bot/telegram_bot/handlers/admin.py:49 bot/telegram_bot/handlers/user.py:137
+#, fuzzy, python-brace-format
+msgid "No users found online on server {server_host}."
+msgstr "Користувача більше не знайдено на сервері."
 
 # | msgid "Select a user to kick:"
 #: bot/telegram_bot/handlers/admin.py:56
@@ -569,25 +571,18 @@ msgstr "в невідомому місці"
 msgid "No users found online"
 msgstr "Користувачів онлайн не знайдено."
 
-# | msgid "User not found on server anymore."
-#: bot/telegram_bot/handlers/user.py:137
-#, fuzzy, python-brace-format
-#| msgid "User not found on server {server_host} anymore."
-msgid "No users found online on server {server_host}."
-msgstr "Користувача більше не знайдено на сервері."
-
 # | msgid "No users found online."
+# | msgid "No users found online"
 #: bot/telegram_bot/handlers/user.py:139
 #, fuzzy
-#| msgid "No users found online"
 msgid "No users found online."
 msgstr "Користувачів онлайн не знайдено."
 
 # | msgid "There are {user_count} {users_word} on the server:\n"
 # | msgid "There are {user_count} {users_word} on the server"
+# | msgid "There are {user_count} {users_word} on the server {server_host}:\n"
 #: bot/telegram_bot/handlers/user.py:150
 #, fuzzy, python-brace-format
-#| msgid "There are {user_count} {users_word} on the server {server_host}:\n"
 msgid "There is {user_count} user on the server {server_host}:\n"
 msgid_plural "There are {user_count} users on the server {server_host}:\n"
 msgstr[0] "На сервері зараз {user_count} {users_word}:\n"
@@ -598,7 +593,6 @@ msgstr[2] ""
 # | msgid "There are {user_count} {users_word} on the server"
 #: bot/telegram_bot/handlers/user.py:157
 #, fuzzy, python-brace-format
-#| msgid "There are {user_count} {users_word} on the server:\n"
 msgid "There is {user_count} user on the server:\n"
 msgid_plural "There are {user_count} users on the server:\n"
 msgstr[0] "На сервері зараз {user_count} {users_word}:\n"
@@ -636,6 +630,7 @@ msgstr "Користувача {user_nickname} забанено та видал�
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:51
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:197
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:270
 msgid "Unknown action."
 msgstr "Невідома дія."
 
@@ -926,10 +921,6 @@ msgid ""
 "{telegram_id}:"
 msgstr "Виберіть акаунт TeamTalk для прив'язки до підписника {telegram_id}:"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:270
-msgid "Unknown manage account action."
-msgstr "Невідома дія з керування акаунтом."
-
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:297
 #, python-brace-format
 msgid "This TeamTalk username ({tt_username}) is banned and cannot be linked."
@@ -1171,3 +1162,9 @@ msgstr "Налаштування підписки оновлено на: {settin
 #~ msgstr[0] "користувач"
 #~ msgstr[1] "користувачі"
 #~ msgstr[2] "користувачів"
+
+#~ msgid "No users online on TeamTalk server {server_host}."
+#~ msgstr ""
+
+#~ msgid "Unknown manage account action."
+#~ msgstr "Невідома дія з керування акаунтом."
