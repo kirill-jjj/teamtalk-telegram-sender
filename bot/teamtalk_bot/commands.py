@@ -13,14 +13,11 @@ from pytalk.exceptions import TeamTalkException
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
-# from bot.config import app_config # Will use app.app_config
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink, add_admin, remove_admin_db
-# from bot.telegram_bot.bot_instances import tg_bot_event # Will use app.tg_bot_event
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 from bot.teamtalk_bot.utils import send_long_tt_reply
 from bot.core.enums import DeeplinkAction
-# from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting connection if passed directly
 
 if TYPE_CHECKING:
     from sender import Application # For type hinting app instance

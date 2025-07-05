@@ -53,13 +53,13 @@ def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool: # Pass app_c
 async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
-    session_factory: "DbSessionFactory", # Pass factory
-    subscribed_users_cache: Set[int] # Pass cache
+    session_factory: "DbSessionFactory",
+    subscribed_users_cache: Set[int]
 ) -> list[int]:
-    subscriber_ids = list(subscribed_users_cache) # Use passed cache
+    subscriber_ids = list(subscribed_users_cache)
     if not subscriber_ids: return []
 
-    async with session_factory() as session: # Use passed factory
+    async with session_factory() as session:
         filters = [
             UserSettings.telegram_id.in_(subscriber_ids),
             UserSettings.notification_settings != NotificationSetting.NONE

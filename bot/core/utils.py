@@ -8,9 +8,6 @@ from pytalk.instance import TeamTalkInstance # Keep for type hint
 from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
-# from bot.config import app_config # Will be passed as parameter
-# from bot.state import ONLINE_USERS_CACHE # Will be removed
-
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 

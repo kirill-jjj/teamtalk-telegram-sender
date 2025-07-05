@@ -9,15 +9,10 @@ from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
 
-# from bot.config import app_config # Not used directly here anymore
 from bot.services import user_service # Keep, used by _handle_telegram_api_error
-# from bot.database.engine import SessionFactory # No longer directly used, app.session_factory is used
-# from bot.core.user_settings import USER_SETTINGS_CACHE # No longer directly used, app.user_settings_cache is used
-# from bot.state import ONLINE_USERS_CACHE # Removed
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-# from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message # Bot instances passed as params
 
 # For type hinting app instance
 from typing import TYPE_CHECKING

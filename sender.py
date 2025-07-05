@@ -43,7 +43,6 @@ from bot.core.languages import discover_languages, AVAILABLE_LANGUAGES_DATA, DEF
 from bot.language import get_translator
 
 # Telegram specific components to be managed by Application
-from bot.telegram_bot.bot_instances import tg_bot_event, tg_bot_message
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
