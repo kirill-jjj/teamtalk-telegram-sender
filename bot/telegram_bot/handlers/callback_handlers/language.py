@@ -88,13 +88,13 @@ async def cq_set_language(
     is_admin = managed_user_settings.telegram_id in app.admin_ids_cache
 
     try:
-        # 1. Сохраняем в БД
+        # 1. Save to DB
         await update_user_settings_in_db(session, managed_user_settings)
 
-        # 2. <<< ВАЖНО: НЕМЕДЛЕННО ОБНОВЛЯЕМ КЭШ >>>
+        # 2. <<< IMPORTANT: IMMEDIATELY UPDATE CACHE >>>
         app.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
 
-        # 3. Теперь отвечаем пользователю и обновляем UI
+        # 3. Now respond to the user and update UI
         await callback_query.answer(
             new_gettext_func("Language updated to {lang_name}.").format(lang_name=selected_lang_info["native_name"]),
             show_alert=False

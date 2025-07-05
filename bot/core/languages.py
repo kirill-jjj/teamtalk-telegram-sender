@@ -18,8 +18,8 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
     """
     Scans the locales directory for translated languages and always includes English as the base language.
     """
-    # 1. Начинаем список с английского языка, который является исходным.
-    #    Его нативное имя - это не "перевод", а метаданные.
+    # 1. Start the list with English, which is the source language.
+    #    Its native name is not a "translation" but metadata.
     discovered: List[LanguageInfo] = [
         {"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}
     ]
@@ -30,10 +30,10 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
         print(f"Warning: Locales directory not found at {locales_path}. Only English will be available.")
         return discovered
 
-    # 2. Ищем и добавляем все остальные переведенные языки.
+    # 2. Search for and add all other translated languages.
     for lang_code in os.listdir(locales_path):
         if lang_code in discovered_codes:
-            continue # Пропускаем, если это 'en' (которого уже не должно быть)
+            continue # Skip if it's 'en' (which shouldn't be the case anymore)
 
         lang_path = os.path.join(locales_path, lang_code)
         mo_file_path = os.path.join(lang_path, "LC_MESSAGES", "messages.mo")
@@ -55,7 +55,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
             discovered.append({"code": lang_code, "native_name": native_name})
             discovered_codes.add(lang_code)
 
-    # 3. Сортируем итоговый список для красивого отображения в меню.
+    # 3. Sort the final list for nice display in menus.
     discovered.sort(key=lambda x: x["native_name"])
 
     return discovered

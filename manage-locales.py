@@ -4,7 +4,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-# Константы
+# Constants
 PROJECT_NAME = "teamtalk-telegram-sender"
 COPYRIGHT_HOLDER = "kirill-jjj"
 BABEL_CONFIG = "babel.cfg" # Assumed to be in BASE_DIR
@@ -20,7 +20,7 @@ except NameError: # Fallback for __file__ not defined
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 
 def get_project_version() -> str:
-    """Читает версию из pyproject.toml."""
+    """Reads the version from pyproject.toml."""
     pyproject_path = BASE_DIR / "pyproject.toml"
     try:
         with open(pyproject_path, "rb") as f:

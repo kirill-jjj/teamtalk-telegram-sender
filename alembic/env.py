@@ -50,12 +50,12 @@ def get_db_url():
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
-    # Чтобы импортировать Settings, нам нужно временно добавить текущую директорию в path
+    # To import Settings, we need to temporarily add the current directory to the path
     import sys
     sys.path.insert(0, '.')
     from bot.config import Settings
 
-    # Создаем экземпляр настроек, используя нужный файл
+    # Create an instance of settings using the required file
     app_config = Settings(_env_file=config_file)
 
     db_path = os.path.abspath(app_config.DATABASE_FILE)
