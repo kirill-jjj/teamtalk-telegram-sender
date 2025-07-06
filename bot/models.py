@@ -1,6 +1,7 @@
 import enum
 from datetime import datetime
 from typing import Optional, List
+from sqlalchemy import CheckConstraint
 from sqlmodel import Field, SQLModel, Relationship
 
 from bot.core.enums import DeeplinkAction
@@ -79,5 +80,9 @@ class BanList(SQLModel, table=True):
     banned_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     # Constraint to ensure at least one identifier is present
-    # This is more complex to enforce at DB level with SQLModel directly without raw SQL.
-    # Will be enforced at application level in CRUD.
+    __table_args__ = (
+        CheckConstraint(
+            "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL",
+            name="ck_ban_list_identifier_not_both_null"
+        ),
+    )
