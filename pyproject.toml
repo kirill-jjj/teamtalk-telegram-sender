@@ -119,7 +119,14 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [project.scripts]
+# Original command
 teamtalk-telegram-sender = "sender:main_cli"
+
+# New aliases
+bot = "sender:main_cli"
+sender = "sender:main_cli"
+
+# System scripts
 migrate = "scripts.run_alembic:main"
 i18n = "scripts.manage_locales:main"
 env-to-toml = "scripts.env_to_toml:main"

@@ -182,7 +182,12 @@ def main():
 
         for env_file_path_item in env_files_to_process:
             found_files_count +=1
-            output_toml_path_item = env_file_path_item.with_suffix(".toml")
+            # Determine output path for --all mode
+            if env_file_path_item.name == ".env" and env_file_path_item.parent == project_root:
+                output_toml_path_item = project_root / "config.toml"
+            else:
+                output_toml_path_item = env_file_path_item.with_suffix(".toml")
+
             if process_single_env_file(env_file_path_item, output_toml_path_item):
                 converted_count += 1
 
