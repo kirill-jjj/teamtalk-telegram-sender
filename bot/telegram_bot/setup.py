@@ -1,29 +1,30 @@
 from typing import TYPE_CHECKING
-from aiogram import Dispatcher # For type hinting dp
+
+from aiogram import Dispatcher  # For type hinting dp
 
 if TYPE_CHECKING:
-    from sender import Application # For app_callbacks type hint
     from bot.services_container import Services
+    from sender import Application  # For app_callbacks type hint
 
 # Aiogram компоненты
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
-# Middlewares
-from bot.telegram_bot.middlewares import (
-    DbSessionMiddleware,
-    UserSettingsMiddleware,
-    SubscriptionCheckMiddleware,
-    ActiveTeamTalkConnectionMiddleware,
-    TeamTalkConnectionCheckMiddleware,
-    AdminCheckMiddleware
-)
+from bot.telegram_bot.handlers.admin import admin_router
+from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
+from bot.telegram_bot.handlers.callbacks import callback_router
+from bot.telegram_bot.handlers.unknown import catch_all_router
 
 # Роутеры
 from bot.telegram_bot.handlers.user import user_commands_router
-from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callbacks import callback_router
-from bot.telegram_bot.handlers.unknown import catch_all_router
-from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
+
+# Middlewares
+from bot.telegram_bot.middlewares import (
+    ActiveTeamTalkConnectionMiddleware,
+    AdminCheckMiddleware,
+    DbSessionMiddleware,
+    SubscriptionCheckMiddleware,
+    UserSettingsMiddleware,
+)
 
 
 def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):
@@ -49,7 +50,7 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
     dp["available_languages"] = services.available_languages
 
 
-    # Регистрация Middlewares
+    # Register Middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
 
     # These middlewares will be refactored later to pull dependencies from data dict
@@ -59,31 +60,28 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
 
-    # ActiveTeamTalkConnectionMiddleware can be applied to specific routers or globally
-    # For now, assuming it's registered generally and handlers decide if they need tt_connection
-    # Or it can be applied to specific routers that always need it.
-    # Example: user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware())
-    # Let's keep it general for now, to be refined if needed.
-    # It will also be refactored to use data['services']
+    # ActiveTeamTalkConnectionMiddleware is registered globally here.
+    # Handlers that need it will have it injected.
+    # It will be refactored to use data['services'].
     dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
     dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
 
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    # Middleware для проверки админа на конкретных роутерах
+    # Admin check middleware for specific routers
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 
 
-    # Подключение роутеров
+    # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
     dp.include_router(subscriber_actions_router)
     dp.include_router(catch_all_router)
 
-    # Регистрация хуков жизненного цикла и обработчика ошибок from Application instance
+    # Register lifecycle hooks and error handler from Application instance
     dp.startup.register(app_callbacks._on_startup_logic)
     dp.shutdown.register(app_callbacks._on_shutdown_logic)
     dp.errors.register(app_callbacks._global_error_handler)

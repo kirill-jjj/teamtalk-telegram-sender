@@ -1,29 +1,21 @@
 import logging
-from aiogram import Router, Bot as AiogramBot, F
+
+from aiogram import Bot as AiogramBot
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.utils import get_tt_user_display_name, get_online_teamtalk_users
-from bot.telegram_bot.keyboards import create_user_selection_keyboard
-from bot.telegram_bot.middlewares import TeamTalkConnectionCheckMiddleware, ActiveTeamTalkConnectionMiddleware
-from bot.teamtalk_bot.connection import TeamTalkConnection
-
 from bot.core.enums import AdminAction
-from .callback_handlers.list_utils import _show_subscriber_list_page
+from bot.core.utils import get_online_teamtalk_users, get_tt_user_display_name
+from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
-# TYPE_CHECKING for Services is not needed here as handlers will request specific dependencies
-# from typing import TYPE_CHECKING
-# if TYPE_CHECKING:
-    # from bot.services_container import Services
+from .callback_handlers.list_utils import _show_subscriber_list_page
 
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-# Middlewares ActiveTeamTalkConnectionMiddleware and TeamTalkConnectionCheckMiddleware
-# are already applied and refactored to use DI.
-# They will inject tt_connection or block if unavailable/not ready.
-# UserSettingsMiddleware (providing _) is applied globally in setup_telegram_dispatcher.
 
 async def _show_user_buttons(
     message: Message,
@@ -33,7 +25,10 @@ async def _show_user_buttons(
 ):
     if not tt_connection or not tt_connection.instance:
         # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
-        logger.error("tt_connection or its instance is None in _show_user_buttons. This should have been caught by middleware.")
+        logger.error(
+            "tt_connection or its instance is None in _show_user_buttons. "
+            "This should have been caught by middleware."
+        )
         await message.reply(_("TeamTalk connection is not available. Please try again later."))
         return
 
@@ -48,15 +43,23 @@ async def _show_user_buttons(
     online_users = await get_online_teamtalk_users(tt_instance)
 
     if not online_users:
-        await message.reply(_("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host))
+        await message.reply(
+            _("No users found online on server {server_host}.").format(
+                server_host=tt_connection.server_info.host
+            )
+        )
         return
 
     sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, _).lower())
     builder = await create_user_selection_keyboard(_, sorted_users, command_type)
 
     command_text_map = {
-        AdminAction.KICK: _("Select a user to kick from {server_host}:").format(server_host=tt_connection.server_info.host),
-        AdminAction.BAN: _("Select a user to ban from {server_host}:").format(server_host=tt_connection.server_info.host)
+        AdminAction.KICK: _("Select a user to kick from {server_host}:").format(
+            server_host=tt_connection.server_info.host
+        ),
+        AdminAction.BAN: _("Select a user to ban from {server_host}:").format(
+            server_host=tt_connection.server_info.host
+        )
     }
     reply_text = command_text_map.get(command_type, _("Select a user:"))
 

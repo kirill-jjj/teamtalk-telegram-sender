@@ -1,5 +1,6 @@
+
 from pydantic import BaseModel
-from typing import List
+
 
 class SubscriberInfo(BaseModel):
     telegram_id: int
@@ -11,4 +12,4 @@ class WhoUser(BaseModel):
 
 class WhoChannelGroup(BaseModel):
     channel_name: str
-    users: List[WhoUser]
+    users: list[WhoUser]

@@ -1,28 +1,22 @@
-import asyncio
 import argparse
-import traceback
+import asyncio
 import logging
+import traceback
+
 # from datetime import datetime # No longer needed here
-
-from typing import Optional
-
-from bot.config import Settings # For type hinting app_config_instance
-from bot.database.engine import create_session_factory
-
 from aiogram import Dispatcher, html
-from aiogram.types import ErrorEvent, Message as AiogramMessage # For _global_error_handler
+from aiogram.types import ErrorEvent  # For _global_error_handler
+from aiogram.types import Message as AiogramMessage
 
-import pytalk
-
+from bot.config import Settings  # For type hinting app_config_instance
+from bot.core.languages import DEFAULT_LANGUAGE_CODE  # For _global_error_handler fallback
+from bot.database import crud  # Used in _on_startup_logic
+from bot.database.engine import create_session_factory
 from bot.logging_setup import setup_logging
-from bot.database import crud # Used in _on_startup_logic
-from bot.core.languages import DEFAULT_LANGUAGE_CODE # For _global_error_handler fallback
-
-from bot.telegram_bot.commands import set_telegram_commands
 
 # Import Services container
 from bot.services_container import Services
-
+from bot.telegram_bot.commands import set_telegram_commands
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +39,7 @@ class Application:
         self.tt_event_handler = TeamTalkEventHandler(self.services)
 
 
-        self.teamtalk_task: Optional[asyncio.Task] = None
+        self.teamtalk_task: asyncio.Task | None = None
 
 
     # --- Application Lifecycle Methods ---
@@ -162,12 +156,17 @@ class Application:
                 )
                 await self.services.bot_event.send_message(admin_chat_id_for_error, error_text, parse_mode="HTML")
             except Exception as e:
-                self.logger.error(f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}", exc_info=True)
+                self.logger.error(
+                    f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}",
+                    exc_info=True
+                )
 
         update = event.update
         user_id = None
-        if update.message and update.message.from_user: user_id = update.message.from_user.id
-        elif update.callback_query and update.callback_query.from_user: user_id = update.callback_query.from_user.id
+        if update.message and update.message.from_user:
+            user_id = update.message.from_user.id
+        elif update.callback_query and update.callback_query.from_user:
+            user_id = update.callback_query.from_user.id
 
         lang_code = DEFAULT_LANGUAGE_CODE # Fallback
         if user_id:
@@ -191,7 +190,10 @@ class Application:
                 elif user_id: # Try direct send if no reply context
                      await self.services.bot_event.send_message(chat_id=user_id, text=user_message_text)
             except Exception as e:
-                self.logger.error(f"Error sending error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True)
+                self.logger.error(
+                    f"Error sending error message to user {user_id if user_id else 'Unknown'}: {e}",
+                    exc_info=True
+                )
 
 
     async def run(self):
@@ -229,7 +231,7 @@ def main_cli():
     )
     args, _ = parser.parse_known_args() # Keep known_args if other CLI tools might chain here, otherwise parse_args()
 
-    from bot.config import Settings # Keep for type hinting and access to from_toml
+    from bot.config import Settings  # Keep for type hinting and access to from_toml
 
     try:
         print(f"Loading configuration from: {args.config}")

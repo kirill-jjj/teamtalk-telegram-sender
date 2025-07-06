@@ -1,13 +1,13 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
 from typing import TYPE_CHECKING
+
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database import crud
 
 if TYPE_CHECKING:
-    # from sender import Application # No longer Application
-    from bot.services_container import Services # Import Services
+    from bot.services_container import Services  # Import Services
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +42,18 @@ async def delete_full_user_profile(
         logger.info(f"User {telegram_id} discarded from services.admin_ids_cache (if present).")
 
 
-        logger.info(f"Full user profile deletion process completed for Telegram ID: {telegram_id}. DB changes (if any) committed. Caches cleared via services container.")
+        logger.info(
+            f"Full user profile deletion process completed for Telegram ID: {telegram_id}. "
+            f"DB changes (if any) committed. Caches cleared via services container."
+        )
         return True
 
     except SQLAlchemyError as e_sql:
         await session.rollback()
-        logger.error(f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.", exc_info=True)
+        logger.error(
+            f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.",
+            exc_info=True
+        )
         return False
     except Exception as e:
         await session.rollback()

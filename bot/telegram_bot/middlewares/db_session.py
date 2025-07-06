@@ -1,7 +1,10 @@
-from typing import Callable, Coroutine, Any, Dict
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.orm import sessionmaker
+
 
 class DbSessionMiddleware(BaseMiddleware):
     def __init__(self, session_factory: sessionmaker): # type: ignore

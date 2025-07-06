@@ -1,6 +1,7 @@
 import sys
-from bot.config import Settings
 from pathlib import Path
+
+from bot.config import Settings
 
 if __name__ == "__main__":
     config_path = "config.example.toml"

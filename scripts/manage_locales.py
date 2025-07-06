@@ -32,9 +32,13 @@ def get_project_version() -> str:
         print("⚠️ Warning: Version not found in pyproject.toml under project.version.", file=sys.stderr)
         return "0.0.0" # Fallback version
     except FileNotFoundError:
-        print(f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. Cannot determine project version.", file=sys.stderr)
+        print(
+            f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. "
+            f"Cannot determine project version.", file=sys.stderr
+        )
         return "0.0.0" # Fallback version
-    except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e: # Broader catch for TOML issues or structure changes
+    # Broader catch for TOML issues or structure changes
+    except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e:
         print(f"⚠️ Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
         return "0.0.0" # Fallback version
 
@@ -56,7 +60,7 @@ def extract():
         subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
         print(f"✅ Messages extracted to '{POT_FILE.relative_to(BASE_DIR)}'")
     except FileNotFoundError:
-        print(f"❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.", file=sys.stderr)
+        print("❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel extract': {e.stderr}", file=sys.stderr)
@@ -75,9 +79,9 @@ def update():
     print(f"▶️  Executing: {' '.join(command)}")
     try:
         subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
-        print(f"✅ Translation catalogs (.po) successfully updated by pybabel.")
+        print("✅ Translation catalogs (.po) successfully updated by pybabel.")
     except FileNotFoundError:
-        print(f"❌ Error: Command 'pybabel' not found.", file=sys.stderr)
+        print("❌ Error: Command 'pybabel' not found.", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel update': {e.stderr}", file=sys.stderr)
@@ -96,9 +100,9 @@ def compile_cmd():
         result = subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
         if result.stdout:
             print(result.stdout.strip())
-        print(f"✅ Translation catalogs (.mo) successfully compiled.")
+        print("✅ Translation catalogs (.mo) successfully compiled.")
     except FileNotFoundError:
-        print(f"❌ Error: Command 'pybabel' not found.", file=sys.stderr)
+        print("❌ Error: Command 'pybabel' not found.", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel compile': {e.stderr}", file=sys.stderr)

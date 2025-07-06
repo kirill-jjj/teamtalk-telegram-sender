@@ -1,14 +1,22 @@
-import logging
-from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field, ValidationError
+from __future__ import annotations
 
-from bot.models import UserSettings, NotificationSetting
-from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
-from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
+import logging
+from typing import TYPE_CHECKING
+
+from aiogram import F, Router
+from aiogram.types import CallbackQuery
+from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from bot.core.enums import SettingsNavAction, SubscriptionAction
+from bot.models import NotificationSetting, UserSettings
+from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
+from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
+
 from ._helpers import process_setting_update, safe_edit_text
+
+if TYPE_CHECKING:
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +54,17 @@ async def cq_set_subscription_setting(
     _: callable,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
-    services: "Services"
+    services: Services
 ):
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
 
     except ValidationError as e:
-        logger.error(f"Invalid subscription setting value received in callback: {e} for user {callback_query.from_user.id}. Raw value: {callback_data.setting_value}")
+        logger.error(
+            f"Invalid subscription setting value received in callback: {e} for user "
+            f"{callback_query.from_user.id}. Raw value: {callback_data.setting_value}"
+        )
         await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
         return
 

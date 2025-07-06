@@ -1,26 +1,21 @@
-import logging
+from __future__ import annotations
+
 import asyncio
-from typing import Callable, TYPE_CHECKING
-from aiogram.utils.formatting import Text, Bold
+import html
+import logging
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pytalk
-from bot.constants import (
-    TT_HELP_MESSAGE_PART_DELAY,
-    TT_MAX_MESSAGE_BYTES,
-    DEFAULT_LANGUAGE
-)
-from bot.telegram_bot.utils import send_telegram_message_individual
-from bot.core.utils import get_effective_server_name, get_tt_user_display_name
-import html
-
-
-from pytalk import TeamTalkServerInfo
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
 
+from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
+from bot.core.utils import get_effective_server_name, get_tt_user_display_name
+from bot.telegram_bot.utils import send_telegram_message_individual
+
 if TYPE_CHECKING:
-    from sender import Application
-    from bot.teamtalk_bot.connection import TeamTalkConnection
+    from bot.services_container import Services  # Forward reference for Services
 
 logger = logging.getLogger(__name__)
 ttstr = sdk.ttstr
@@ -95,10 +90,18 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
                 remaining_text = ""
                 break
         else:
-            if current_chunk_str and not remaining_text:
-                 logger.debug("_split_text_for_tt: Appending final chunk in else block, this might be redundant.")
-                 parts_to_send_list.append(current_chunk_str)
-            remaining_text = ""
+            # This else block for the for loop is reached if the loop completes
+            # without a 'break', meaning the remaining_text was processed fully
+            # within the loop's last iteration or was already empty.
+            # The logic inside the loop should handle appending the last chunk.
+            # If current_chunk_str has content and remaining_text is now empty,
+            # it implies it was the last piece.
+            if current_chunk_str and not remaining_text: # Should have been appended already
+                # This condition might indicate a slight redundancy in the loop's final append,
+                # but it's safer to ensure the last piece isn't missed.
+                # However, the primary logic for appending the final chunk is within the loop.
+                pass # logger.debug("_split_text_for_tt: Final chunk logic handled within loop.")
+            remaining_text = "" # Ensure it's cleared
     return parts_to_send_list
 
 
@@ -116,7 +119,11 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
         if part_to_send_str.strip():
             try:
                 reply_method(part_to_send_str)
-                logger.debug(f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, length {len(part_to_send_str.encode('utf-8', errors='ignore'))} bytes.")
+                encoded_len = len(part_to_send_str.encode('utf-8', errors='ignore'))
+                logger.debug(
+                    f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, "
+                    f"length {encoded_len} bytes."
+                )
                 if part_idx < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
             except pytalk.exceptions.TeamTalkException as e:
@@ -126,25 +133,34 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    services: "Services", # Changed from app: "Application"
+    services: Services, # Changed from app: "Application"
     server_host_for_display: str
 ):
     if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message: # Use services.config, services.bot_message
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = services.config.TG_ADMIN_CHAT_ID # Use services.config
-    admin_settings = services.user_settings_cache.get(admin_chat_id) # Use services.user_settings_cache
-    admin_language_code = admin_settings.language_code if admin_settings else services.config.DEFAULT_LANG # Use services.config
+    admin_chat_id = services.config.TG_ADMIN_CHAT_ID
+    admin_settings = services.user_settings_cache.get(admin_chat_id)
+    if admin_settings and admin_settings.language_code:
+        admin_language_code = admin_settings.language_code
+    else:
+        admin_language_code = services.config.DEFAULT_LANG
 
-    translator = services.get_translator(admin_language_code) # Use services.get_translator
+    translator = services.get_translator(admin_language_code)
     _ = translator.gettext
 
-    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, services.config) # Pass services.config
+    server_name_to_display = get_effective_server_name(
+        message.teamtalk_instance, _, services.config
+    )
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
-    template_text_parts = _("Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}").format(
+    template_text_parts = _(
+        "Message from server <b>{server_name}</b>\n"
+        "From <b>{sender_name}</b>:\n\n"
+        "{message_content}"
+    ).format(
         server_name=html.escape(server_name_to_display),
         sender_name=html.escape(sender_display),
         message_content=html.escape(message_content)

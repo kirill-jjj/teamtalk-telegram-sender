@@ -1,39 +1,39 @@
-import logging
 import asyncio
-import gettext # For type hinting translator
-from aiogram import Router, html
+import gettext  # For type hinting translator
+import logging
+from html import escape
+
+# For type hinting Services
+from typing import (
+    TYPE_CHECKING,  # For admin_ids_cache type hint
+)
+
+import pytalk
+from aiogram import Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
-from sqlalchemy.ext.asyncio import AsyncSession
-from html import escape
-from typing import Set # For admin_ids_cache type hint
-
-from bot.core.utils import build_help_message, get_online_teamtalk_users
-import pytalk
 from pytalk.user import User as TeamTalkUser
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from aiogram.exceptions import TelegramAPIError
-from bot.telegram_bot.utils import safe_delete_message
-from bot.telegram_bot.deeplink import handle_deeplink_payload
-from bot.models import UserSettings
-from bot.telegram_bot.models import WhoUser, WhoChannelGroup
-from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_main_menu_keyboard
-from bot.core.utils import get_tt_user_display_name
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
-    WHO_CHANNEL_ID_SERVER_ROOT_ALT2
+    WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
-from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
+from bot.core.utils import build_help_message, get_online_teamtalk_users, get_tt_user_display_name
+from bot.models import UserSettings
+from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
+from bot.telegram_bot.deeplink import handle_deeplink_payload
+from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
+from bot.telegram_bot.models import WhoChannelGroup, WhoUser
+from bot.telegram_bot.utils import safe_delete_message
 
-# For type hinting Services
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bot.services_container import Services
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
@@ -58,8 +58,7 @@ async def start_command_handler(
 
     token = command.args
     if token:
-        # Call to handle_deeplink_payload will need to be updated
-        # when handle_deeplink_payload itself is refactored.
+        # TODO: Call to handle_deeplink_payload might need review if its own dependencies change.
         await handle_deeplink_payload(message, token, session, _, user_settings, services)
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
@@ -76,27 +75,49 @@ def _get_user_display_channel_name(
 
     if channel_obj:
         try:
-            # Ensure pytalk.instance.sdk.ChannelType is correctly referenced
             if hasattr(pytalk.instance.sdk, "ChannelType") and \
                hasattr(channel_obj, 'channel_type') and \
                isinstance(channel_obj.channel_type, int) and \
                (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0:
                 is_channel_hidden = True
         except AttributeError: # Catches missing ChannelType or channel_obj.channel_type
-            logger.warning(f"SDK, ChannelType or channel_type attribute missing, cannot determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden.")
+            log_msg = (
+                f"SDK, ChannelType or channel_type attribute missing, "
+                f"cannot determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden."
+            )
+            logger.warning(log_msg)
         except TypeError as e_chan_type:
-            logger.error(f"TypeError checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan_type}", exc_info=True)
+            log_msg = (
+                f"TypeError checking channel type for {ttstr(channel_obj.name)} "
+                f"({channel_obj.id}): {e_chan_type}"
+            )
+            logger.error(log_msg, exc_info=True)
         except Exception as e_chan:
-            logger.error(f"Unexpected error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}", exc_info=True)
+            log_msg = (
+                f"Unexpected error checking channel type for {ttstr(channel_obj.name)} "
+                f"({channel_obj.id}): {e_chan}"
+            )
+            logger.error(log_msg, exc_info=True)
 
-    if channel_obj and channel_obj.id not in [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]:
+    server_root_ids = [
+        WHO_CHANNEL_ID_ROOT,
+        WHO_CHANNEL_ID_SERVER_ROOT_ALT,
+        WHO_CHANNEL_ID_SERVER_ROOT_ALT2
+    ]
+    if channel_obj and channel_obj.id not in server_root_ids:
         if is_caller_admin or not is_channel_hidden:
-            user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name))
+            channel_name_str = ttstr(channel_obj.name)
+            user_display_channel_name = translator.gettext("in {channel_name}").format(
+                channel_name=channel_name_str
+            )
         else:
             user_display_channel_name = translator.gettext("under server")
     elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT:
         user_display_channel_name = translator.gettext("in root channel")
-    elif not channel_obj or (hasattr(channel_obj, 'id') and channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]):
+    elif not channel_obj or (
+        hasattr(channel_obj, 'id') and
+        channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]
+    ):
         user_display_channel_name = translator.gettext("under server")
     else: # Should ideally not be reached if channel_obj exists and ID is checked
         user_display_channel_name = translator.gettext("in unknown location")
@@ -136,7 +157,12 @@ def _group_users_for_who_command(
     return result_groups, users_added_to_groups_count
 
 
-def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, translator: "gettext.GNUTranslations", server_host: str | None) -> str:
+def _format_who_message(
+    grouped_data: list[WhoChannelGroup],
+    total_users: int,
+    translator: "gettext.GNUTranslations",
+    server_host: str | None
+) -> str:
     _ = translator.gettext
     ngettext = translator.ngettext
 
@@ -187,7 +213,7 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
 async def who_command_handler(
     message: Message,
     translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
-    admin_ids_cache: Set[int], # Injected from workflow_data
+    admin_ids_cache: set[int], # Injected from workflow_data
     tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     if not message.from_user:
@@ -203,7 +229,11 @@ async def who_command_handler(
     try:
         all_users_list = await get_online_teamtalk_users(tt_instance)
     except Exception as e:
-        logger.error(f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}", exc_info=True)
+        log_msg = (
+            f"Error getting user list for /who on server "
+            f"{server_host_for_log_and_display}: {e}"
+        )
+        logger.error(log_msg, exc_info=True)
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
@@ -211,7 +241,11 @@ async def who_command_handler(
     bot_user_id = tt_instance.getMyUserID()
 
     if bot_user_id is None:
-        logger.error(f"Could not get bot's own user ID from TeamTalk instance on server {server_host_for_log_and_display}.")
+        log_msg = (
+            f"Could not get bot's own user ID from TeamTalk instance on server "
+            f"{server_host_for_log_and_display}."
+        )
+        logger.error(log_msg)
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
@@ -234,7 +268,7 @@ async def who_command_handler(
 async def help_command_handler(
     message: Message,
     _: callable, # Injected by UserSettingsMiddleware
-    admin_ids_cache: Set[int] # Injected from workflow_data
+    admin_ids_cache: set[int] # Injected from workflow_data
 ):
     if not message.from_user:
         return
@@ -248,7 +282,6 @@ async def help_command_handler(
 async def settings_command_handler(
     message: Message,
     _: callable # Injected by UserSettingsMiddleware
-    # No app or services needed as create_main_settings_keyboard only needs _
 ):
     if not message.from_user:
         return
@@ -268,7 +301,7 @@ async def settings_command_handler(
 async def menu_command_handler(
     message: Message,
     _: callable, # Injected by UserSettingsMiddleware
-    admin_ids_cache: Set[int] # Injected from workflow_data
+    admin_ids_cache: set[int] # Injected from workflow_data
 ):
     if not message.from_user:
         return

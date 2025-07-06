@@ -1,7 +1,7 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.models import UserSettings
 

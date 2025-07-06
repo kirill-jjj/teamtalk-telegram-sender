@@ -1,18 +1,19 @@
 import logging
-# import asyncio # Not directly used here
-from aiogram import Router, Bot as AiogramBot, F # Renamed Bot
-from aiogram.types import CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from bot.services import user_service
-from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
-from bot.telegram_bot.callback_data import SubscriberListCallback
-from bot.telegram_bot.utils import send_or_edit_paginated_list
-from bot.core.enums import SubscriberListAction
-from .list_utils import _show_subscriber_list_page
 
 # For type hinting app instance
 from typing import TYPE_CHECKING
+
+from aiogram import Bot as AiogramBot
+from aiogram import Router  # Renamed Bot
+from aiogram.types import CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.core.enums import SubscriberListAction
+from bot.services import user_service
+from bot.telegram_bot.callback_data import SubscriberListCallback
+
+from .list_utils import _show_subscriber_list_page
+
 if TYPE_CHECKING:
     from bot.services_container import Services
 
@@ -20,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 subscriber_list_router = Router(name="subscriber_list_actions_router")
 
-# Removed F.from_user.id.in_(ADMIN_IDS_CACHE) filter
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
 async def handle_subscriber_list_actions(
     query: CallbackQuery,
@@ -39,12 +39,21 @@ async def handle_subscriber_list_actions(
             return
 
         telegram_id_to_delete = callback_data.telegram_id
-        success = await user_service.delete_full_user_profile(session, telegram_id_to_delete, services=services) # Pass services
+        success = await user_service.delete_full_user_profile(
+            session, telegram_id_to_delete, services=services
+        ) # Pass services
 
         if success:
-            await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=telegram_id_to_delete))
+            await query.answer(
+                _("Subscriber {telegram_id} deleted successfully.").format(
+                    telegram_id=telegram_id_to_delete
+                )
+            )
         else:
-            await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True)
+            await query.answer(
+                _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete),
+                show_alert=True
+            )
 
         await _show_subscriber_list_page(query, session, bot, _, page=page_from_callback)
 

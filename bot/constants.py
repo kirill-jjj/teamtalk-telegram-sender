@@ -1,10 +1,11 @@
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
+
 MUTE_ACTION_MUTE = "mute"
 MUTE_ACTION_UNMUTE = "unmute"
 
+
 NOTIFICATION_EVENT_JOIN = "join"
 NOTIFICATION_EVENT_LEAVE = "leave"
-
-from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 DEFAULT_LANGUAGE = DEFAULT_LANGUAGE_CODE
 

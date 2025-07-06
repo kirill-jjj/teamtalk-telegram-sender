@@ -12,17 +12,14 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from sqlmodel import SQLModel  # noqa: E402
-# from bot.config import app_config # noqa: E402 # <-- MODIFIED: Commented out/removed
+
 # Import models here for Alembic 'autogenerate' support
 from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401, E402
 
 target_metadata = SQLModel.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 import os  # noqa: E402
+
 
 def process_revision_directives(context, revision, directives):
     """
@@ -41,7 +38,9 @@ def get_db_url():
     config_file_source = f"environment variable {env_var_name}"
 
     if config_file:
-        print(f"INFO  [alembic.env] Found config file specified in environment variable {env_var_name}: '{config_file}'")
+        print(
+            f"INFO  [alembic.env] Found config file specified in environment variable {env_var_name}: '{config_file}'"
+        )
     else:
         print(f"INFO  [alembic.env] Environment variable {env_var_name} not set.")
         # Fallback to default if environment variable is not set
@@ -50,7 +49,7 @@ def get_db_url():
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
-    import tomllib # Python 3.11+
+    import tomllib  # Python 3.11+
 
     if not os.path.exists(config_file):
         error_message = f"Alembic configuration file '{config_file}' not found (source: {config_file_source})."
@@ -63,15 +62,15 @@ def get_db_url():
     except tomllib.TOMLDecodeError as e:
         error_message = f"Error decoding TOML configuration file '{config_file}': {e}"
         print(f"ERROR [alembic.env] {error_message}")
-        raise ValueError(error_message)
+        raise ValueError(error_message) from e
     except Exception as e:
         error_message = f"Error reading configuration file '{config_file}': {e}"
         print(f"ERROR [alembic.env] {error_message}")
-        raise IOError(error_message)
+        raise OSError(error_message) from e
 
     try:
         db_file_name = config_data['database']['db_file']
-    except KeyError:
+    except KeyError as e:
         error_message = f"'database.db_file' not found in TOML configuration file '{config_file}'."
         print(f"ERROR [alembic.env] {error_message}")
         # As a fallback, check environment variable if direct key is missing
@@ -80,7 +79,7 @@ def get_db_url():
             print(f"INFO  [alembic.env] Found DATABASE_FILE in environment variables as fallback: '{db_file_name_env}'")
             db_file_name = db_file_name_env
         else:
-            raise ValueError(error_message + " Also not found as DATABASE_FILE environment variable.")
+            raise ValueError(error_message + " Also not found as DATABASE_FILE environment variable.") from e
 
     if not isinstance(db_file_name, str) or not db_file_name.strip():
         error_message = f"'database.db_file' in '{config_file}' must be a non-empty string. Found: '{db_file_name}'"

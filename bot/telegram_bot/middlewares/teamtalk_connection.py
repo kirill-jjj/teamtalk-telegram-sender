@@ -1,16 +1,18 @@
+import gettext  # For translator type hint
 import logging
-import gettext # For translator type hint
-from typing import Callable, Coroutine, Any, Dict, TYPE_CHECKING
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
-from bot.teamtalk_bot.connection import TeamTalkConnection # Assuming this is the correct path
+from bot.teamtalk_bot.connection import TeamTalkConnection  # Assuming this is the correct path
+
 from .utils import _send_error_response
 
 if TYPE_CHECKING:
     # from sender import Application # No longer needed
-    from bot.services_container import Services # Import Services
+    from bot.services_container import Services  # Import Services
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +28,13 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         # services: "Services" = data["services"] # Get services from workflow_data
         # More direct to get connections if it's already in workflow_data
-        connections: Dict[str, TeamTalkConnection] = data.get("connections", {})
+        connections: dict[str, TeamTalkConnection] = data.get("connections", {})
 
         determined_connection: TeamTalkConnection | None = None
 
@@ -46,13 +48,22 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         elif connections: # Get the first one if no specific key or key not found
             determined_connection = next(iter(connections.values()), None)
             if self.default_server_key and not determined_connection: # Log if key was given but not found
-                 logger.warning(f"ActiveTeamTalkConnectionMiddleware: Default server key '{self.default_server_key}' not found. Falling back to first available connection if any.")
+                logger.warning(
+                    f"ActiveTeamTalkConnectionMiddleware: Default server key '{self.default_server_key}' "
+                    f"not found. Falling back to first available connection if any."
+                )
             elif determined_connection:
-                 logger.debug(f"ActiveTeamTalkConnectionMiddleware: Using first available connection for {determined_connection.server_info.host}.")
+                logger.debug(
+                    f"ActiveTeamTalkConnectionMiddleware: Using first available connection "
+                    f"for {determined_connection.server_info.host}."
+                )
             # else: no connections available, determined_connection remains None
 
         if determined_connection:
-            logger.debug(f"ActiveTeamTalkConnectionMiddleware: Providing connection for {determined_connection.server_info.host} to handler.")
+            logger.debug(
+                f"ActiveTeamTalkConnectionMiddleware: Providing connection for "
+                f"{determined_connection.server_info.host} to handler."
+            )
         else:
             logger.warning("ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk connection to provide.")
 
@@ -69,16 +80,16 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
     """
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
         translator: gettext.GNUTranslations | None = data.get("translator")
 
         # Fallback to get translator from services if not directly available
         if not translator:
-            services: "Services" | None = data.get("services")
+            services: Services | None = data.get("services")
             if services:
                 # Assuming UserSettingsMiddleware ran and set a language-specific translator
                 # If not, this will get the default one based on user_settings or config.
@@ -88,9 +99,12 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
                 # For now, let's assume user_settings is in data IF a user is involved.
                 user_settings = data.get("user_settings")
                 lang_code = user_settings.language_code if user_settings else None
-                translator = services.get_translator(lang_code) # lang_code=None gets default
+                translator = services.get_translator(lang_code)
             else: # Absolute fallback: create a temporary default translator
-                logger.warning("TeamTalkConnectionCheckMiddleware: Translator and Services not found in data. Using temporary default translator.")
+                logger.warning(
+                    "TeamTalkConnectionCheckMiddleware: Translator and Services not found in data. "
+                    "Using temporary default translator."
+                )
                 translator = gettext.NullTranslations() # Should not happen in normal flow
 
         _ = translator.gettext
@@ -118,5 +132,8 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
             )
             return None # Stop processing
 
-        logger.debug(f"TeamTalkConnectionCheckMiddleware: Access granted for server {tt_connection.server_info.host}. Connection is ready.")
+        logger.debug(
+            f"TeamTalkConnectionCheckMiddleware: Access granted for server "
+            f"{tt_connection.server_info.host}. Connection is ready."
+        )
         return await handler(event, data)

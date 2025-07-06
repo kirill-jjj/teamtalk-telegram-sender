@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import logging
-from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from typing import TYPE_CHECKING
+
+from aiogram import F, Router
+from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.models import UserSettings
-from bot.telegram_bot.keyboards import create_notification_settings_keyboard
-from bot.telegram_bot.callback_data import SettingsCallback, NotificationActionCallback
-from bot.core.enums import SettingsNavAction, NotificationAction
-from ._helpers import safe_edit_text
+from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.core.user_settings import update_user_settings_in_db
+from bot.models import UserSettings
+from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
+from bot.telegram_bot.keyboards import create_notification_settings_keyboard
+
+from ._helpers import safe_edit_text
+
+if TYPE_CHECKING:
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
@@ -37,7 +45,7 @@ async def cq_toggle_noon_setting_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: NotificationActionCallback,
-    services: "Services"
+    services: Services
 ):
     if not callback_query.message:
         logger.warning("cq_toggle_noon_setting_action: Callback query is missing message.")
@@ -52,8 +60,11 @@ async def cq_toggle_noon_setting_action(
         await callback_query.answer(_("An error occurred while saving. Please try again."), show_alert=True)
         return
 
-    services.user_settings_cache[user_settings.telegram_id] = user_settings # Changed here
-    logger.debug(f"NOON setting for user {user_settings.telegram_id} toggled to {user_settings.not_on_online_enabled} and saved to DB/cache.")
+    services.user_settings_cache[user_settings.telegram_id] = user_settings
+    logger.debug(
+        f"NOON setting for user {user_settings.telegram_id} toggled to "
+        f"{user_settings.not_on_online_enabled} and saved to DB/cache."
+    )
 
     new_status_display_text = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
     success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)

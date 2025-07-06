@@ -1,34 +1,41 @@
-import logging
 import asyncio
-import pytalk
-from pytalk.user import User as TeamTalkUser
-from typing import Callable, Optional, Dict # Added Dict
-from aiogram import Bot as AiogramBot
-from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
-from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
-from sqlalchemy.exc import SQLAlchemyError
-
-from bot.services import user_service # Keep, used by _handle_telegram_api_error
-from bot.constants import (
-    DEFAULT_LANGUAGE,
-)
+import logging
+from collections.abc import Callable  # Added Dict
 
 # For type hinting Services
 from typing import TYPE_CHECKING
+
+import pytalk
+from aiogram import Bot as AiogramBot
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
+from aiogram.types import CallbackQuery, Chat, InlineKeyboardMarkup, Message
+from pytalk.user import User as TeamTalkUser
+from sqlalchemy.exc import SQLAlchemyError
+
+from bot.constants import (
+    DEFAULT_LANGUAGE,
+)
+from bot.services import user_service  # Keep, used by _handle_telegram_api_error
+
 if TYPE_CHECKING:
-    from bot.services_container import Services # Import Services
-    from bot.models import UserSettings # For type hint
+    from bot.models import UserSettings  # For type hint
+    from bot.services_container import Services  # Import Services
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, services: "Services"): # Changed app to services
+async def _handle_telegram_api_error(
+    error: TelegramAPIError, chat_id: int, services: "Services"
+): # Changed app to services
     """
     Handles specific Telegram API errors.
     """
     if not services: # Check for services
-        logger.error(f"Telegram API error for chat_id {chat_id} but services context was missing for full cleanup: {error}")
+        logger.error(
+            f"Telegram API error for chat_id {chat_id} but services context was missing "
+            f"for full cleanup: {error}"
+        )
         return
 
     if isinstance(error, TelegramForbiddenError):
@@ -41,24 +48,37 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
                 if success:
                     logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
                 else:
-                    logger.error(f"Failed to delete data for blocked/deactivated user {chat_id}, though an attempt was made.")
+                    logger.error(
+                        f"Failed to delete data for blocked/deactivated user {chat_id}, "
+                        f"though an attempt was made."
+                    )
             except SQLAlchemyError as db_err:
-                logger.error(f"Failed to delete data for blocked/deactivated user {chat_id} from DB: {db_err}")
+                logger.error(
+                    f"Failed to delete data for blocked/deactivated user {chat_id} from DB: {db_err}"
+                )
         else:
             logger.error(f"Telegram API Forbidden error for chat_id {chat_id}: {error}")
 
     elif isinstance(error, TelegramBadRequest):
         if "chat not found" in str(error).lower():
-            logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {error}")
+            logger.warning(
+                f"Chat not found for TG ID {chat_id}. Assuming user is gone. "
+                f"Deleting all user data. Error: {error}"
+            )
             try:
                 async with services.session_factory() as session: # Use services.session_factory
-                    delete_success = await user_service.delete_full_user_profile(session, chat_id, services=services) # Pass services
+                    delete_success = await user_service.delete_full_user_profile(
+                        session, chat_id, services=services
+                    ) # Pass services
                 if delete_success:
                     logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
                 else:
                     logger.error(f"Failed to delete all data for TG ID {chat_id} after chat not found.")
             except SQLAlchemyError as db_cleanup_err:
-                logger.error(f"Exception during full data cleanup for TG ID {chat_id} (chat not found): {db_cleanup_err}")
+                logger.error(
+                    f"Exception during full data cleanup for TG ID {chat_id} (chat not found): "
+                    f"{db_cleanup_err}"
+                )
         else:
             logger.error(f"Telegram API BadRequest (non 'chat not found') for chat_id {chat_id}: {error}")
 
@@ -66,7 +86,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
         logger.error(f"Unhandled Telegram API error for chat_id {chat_id}: {error}")
 
 
-def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Services") -> bool: # Changed app to services
+def _should_send_silently(
+    chat_id: int, tt_user_is_online: bool, services: "Services"
+) -> bool: # Changed app to services
     """
     Checks if a message to a given chat_id should be sent silently based on
     NOON settings and the provided online status of their linked TeamTalk user.
@@ -115,9 +137,8 @@ async def send_telegram_messages_to_list(
     bot_instance_to_use: AiogramBot, # Renamed Bot to AiogramBot
     chat_ids: list[int],
     text_generator: Callable[[str], str],
-    # user_settings_cache: dict, # Will use services.user_settings_cache
     services: "Services", # Changed app to services
-    online_users_cache_for_instance: Optional[Dict[int, TeamTalkUser]] = None,
+    online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
 ):
     if not bot_instance_to_use:
@@ -126,7 +147,7 @@ async def send_telegram_messages_to_list(
 
     tasks_list = []
     for chat_id in chat_ids:
-        user_settings : Optional["UserSettings"] = services.user_settings_cache.get(chat_id) # Use services.user_settings_cache
+        user_settings: UserSettings | None = services.user_settings_cache.get(chat_id)
         language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language_code)
         current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
@@ -220,8 +241,6 @@ async def send_or_edit_paginated_list(
             "Must be Message or CallbackQuery. If Message, bot instance must be provided."
         )
 
-    # If it's a CbQ and edit was successful (or not modified) and we haven't shown an alert
-    # MODIFY THIS BLOCK:
     if isinstance(target, CallbackQuery) and not answered_with_alert:
         try:
             # This might fail if already answered by the "message not modified" block, which is fine.
@@ -243,16 +262,9 @@ def format_telegram_user_display_name(chat: Chat | None) -> str:
     Returns the Telegram ID as a string if chat object is None or no other info is available.
     """
     if not chat:
-        # Fallback for cases where chat might be None, though ideally it's always provided.
-        # Returning "N/A" or an empty string might be alternatives.
-        # For now, let's assume if chat is None, we can't get an ID either, so "Unknown User".
-        # However, the original code defaults to telegram_id if chat fetch fails.
-        # This function expects a Chat object. If it can be None, the caller should handle it
-        # or this function needs a way to get an ID (e.g., pass telegram_id as fallback).
-        # Given the usage context, chat object is usually available.
-        # If chat is None, and we are *only* passed chat, we cannot return chat.id.
-        # Let's stick to the logic: if chat is None, we can't process it.
-        return "Unknown User" # Or raise an error, or handle as per specific app logic.
+        # This function expects a Chat object.
+        # If chat is None, we cannot process it to get a display name or ID.
+        return "Unknown User"
 
     # Default to string representation of chat.id if no other name parts are available
     display_name = str(chat.id)
@@ -290,7 +302,10 @@ async def safe_delete_message(message: Message, log_context_message: str = "mess
         if "message to delete not found" in str(e).lower() or \
            "message can't be deleted" in str(e).lower() or \
            "message identifier is not specified" in str(e).lower(): # Should not happen with Message obj
-            logger.info(f"Could not delete {log_context_message} (message likely already gone or permissions issue): {e}")
+            logger.info(
+                f"Could not delete {log_context_message} (message likely already gone or "
+                f"permissions issue): {e}"
+            )
             return True # Treat as "handled" or "not an issue for caller"
         else:
             logger.warning(f"TelegramBadRequest when trying to delete {log_context_message}: {e}")

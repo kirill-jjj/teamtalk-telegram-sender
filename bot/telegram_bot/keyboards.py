@@ -6,48 +6,45 @@ for Telegram interactions using InlineKeyboardBuilder.
 """
 
 import html
-import pytalk # For UserAccount type hint
-from typing import Callable, List, Any # Added Any for the generic helper
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from collections.abc import Callable  # Added Any for the generic helper
+from typing import Any
+
+import pytalk  # For UserAccount type hint
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from bot.telegram_bot.models import SubscriberInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.core.enums import (
     AdminAction,
-    SettingsNavAction,
     LanguageAction,
-    SubscriptionAction,
-    NotificationAction,
-    UserListAction,
-    ToggleMuteSpecificAction,
-    SubscriberListAction,
-    SubscriberAction,
     ManageTTAccountAction,
+    NotificationAction,
+    SettingsNavAction,
+    SubscriberAction,
+    SubscriberListAction,
+    SubscriptionAction,
+    ToggleMuteSpecificAction,
+    UserListAction,
 )
-from functools import partial # Added for pagination_callback_factory
-from bot.telegram_bot.callback_data import (
-    SettingsCallback,
-    LanguageCallback,
-    SubscriptionCallback,
-    NotificationActionCallback,
-    SetMuteModeCallback,
-    UserListCallback,
-    PaginateUsersCallback,
-    ToggleMuteSpecificCallback,
-    AdminActionCallback,
-    SubscriberListCallback,
-    MenuCallback,
-    ViewSubscriberCallback,
-    SubscriberActionCallback,
-    ManageTTAccountCallback,
-    LinkTTAccountChosenCallback,
-    # New callback for this paginated list if needed, let's call it PaginateLinkableTtAccountsCallback
-    # For now, we'll assume ManageTTAccountCallback can be used if action is adapted or a new one added.
-    # Let's create a placeholder if we make it self-paginated:
-    # PaginateLinkableTtAccountsCallback,
-)
-from bot.models import NotificationSetting, UserSettings, MuteListMode
 from bot.core.utils import get_tt_user_display_name
+from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.telegram_bot.callback_data import (
+    AdminActionCallback,
+    LanguageCallback,
+    LinkTTAccountChosenCallback,
+    ManageTTAccountCallback,
+    MenuCallback,
+    NotificationActionCallback,
+    PaginateUsersCallback,
+    SetMuteModeCallback,
+    SettingsCallback,
+    SubscriberActionCallback,
+    SubscriberListCallback,
+    SubscriptionCallback,
+    ToggleMuteSpecificCallback,
+    UserListCallback,
+    ViewSubscriberCallback,
+)
+from bot.telegram_bot.models import SubscriberInfo
 
 ttstr = pytalk.instance.sdk.ttstr
 
@@ -191,7 +188,10 @@ async def create_manage_muted_users_keyboard(
     )
     builder.adjust(2)
 
-    list_mode_text = _("Manage Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Manage Whitelist")
+    if user_settings.mute_list_mode == MuteListMode.blacklist:
+        list_mode_text = _("Manage Blacklist")
+    else:
+        list_mode_text = _("Manage Whitelist")
     builder.button(
         text=list_mode_text,
         callback_data=UserListCallback(action=UserListAction.LIST_MUTED).pack()
@@ -321,14 +321,14 @@ def _add_pagination_controls_generic(
 
 async def _create_generic_paginated_list_keyboard(
     _: Callable[[str], str],
-    page_items: List[Any],
+    page_items: list[Any],
     current_page: int,
     total_pages: int,
-    item_button_former: Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | List[InlineKeyboardButton]],
+    item_button_former: Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | list[InlineKeyboardButton]],
     pagination_callback_factory: Callable[..., Any],
     pagination_factory_kwargs: dict | None = None, # For additional fixed args to pagination_callback_factory
-    additional_buttons_top: List[List[InlineKeyboardButton]] | None = None,
-    additional_buttons_bottom: List[List[InlineKeyboardButton]] | None = None
+    additional_buttons_top: list[list[InlineKeyboardButton]] | None = None,
+    additional_buttons_bottom: list[list[InlineKeyboardButton]] | None = None
 ) -> InlineKeyboardMarkup:
     """
     Generic helper to create a keyboard for a paginated list of items.
@@ -370,7 +370,7 @@ async def _create_generic_paginated_list_keyboard(
 
 async def create_subscriber_list_keyboard(
     _: Callable[[str], str],
-    page_subscribers_info: List[SubscriberInfo],
+    page_subscribers_info: list[SubscriberInfo],
     current_page: int,
     total_pages: int
 ) -> InlineKeyboardMarkup:
@@ -512,7 +512,7 @@ async def create_subscriber_action_menu_keyboard(
 # --- Generic Helper for Paginated User Lists with Toggle ---
 async def _create_generic_user_toggle_list_keyboard(
     _: Callable[[str], str],
-    page_items: List[Any],
+    page_items: list[Any],
     current_page: int,
     total_pages: int,
     user_settings: UserSettings,
@@ -532,7 +532,9 @@ async def _create_generic_user_toggle_list_keyboard(
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-        effectively_muted = _is_username_effectively_muted(username_str, user_settings, muted_usernames_from_relationship)
+        effectively_muted = _is_username_effectively_muted(
+            username_str, user_settings, muted_usernames_from_relationship
+        )
         if effectively_muted:
             button_text = _("{item_display_name} (Status: Muted)").format(
                 item_display_name=html.escape(display_name_on_button)
@@ -650,11 +652,13 @@ async def create_linkable_tt_account_list_keyboard(
     # This is a bit of a workaround if this list itself needs pagination.
     # A dedicated PaginateLinkableTtAccountsCallback would be cleaner.
     # For this example, let's assume pagination needs to bring us back to the same view.
-    # The ManageTTAccountCallback.LINK_NEW action handler would need to be aware of an optional 'page_to_show' for its own list.
+    # The ManageTTAccountCallback.LINK_NEW action handler would need to be aware of an
+    # optional 'page_to_show' for its own list.
 
-    # If this list is paginated, the LINK_NEW handler would need to accept a `current_tt_account_page`
-    # or similar to re-render this list at the correct page.
-    # For simplicity, and based on original comments, let's assume this list itself is not paginated by its own callback for now.
+    # If this list is paginated, the LINK_NEW handler would need to accept a
+    # `current_tt_account_page` or similar to re-render this list at the correct page.
+    # For simplicity, and based on original comments, let's assume this list itself is
+    # not paginated by its own callback for now.
     # So, pagination_callback_factory can be a dummy or raise an error if total_pages > 1,
     # or we simply don't provide it if the list is not meant to be paginated by the generic helper.
     # The original code did not have explicit pagination buttons for this list.

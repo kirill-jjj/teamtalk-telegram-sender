@@ -1,16 +1,18 @@
 import logging
-from typing import Callable, Coroutine, Any, Dict, TYPE_CHECKING
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, CallbackQuery, User as AiogramUser
+from aiogram.types import CallbackQuery, Message
+from aiogram.types import User as AiogramUser
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .utils import _send_error_response # Import from local utils
+from .utils import _send_error_response  # Import from local utils
 
 if TYPE_CHECKING:
     # from sender import Application # No longer needed
-    from bot.services_container import Services # Import Services
-    from bot.config import Settings # Import Settings for config type hint
+    from bot.config import Settings  # Import Settings for config type hint
+    from bot.services_container import Services  # Import Services
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +25,8 @@ class UserSettingsMiddleware(BaseMiddleware):
     ) -> Any:
         user_obj: AiogramUser = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
-        services: "Services" = data["services"] # Get services from workflow_data
-        config: "Settings" = data["config"] # Get config from workflow_data
+        services: Services = data["services"] # Get services from workflow_data
+        config: Settings = data["config"] # Get config from workflow_data
 
         user_settings = services.user_settings_cache.get(user_obj.id)
 
@@ -34,9 +36,12 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         if not user_settings: # Should ideally not happen if get_or_create handles fallback
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            # Use services.get_translator and config.general.default_lang
             _default_tr = services.get_translator(config.general.default_lang).gettext
-            await _send_error_response(event, _default_tr("An error occurred. Please try again later."), show_alert_for_callback=True)
+            await _send_error_response(
+                event,
+                _default_tr("An error occurred. Please try again later."),
+                show_alert_for_callback=True
+            )
             return
 
         try:
@@ -56,10 +61,21 @@ class UserSettingsMiddleware(BaseMiddleware):
             await session_obj.refresh(user_settings, attribute_names=['muted_users_list'])
             logger.debug(f"Refreshed muted_users_list for user {user_obj.id} in current session.")
         except Exception as refresh_e: # Catch more specific SQLAlchemy errors if possible
-            logger.error(f"Error merging or refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}", exc_info=True)
-            error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else config.general.default_lang
+            logger.error(
+                f"Error merging or refreshing muted_users_list for user {user_obj.id} "
+                f"in session: {refresh_e}", exc_info=True
+            )
+            error_lang_code = (
+                user_settings.language_code
+                if user_settings and hasattr(user_settings, 'language_code')
+                else config.general.default_lang
+            )
             _tr = services.get_translator(error_lang_code).gettext
-            await _send_error_response(event, _tr("An error occurred. Please try again later."), show_alert_for_callback=True)
+            await _send_error_response(
+                event,
+                _tr("An error occurred. Please try again later."),
+                show_alert_for_callback=True
+            )
             return
 
         data["user_settings"] = user_settings

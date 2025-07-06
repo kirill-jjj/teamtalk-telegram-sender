@@ -1,7 +1,8 @@
-import tomllib # Requires Python 3.11+
-from typing import List, Optional, Literal
+import tomllib  # Requires Python 3.11+
+from typing import Literal
+
 from pydantic import Field
-from pydantic_settings import BaseSettings # Still useful for model features
+from pydantic_settings import BaseSettings  # Still useful for model features
 
 # Type for gender, can be expanded if needed
 GenderType = Literal["male", "female", "neutral"]
@@ -11,7 +12,7 @@ GenderType = Literal["male", "female", "neutral"]
 class GeneralSettings(BaseSettings): # Renamed from BotGeneralSettings
     default_lang: str = Field("en", description="Default language for bot messages.")
     gender: GenderType = Field("neutral", description="Gender for bot's persona in localized messages.")
-    admin_username: Optional[str] = Field(None, description="Optional admin username for display/identification.")
+    admin_username: str | None = Field(None, description="Optional admin username for display/identification.")
 
 class DatabaseSettings(BaseSettings):
     db_file: str = Field("bot_data.db", description="Path to the SQLite database file.")
@@ -28,18 +29,22 @@ class TeamTalkSettings(BaseSettings):
     user_name: str = Field("BotUser", description="Bot's username on TeamTalk.")
     password: str = Field(..., description="Bot's password on TeamTalk.")
     channel: str = Field("/Root/Public Channel", description="Full path to TeamTalk channel.")
-    channel_password: Optional[str] = Field(None, description="Password for the TeamTalk channel, if any.")
+    channel_password: str | None = Field(None, description="Password for the TeamTalk channel, if any.")
     nick_name: str = Field("NotifierBot", description="Bot's nickname on TeamTalk.")
     status_text: str = Field("Forwarding notifications to Telegram", description="Bot's status message on TeamTalk.")
     client_name: str = Field("TTTelegramBotV1", description="Client name reported to TeamTalk server.")
-    server_name: Optional[str] = Field(None, description="Optional name for the TeamTalk server (for display).")
-    global_ignore_usernames: List[str] = Field(default_factory=list, description="List of TeamTalk usernames to ignore globally.")
+    server_name: str | None = Field(None, description="Optional name for the TeamTalk server (for display).")
+    global_ignore_usernames: list[str] = Field(
+        default_factory=list, description="List of TeamTalk usernames to ignore globally."
+    )
 
 class OperationalParameters(BaseSettings):
     deeplink_ttl_seconds: int = Field(300, description="TTL for deeplinks in seconds.")
     tt_reconnect_retry_seconds: int = Field(15, description="Retry interval for TeamTalk connection.")
     tt_reconnect_check_interval_seconds: int = Field(10, description="Check interval for TeamTalk connection status.")
-    online_users_cache_sync_interval_seconds: int = Field(300, description="Sync interval for online TeamTalk users cache.")
+    online_users_cache_sync_interval_seconds: int = Field(
+        300, description="Sync interval for online TeamTalk users cache."
+    )
 
 class Settings(BaseSettings):
     """
@@ -60,12 +65,14 @@ class Settings(BaseSettings):
         try:
             with open(path, 'rb') as f:
                 data = tomllib.load(f)
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns
             import os
             abs_path = os.path.abspath(path)
-            raise FileNotFoundError(f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path}')")
+            raise FileNotFoundError(
+                f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path}')"
+            ) from e
         except tomllib.TOMLDecodeError as e:
-            raise ValueError(f"Error decoding TOML file {path}: {e}")
+            raise ValueError(f"Error decoding TOML file {path}: {e}") from e
 
         return cls(**data)

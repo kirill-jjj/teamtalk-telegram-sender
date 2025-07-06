@@ -1,7 +1,8 @@
 import logging
 from typing import TYPE_CHECKING
-from aiogram.types import TelegramObject, Message, CallbackQuery
+
 from aiogram.exceptions import TelegramAPIError
+from aiogram.types import CallbackQuery, Message, TelegramObject
 
 if TYPE_CHECKING:
     pass # No specific type hints needed from sender.Application here yet

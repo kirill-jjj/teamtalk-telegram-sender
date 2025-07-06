@@ -1,13 +1,14 @@
 import logging
 import secrets
 from datetime import datetime, timedelta
+
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, SQLModel
+from sqlmodel import SQLModel, select
 
-from bot.core.enums import DeeplinkAction
-from bot.models import SubscribedUser, Admin, Deeplink, UserSettings, BanList
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
+from bot.core.enums import DeeplinkAction
+from bot.models import Admin, BanList, Deeplink, SubscribedUser, UserSettings
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,10 @@ async def create_deeplink(
         expiry_time=expiry_time
     )
     if await db_add_generic(session, deeplink_obj):
-        logger.debug(f"Created deeplink: token={token_str}, action={action}, payload={payload}, expected_id={expected_telegram_id}")
+        logger.debug(
+            f"Created deeplink: token={token_str}, action={action}, payload={payload}, "
+            f"expected_id={expected_telegram_id}"
+        )
         return token_str
     else:
         logger.error(f"Failed to save deeplink to DB for action {action}.")
@@ -173,7 +177,10 @@ async def add_to_ban_list(
     )
     added = await db_add_generic(session, ban_entry)
     if added:
-        logger.info(f"Added to ban list: telegram_id={telegram_id}, teamtalk_username='{teamtalk_username}', reason='{reason}'")
+        logger.info(
+            f"Added to ban list: telegram_id={telegram_id}, "
+            f"teamtalk_username='{teamtalk_username}', reason='{reason}'"
+        )
     return added
 
 async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool:

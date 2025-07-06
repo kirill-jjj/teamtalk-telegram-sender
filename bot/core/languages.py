@@ -1,6 +1,6 @@
-import os
 import gettext
-from typing import List, Dict, TypedDict
+import os
+from typing import TypedDict
 
 # Define a path to the locales directory relative to this file or project root
 # Assuming project root is parent of 'bot' directory
@@ -14,13 +14,13 @@ class LanguageInfo(TypedDict):
     native_name: str
 
 
-def discover_languages(locales_path: str = _LOCALE_DIR) -> List[LanguageInfo]:
+def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
     """
     Scans the locales directory for translated languages and always includes English as the base language.
     """
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.
-    discovered: List[LanguageInfo] = [
+    discovered: list[LanguageInfo] = [
         {"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}
     ]
 

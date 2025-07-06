@@ -1,21 +1,19 @@
 import gettext
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Set, List
 
 from aiogram import Bot
-from sqlalchemy.orm import sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession # For type hinting
-from sqlmodel import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload, sessionmaker
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession  # For type hinting
 
 from bot.config import Settings
-from bot.models import UserSettings
-from bot.teamtalk_bot.connection import TeamTalkConnection # Assuming this path is correct
-# Assuming discover_languages and DEFAULT_LANGUAGE_CODE are correctly importable
-from bot.core.languages import DEFAULT_LANGUAGE_CODE, discover_languages
 
+# Assuming discover_languages and DEFAULT_LANGUAGE_CODE are correctly importable
+from bot.core.languages import discover_languages
+from bot.models import UserSettings
+from bot.teamtalk_bot.connection import TeamTalkConnection  # Assuming this path is correct
 
 # These might be passed to __init__ or defined globally if they are static
 LOCALE_DIR = Path("locales")
@@ -29,31 +27,32 @@ class Services:
         self.config = config
         self.session_factory: sessionmaker[AsyncSession] = session_factory # Added type hint
 
-        # Logging - Assuming logger is configured elsewhere or passed if needed per service
-        # For now, methods here will use the module-level logger
-        self.logger = logger # Or pass a logger instance if preferred
+        self.logger = logger
 
         # Боты
         self.bot_event: Bot = Bot(token=config.telegram.event_token)
-        self.bot_message: Bot = Bot(token=config.telegram.message_token) if config.telegram.message_token else self.bot_event
+        if config.telegram.message_token:
+            self.bot_message: Bot = Bot(token=config.telegram.message_token)
+        else:
+            self.bot_message: Bot = self.bot_event
 
         # TeamTalk Bot instance
-        import pytalk # Import pytalk here
+        import pytalk  # Import pytalk here
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)
 
 
         # Состояние (кеши)
-        self.connections: Dict[str, TeamTalkConnection] = {}
-        self.subscribed_users_cache: Set[int] = set()
-        self.admin_ids_cache: Set[int] = set()
-        self.user_settings_cache: Dict[int, UserSettings] = {} # Changed Any to UserSettings
+        self.connections: dict[str, TeamTalkConnection] = {}
+        self.subscribed_users_cache: set[int] = set()
+        self.admin_ids_cache: set[int] = set()
+        self.user_settings_cache: dict[int, UserSettings] = {} # Changed Any to UserSettings
 
         # Инструменты
-        self.translator_cache: Dict[str, gettext.GNUTranslations] = {}
-        self.available_languages: List[Dict[str, str]] = [] # More specific type hint
+        self.translator_cache: dict[str, gettext.GNUTranslations] = {}
+        self.available_languages: list[dict[str, str]] = [] # More specific type hint
 
 
-    def get_translator(self, language_code: Optional[str] = None) -> gettext.GNUTranslations:
+    def get_translator(self, language_code: str | None = None) -> gettext.GNUTranslations:
         """
         Returns a translator object for the specified language code.
         Caches translators after first load.
@@ -73,10 +72,14 @@ class Services:
         except FileNotFoundError:
             default_lang_code = self.config.general.default_lang # Use self.config
             if language_code != default_lang_code:
-                self.logger.warning(f"Language '{language_code}' not found. Falling back to default '{default_lang_code}'.")
+                self.logger.warning(
+                    f"Language '{language_code}' not found. Falling back to default '{default_lang_code}'."
+                )
                 return self.get_translator(default_lang_code) # Recursive call
             else:
-                self.logger.error(f"Default language '{default_lang_code}' not found. Using NullTranslations.")
+                self.logger.error(
+                    f"Default language '{default_lang_code}' not found. Using NullTranslations."
+                )
                 null_trans = gettext.NullTranslations()
                 self.translator_cache[language_code] = null_trans # Cache even null translation
                 return null_trans
@@ -84,7 +87,8 @@ class Services:
     async def load_user_settings_to_app_cache(self): # Renamed from load_user_settings_to_app_cache for clarity
         """Loads all user settings from DB into the service's cache."""
         async with self.session_factory() as session:
-            stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list)) # Ensure muted_users are loaded
+            # Ensure muted_users are loaded
+            stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))
             result = await session.exec(stmt)
             all_settings = result.all()
             for setting in all_settings:
@@ -95,14 +99,6 @@ class Services:
         """Gets user settings from service cache or DB, creates if not exists."""
         cached_settings = self.user_settings_cache.get(telegram_id)
         if cached_settings:
-            # To ensure the session is aware of the cached object if it's used for DB operations later
-            # This can be tricky. If the object is modified and then used with a new session,
-            # it might lead to issues. For read-only use from cache, it's fine.
-            # If modifications are expected, re-fetching or merging might be safer.
-            # For now, assume it's merged into the session or handled appropriately by the caller.
-            # A simple way to ensure it's "live" for the given session (if needed for write):
-            # if session.is_active:
-            #    cached_settings = await session.merge(cached_settings)
             return cached_settings
 
         user_settings = await session.get(
@@ -119,7 +115,8 @@ class Services:
             session.add(user_settings)
             try:
                 await session.commit()
-                await session.refresh(user_settings, attribute_names=['muted_users_list']) # Refresh all, including relationships
+                # Refresh all, including relationships
+                await session.refresh(user_settings, attribute_names=['muted_users_list'])
                 self.logger.info(f"Successfully created and saved new settings for user {telegram_id}.")
             except SQLAlchemyError as e:
                 await session.rollback()
@@ -137,10 +134,7 @@ class Services:
             self.logger.critical("No languages discovered. Check locales setup.")
             # Decide error handling: raise, or operate with default only
         else:
-            self.logger.info(f"Available languages loaded into services: {[lang['code'] for lang in self.available_languages]}")
-
-    # Placeholder for other service methods that might be migrated or added
-    # Example:
-    # async def some_other_service_method(self, ...):
-    #     # ... logic ...
-    #     pass
+            self.logger.info(
+                f"Available languages loaded into services: "
+                f"{[lang['code'] for lang in self.available_languages]}"
+            )

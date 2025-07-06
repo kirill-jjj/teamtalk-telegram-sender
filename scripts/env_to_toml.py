@@ -1,9 +1,16 @@
 import argparse
-import os
 import sys
 from pathlib import Path
-import toml # For writing TOML
-from dotenv import dotenv_values # For reading .env files
+from typing import Any
+
+import toml  # For writing TOML
+from dotenv import dotenv_values  # For reading .env files
+
+
+def parse_comma_separated_string_to_list(v: Any) -> list[str]:
+    if isinstance(v, str) and v.strip():
+        return [s.strip() for s in v.split(',')]
+    return []
 
 # Define the mapping from .env keys to TOML structure
 # Format: env_key: (toml_section, toml_key, type_conversion_function_or_literal)
@@ -23,17 +30,28 @@ ENV_TO_TOML_MAPPING = {
     "CLIENT_NAME": ("teamtalk", "client_name", str),
     "SERVER_NAME": ("teamtalk", "server_name", str), # Will be empty string if missing/empty in .env
     "ADMIN_USERNAME": ("general", "admin_username", str), # Will be empty string if missing/empty in .env
-    "GLOBAL_IGNORE_USERNAMES": ("teamtalk", "global_ignore_usernames", lambda v: [s.strip() for s in v.split(',')] if isinstance(v, str) and v.strip() else []),
+    "GLOBAL_IGNORE_USERNAMES": ("teamtalk", "global_ignore_usernames", parse_comma_separated_string_to_list),
     "DATABASE_FILE": ("database", "db_file", str),
     "DEFAULT_LANG": ("general", "default_lang", str),
     "GENDER": ("general", "gender", str),
-    "DEEPLINK_TTL_SECONDS": ("operational_parameters", "deeplink_ttl_seconds", int),
-    "TT_RECONNECT_RETRY_SECONDS": ("operational_parameters", "tt_reconnect_retry_seconds", int),
-    "TT_RECONNECT_CHECK_INTERVAL_SECONDS": ("operational_parameters", "tt_reconnect_check_interval_seconds", int),
-    "ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS": ("operational_parameters", "online_users_cache_sync_interval_seconds", int),
+    "DEEPLINK_TTL_SECONDS": (
+        "operational_parameters", "deeplink_ttl_seconds", int
+    ),
+    "TT_RECONNECT_RETRY_SECONDS": (
+        "operational_parameters", "tt_reconnect_retry_seconds", int
+    ),
+    "TT_RECONNECT_CHECK_INTERVAL_SECONDS": (
+        "operational_parameters", "tt_reconnect_check_interval_seconds", int
+    ),
+    "ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS": (
+        "operational_parameters", "online_users_cache_sync_interval_seconds", int
+    ),
 }
 
-DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"] # Added alembic and scripts
+# Added alembic and scripts
+DEFAULT_EXCLUDE_DIRS = [
+    ".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"
+]
 
 def convert_value(raw_value, conversion_rule, env_key):
     """Applies the specified conversion rule to the raw value from .env."""
@@ -53,7 +71,10 @@ def convert_value(raw_value, conversion_rule, env_key):
         # For other types, if the .env value is empty, it's problematic for int/bool.
         # Let Pydantic handle defaults for these if they are not in TOML.
         # So, if value is empty and not one of above, we skip it (return None).
-        print(f"Info: Empty value for '{env_key}' in .env, will be omitted from TOML. Pydantic defaults may apply.", file=sys.stderr)
+        print(
+            f"Info: Empty value for '{env_key}' in .env, will be omitted from TOML. "
+            f"Pydantic defaults may apply.", file=sys.stderr
+        )
         return None
 
     try:
@@ -62,7 +83,12 @@ def convert_value(raw_value, conversion_rule, env_key):
         else: # Should not happen
             return str(raw_value)
     except ValueError as e:
-        print(f"Warning: Could not convert value '{raw_value}' for key '{env_key}' using {conversion_rule.__name__ if callable(conversion_rule) else conversion_rule}. Error: {e}. Storing as raw string.", file=sys.stderr)
+        conversion_name = conversion_rule.__name__ if callable(conversion_rule) else conversion_rule
+        print(
+            f"Warning: Could not convert value '{raw_value}' for key '{env_key}' "
+            f"using {conversion_name}. Error: {e}. Storing as raw string.",
+            file=sys.stderr
+        )
         return str(raw_value)
 
 def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> bool:
@@ -77,7 +103,8 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
     for env_key_orig, env_value in env_vars.items():
         env_key = env_key_orig.strip()
-        if not env_key: continue # Skip empty keys that might result from comment lines etc.
+        if not env_key:
+            continue # Skip empty keys that might result from comment lines etc.
 
         if env_key in ENV_TO_TOML_MAPPING:
             section, toml_key, conversion_func = ENV_TO_TOML_MAPPING[env_key]
@@ -96,7 +123,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
             toml.dump(toml_data, f)
         print(f"Successfully converted to '{output_toml_path}'.")
         return True
-    except IOError as e:
+    except OSError as e:
         print(f"Error writing TOML file '{output_toml_path}': {e}", file=sys.stderr)
     except Exception as e:
         print(f"Error during TOML generation for '{output_toml_path}': {e}", file=sys.stderr)
@@ -130,7 +157,10 @@ def main():
         "--exclude-dirs",
         type=str,
         default=",".join(DEFAULT_EXCLUDE_DIRS),
-        help=f"Comma-separated list of directory names to exclude when using --all.\nDefault: {','.join(DEFAULT_EXCLUDE_DIRS)}"
+        help=(
+            f"Comma-separated list of directory names to exclude when using --all.\n"
+            f"Default: {','.join(DEFAULT_EXCLUDE_DIRS)}"
+        )
     )
     parser.add_argument(
         "--project-root",

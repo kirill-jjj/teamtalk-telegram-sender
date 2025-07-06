@@ -1,15 +1,19 @@
 # bot/telegram_bot/commands.py
 
 import logging
-from typing import List, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING  # Moved to top
+
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from aiogram.exceptions import TelegramAPIError
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
+
+# TYPE_CHECKING import for Services is below, that's fine.
 
 logger = logging.getLogger(__name__)
 
 # Functions that return localized lists of BotCommand
-def get_user_commands(_: Callable[[str], str]) -> List[BotCommand]:
+def get_user_commands(_: Callable[[str], str]) -> list[BotCommand]:
     """Returns a list of BotCommand objects for regular users, localized."""
     return [
         BotCommand(command="menu", description=_("Show main menu with all commands")),
@@ -18,7 +22,7 @@ def get_user_commands(_: Callable[[str], str]) -> List[BotCommand]:
         BotCommand(command="settings", description=_("Access interactive settings menu")),
     ]
 
-def get_admin_commands(_: Callable[[str], str]) -> List[BotCommand]:
+def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
     """Returns a list of BotCommand objects for administrators, localized."""
     # Administrator commands include user commands plus administrator-specific ones
     admin_specific = [
@@ -28,16 +32,11 @@ def get_admin_commands(_: Callable[[str], str]) -> List[BotCommand]:
     ]
     return get_user_commands(_) + admin_specific
 
-# Add TYPE_CHECKING and Services import
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    # from sender import Application # No longer Application
-    from bot.services_container import Services # Import Services
-    from sqlalchemy.ext.asyncio import AsyncSession # Still needed for session type hint if used
+    from bot.services_container import Services  # Import Services
 
-logger = logging.getLogger(__name__)
-
-# Функции get_user_commands и get_admin_commands остаются без изменений.
+# Logger re-initialization removed as it's already at the top
+# get_user_commands and get_admin_commands functions remain unchanged.
 
 async def set_telegram_commands(services: "Services"): # Changed app to services
     """
@@ -45,7 +44,7 @@ async def set_telegram_commands(services: "Services"): # Changed app to services
     """
     logger.info("Setting up global and admin-specific Telegram commands...")
 
-    # --- 1. Установка глобальных команд для каждого поддерживаемого языка ---
+    # --- 1. Set global commands for each supported language ---
     for lang_info in services.available_languages: # Use services
         lang_code = lang_info["code"]
         translator = services.get_translator(lang_code) # Use services
@@ -61,7 +60,7 @@ async def set_telegram_commands(services: "Services"): # Changed app to services
         except TelegramAPIError as e:
             logger.error(f"Failed to set global commands for language '{lang_code}': {e}")
 
-    # --- 2. Установка индивидуальных команд для каждого администратора ---
+    # --- 2. Set individual commands for each administrator ---
     async with services.session_factory() as session: # Use services
         for admin_id in services.admin_ids_cache: # Use services
             admin_lang_code = services.config.general.default_lang # Use services

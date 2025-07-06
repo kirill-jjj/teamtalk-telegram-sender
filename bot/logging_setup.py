@@ -1,6 +1,8 @@
 import logging
 import sys
+
 from bot.constants import LOG_FORMAT
+
 
 def setup_logging():
     log_formatter = logging.Formatter(LOG_FORMAT)

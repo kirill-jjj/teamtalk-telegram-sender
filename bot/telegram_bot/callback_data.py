@@ -1,34 +1,36 @@
 from aiogram.filters.callback_data import CallbackData
+
+from bot.constants import (
+    CB_PREFIX_ADMIN_ACTION,
+    CB_PREFIX_LANG_SET,
+    CB_PREFIX_LINK_TT_CHOSEN,
+    CB_PREFIX_MAIN_MENU,
+    CB_PREFIX_MANAGE_TT_ACC,
+    CB_PREFIX_MUTE_MODE_SET,
+    CB_PREFIX_NOTIF_ACTION,
+    CB_PREFIX_PAGINATE_LIST,
+    CB_PREFIX_SETTINGS_NAV,
+    CB_PREFIX_SUB_ACTION,
+    CB_PREFIX_SUB_LIST,
+    CB_PREFIX_SUB_SET,
+    CB_PREFIX_TOGGLE_USER_MUTE,
+    CB_PREFIX_USER_LIST_NAV,
+    CB_PREFIX_VIEW_SUB,
+)
 from bot.core.enums import (
     AdminAction,
-    SettingsNavAction,
     LanguageAction,
-    SubscriptionAction,
+    ManageTTAccountAction,
     NotificationAction,
-    UserListAction,
-    ToggleMuteSpecificAction,
-    SubscriberListAction,
+    SettingsNavAction,
     SubscriberAction,
-    ManageTTAccountAction
+    SubscriberListAction,
+    SubscriptionAction,
+    ToggleMuteSpecificAction,
+    UserListAction,
 )
 from bot.models import MuteListMode
-from bot.constants import (
-    CB_PREFIX_SETTINGS_NAV,
-    CB_PREFIX_LANG_SET,
-    CB_PREFIX_SUB_SET,
-    CB_PREFIX_NOTIF_ACTION,
-    CB_PREFIX_USER_LIST_NAV,
-    CB_PREFIX_MUTE_MODE_SET,
-    CB_PREFIX_PAGINATE_LIST,
-    CB_PREFIX_TOGGLE_USER_MUTE,
-    CB_PREFIX_ADMIN_ACTION,
-    CB_PREFIX_SUB_LIST,
-    CB_PREFIX_MAIN_MENU,
-    CB_PREFIX_VIEW_SUB,
-    CB_PREFIX_SUB_ACTION,
-    CB_PREFIX_MANAGE_TT_ACC,
-    CB_PREFIX_LINK_TT_CHOSEN,
-)
+
 
 # For main settings navigation
 class SettingsCallback(CallbackData, prefix=CB_PREFIX_SETTINGS_NAV):

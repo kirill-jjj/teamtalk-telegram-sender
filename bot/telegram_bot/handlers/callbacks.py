@@ -2,12 +2,12 @@ from aiogram import Router
 
 from .callback_handlers.admin import admin_actions_router
 from .callback_handlers.language import language_router
-from .callback_handlers.subscription import subscription_router
-from .callback_handlers.notifications import notifications_router
+from .callback_handlers.menu_callbacks import admin_menu_callback_router, menu_callback_router
 from .callback_handlers.mute import mute_router
 from .callback_handlers.navigation import navigation_router
+from .callback_handlers.notifications import notifications_router
 from .callback_handlers.subscriber_list import subscriber_list_router
-from .callback_handlers.menu_callbacks import menu_callback_router, admin_menu_callback_router
+from .callback_handlers.subscription import subscription_router
 
 callback_router = Router(name="main_callback_router")
 

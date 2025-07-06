@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class AdminAction(Enum):
     KICK = "kick"
     BAN = "ban"

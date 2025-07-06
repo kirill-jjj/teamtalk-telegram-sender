@@ -1,10 +1,12 @@
 import logging
-from aiogram import Router, F
+
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from bot.telegram_bot.keyboards import create_main_settings_keyboard
-from bot.telegram_bot.callback_data import SettingsCallback
 from bot.core.enums import SettingsNavAction
+from bot.telegram_bot.callback_data import SettingsCallback
+from bot.telegram_bot.keyboards import create_main_settings_keyboard
+
 from ._helpers import safe_edit_text
 
 logger = logging.getLogger(__name__)
@@ -18,10 +20,10 @@ async def cq_back_to_main_settings_menu(
 ):
     await callback_query.answer()
 
-    main_settings_builder = await create_main_settings_keyboard(_) # <--- FIXED
+    main_settings_builder = await create_main_settings_keyboard(_)
     main_settings_text = _("Settings")
 
-    if callback_query.message: # Add check that message exists
+    if callback_query.message:
         await safe_edit_text(
             message_to_edit=callback_query.message,
             text=main_settings_text,

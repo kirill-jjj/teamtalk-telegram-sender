@@ -5,9 +5,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-# from bot.constants import DB_MAIN_NAME # No longer needed here
-from bot.config import Settings # Needed for config type hint
 from bot import models  # Important for SQLModel to discover models
+from bot.config import Settings  # Needed for config type hint
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ def create_session_factory(config: Settings) -> sessionmaker:
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models
 
-    import os # Required for os.path.abspath
+    import os  # Required for os.path.abspath
     absolute_db_path = os.path.abspath(config.database.db_file)
     db_url = f"sqlite+aiosqlite:///{absolute_db_path}"
     logger.info(f"Creating database engine for: {db_url}")

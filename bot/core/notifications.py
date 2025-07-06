@@ -1,53 +1,57 @@
+import gettext
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from aiogram import Bot as AiogramBot, html
-from typing import TYPE_CHECKING, Optional, Set, Any, Callable, Dict # Added Dict
 from html import escape
-
-# Forward reference for Services
-if TYPE_CHECKING:
-    from bot.services_container import Services # Use Services
-    from sqlalchemy.orm import sessionmaker # Import for DbSessionFactory alias
-    DbSessionFactory = sessionmaker # Create alias
-
-from sqlalchemy import and_, or_
+from typing import TYPE_CHECKING, Any
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
+from sqlalchemy import and_, or_
 from sqlmodel import select
 
-from bot.models import UserSettings, MutedUser, NotificationSetting, MuteListMode
-from bot.telegram_bot.utils import send_telegram_messages_to_list
-from bot.constants import (
-    NOTIFICATION_EVENT_JOIN,
-    NOTIFICATION_EVENT_LEAVE,
-    INITIAL_LOGIN_IGNORE_DELAY_SECONDS
-)
+from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
+from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
+from bot.telegram_bot.utils import send_telegram_messages_to_list
 
+# TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps
 if TYPE_CHECKING:
-    from bot.database.engine import SessionFactory as DbSessionFactory
+    from sqlalchemy.orm import sessionmaker  # For DbSessionFactory alias if used as a type
+
+    # Using a more specific alias to avoid conflict if DbSessionFactory is used elsewhere
+    from bot.database.engine import SessionFactory as DbEngineSessionFactoryType
+    from bot.services_container import Services
+    DbSessionFactory = sessionmaker # Alias for SessionFactory from sqlalchemy.orm for type hints in this module
 
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def _should_ignore_initial_event(event_type: str, username: str, user_id: int, login_complete_time: datetime | None) -> bool:
+def _should_ignore_initial_event(
+    event_type: str, username: str, user_id: int, login_complete_time: datetime | None
+) -> bool:
     reason_for_ignore = ""
-    if login_complete_time is None: reason_for_ignore = "bot still initializing/reconnecting"
+    if login_complete_time is None:
+        reason_for_ignore = "bot still initializing/reconnecting"
     elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
         reason_for_ignore = "bot login too recent"
-    else: return False
+    else:
+        return False
     if event_type == NOTIFICATION_EVENT_JOIN:
-        logger.debug(f"Ignoring potential initial sync {event_type} for {username} ({user_id}). Reason: {reason_for_ignore}.")
+        logger.debug(
+            f"Ignoring potential initial sync {event_type} for {username} ({user_id}). "
+            f"Reason: {reason_for_ignore}."
+        )
     return True
 
 
 def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool: # Pass app_cfg
     global_ignore_str = app_cfg.GLOBAL_IGNORE_USERNAMES or ""
-    if not global_ignore_str: return False
+    if not global_ignore_str:
+        return False
     ignored_set = {name.strip() for name in global_ignore_str.split(',') if name.strip()}
     return username in ignored_set
 
@@ -55,19 +59,22 @@ def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool: # Pass app_c
 async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
-    session_factory: "DbSessionFactory",
-    subscribed_users_cache: Set[int]
+    session_factory: "DbEngineSessionFactoryType", # Use renamed alias
+    subscribed_users_cache: set[int]
 ) -> list[int]:
     subscriber_ids = list(subscribed_users_cache)
-    if not subscriber_ids: return []
+    if not subscriber_ids:
+        return []
 
     async with session_factory() as session:
         filters = [
             UserSettings.telegram_id.in_(subscriber_ids),
             UserSettings.notification_settings != NotificationSetting.NONE
         ]
-        if event_type == NOTIFICATION_EVENT_JOIN: filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
-        elif event_type == NOTIFICATION_EVENT_LEAVE: filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
+        if event_type == NOTIFICATION_EVENT_JOIN:
+            filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
+        elif event_type == NOTIFICATION_EVENT_LEAVE:
+            filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
         user_is_in_list_subquery = select(MutedUser.id).where(
             and_(
@@ -85,43 +92,31 @@ async def _get_recipients_for_notification(
         return result.scalars().all()
 
 
-import gettext # Added for type hint
-from typing import TYPE_CHECKING, Optional, Set, Any, Callable # Added Callable
-
-# ... (other imports remain the same) ...
-
-# Forward reference for Application # This should be Services now
-if TYPE_CHECKING:
-    from bot.services_container import Services # Add this
-
-# ... (rest of the imports) ...
-
 def _generate_join_leave_notification_text(
     tt_user: TeamTalkUser,
     server_name: str,
     event_type: str,
     lang_code: str,
-    get_translator_func: Callable[[Optional[str]], gettext.GNUTranslations] # Changed signature
+    get_translator_func: Callable[[str | None], gettext.GNUTranslations] # Changed signature
 ) -> str:
     recipient_translator = get_translator_func(lang_code) # Use passed function
     _ = recipient_translator_func = recipient_translator.gettext
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
-    notification_template = _("User {user_nickname} joined server {server_name}") if event_type == NOTIFICATION_EVENT_JOIN \
-                            else _("User {user_nickname} left server {server_name}")
+    if event_type == NOTIFICATION_EVENT_JOIN:
+        notification_template = _("User {user_nickname} joined server {server_name}")
+    else:
+        notification_template = _("User {user_nickname} left server {server_name}")
     return notification_template.format(user_nickname=escape(localized_user_nickname), server_name=escape(server_name))
 
 
 async def send_join_leave_notification_logic(
     event_type: str,
     tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance, # tt_instance is specific to the event, so keep
-    login_complete_time: Optional[datetime], # Specific to the connection/event
-    online_users_cache_for_instance: Dict[int, "pytalk.user.User"], # Specific to the connection
+    tt_instance: TeamTalkInstance,
+    login_complete_time: datetime | None,
+    online_users_cache_for_instance: dict[int, "pytalk.user.User"],
     services: "Services"
-    # Removed: bot, session_factory, user_settings_cache, subscribed_users_cache
-    # These will now be accessed via services object
 ):
-    # Use services for config, caches, and bot instance
     default_lang_for_markup_and_log = services.config.DEFAULT_LANG
     _log_markup_translator = services.get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
@@ -130,36 +125,51 @@ async def send_join_leave_notification_logic(
     user_id = tt_user.id
 
     if not user_username:
-        logger.warning(f"User {event_type} with empty username (Nickname: {user_nickname}, ID: {user_id}) on server {tt_instance.server_info.host}. Skipping.")
+        logger.warning(
+            f"User {event_type} with empty username (Nickname: {user_nickname}, ID: {user_id}) "
+            f"on server {tt_instance.server_info.host}. Skipping."
+        )
         return
 
     if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
         return
 
-    if _is_user_globally_ignored(user_username, services.config): # Pass services.config
-        logger.debug(f"User {user_username} is globally ignored on server {tt_instance.server_info.host}. Skipping {event_type} notification.")
+    if _is_user_globally_ignored(user_username, services.config):
+        logger.debug(
+            f"User {user_username} is globally ignored on server {tt_instance.server_info.host}. "
+            f"Skipping {event_type} notification."
+        )
         return
 
     recipients = await _get_recipients_for_notification(
         user_username,
         event_type,
-        services.session_factory, # Use services
-        services.subscribed_users_cache # Use services
+        services.session_factory,
+        services.subscribed_users_cache
     )
 
     if not recipients:
-        logger.debug(f"No recipients found for {event_type} event for user {user_username} on server {tt_instance.server_info.host}.")
+        logger.debug(
+            f"No recipients found for {event_type} event for user {user_username} "
+            f"on server {tt_instance.server_info.host}."
+        )
         return
 
-    logger.info(f"Notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} will be sent to {len(recipients)} initial recipients.")
+    logger.info(
+        f"Notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} "
+        f"will be sent to {len(recipients)} initial recipients."
+    )
     server_name = get_effective_server_name(tt_instance, _log_markup_translator, services.config)
 
     final_recipients = []
 
     for tg_user_id in recipients:
-        user_specific_settings = services.user_settings_cache.get(tg_user_id) # Use services
+        user_specific_settings = services.user_settings_cache.get(tg_user_id)
         if not user_specific_settings:
-            logger.warning(f"User settings not found in cache for recipient {tg_user_id} during final NOON check. Skipping NOON for them.")
+            logger.warning(
+                f"User settings not found in cache for recipient {tg_user_id} "
+                f"during final NOON check. Skipping NOON for them."
+            )
             final_recipients.append(tg_user_id)
             continue
 
@@ -169,25 +179,37 @@ async def send_join_leave_notification_logic(
             if not is_event_user_tt_admin:
                 other_users_online_in_instance = False
                 for online_user_id_in_instance in online_users_cache_for_instance.keys():
-                    if online_user_id_in_instance != tt_instance.getMyUserID() and online_user_id_in_instance != tt_user.id:
+                    if (online_user_id_in_instance != tt_instance.getMyUserID() and
+                            online_user_id_in_instance != tt_user.id):
                         other_users_online_in_instance = True
                         break
                 if not other_users_online_in_instance:
-                    logger.debug(f"NOON: User {user_nickname} is the only one online (besides bot) for TG user {tg_user_id} on server {tt_instance.server_info.host}. Skipping notification for this recipient.")
+                    logger.debug(
+                        f"NOON: User {user_nickname} is the only one online (besides bot) "
+                        f"for TG user {tg_user_id} on server {tt_instance.server_info.host}. "
+                        f"Skipping notification for this recipient."
+                    )
                     continue
         final_recipients.append(tg_user_id)
 
     if not final_recipients:
-        logger.info(f"No recipients left after NOON filtering for {event_type} of {user_username} on server {tt_instance.server_info.host}.")
+        logger.info(
+            f"No recipients left after NOON filtering for {event_type} of {user_username} "
+            f"on server {tt_instance.server_info.host}."
+        )
         return
 
-    logger.info(f"Final notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} will be sent to {len(final_recipients)} users.")
+    logger.info(
+        f"Final notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} "
+        f"will be sent to {len(final_recipients)} users."
+    )
 
     await send_telegram_messages_to_list(
-        bot_instance_to_use=services.bot_event, # Use services.bot_event
+        bot_instance_to_use=services.bot_event,
         chat_ids=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
-            tt_user, server_name, event_type, lang_code, get_translator_func=services.get_translator # Pass get_translator_func
+            tt_user, server_name, event_type, lang_code,
+            get_translator_func=services.get_translator
         ),
         services=services,
         online_users_cache_for_instance=online_users_cache_for_instance

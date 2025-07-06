@@ -1,14 +1,21 @@
 # This module contains utility functions for list display,
 # pagination, and keyboard creation, moved here to avoid circular dependencies.
 
-import logging
+from __future__ import annotations
+
 import asyncio
+import logging
+from typing import TYPE_CHECKING
+
 from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from aiogram.types import CallbackQuery, Message
+
 from bot.database.crud import get_all_subscribers_ids
+from bot.models import UserSettings  # For UserSettings model
 from bot.telegram_bot.models import SubscriberInfo
-from bot.models import UserSettings # For UserSettings model
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
 logger = logging.getLogger(__name__)
@@ -97,16 +104,15 @@ async def _get_paginated_subscribers_info(
 
 
 async def _show_subscriber_list_page(
-    target: "Message | CallbackQuery", # Use quotes for forward reference if Message/CallbackQuery not imported
+    target: Message | CallbackQuery, # Use quotes for forward reference if Message/CallbackQuery not imported
     session: AsyncSession,
     bot: Bot,
     _: callable,
     page: int = 0
 ):
     """Fetches and displays a specific page of the subscriber list."""
-    from aiogram.types import Message, CallbackQuery # Local import for type hint
-    from bot.telegram_bot.utils import send_or_edit_paginated_list # Local import
-    from bot.telegram_bot.keyboards import create_subscriber_list_keyboard # Local import
+    from bot.telegram_bot.keyboards import create_subscriber_list_keyboard  # Local import
+    from bot.telegram_bot.utils import send_or_edit_paginated_list  # Local import
 
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
         session, bot, requested_page=page
