@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings
     telegram: TelegramSettings
     teamtalk: TeamTalkSettings
-    operational_parameters: OperationalParameters
+    operational_parameters: OperationalParameters = Field(default_factory=OperationalParameters)
 
     @classmethod
     def from_toml(cls, path: str) -> 'Settings':

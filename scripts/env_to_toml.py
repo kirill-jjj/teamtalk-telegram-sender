@@ -146,7 +146,10 @@ def main():
         if args.output:
             output_file_path = args.output.resolve()
         else:
-            output_file_path = input_file_path.with_suffix(".toml")
+            if input_file_path.name == ".env":
+                output_file_path = input_file_path.parent / "config.toml"
+            else:
+                output_file_path = input_file_path.with_suffix(".toml")
 
         if not process_single_env_file(input_file_path, output_file_path):
             sys.exit(1)
