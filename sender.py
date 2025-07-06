@@ -125,10 +125,8 @@ class Application:
         self.logger.info(f"Final admin_ids_cache count after startup: {len(self.services.admin_ids_cache)}.")
         self.logger.debug(f"Final admin_ids_cache state after startup: {self.services.admin_ids_cache}")
 
-        # set_telegram_commands might need services or config if it uses them.
-        # For now, assuming it might need app_config or specific parts of services.
-        # If it only needs the bot, it's self.services.bot_event
-        await set_telegram_commands(bot=self.services.bot_event, config=self.app_config, services=self.services)
+        # set_telegram_commands now expects only services
+        await set_telegram_commands(services=self.services)
         self.logger.info("Telegram bot commands set.")
 
 

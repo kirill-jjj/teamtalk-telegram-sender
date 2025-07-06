@@ -28,70 +28,63 @@ def get_admin_commands(_: Callable[[str], str]) -> List[BotCommand]:
     ]
     return get_user_commands(_) + admin_specific
 
-# Add TYPE_CHECKING and Application import
+# Add TYPE_CHECKING and Services import
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
-    from sqlalchemy.ext.asyncio import AsyncSession
+    # from sender import Application # No longer Application
+    from bot.services_container import Services # Import Services
+    from sqlalchemy.ext.asyncio import AsyncSession # Still needed for session type hint if used
 
 logger = logging.getLogger(__name__)
 
 # Функции get_user_commands и get_admin_commands остаются без изменений.
-# (Они были предоставлены в предыдущем сообщении и здесь предполагается, что они уже есть)
 
-async def set_telegram_commands(app: "Application"):
+async def set_telegram_commands(services: "Services"): # Changed app to services
     """
     Sets bot commands globally for all supported languages and individually for administrators.
     """
     logger.info("Setting up global and admin-specific Telegram commands...")
 
     # --- 1. Установка глобальных команд для каждого поддерживаемого языка ---
-    # Это команды, которые увидят все обычные пользователи.
-    for lang_info in app.available_languages:
+    for lang_info in services.available_languages: # Use services
         lang_code = lang_info["code"]
-        translator = app.get_translator(lang_code)
+        translator = services.get_translator(lang_code) # Use services
         user_commands = get_user_commands(translator.gettext)
 
         try:
-            # Устанавливаем команды для всех пользователей с этим языком в клиенте Telegram
-            await app.tg_bot_event.set_my_commands(
+            await services.bot_event.set_my_commands( # Use services
                 commands=user_commands,
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code if lang_code != app.app_config.DEFAULT_LANG else None
-                # Для языка по умолчанию language_code=None
+                language_code=lang_code if lang_code != services.config.DEFAULT_LANG else None # Use services
             )
             logger.info(f"Successfully set global user commands for language: '{lang_code}'.")
         except TelegramAPIError as e:
             logger.error(f"Failed to set global commands for language '{lang_code}': {e}")
 
     # --- 2. Установка индивидуальных команд для каждого администратора ---
-    # Это переопределит глобальные команды для конкретных пользователей-админов.
-    # Их команды будут на том языке, который они выбрали в настройках бота.
-    async with app.session_factory() as session:
-        for admin_id in app.admin_ids_cache:
-            admin_lang_code = app.app_config.DEFAULT_LANG # Язык по умолчанию
+    async with services.session_factory() as session: # Use services
+        for admin_id in services.admin_ids_cache: # Use services
+            admin_lang_code = services.config.DEFAULT_LANG # Use services
 
-            # Получаем язык админа из кеша или БД
-            admin_settings = app.user_settings_cache.get(admin_id)
+            admin_settings = services.user_settings_cache.get(admin_id) # Use services
             if not admin_settings:
-                admin_settings = await app.get_or_create_user_settings(admin_id, session)
+                # Use services.get_or_create_user_settings
+                admin_settings = await services.get_or_create_user_settings(admin_id, session)
 
             if admin_settings and admin_settings.language_code:
                 admin_lang_code = admin_settings.language_code
 
-            admin_translator = app.get_translator(admin_lang_code)
+            admin_translator = services.get_translator(admin_lang_code) # Use services
             admin_commands = get_admin_commands(admin_translator.gettext)
             admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
             try:
-                # Устанавливаем персональный набор команд для администратора
-                # Нет необходимости удалять команды перед установкой, set_my_commands перезаписывает.
-                await app.tg_bot_event.set_my_commands(commands=admin_commands, scope=admin_scope)
+                await services.bot_event.set_my_commands(commands=admin_commands, scope=admin_scope) # Use services
                 logger.info(f"Successfully set custom commands for admin {admin_id} in language '{admin_lang_code}'.")
             except TelegramAPIError as e:
                 logger.error(f"Failed to set commands for admin {admin_id}: {e}")
 
-async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int):
+async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int): # bot: Bot is fine, it's a direct Bot instance
     """Clears all custom commands for a specific chat."""
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
