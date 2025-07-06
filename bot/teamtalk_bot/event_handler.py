@@ -351,14 +351,13 @@ class TeamTalkEventHandler:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection: return
         connection.update_caches_on_event("user_login", user)
-        # send_join_leave_notification_logic will be updated to take services
         await send_join_leave_notification_logic(
-            event_type=NOTIFICATION_EVENT_JOIN, tt_user=user, tt_instance=connection.instance,
-            login_complete_time=connection.login_complete_time, bot=self.services.bot_event, # Use self.services
-            session_factory=self.services.session_factory, user_settings_cache=self.services.user_settings_cache, # Use self.services
-            subscribed_users_cache=self.services.subscribed_users_cache, # Use self.services
-            online_users_cache_for_instance=connection.online_users_cache,
-            app_config_instance=self.services.config, services=self.services # Use self.services
+            services=self.services,
+            event_type=NOTIFICATION_EVENT_JOIN,
+            tt_user=user,
+            tt_instance=connection.instance,
+            login_complete_time=connection.login_complete_time,
+            online_users_cache_for_instance=connection.online_users_cache
         )
 
     async def on_pytalk_user_logout(self, user: PytalkUser):
@@ -366,14 +365,13 @@ class TeamTalkEventHandler:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection: return
         connection.update_caches_on_event("user_logout", user)
-        # send_join_leave_notification_logic will be updated to take services
         await send_join_leave_notification_logic(
-            event_type=NOTIFICATION_EVENT_LEAVE, tt_user=user, tt_instance=connection.instance,
-            login_complete_time=connection.login_complete_time, bot=self.services.bot_event, # Use self.services
-            session_factory=self.services.session_factory, user_settings_cache=self.services.user_settings_cache, # Use self.services
-            subscribed_users_cache=self.services.subscribed_users_cache, # Use self.services
-            online_users_cache_for_instance=connection.online_users_cache,
-            app_config_instance=self.services.config, services=self.services # Use self.services
+            services=self.services,
+            event_type=NOTIFICATION_EVENT_LEAVE,
+            tt_user=user,
+            tt_instance=connection.instance,
+            login_complete_time=connection.login_complete_time,
+            online_users_cache_for_instance=connection.online_users_cache
         )
 
     async def on_pytalk_user_update(self, user: PytalkUser):

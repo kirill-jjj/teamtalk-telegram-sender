@@ -65,13 +65,13 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
         logger.error(f"Unhandled Telegram API error for chat_id {chat_id}: {error}")
 
 
-def _should_send_silently(chat_id: int, tt_user_is_online: bool, app: "Application") -> bool:
+def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Services") -> bool: # Changed app to services
     """
     Checks if a message to a given chat_id should be sent silently based on
     NOON settings and the provided online status of their linked TeamTalk user.
-    Uses app.user_settings_cache.
+    Uses services.user_settings_cache.
     """
-    recipient_settings = app.user_settings_cache.get(chat_id)
+    recipient_settings = services.user_settings_cache.get(chat_id) # Use services
 
     if (
         recipient_settings and
@@ -86,16 +86,15 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, app: "Applicati
 
 
 async def send_telegram_message_individual(
-    bot_instance: AiogramBot, # <--- Changed Bot to AiogramBot here
+    bot_instance: AiogramBot,
     chat_id: int,
-    app: "Application", # Changed to non-optional
+    services: "Services", # Changed app to services
     language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     tt_user_is_online: bool = False,
     **kwargs
 ) -> bool:
-    # app is now mandatory
-    send_silently = _should_send_silently(chat_id, tt_user_is_online, app)
+    send_silently = _should_send_silently(chat_id, tt_user_is_online, services) # Pass services
 
     try:
         await bot_instance.send_message(
@@ -107,7 +106,7 @@ async def send_telegram_message_individual(
         logger.debug(f"Message sent to {chat_id}. Silent: {send_silently}, kwargs used: {kwargs}")
         return True
     except TelegramAPIError as e:
-        await _handle_telegram_api_error(e, chat_id, app=app) # Pass app to error handler
+        await _handle_telegram_api_error(e, chat_id, services=services) # Pass services
         return False
 
 
@@ -115,10 +114,9 @@ async def send_telegram_messages_to_list(
     bot_instance_to_use: AiogramBot, # Renamed Bot to AiogramBot
     chat_ids: list[int],
     text_generator: Callable[[str], str],
-    user_settings_cache: dict, # Expect app.user_settings_cache
-    # session_factory: "DbSessionFactory", # No longer needed directly by this func, but by _handle_telegram_api_error via app
-    app: "Application", # Pass Application instance
-    online_users_cache_for_instance: Optional[dict[int, TeamTalkUser]] = None, # For specific instance's online users
+    # user_settings_cache: dict, # Will use services.user_settings_cache
+    services: "Services", # Changed app to services
+    online_users_cache_for_instance: Optional[Dict[int, TeamTalkUser]] = None,
     reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None
 ):
     if not bot_instance_to_use:
@@ -127,16 +125,13 @@ async def send_telegram_messages_to_list(
 
     tasks_list = []
     for chat_id in chat_ids:
-        user_settings = user_settings_cache.get(chat_id) # Use passed user_settings_cache
+        user_settings : Optional["UserSettings"] = services.user_settings_cache.get(chat_id) # Use services.user_settings_cache
         language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language_code)
         current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
 
         individual_tt_user_is_online = False
         if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
-            # Check if the recipient's linked TT username is in the provided online cache for the relevant instance
-            # The key for online_users_cache_for_instance is user_id (int), value is User object.
-            # We need to iterate values to check by username if not already a set of usernames.
             for tt_user_obj in online_users_cache_for_instance.values():
                 if ttstr(tt_user_obj.username) == user_settings.teamtalk_username:
                     individual_tt_user_is_online = True
@@ -148,7 +143,7 @@ async def send_telegram_messages_to_list(
             language=language_code,
             reply_markup=current_reply_markup,
             tt_user_is_online=individual_tt_user_is_online,
-            app=app, # Pass app context down
+            services=services, # Pass services
             text=text,
             parse_mode="HTML"
         ))
