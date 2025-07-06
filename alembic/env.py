@@ -66,21 +66,13 @@ def get_db_url():
         db_file_name = os.environ.get("DATABASE_FILE") # Fallback to actual env var
 
     if not db_file_name:
-        # If still not found, use a default or raise error
-        # For this project, DATABASE_FILE is expected.
-        # Raising an error might be too strict if other ways of configuring URL are available.
-        # However, the original script relied on it being in the .env.
-        print(f"ERROR [alembic.env] 'DATABASE_FILE' not found in '{config_file}' or environment variables.")
-        print(f"INFO  [alembic.env] Please ensure DATABASE_FILE is set in {config_file_source} or as an environment variable.")
-        # Fallback to a default name, though this might not be what user wants.
-        # Or, better, raise an informative error.
-        # For now, let's try a default and print a clear warning.
-        default_db_name = "bot_data.db" # Default from original .env.example
-        print(f"WARN  [alembic.env] Falling back to default DATABASE_FILE name: '{default_db_name}'")
-        db_file_name = default_db_name
-        # Alternatively, to be stricter:
-        # raise ValueError(f"DATABASE_FILE not found in {config_file_source} or environment variables. "
-        #                  "Cannot determine database URL for Alembic.")
+        error_message = (
+            f"'DATABASE_FILE' not found. Please ensure it is set in the "
+            f"configuration file ('{config_file}', source: {config_file_source}) "
+            f"or as an environment variable."
+        )
+        print(f"ERROR [alembic.env] {error_message}")
+        raise ValueError(error_message)
 
     db_path = os.path.abspath(db_file_name)
     db_url = f"sqlite+aiosqlite:///{db_path}"

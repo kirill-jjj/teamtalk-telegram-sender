@@ -1,57 +1,77 @@
 import subprocess
 import sys
 import os
+import argparse
+from pathlib import Path
 
 def main():
-    """Simple proxy script to run alembic with a custom config."""
+    """
+    Proxy script to run Alembic commands.
+    It sets the ALEMBIC_ENV_CONFIG_FILE environment variable based on the
+    --config argument, then passes all other arguments to the Alembic CLI.
+    """
+    parser = argparse.ArgumentParser(
+        description="Run Alembic commands with a specific .env file for configuration.",
+        usage="migrate [--config ENV_FILE] [alembic_command] [alembic_options...]"
+    )
+    parser.add_argument(
+        "--config",
+        default=".env",
+        help="Path to the .env file to use for Alembic's database configuration. "
+             "This path is relative to the project root. (default: .env)"
+    )
+    # parse_known_args() splits arguments into those recognized by this script's parser
+    # and the rest, which are assumed to be for Alembic.
+    args, alembic_cli_args = parser.parse_known_args()
 
-    config_file = ".env"
-    cli_args = sys.argv[1:]
+    # Determine project root (parent directory of 'scripts/' directory)
+    project_root = Path(__file__).resolve().parent.parent
 
-    # Ensure the script can find bot.config by adding project root to sys.path
-    # This assumes scripts/run_alembic.py is one level down from project root.
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
+    # Resolve the config file path relative to the project root
+    # If args.config is absolute, project_root part is ignored by os.path.join or Path resolution.
+    # However, Path resolution with / operator requires the right side to be relative if left is absolute.
+    # Safest is to resolve project_root first, then join.
+    config_file_on_disk = project_root / args.config
+    # Ensure the path is absolute for the environment variable, though not strictly necessary
+    # as env.py also resolves it. But good for clarity in logs.
+    absolute_config_path = config_file_on_disk.resolve()
 
-    try:
-        config_index = cli_args.index("--config")
-        if config_index + 1 < len(cli_args):
-            config_file = cli_args[config_index + 1]
-            del cli_args[config_index:config_index + 2]
-        else:
-            print("Error: --config option requires a value.", file=sys.stderr)
-            sys.exit(1)
-    except ValueError:
-        pass
-    except IndexError:
-        # Should not happen if ValueError is caught first for missing --config
-        # but as a safeguard if cli_args[config_index + 1] fails for other reasons.
-        print("Error: Malformed --config option.", file=sys.stderr)
-        sys.exit(1)
-
-    # Ensure alembic is found, might need to be 'python -m alembic' if not in PATH
-    # For now, assume 'alembic' is directly callable.
-    # We will pass the config file path via an environment variable
-    # as -x attributes are not reliably being passed through.
+    # Set environment variable for alembic/env.py to pick up
     env_vars = os.environ.copy()
-    env_vars["ALEMBIC_ENV_CONFIG_FILE"] = config_file
+    env_vars["ALEMBIC_ENV_CONFIG_FILE"] = str(absolute_config_path)
 
-    print(f"INFO  [run_alembic.py] Setting ALEMBIC_ENV_CONFIG_FILE={config_file}")
+    print(f"INFO  [run_alembic.py] Setting ALEMBIC_ENV_CONFIG_FILE={absolute_config_path}")
 
-    command = [
-        "alembic",
-        *cli_args
-    ]
+    # Determine Alembic executable.
+    # Prefer 'alembic' directly, assuming PATH is correctly set up by `uv run` or similar.
+    alembic_executable = "alembic"
+    # Fallback for older setups or direct script runs if needed:
+    # venv_alembic_path = project_root / ".venv" / "bin" / "alembic"
+    # if venv_alembic_path.exists():
+    #     alembic_executable = str(venv_alembic_path)
+    # else:
+    #     print(f"WARN [run_alembic.py] Alembic executable not found at {venv_alembic_path}, relying on PATH.")
 
-    print(f"▶️  Executing: {' '.join(command)}")
+
+    command = [alembic_executable, *alembic_cli_args]
+
+    # For display, convert Path objects in command to string if any were used
+    # (though alembic_executable and alembic_cli_args are strings here)
+    display_command = [str(c) for c in command]
+    print(f"▶️  Executing: {' '.join(display_command)} (CWD: {project_root})")
+
     try:
-        subprocess.run(command, check=True, env=env_vars)
+        # Run the Alembic command
+        subprocess.run(command, check=True, env=env_vars, cwd=project_root)
     except FileNotFoundError:
-        print(f"Error: 'alembic' command not found. Make sure Alembic is installed and in your PATH.", file=sys.stderr)
+        print(
+            f"Error: '{alembic_executable}' command not found. "
+            f"Make sure Alembic is installed and in your PATH, or the virtual environment is active.",
+            file=sys.stderr
+        )
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        # No need to print full stack trace, alembic usually gives good errors
+        # Alembic usually provides good error messages, so just exit with its return code.
         sys.exit(e.returncode)
 
 if __name__ == "__main__":
