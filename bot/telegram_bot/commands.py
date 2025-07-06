@@ -55,7 +55,7 @@ async def set_telegram_commands(services: "Services"): # Changed app to services
             await services.bot_event.set_my_commands( # Use services
                 commands=user_commands,
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code if lang_code != services.config.DEFAULT_LANG else None # Use services
+                language_code=lang_code if lang_code != services.config.general.default_lang else None # Use services
             )
             logger.info(f"Successfully set global user commands for language: '{lang_code}'.")
         except TelegramAPIError as e:
@@ -64,7 +64,7 @@ async def set_telegram_commands(services: "Services"): # Changed app to services
     # --- 2. Установка индивидуальных команд для каждого администратора ---
     async with services.session_factory() as session: # Use services
         for admin_id in services.admin_ids_cache: # Use services
-            admin_lang_code = services.config.DEFAULT_LANG # Use services
+            admin_lang_code = services.config.general.default_lang # Use services
 
             admin_settings = services.user_settings_cache.get(admin_id) # Use services
             if not admin_settings:
