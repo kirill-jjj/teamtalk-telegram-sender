@@ -52,6 +52,9 @@ Homepage = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Issues = "https://github.com/kirill-jjj/teamtalk-telegram-sender/issues"
 
+[tool.setuptools]
+py-modules = ["sender"] # Changed underscore to hyphen
+
 [tool.setuptools.packages.find]
 where = ["."]  # Search for packages in the root directory
 exclude = ["tests*"] # Exclude test packages
