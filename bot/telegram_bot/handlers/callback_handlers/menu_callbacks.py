@@ -1,5 +1,6 @@
 import logging
 import gettext
+from typing import Set # Added import
 from aiogram import Router, F, Bot as AiogramBot
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
