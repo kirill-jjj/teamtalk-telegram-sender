@@ -37,7 +37,7 @@ dependencies = [
     "python-dotenv~=1.1",
     "SQLAlchemy~=2.0",
     "aiosqlite~=0.21",
-    'uvloop; sys_platform != "win32"',
+    'uvloop~=0.21; sys_platform != "win32"',
     "Babel~=2.15",
     "pydantic-settings~=2.9",
     "pydantic~=2.11",
@@ -132,10 +132,3 @@ dev = [
     "mypy>=1.11.1",
     "ruff>=0.5.5"
 ]
-
-[tool.uv.tasks]
-test = "pytest --cov=bot --cov-report=term-missing"
-lint = "ruff check . --fix"
-format = "ruff format ."
-type-check = "mypy bot"
-coverage-html = "coverage html"

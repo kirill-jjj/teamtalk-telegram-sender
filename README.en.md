@@ -65,11 +65,11 @@ source $HOME/.local/bin/env
     cd teamtalk-telegram-sender
     ```
 
-3.  **Install dependencies (the `uv sync` command will automatically create a virtual environment in a `.venv` folder if it doesn't exist and install all necessary packages into it):**
+3.  **Install dependencies:** `uv sync` will automatically create a virtual environment in a `.venv` folder if it doesn't exist and install all necessary packages into it. For development, you need to install the extra dependencies as well:
     ```bash
-    uv sync
+    # This command installs both production and development dependencies
+    uv sync --all-extras
     ```
-    (`uv sync` will create a `.venv` virtual environment if it doesn't exist and install all dependencies. `uv` automatically uses this environment for commands like `uv run`.)
 4.  **Generate Localization Files**: The project uses a gettext-based localization system. To manage localization files, use the following `uv run` commands:
     *   To extract all translatable strings from the code into a template file (`locales/messages.pot`):
         ```bash
