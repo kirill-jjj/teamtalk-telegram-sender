@@ -151,12 +151,12 @@ async def forward_tt_message_to_telegram_admin(
     )
 
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=app.tg_bot_message,
+        bot_instance=services.bot_message, # Corrected: Use services.bot_message
         chat_id=admin_chat_id,
         language=admin_language_code,
-        app=app,
-        text=template_text_parts, # Передаем отформатированный текст
-        parse_mode="HTML"        # и указываем parse_mode
+        services=services, # Corrected: Pass services
+        text=template_text_parts,
+        parse_mode="HTML"
     )
 
     if was_sent:

@@ -181,7 +181,7 @@ async def _generate_and_reply_deeplink(
     success_log_message: str,
     reply_text_source: str,
     error_reply_source: str,
-    app: "Application", # Pass app instance
+    services: "Services", # Changed from app: "Application"
     payload: Optional[str] = None,
 ):
     sender_tt_username = ttstr(tt_message.user.username)
@@ -189,12 +189,12 @@ async def _generate_and_reply_deeplink(
         token = await create_deeplink(
             session,
             action,
-            app.app_config.DEEPLINK_TTL_SECONDS, # Pass TTL
+            services.config.DEEPLINK_TTL_SECONDS, # Use services.config
             payload=payload,
             expected_telegram_id=None
         )
-        # Use app's Telegram bot instance
-        bot_info = await app.tg_bot_event.get_me()
+        # Use services.bot_event
+        bot_info = await services.bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
         logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
         reply_text = _(reply_text_source).format(deeplink_url=deeplink_url) if "{deeplink_url}" in reply_text_source else _(reply_text_source)
@@ -316,8 +316,8 @@ async def handle_tt_help_command(
 async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
     _: callable,
-    app: "Application", # Add app (though not used yet)
-    connection: "TeamTalkConnection" # Add connection (though not used yet)
+    # app: "Application", # Removed
+    connection: "TeamTalkConnection"
 ):
     reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")
     tt_message.reply(reply_text)

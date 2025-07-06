@@ -339,7 +339,7 @@ class TeamTalkEventHandler:
                 else:
                     await handler(message, session=session, _=_, services=self.services, connection=connection)
             elif message_content.startswith("/"):
-                await handle_tt_unknown_command(message, _, services=self.services, connection=connection)
+                await handle_tt_unknown_command(message, _, connection=connection) # Removed services
             else:
                 # forward_tt_message_to_telegram_admin will also need services
                 await forward_tt_message_to_telegram_admin(
