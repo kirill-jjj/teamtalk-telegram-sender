@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
-from aiogram import Bot as AiogramBot, html # Renamed Bot
-from typing import TYPE_CHECKING, Optional, Set, Any # Added Set, Any
+from aiogram import Bot as AiogramBot, html
+from typing import TYPE_CHECKING, Optional, Set, Any, Callable, Dict # Added Dict
 from html import escape
 
 # Forward reference for Application
