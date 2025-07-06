@@ -43,7 +43,8 @@ dependencies = [
     "pydantic~=2.11",
     "sqlmodel>=0.0.24",
     "alembic~=1.16",
-    "cachetools~=6.1"
+    "cachetools~=6.1",
+    "toml~=0.10.2" # For writing TOML files (e.g., in env-to-toml script)
 ]
 
 [project.urls]
@@ -118,6 +119,7 @@ line-ending = "auto"
 teamtalk-telegram-sender = "sender:main_cli"
 migrate = "scripts.run_alembic:main"
 i18n = "scripts.manage_locales:main"
+env-to-toml = "scripts.env_to_toml:main"
 
 [tool.pytest.ini_options]
 pythonpath = [
