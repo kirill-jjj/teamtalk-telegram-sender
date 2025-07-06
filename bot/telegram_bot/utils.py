@@ -2,8 +2,8 @@ import logging
 import asyncio
 import pytalk
 from pytalk.user import User as TeamTalkUser
-from typing import Callable, Optional
-from aiogram import Bot as AiogramBot # <--- Changed this line
+from typing import Callable, Optional, Dict # Added Dict
+from aiogram import Bot as AiogramBot
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery, Chat
 from aiogram.exceptions import TelegramForbiddenError, TelegramAPIError, TelegramBadRequest
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,10 +13,11 @@ from bot.constants import (
     DEFAULT_LANGUAGE,
 )
 
-# For type hinting app instance
+# For type hinting Services
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services # Import Services
+    from bot.models import UserSettings # For type hint
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
