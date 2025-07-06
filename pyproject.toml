@@ -32,19 +32,19 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiogram~=3.20.0",
-    "py-talk-ex~=1.6.0",
-    "python-dotenv~=1.1.0",
-    "SQLAlchemy~=2.0.41",
-    "aiosqlite~=0.21.0",
+    "aiogram~=3.20",
+    "py-talk-ex~=1.6",
+    "python-dotenv~=1.1",
+    "SQLAlchemy~=2.0",
+    "aiosqlite~=0.21",
     'uvloop; sys_platform != "win32"',
-    "Babel>=2.15.0",
+    "Babel~=2.15",
     "pydantic-settings~=2.9",
     "pydantic~=2.11",
-    "sqlmodel>=0.0.24",
+    "sqlmodel~=0.0",
     "alembic~=1.16",
     "cachetools~=6.1",
-    "toml~=0.10.2" # For writing TOML files (e.g., in env-to-toml script)
+    "toml~=0.10" # For writing TOML files (e.g., in env-to-toml script)
 ]
 
 [project.urls]
@@ -60,62 +60,49 @@ where = ["."]  # Search for packages in the root directory
 exclude = ["tests*"] # Exclude test packages
 
 [tool.ruff]
-# Exclude a variety of commonly ignored directories.
+target-version = "py311"
+src = ["bot", "scripts", "sender.py"]
+respect-gitignore = true
 exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
+    "alembic.ini",
+    "babel.cfg",
 ]
 line-length = 120
 indent-width = 4
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity checks (`C901`) by default.
-# E, W: pycodestyle errors and warnings
-# F: Pyflakes errors
-# I: import sorting (isort)
-# C4: useful simplifications (e.g., dict(a=1) instead of {"a": 1})
-# B: bugbear (potential bug detection)
-# UP: auto-update syntax to newer Python versions
-select = ["E", "W", "F", "I", "C4", "B", "UP"]
-ignore = []
-
-# Allow fix for all enabled rules (when `--fix`) is provided.
+select = [
+    "E", "W", "F", "I", "UP", "B", "C4", "A", "SIM", "T20", "PT", "RUF",
+    "D", "ERA", "ISC", "G", "PL", "ASYNC",
+]
+ignore = [
+    "D203",
+    "D213",
+    "PLR0913",
+]
 fixable = ["ALL"]
 unfixable = []
-
-# Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"]
+"tests/*" = ["D", "S101"]
+"alembic/versions/*" = ["D"]
+"scripts/*" = ["T201"]
+"sender.py" = ["T201"]
+"bot/config.py" = ["E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["bot", "scripts"]
+force-sort-within-sections = true
+
 [tool.ruff.format]
-# Like Black, use double quotes for strings.
 quote-style = "double"
-
-# Like Black, indent with spaces, rather than tabs.
 indent-style = "space"
-
-# Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
-
-# Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
 
 [project.scripts]
@@ -136,15 +123,6 @@ pythonpath = [
   "."
 ]
 asyncio_mode = "auto"
-# uv pip install -e .
-# coverage run -m pytest
-# coverage report
-# coverage html
-# python -m http.server --directory htmlcov
-# mypy --install-types --non-interactive bot
-# mypy bot --exclude bot/locales --exclude bot/database/versions
-# ruff check . --fix
-# ruff format .
 
 [project.optional-dependencies]
 dev = [
@@ -154,3 +132,10 @@ dev = [
     "mypy>=1.11.1",
     "ruff>=0.5.5"
 ]
+
+[tool.uv.tasks]
+test = "pytest --cov=bot --cov-report=term-missing"
+lint = "ruff check . --fix"
+format = "ruff format ."
+type-check = "mypy bot"
+coverage-html = "coverage html"
