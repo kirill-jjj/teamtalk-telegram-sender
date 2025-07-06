@@ -2,35 +2,23 @@ import asyncio
 import argparse
 import traceback
 import logging
-from datetime import datetime # Keep for potential future use, though not directly in App class now
+# from datetime import datetime # No longer needed here
 
-from typing import Optional # Dict, Any removed as direct members of App
+from typing import Optional
 
-# create_async_engine, sessionmaker, AsyncSession, db_models, DB_MAIN_NAME are no longer directly used here
 from bot.config import Settings # For type hinting app_config_instance
-from bot.database.engine import create_session_factory # Import the new factory function
+from bot.database.engine import create_session_factory
 
-from aiogram import Dispatcher, html # Bot is imported by services_container
+from aiogram import Dispatcher, html
 from aiogram.types import ErrorEvent, Message as AiogramMessage # For _global_error_handler
-# TelegramAPIError not directly used by App now
-# CallbackAnswerMiddleware not directly used by App now
 
 import pytalk
-
-# gettext, Path moved to services_container or not used directly by App
-# LOCALE_DIR, DOMAIN moved to services_container
 
 from bot.logging_setup import setup_logging
 from bot.database import crud # Used in _on_startup_logic
 from bot.core.languages import DEFAULT_LANGUAGE_CODE # For _global_error_handler fallback
-# discover_languages moved to services.initialize_languages
 
 from bot.telegram_bot.commands import set_telegram_commands
-# Middlewares are configured in setup_telegram_dispatcher, not directly by App instance
-# from bot.telegram_bot.middlewares import (...)
-
-# TeamTalkConnection is managed by Services
-# from bot.teamtalk_bot.connection import TeamTalkConnection
 
 # Import Services container
 from bot.services_container import Services
@@ -51,8 +39,6 @@ class Application:
 
         # 3. Create components that depend on services or app config
         self.dp: Dispatcher = Dispatcher()
-        # tt_bot is now created and stored in self.services.tt_bot
-        # Remove: self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
 
         from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
         # TeamTalkEventHandler now takes only services
@@ -62,11 +48,7 @@ class Application:
         self.teamtalk_task: Optional[asyncio.Task] = None
 
 
-    # Methods like get_translator, load_user_settings_to_app_cache, get_or_create_user_settings
-    # have been moved to Services class.
-
     # --- Application Lifecycle Methods ---
-    # _on_startup_logic now receives dispatcher, not bot. bot is in self.services.bot_event
     async def _on_startup_logic(self, dispatcher: Dispatcher):
         """Internal logic for startup."""
         self.logger.info("Application startup: Initializing TeamTalk components...")

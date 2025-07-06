@@ -31,7 +31,7 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 # For type hinting app instance
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
@@ -45,7 +45,6 @@ async def _refresh_and_display_subscriber_list(
     bot: AiogramBot,
     return_page: int,
     _: callable
-    # app: "Application" # Removed
 ):
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
@@ -75,7 +74,7 @@ async def handle_view_subscriber(
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -121,7 +120,7 @@ async def handle_subscriber_action(
     bot: AiogramBot,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -199,7 +198,7 @@ async def handle_manage_tt_account(
     session: AsyncSession,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -267,7 +266,7 @@ async def handle_link_tt_account_chosen(
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

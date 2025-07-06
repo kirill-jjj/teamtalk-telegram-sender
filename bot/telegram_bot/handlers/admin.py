@@ -15,7 +15,7 @@ from .callback_handlers.list_utils import _show_subscriber_list_page
 # TYPE_CHECKING for Services is not needed here as handlers will request specific dependencies
 # from typing import TYPE_CHECKING
 # if TYPE_CHECKING:
-    # from bot.services_container import Services # No longer app
+    # from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,6 @@ async def kick_command_handler(
     message: Message,
     _: callable, # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
-    # app: "Application" removed
 ):
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
@@ -78,7 +77,6 @@ async def ban_command_handler(
     message: Message,
     _: callable, # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
-    # app: "Application" removed
 ):
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
@@ -89,6 +87,5 @@ async def subscribers_command_handler(
     session: AsyncSession, # Injected by DbSessionMiddleware
     bot: AiogramBot,       # Injected by Aiogram (Dispatcher has it)
     _: callable           # Injected by UserSettingsMiddleware
-    # app: "Application" removed, _show_subscriber_list_page doesn't need it
 ):
     await _show_subscriber_list_page(message, session, bot, _, page=0)

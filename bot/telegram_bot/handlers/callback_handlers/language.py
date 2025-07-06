@@ -17,7 +17,6 @@ from bot.core.user_settings import update_user_settings_in_db
 # For type hinting Services
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    # from sender import Application # No longer Application
     from bot.services_container import Services # Import Services
 
 logger = logging.getLogger(__name__)

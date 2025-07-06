@@ -18,7 +18,6 @@ from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, Tea
 # For type hinting app instance - no longer needed
 # from typing import TYPE_CHECKING
 # if TYPE_CHECKING:
-    # from sender import Application # No longer app
     # from bot.services_container import Services
 
 logger = logging.getLogger(__name__)

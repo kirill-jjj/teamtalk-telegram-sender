@@ -6,7 +6,6 @@ from html import escape
 
 # Forward reference for Services
 if TYPE_CHECKING:
-    # from sender import Application # No longer Application
     from bot.services_container import Services # Use Services
     from sqlalchemy.orm import sessionmaker # Import for DbSessionFactory alias
     DbSessionFactory = sessionmaker # Create alias
@@ -58,7 +57,6 @@ async def _get_recipients_for_notification(
     event_type: str,
     session_factory: "DbSessionFactory",
     subscribed_users_cache: Set[int]
-    # app: "Application" # Removed
 ) -> list[int]:
     subscriber_ids = list(subscribed_users_cache)
     if not subscriber_ids: return []
@@ -94,7 +92,6 @@ from typing import TYPE_CHECKING, Optional, Set, Any, Callable # Added Callable
 
 # Forward reference for Application # This should be Services now
 if TYPE_CHECKING:
-    # from sender import Application # Remove this
     from bot.services_container import Services # Add this
 
 # ... (rest of the imports) ...
@@ -158,7 +155,6 @@ async def send_join_leave_notification_logic(
     server_name = get_effective_server_name(tt_instance, _log_markup_translator, services.config)
 
     final_recipients = []
-    # online_usernames_for_noon_check = {ttstr(u.username) for u in online_users_cache_for_instance.values()} # Keep commented unless needed
 
     for tg_user_id in recipients:
         user_specific_settings = services.user_settings_cache.get(tg_user_id) # Use services
@@ -195,5 +191,4 @@ async def send_join_leave_notification_logic(
         ),
         services=services,
         online_users_cache_for_instance=online_users_cache_for_instance
-        # user_settings_cache argument removed from send_telegram_messages_to_list as it will use services.user_settings_cache
     )

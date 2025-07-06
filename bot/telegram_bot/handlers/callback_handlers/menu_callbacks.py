@@ -21,7 +21,7 @@ from bot.core.enums import AdminAction
 # Для типизации
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
@@ -78,7 +78,6 @@ async def menu_settings_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations" # Injected by UserSettingsMiddleware
-    # app: "Application" removed
 ):
     # Ensure query.message exists
     await settings_command_handler(
@@ -97,7 +96,6 @@ async def menu_kick_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations", # Injected
-    # app: "Application", # Removed
     tt_connection: TeamTalkConnection | None # Injected
 ):
     # Ensure query.message exists
@@ -111,7 +109,6 @@ async def menu_ban_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations", # Injected
-    # app: "Application", # Removed
     tt_connection: TeamTalkConnection | None # Injected
 ):
     # Ensure query.message exists
@@ -127,7 +124,6 @@ async def menu_subscribers_handler(
     session: AsyncSession, # Injected
     bot: AiogramBot, # Injected
     translator: "gettext.GNUTranslations" # Injected
-    # app: "Application" # Removed
 ):
     # Ensure query.message exists
     await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0) # type: ignore

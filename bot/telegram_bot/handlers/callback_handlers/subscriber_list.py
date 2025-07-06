@@ -14,7 +14,7 @@ from .list_utils import _show_subscriber_list_page
 # For type hinting app instance
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def handle_subscriber_list_actions(
     session: AsyncSession,
     bot: AiogramBot,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0

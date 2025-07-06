@@ -37,7 +37,7 @@ from ._helpers import process_setting_update, safe_edit_text
 # For type hinting app instance
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
@@ -249,7 +249,7 @@ async def _commit_mute_changes_and_notify(
     callback_query: CallbackQuery,
     user_settings: UserSettings,
     toast_message: str,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ) -> bool:
     if not callback_query.from_user:
         logger.error("Cannot save settings: callback_query.from_user is None.")
@@ -351,7 +351,7 @@ async def cq_set_mute_mode_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     managed_user_settings = await session.merge(user_settings)
     new_mode = callback_data.mode
@@ -454,7 +454,7 @@ async def cq_toggle_specific_user_mute_action(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not tt_connection:
          await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)

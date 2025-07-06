@@ -13,7 +13,6 @@ from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
     SubscriptionCheckMiddleware,
-    # ApplicationMiddleware, # Will be removed
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware,
     AdminCheckMiddleware
@@ -51,7 +50,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
 
 
     # Регистрация Middlewares
-    # ApplicationMiddleware is removed.
     dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
 
     # These middlewares will be refactored later to pull dependencies from data dict
@@ -74,7 +72,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     # Middleware для проверки админа на конкретных роутерах
-    # These will also be refactored to use data['services']
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 

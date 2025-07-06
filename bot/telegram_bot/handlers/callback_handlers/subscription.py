@@ -46,7 +46,7 @@ async def cq_set_subscription_setting(
     _: callable,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
-    services: "Services" # Added services
+    services: "Services"
 ):
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())

@@ -37,7 +37,7 @@ async def cq_toggle_noon_setting_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: NotificationActionCallback,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     if not callback_query.message:
         logger.warning("cq_toggle_noon_setting_action: Callback query is missing message.")

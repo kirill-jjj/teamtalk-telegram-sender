@@ -2,7 +2,6 @@ import logging
 import functools
 import gettext
 from typing import Optional, Callable, Any, TYPE_CHECKING
-# from aiogram.filters import CommandObject # Not used directly by these handlers anymore
 from pydantic import BaseModel, model_validator, Field
 from aiogram.types import BotCommandScopeChat, BotCommand
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +19,7 @@ from bot.teamtalk_bot.utils import send_long_tt_reply
 from bot.core.enums import DeeplinkAction
 
 if TYPE_CHECKING:
-    from sender import Application # For type hinting app instance
+    from bot.services_container import Services # For type hinting app instance
     # from bot.teamtalk_bot.connection import TeamTalkConnection # Already imported if needed for direct pass
 
 logger = logging.getLogger(__name__)
@@ -77,7 +76,7 @@ async def _execute_admin_action_for_id(
     crud_function: Callable[[AsyncSession, int], bool],
     commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]],
     translator: gettext.GNUTranslations,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ) -> bool:
     _ = translator.gettext
     if await crud_function(session, telegram_id):
@@ -129,7 +128,7 @@ async def _manage_admin_ids(
     error_msg_key: str,
     invalid_id_msg_key: str,
     header_msg_key: str,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ):
     _ = translator.gettext
     args = AdminIdArgs.model_validate(args_str)
@@ -181,7 +180,7 @@ async def _generate_and_reply_deeplink(
     success_log_message: str,
     reply_text_source: str,
     error_reply_source: str,
-    services: "Services", # Changed from app: "Application"
+    services: "Services",
     payload: Optional[str] = None,
 ):
     sender_tt_username = ttstr(tt_message.user.username)
@@ -217,7 +216,7 @@ async def handle_tt_subscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     _: callable,
-    services: "Services", # Changed from app: "Application"
+    services: "Services",
     connection: "TeamTalkConnection"
 ):
     sender_tt_username = ttstr(tt_message.user.username)
@@ -235,7 +234,7 @@ async def handle_tt_unsubscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     _: callable,
-    services: "Services", # Changed from app: "Application"
+    services: "Services",
     connection: "TeamTalkConnection"
 ):
     await _generate_and_reply_deeplink(
@@ -253,7 +252,7 @@ async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
-    services: "Services", # Changed from app: "Application", will be in kwargs for decorator
+    services: "Services", # will be in kwargs for decorator
     connection: "TeamTalkConnection",
     *,
     args_str: Optional[str]
@@ -276,7 +275,7 @@ async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
-    services: "Services", # Changed from app: "Application"
+    services: "Services",
     connection: "TeamTalkConnection",
     *,
     args_str: Optional[str]
@@ -297,7 +296,7 @@ async def handle_tt_remove_admin_command(
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
     _: callable,
-    services: "Services", # Changed from app: "Application"
+    services: "Services",
     connection: "TeamTalkConnection"
 ):
     is_main_tt_admin = False
@@ -316,7 +315,6 @@ async def handle_tt_help_command(
 async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
     _: callable,
-    # app: "Application", # Removed
     connection: "TeamTalkConnection"
 ):
     reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")

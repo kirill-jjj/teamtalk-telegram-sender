@@ -8,7 +8,6 @@ from bot.models import UserSettings
 from bot.core.user_settings import update_user_settings_in_db
 
 if TYPE_CHECKING:
-    # from sender import Application # No longer Application
     from bot.services_container import Services # Import Services
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ async def process_setting_update(
     success_toast_text: str,
     new_text: str,
     new_markup: InlineKeyboardMarkup,
-    services: "Services" # Changed from app: "Application"
+    services: "Services"
 ) -> None:
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
