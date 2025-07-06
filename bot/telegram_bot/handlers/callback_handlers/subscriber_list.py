@@ -28,7 +28,7 @@ async def handle_subscriber_list_actions(
     session: AsyncSession,
     bot: AiogramBot,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
@@ -39,7 +39,7 @@ async def handle_subscriber_list_actions(
             return
 
         telegram_id_to_delete = callback_data.telegram_id
-        success = await user_service.delete_full_user_profile(session, telegram_id_to_delete, app=app)
+        success = await user_service.delete_full_user_profile(session, telegram_id_to_delete, services=services) # Pass services
 
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=telegram_id_to_delete))

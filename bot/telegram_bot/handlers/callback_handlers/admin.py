@@ -3,37 +3,38 @@ from aiogram import Router, F, html
 from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramAPIError
 import pytalk
-# from pytalk.instance import TeamTalkInstance # Will use tt_connection.instance
 from pytalk.exceptions import PermissionError as PytalkPermissionError, TeamTalkException as PytalkException
-from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
 from bot.telegram_bot.callback_data import AdminActionCallback
 from bot.core.enums import AdminAction
 from bot.core.utils import get_tt_user_display_name
 from html import escape
+from typing import Set # For admin_ids_cache type hint
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 
-
-# For type hinting app instance
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from sender import Application
+# For type hinting app instance - no longer needed
+# from typing import TYPE_CHECKING
+# if TYPE_CHECKING:
+    # from sender import Application # No longer app
+    # from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
-admin_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
-admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Added
+# Middlewares are applied, they will inject tt_connection and _ (via UserSettingsMiddleware)
+admin_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 
-ttstr = pytalk.instance.sdk.ttstr # Keep if get_tt_user_display_name or other utils use it.
+ttstr = pytalk.instance.sdk.ttstr
 
 async def _execute_tt_user_action(
     action: AdminAction,
-    user_to_act_on: pytalk.user.User, # This user object is tied to a specific tt_instance
+    user_to_act_on: pytalk.user.User,
     _: callable,
     admin_tg_id: int,
-    server_host: str # For logging context
+    server_host: str
 ) -> tuple[bool, str]:
     """
     Executes a moderation action on a TeamTalk user.
@@ -44,12 +45,12 @@ async def _execute_tt_user_action(
 
     try:
         if action == AdminAction.KICK:
-            user_to_act_on.kick(from_server=True) # kick method on User object uses its associated instance
+            user_to_act_on.kick(from_server=True)
             logger.info(f"Admin {admin_tg_id} kicked TT user '{user_nickname}' (ID: {user_to_act_on.id}) from server {server_host}")
             return True, _("User {user_nickname} kicked from server {server_host}.").format(user_nickname=quoted_nickname, server_host=server_host)
         elif action == AdminAction.BAN:
-            user_to_act_on.ban(from_server=True) # ban method on User object
-            user_to_act_on.kick(from_server=True) # kick as well after ban
+            user_to_act_on.ban(from_server=True)
+            user_to_act_on.kick(from_server=True)
             logger.info(f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname}' (ID: {user_to_act_on.id}) from server {server_host}")
             return True, _("User {user_nickname} banned and kicked from server {server_host}.").format(user_nickname=quoted_nickname, server_host=server_host)
         else:
@@ -62,48 +63,46 @@ async def _execute_tt_user_action(
     except PytalkException as e:
         logger.error(f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}", exc_info=True)
         return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
-    except (ValueError, TypeError, AttributeError) as e_data: # Includes issues if user_to_act_on is somehow invalid
+    except (ValueError, TypeError, AttributeError) as e_data:
         logger.error(f"Data error during '{action}' on TT user (ID: {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}) on server {server_host}: {e_data}", exc_info=True)
         return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
-    except (TimeoutError, OSError) as e_net: # Network or OS level errors
+    except (TimeoutError, OSError) as e_net:
         logger.critical(f"CRITICAL: Network/OS error during '{action}' on TT user (ID: {user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'}) on server {server_host}: {e_net}", exc_info=True)
         return False, _("An error occurred while performing the action on server {server_host}. Please try again later.").format(server_host=server_host)
 
 
 @admin_actions_router.callback_query(
     AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN}))
-    # Removed F.from_user.id.in_(ADMIN_IDS_CACHE) - will check manually
 )
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
-    _: callable,
-    app: "Application", # Injected by ApplicationMiddleware
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware & checked by TeamTalkConnectionCheckMiddleware
+    _: callable, # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int], # Injected from workflow_data
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
 ):
-    if not callback_query.message: # Should be handled by ensure_message_context if that's used, or check here
+    if not callback_query.message:
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
 
-    if callback_query.from_user.id not in app.admin_ids_cache:
+    if callback_query.from_user.id not in admin_ids_cache: # Use injected admin_ids_cache
         await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
         return
 
-    # TeamTalkConnectionCheckMiddleware should ensure tt_connection and tt_connection.instance are valid
+    # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection and instance are valid
     if not tt_connection or not tt_connection.instance:
-         # This case should ideally be caught by TeamTalkConnectionCheckMiddleware if applied to this router
+         # This check is somewhat redundant if TeamTalkConnectionCheckMiddleware is effective
          await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
          return
 
     tt_instance = tt_connection.instance
     server_host_for_display = tt_connection.server_info.host
 
-    user_to_act_on = tt_instance.get_user(callback_data.user_id) # Get user from specific instance
+    user_to_act_on = tt_instance.get_user(callback_data.user_id)
     if not user_to_act_on:
         await callback_query.answer(_("User not found on server {server_host} anymore.").format(server_host=server_host_for_display), show_alert=True)
         try:
-            # Try to remove buttons if user is gone
-            if callback_query.message: # Check if message exists
+            if callback_query.message:
                  await callback_query.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError:
             logger.debug(f"Failed to remove reply markup when user {callback_data.user_id} was not found on {server_host_for_display}.")
@@ -114,22 +113,19 @@ async def process_user_action_selection(
         user_to_act_on=user_to_act_on,
         _=_,
         admin_tg_id=callback_query.from_user.id,
-        server_host=server_host_for_display # Pass server_host for context
+        server_host=server_host_for_display
     )
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        # Edit the original message (e.g., the one with user selection buttons)
-        if callback_query.message: # Check if message exists
+        if callback_query.message:
             try:
                 await callback_query.message.edit_text(message_text, reply_markup=None)
             except TelegramAPIError as e:
-                # If editing text fails (e.g. message too old, or not text based), try just removing markup
                 logger.warning(f"Failed to edit message text after user action on {server_host_for_display}: {e}. Trying to edit reply markup only.")
                 try:
                     await callback_query.message.edit_reply_markup(reply_markup=None)
                 except TelegramAPIError as e_markup:
                     logger.error(f"Failed to even remove reply markup after user action on {server_host_for_display}: {e_markup}")
     else:
-        # For failures, message_text from _execute_tt_user_action already includes server_host context
         await callback_query.answer(message_text, show_alert=True)

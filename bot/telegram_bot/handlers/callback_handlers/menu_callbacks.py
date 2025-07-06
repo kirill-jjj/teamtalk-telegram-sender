@@ -42,14 +42,15 @@ admin_menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMidd
 async def menu_who_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int], # Injected from workflow_data
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    # Ensure query.message exists due to @ensure_message_context
     await who_command_handler(
-        message=query.message,
+        message=query.message, # type: ignore
         translator=translator,
-        app=app,
+        admin_ids_cache=admin_ids_cache, # Pass admin_ids_cache
         tt_connection=tt_connection
     )
     await query.answer()
@@ -59,13 +60,14 @@ async def menu_who_handler(
 async def menu_help_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",
-    app: "Application"
+    translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int] # Injected from workflow_data
 ):
+    # Ensure query.message exists
     await help_command_handler(
-        message=query.message,
+        message=query.message, # type: ignore
         _=translator.gettext,
-        app=app
+        admin_ids_cache=admin_ids_cache # Pass admin_ids_cache
     )
     await query.answer()
 
@@ -74,13 +76,14 @@ async def menu_help_handler(
 async def menu_settings_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",
-    app: "Application"
+    translator: "gettext.GNUTranslations" # Injected by UserSettingsMiddleware
+    # app: "Application" removed
 ):
+    # Ensure query.message exists
     await settings_command_handler(
-        message=query.message,
-        _=translator.gettext,
-        app=app
+        message=query.message, # type: ignore
+        _=translator.gettext
+        # app argument removed from settings_command_handler
     )
     await query.answer()
 
@@ -92,11 +95,12 @@ async def menu_settings_handler(
 async def menu_kick_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    translator: "gettext.GNUTranslations", # Injected
+    # app: "Application", # Removed
+    tt_connection: TeamTalkConnection | None # Injected
 ):
-    await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection)
+    # Ensure query.message exists
+    await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection) # type: ignore
     await query.answer()
 
 
@@ -105,11 +109,12 @@ async def menu_kick_handler(
 async def menu_ban_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    translator: "gettext.GNUTranslations", # Injected
+    # app: "Application", # Removed
+    tt_connection: TeamTalkConnection | None # Injected
 ):
-    await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection)
+    # Ensure query.message exists
+    await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection) # type: ignore
     await query.answer()
 
 
@@ -118,10 +123,11 @@ async def menu_ban_handler(
 async def menu_subscribers_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    session: AsyncSession,
-    bot: AiogramBot,
-    translator: "gettext.GNUTranslations",
-    app: "Application"
+    session: AsyncSession, # Injected
+    bot: AiogramBot, # Injected
+    translator: "gettext.GNUTranslations" # Injected
+    # app: "Application" # Removed
 ):
-    await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0)
+    # Ensure query.message exists
+    await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0) # type: ignore
     await query.answer()

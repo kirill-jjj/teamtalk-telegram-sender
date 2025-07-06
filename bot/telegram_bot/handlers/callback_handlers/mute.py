@@ -249,7 +249,7 @@ async def _commit_mute_changes_and_notify(
     callback_query: CallbackQuery,
     user_settings: UserSettings,
     toast_message: str,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ) -> bool:
     if not callback_query.from_user:
         logger.error("Cannot save settings: callback_query.from_user is None.")
@@ -263,7 +263,7 @@ async def _commit_mute_changes_and_notify(
         # but explicit refresh can be added if issues with muted_users_list persist.
         # await session.refresh(user_settings, attribute_names=['muted_users_list'])
 
-        app.user_settings_cache[user_settings.telegram_id] = user_settings
+        services.user_settings_cache[user_settings.telegram_id] = user_settings # Changed here
 
         await callback_query.answer(toast_message, show_alert=False)
         return True
@@ -351,7 +351,7 @@ async def cq_set_mute_mode_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     managed_user_settings = await session.merge(user_settings)
     new_mode = callback_data.mode
@@ -387,7 +387,7 @@ async def cq_set_mute_mode_action(
         success_toast_text=success_toast_text,
         new_text=menu_text,
         new_markup=updated_builder.as_markup(),
-        app=app
+        services=services # Pass services
     )
 
 
@@ -454,7 +454,7 @@ async def cq_toggle_specific_user_mute_action(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not tt_connection:
          await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -486,7 +486,7 @@ async def cq_toggle_specific_user_mute_action(
     )
 
     save_successful = await _commit_mute_changes_and_notify(
-        session, callback_query, managed_user_settings, toast_message, app
+        session, callback_query, managed_user_settings, toast_message, services # Pass services
     )
 
     if not save_successful:

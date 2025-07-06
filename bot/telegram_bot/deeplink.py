@@ -17,11 +17,11 @@ from bot.database.crud import (
 )
 from bot.database import crud
 from bot.database.crud import get_deeplink as db_get_deeplink
-from bot.services import user_service # Import the new service
+from bot.services import user_service
 
-# Add import Application for Type Hinting
 if TYPE_CHECKING:
-    from sender import Application
+    # from sender import Application # No longer Application
+    from bot.services_container import Services # Import Services
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,6 @@ async def _validate_deeplink_token(
 
     if deeplink_obj.expected_telegram_id and deeplink_obj.expected_telegram_id != message_from_user_id:
         await message.reply(_("This confirmation link was intended for a different Telegram account."))
-        # Do not delete the deeplink here, as it might be for someone else.
         return None
 
     return deeplink_obj
@@ -53,7 +52,7 @@ async def _execute_deeplink_action(
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
     token: str,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ) -> str:
     """
     Executes the action specified by the deeplink object and returns a reply text.
@@ -70,10 +69,11 @@ async def _execute_deeplink_action(
         return _("Invalid deeplink action.")
 
     try:
+        # Pass services to the specific handlers
         if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-            return await handler_func(session, telegram_id, _, app=app)
+            return await handler_func(session, telegram_id, _, services=services)
         else:
-            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings, app=app)
+            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings, services=services)
 
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.error(f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True)
@@ -84,9 +84,10 @@ async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ) -> str:
-    if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, app=app):
+    # Pass services to delete_full_user_profile
+    if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, services=services):
         logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink (using user_service).")
         return _("You have successfully unsubscribed from notifications.")
     else:
@@ -98,11 +99,11 @@ async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    payload: str | None, # Expecting TeamTalk username as payload
+    payload: str | None,
     user_settings: UserSettings,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ) -> str:
-    # --- Ban Check ---
+    # Ban check remains the same as it uses session (crud)
     if await crud.is_telegram_id_banned(session, telegram_id):
         logger.warning(f"Subscription attempt by banned Telegram ID: {telegram_id}")
         return _("Your Telegram account is banned from using this service.")
@@ -111,46 +112,41 @@ async def _handle_subscribe_deeplink(
     if tt_username_from_payload and await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
         logger.warning(f"Subscription attempt with banned TeamTalk username: {tt_username_from_payload} by Telegram ID: {telegram_id}")
         return _("The TeamTalk username '{tt_username}' is banned and cannot be linked.").format(tt_username=tt_username_from_payload)
-    # --- End Ban Check ---
 
     await add_subscriber(session, telegram_id)
-    # Update cache directly using app instance
-    app.subscribed_users_cache.add(telegram_id)
+    # Update cache using services
+    services.subscribed_users_cache.add(telegram_id)
     logger.info(f"User {telegram_id} added to subscribers list and cache.")
 
-    # If the user is an admin in the DB, add them to the admin_ids_cache as well
-    # This handles the case where an admin unsubscribes and then re-subscribes via deeplink
-    admin_record = await session.get(crud.Admin, telegram_id) # Use crud.Admin to access the model
+    admin_record = await session.get(crud.Admin, telegram_id)
     if admin_record:
-        app.admin_ids_cache.add(telegram_id)
+        services.admin_ids_cache.add(telegram_id)
         logger.info(f"User {telegram_id} is an admin, added to admin_ids_cache.")
 
-    # The user_settings passed in is from middleware, it's already get_or_created.
     current_settings = user_settings
-
     tt_username_from_payload = payload
     if not tt_username_from_payload:
-        # Since this is the standard subscription, payload is now expected.
         logger.error(f"Deeplink for '{DeeplinkAction.SUBSCRIBE}' missing TeamTalk username in payload for user {telegram_id}.")
         return _("Error: Missing required information for subscription. Please try the link again or contact support.")
 
     current_settings.teamtalk_username = tt_username_from_payload
     current_settings.not_on_online_confirmed = True
     await update_user_settings_in_db(session, current_settings)
-    # Update cache directly using app instance
-    app.user_settings_cache[telegram_id] = current_settings
+    # Update cache using services
+    services.user_settings_cache[telegram_id] = current_settings
     logger.info(f"User {telegram_id} linked to TT user '{tt_username_from_payload}' and settings updated during subscription and in cache.")
 
     return _("You have successfully subscribed to notifications.")
 
 
+# Type hints for handlers might need to reflect the change from app to services if they were very specific
 DeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable, Any, UserSettings],
+    [AsyncSession, int, callable, Any, UserSettings, "Services"], # Added Services
     Coroutine[Any, Any, str]
 ]
 
 UnsubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable],
+    [AsyncSession, int, callable, "Services"], # Added Services
     Coroutine[Any, Any, str]
 ]
 
@@ -166,7 +162,7 @@ async def handle_deeplink_payload(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
@@ -175,12 +171,10 @@ async def handle_deeplink_payload(
 
     message_from_user_id = message.from_user.id
 
-    # _validate_deeplink_token expects bot.models.Deeplink from db_get_deeplink
     deeplink_obj: Optional[DeeplinkModel] = await _validate_deeplink_token(session, token, message_from_user_id, message, _)
     if not deeplink_obj:
         return
 
-    # user_settings is already fetched by middleware. It's used/updated by the action handler.
     reply_text = await _execute_deeplink_action(
         session,
         message_from_user_id,
@@ -188,9 +182,8 @@ async def handle_deeplink_payload(
         deeplink_obj,
         user_settings,
         token,
-        app=app
+        services=services # Pass services
     )
 
     await message.reply(reply_text)
-    # db_delete_deeplink_by_token expects the token string
     await delete_deeplink_by_token(session, token)

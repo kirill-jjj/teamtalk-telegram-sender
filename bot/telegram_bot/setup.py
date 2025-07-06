@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING
+from aiogram import Dispatcher # For type hinting dp
 
 if TYPE_CHECKING:
-    from sender import Application
+    from sender import Application # For app_callbacks type hint
+    from bot.services_container import Services
 
 # Aiogram компоненты
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
@@ -11,7 +13,7 @@ from bot.telegram_bot.middlewares import (
     DbSessionMiddleware,
     UserSettingsMiddleware,
     SubscriptionCheckMiddleware,
-    ApplicationMiddleware,
+    # ApplicationMiddleware, # Will be removed
     ActiveTeamTalkConnectionMiddleware,
     TeamTalkConnectionCheckMiddleware,
     AdminCheckMiddleware
@@ -22,55 +24,71 @@ from bot.telegram_bot.handlers.user import user_commands_router
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
-# --- ИСПРАВЛЕННЫЙ ИМПОРТ ---
-# --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
 
 
-def setup_telegram_dispatcher(app: "Application"):
+def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):
     """
     Configures the Aiogram Dispatcher with middlewares, routers,
     and lifecycle handlers.
+    Dependencies are injected via dp.workflow_data.
     """
-    app.logger.info("Setting up Telegram dispatcher...")
+    services.logger.info("Setting up Telegram dispatcher...") # Use logger from services
+
+    # Populate workflow_data for DI
+    dp["services"] = services
+    dp["config"] = services.config
+    dp["session_factory"] = services.session_factory # For DbSessionMiddleware
+    # Individual caches/components for direct injection if preferred by handlers later
+    dp["admin_ids_cache"] = services.admin_ids_cache
+    dp["user_settings_cache"] = services.user_settings_cache
+    dp["subscribed_users_cache"] = services.subscribed_users_cache
+    dp["connections"] = services.connections
+    dp["bot_event"] = services.bot_event
+    dp["bot_message"] = services.bot_message
+    dp["translator_cache"] = services.translator_cache # Though get_translator is preferred
+    dp["available_languages"] = services.available_languages
+
 
     # Регистрация Middlewares
-    app.dp.update.outer_middleware.register(ApplicationMiddleware(app))
-    app.dp.update.outer_middleware.register(DbSessionMiddleware(app.session_factory))
+    # ApplicationMiddleware is removed.
+    dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
 
-    app.dp.message.middleware(SubscriptionCheckMiddleware())
-    app.dp.callback_query.middleware(SubscriptionCheckMiddleware())
+    # These middlewares will be refactored later to pull dependencies from data dict
+    dp.message.middleware(SubscriptionCheckMiddleware())
+    dp.callback_query.middleware(SubscriptionCheckMiddleware())
 
-    app.dp.message.middleware(UserSettingsMiddleware())
-    app.dp.callback_query.middleware(UserSettingsMiddleware())
+    dp.message.middleware(UserSettingsMiddleware())
+    dp.callback_query.middleware(UserSettingsMiddleware())
 
-    # ActiveTeamTalkConnectionMiddleware will be applied to specific routers
-    # app.dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-    # app.dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+    # ActiveTeamTalkConnectionMiddleware can be applied to specific routers or globally
+    # For now, assuming it's registered generally and handlers decide if they need tt_connection
+    # Or it can be applied to specific routers that always need it.
+    # Example: user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware())
+    # Let's keep it general for now, to be refined if needed.
+    # It will also be refactored to use data['services']
+    dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+    dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
-    app.dp.callback_query.middleware(CallbackAnswerMiddleware())
+
+    dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     # Middleware для проверки админа на конкретных роутерах
+    # These will also be refactored to use data['services']
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
-    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ, чтобы защитить кнопки админа в меню ---
-    # menu_callback_router.callback_query.middleware(AdminCheckMiddleware()) # Removed: Handled by main callback_router or within menu_callbacks itself
-    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 
     # Подключение роутеров
-    app.dp.include_router(user_commands_router)
-    app.dp.include_router(admin_router)
-    app.dp.include_router(callback_router) # menu_callback_router is now included here
-    # --- ИСПРАВЛЕННЫЙ РОУТЕР ---
-    # app.dp.include_router(menu_callback_router) # Removed: Handled by main callback_router
-    # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-    app.dp.include_router(subscriber_actions_router)
-    app.dp.include_router(catch_all_router)
+    dp.include_router(user_commands_router)
+    dp.include_router(admin_router)
+    dp.include_router(callback_router)
+    dp.include_router(subscriber_actions_router)
+    dp.include_router(catch_all_router)
 
-    # Регистрация хуков жизненного цикла и обработчика ошибок
-    app.dp.startup.register(app._on_startup_logic)
-    app.dp.shutdown.register(app._on_shutdown_logic)
-    app.dp.errors.register(app._global_error_handler)
+    # Регистрация хуков жизненного цикла и обработчика ошибок from Application instance
+    dp.startup.register(app_callbacks._on_startup_logic)
+    dp.shutdown.register(app_callbacks._on_shutdown_logic)
+    dp.errors.register(app_callbacks._global_error_handler)
 
-    app.logger.info("Telegram dispatcher configured.")
+    services.logger.info("Telegram dispatcher configured.")

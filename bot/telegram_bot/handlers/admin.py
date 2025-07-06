@@ -12,25 +12,28 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.core.enums import AdminAction
 from .callback_handlers.list_utils import _show_subscriber_list_page
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from sender import Application
+# TYPE_CHECKING for Services is not needed here as handlers will request specific dependencies
+# from typing import TYPE_CHECKING
+# if TYPE_CHECKING:
+    # from bot.services_container import Services # No longer app
 
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-admin_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
-admin_router.message.middleware(TeamTalkConnectionCheckMiddleware()) # Existing
-
+# Middlewares ActiveTeamTalkConnectionMiddleware and TeamTalkConnectionCheckMiddleware
+# are already applied and refactored to use DI.
+# They will inject tt_connection or block if unavailable/not ready.
+# UserSettingsMiddleware (providing _) is applied globally in setup_telegram_dispatcher.
 
 async def _show_user_buttons(
     message: Message,
     command_type: AdminAction,
-    _: callable,
-    tt_connection: TeamTalkConnection | None
+    _: callable, # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     if not tt_connection or not tt_connection.instance:
-        logger.error("tt_connection or its instance is None in _show_user_buttons.")
+        # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
+        logger.error("tt_connection or its instance is None in _show_user_buttons. This should have been caught by middleware.")
         await message.reply(_("TeamTalk connection is not available. Please try again later."))
         return
 
@@ -63,9 +66,9 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"))
 async def kick_command_handler(
     message: Message,
-    _: callable,
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    _: callable, # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    # app: "Application" removed
 ):
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
@@ -73,9 +76,9 @@ async def kick_command_handler(
 @admin_router.message(Command("ban"))
 async def ban_command_handler(
     message: Message,
-    _: callable,
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    _: callable, # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    # app: "Application" removed
 ):
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
@@ -83,9 +86,9 @@ async def ban_command_handler(
 @admin_router.message(Command("subscribers"))
 async def subscribers_command_handler(
     message: Message,
-    session: AsyncSession,
-    bot: AiogramBot,
-    _: callable,
-    app: "Application"
+    session: AsyncSession, # Injected by DbSessionMiddleware
+    bot: AiogramBot,       # Injected by Aiogram (Dispatcher has it)
+    _: callable           # Injected by UserSettingsMiddleware
+    # app: "Application" removed, _show_subscriber_list_page doesn't need it
 ):
     await _show_subscriber_list_page(message, session, bot, _, page=0)

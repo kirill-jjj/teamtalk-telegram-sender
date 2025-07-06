@@ -54,8 +54,8 @@ async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
     session_factory: "DbSessionFactory",
-    subscribed_users_cache: Set[int],
-    app: "Application"
+    subscribed_users_cache: Set[int]
+    # app: "Application" # Removed
 ) -> list[int]:
     subscriber_ids = list(subscribed_users_cache)
     if not subscriber_ids: return []
@@ -85,9 +85,9 @@ async def _get_recipients_for_notification(
 
 
 def _generate_join_leave_notification_text(
-    tt_user: TeamTalkUser, server_name: str, event_type: str, lang_code: str, app: "Application"
+    tt_user: TeamTalkUser, server_name: str, event_type: str, lang_code: str, services: "Services" # Changed app to services
 ) -> str:
-    recipient_translator = app.get_translator(lang_code)
+    recipient_translator = services.get_translator(lang_code) # Use services
     _ = recipient_translator_func = recipient_translator.gettext
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
     notification_template = _("User {user_nickname} joined server {server_name}") if event_type == NOTIFICATION_EVENT_JOIN \
@@ -102,14 +102,14 @@ async def send_join_leave_notification_logic(
     login_complete_time: datetime | None,
     bot: AiogramBot, # Parameter from Application
     session_factory: "DbSessionFactory", # Parameter from Application
-    user_settings_cache: dict[int, UserSettings], # Parameter from Application
+    user_settings_cache: dict[int, UserSettings],
     subscribed_users_cache: Set[int],
     online_users_cache_for_instance: dict[int, "pytalk.user.User"],
-    app_config_instance: Any,
-    app: "Application"
+    # app_config_instance: Any, # Will use services.config
+    services: "Services" # Changed from app: "Application"
 ):
-    default_lang_for_markup_and_log = app_config_instance.DEFAULT_LANG
-    _log_markup_translator = app.get_translator(default_lang_for_markup_and_log).gettext
+    default_lang_for_markup_and_log = services.config.DEFAULT_LANG # Use services.config
+    _log_markup_translator = services.get_translator(default_lang_for_markup_and_log).gettext # Use services
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
 
     user_username = ttstr(tt_user.username)
@@ -122,21 +122,23 @@ async def send_join_leave_notification_logic(
     if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
         return
 
-    if _is_user_globally_ignored(user_username, app_config_instance):
+    if _is_user_globally_ignored(user_username, services.config): # Pass services.config
         logger.debug(f"User {user_username} is globally ignored on server {tt_instance.server_info.host}. Skipping {event_type} notification.")
         return
 
-    recipients = await _get_recipients_for_notification(user_username, event_type, session_factory, subscribed_users_cache, app=app)
+    # _get_recipients_for_notification was updated to not need app/services
+    recipients = await _get_recipients_for_notification(user_username, event_type, session_factory, subscribed_users_cache)
 
     if not recipients:
         logger.debug(f"No recipients found for {event_type} event for user {user_username} on server {tt_instance.server_info.host}.")
         return
 
     logger.info(f"Notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} will be sent to {len(recipients)} initial recipients.")
-    server_name = get_effective_server_name(tt_instance, _log_markup_translator, app_config_instance)
+    server_name = get_effective_server_name(tt_instance, _log_markup_translator, services.config) # Pass services.config
 
     final_recipients = []
-    online_usernames_for_noon_check = {ttstr(u.username) for u in online_users_cache_for_instance.values()}
+    # online_usernames_for_noon_check seems unused, can be removed if not needed by other logic
+    # online_usernames_for_noon_check = {ttstr(u.username) for u in online_users_cache_for_instance.values()}
 
     for tg_user_id in recipients:
         user_specific_settings = user_settings_cache.get(tg_user_id)
@@ -146,7 +148,7 @@ async def send_join_leave_notification_logic(
             continue
 
         if user_specific_settings.not_on_online_enabled and tt_user.id != tt_instance.getMyUserID():
-            is_event_user_tt_admin = (app_config_instance.ADMIN_USERNAME == user_username)
+            is_event_user_tt_admin = (services.config.ADMIN_USERNAME == user_username) # Use services.config
 
             if not is_event_user_tt_admin:
                 other_users_online_in_instance = False
@@ -155,7 +157,7 @@ async def send_join_leave_notification_logic(
                         other_users_online_in_instance = True
                         break
                 if not other_users_online_in_instance:
-                    logger.debug(f"NOON: User {user_nickname} is the only one online (besides bot) for TG user {tg_user_id} on server {tt_instance.server_info.host}. Skipping notification for this recipient.") # server_host was undefined here
+                    logger.debug(f"NOON: User {user_nickname} is the only one online (besides bot) for TG user {tg_user_id} on server {tt_instance.server_info.host}. Skipping notification for this recipient.")
                     continue
         final_recipients.append(tg_user_id)
 
@@ -165,13 +167,14 @@ async def send_join_leave_notification_logic(
 
     logger.info(f"Final notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} will be sent to {len(final_recipients)} users.")
 
+    # send_telegram_messages_to_list will be updated to take services
     await send_telegram_messages_to_list(
         bot_instance_to_use=bot,
         chat_ids=final_recipients,
-        text_generator=lambda lang_code: _generate_join_leave_notification_text(
-            tt_user, server_name, event_type, lang_code, app=app
+        text_generator=lambda lang_code: _generate_join_leave_notification_text( # _generate_join_leave_notification_text updated to take services
+            tt_user, server_name, event_type, lang_code, services=services
         ),
-        user_settings_cache=user_settings_cache,
-        app=app,
+        # user_settings_cache is already passed, send_telegram_messages_to_list will use services.user_settings_cache
+        services=services, # Pass services
         online_users_cache_for_instance=online_users_cache_for_instance
     )

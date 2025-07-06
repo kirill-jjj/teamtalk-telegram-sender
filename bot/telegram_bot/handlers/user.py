@@ -6,6 +6,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 from html import escape
+from typing import Set # For admin_ids_cache type hint
 
 from bot.core.utils import build_help_message, get_online_teamtalk_users
 import pytalk
@@ -25,10 +26,10 @@ from bot.constants import (
 )
 from bot.teamtalk_bot.connection import TeamTalkConnection # For type hinting
 
-# For type hinting app instance
+# For type hinting Services
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from sender import Application
+    from bot.services_container import Services
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
@@ -37,8 +38,8 @@ from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, Tea
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
 # Apply to the whole router. Specific handlers will use or not use tt_connection.
-user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
-user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware()) # Added
+user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 ttstr = pytalk.instance.sdk.ttstr
 
@@ -48,16 +49,18 @@ async def start_command_handler(
     message: Message,
     command: CommandObject,
     session: AsyncSession,
-    _: callable,
+    _: callable, # gettext function
     user_settings: UserSettings,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not message.from_user:
         return
 
     token = command.args
     if token:
-        await handle_deeplink_payload(message, token, session, _, user_settings, app)
+        # Call to handle_deeplink_payload will need to be updated
+        # when handle_deeplink_payload itself is refactored.
+        await handle_deeplink_payload(message, token, session, _, user_settings, services)
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
 
@@ -119,7 +122,7 @@ def _group_users_for_who_command(
         if user_display_channel_name not in channels_display_data:
             channels_display_data[user_display_channel_name] = []
 
-        user_nickname = get_tt_user_display_name(user_obj, translator) # This helper is fine
+        user_nickname = get_tt_user_display_name(user_obj, translator)
         channels_display_data[user_display_channel_name].append(escape(user_nickname))
         users_added_to_groups_count += 1
 
@@ -140,7 +143,6 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
     if total_users == 0:
         no_users_text = _("No users found online")
         if server_host:
-            # Используем отдельный msgid для случая с именем сервера
             no_users_text = _("No users found online on server {server_host}.").format(server_host=server_host)
         else:
             no_users_text = _("No users found online.")
@@ -148,10 +150,6 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
 
     sorted_groups = sorted(grouped_data, key=lambda group: group.channel_name)
 
-    # --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
-    # Мы используем ngettext для всей фразы.
-    # Babel извлечет две строки: единственного и множественного числа.
-    # В .po файле у вас будет возможность задать все три формы для славянских языков.
     if server_host:
         header_template = ngettext(
             "There is {user_count} user on the server {server_host}:\n",
@@ -166,7 +164,6 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
             total_users
         )
         text_reply = header_template.format(user_count=total_users)
-    # --- КОНЕЦ КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
 
     channel_info_parts: list[str] = []
     for group in sorted_groups:
@@ -189,9 +186,9 @@ def _format_who_message(grouped_data: list[WhoChannelGroup], total_users: int, t
 @user_commands_router.message(Command("who"))
 async def who_command_handler(
     message: Message,
-    translator: "gettext.GNUTranslations",
-    app: "Application",
-    tt_connection: TeamTalkConnection | None
+    translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int], # Injected from workflow_data
+    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     if not message.from_user:
         return
@@ -210,7 +207,7 @@ async def who_command_handler(
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
-    is_caller_admin = message.from_user.id in app.admin_ids_cache
+    is_caller_admin = message.from_user.id in admin_ids_cache
     bot_user_id = tt_instance.getMyUserID()
 
     if bot_user_id is None:
@@ -236,13 +233,13 @@ async def who_command_handler(
 @user_commands_router.message(Command("help"))
 async def help_command_handler(
     message: Message,
-    _: callable,
-    app: "Application"
+    _: callable, # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int] # Injected from workflow_data
 ):
     if not message.from_user:
         return
 
-    is_telegram_admin = message.from_user.id in app.admin_ids_cache
+    is_telegram_admin = message.from_user.id in admin_ids_cache
     help_text = build_help_message(_, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text, parse_mode="HTML")
 
@@ -250,8 +247,8 @@ async def help_command_handler(
 @user_commands_router.message(Command("settings"))
 async def settings_command_handler(
     message: Message,
-    _: callable,
-    app: "Application"
+    _: callable # Injected by UserSettingsMiddleware
+    # No app or services needed as create_main_settings_keyboard only needs _
 ):
     if not message.from_user:
         return
@@ -270,14 +267,14 @@ async def settings_command_handler(
 @user_commands_router.message(Command("menu"))
 async def menu_command_handler(
     message: Message,
-    _: callable,
-    app: "Application"
+    _: callable, # Injected by UserSettingsMiddleware
+    admin_ids_cache: Set[int] # Injected from workflow_data
 ):
     if not message.from_user:
         return
 
     await safe_delete_message(message, log_context_message="user menu command")
-    is_admin = message.from_user.id in app.admin_ids_cache
+    is_admin = message.from_user.id in admin_ids_cache
     menu_builder = await create_main_menu_keyboard(_, is_admin)
     try:
         await message.answer(

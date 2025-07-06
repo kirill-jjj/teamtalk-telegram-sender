@@ -126,21 +126,21 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    app: "Application",
-    server_host_for_display: str # This is passed but get_effective_server_name is used below
+    services: "Services", # Changed from app: "Application"
+    server_host_for_display: str
 ):
-    if not app.app_config.TG_ADMIN_CHAT_ID or not app.tg_bot_message:
+    if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message: # Use services.config, services.bot_message
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = app.app_config.TG_ADMIN_CHAT_ID
-    admin_settings = app.user_settings_cache.get(admin_chat_id)
-    admin_language_code = admin_settings.language_code if admin_settings else app.app_config.DEFAULT_LANG
+    admin_chat_id = services.config.TG_ADMIN_CHAT_ID # Use services.config
+    admin_settings = services.user_settings_cache.get(admin_chat_id) # Use services.user_settings_cache
+    admin_language_code = admin_settings.language_code if admin_settings else services.config.DEFAULT_LANG # Use services.config
 
-    translator = app.get_translator(admin_language_code)
+    translator = services.get_translator(admin_language_code) # Use services.get_translator
     _ = translator.gettext
 
-    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, app.app_config)
+    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, services.config) # Pass services.config
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 

@@ -22,20 +22,21 @@ ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, app: "Application"): # app is now a direct param
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, services: "Services"): # Changed app to services
     """
     Handles specific Telegram API errors.
     """
-    if not app: # Should ideally not happen if called correctly
-        logger.error(f"Telegram API error for chat_id {chat_id} but app context was missing for full cleanup: {error}")
+    if not services: # Check for services
+        logger.error(f"Telegram API error for chat_id {chat_id} but services context was missing for full cleanup: {error}")
         return
 
     if isinstance(error, TelegramForbiddenError):
         if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
             logger.warning(f"User {chat_id} blocked the bot or is deactivated. Deleting all user data...")
             try:
-                async with app.session_factory() as session: # Use app's session_factory
-                    success = await user_service.delete_full_user_profile(session, chat_id, app=app)
+                async with services.session_factory() as session: # Use services.session_factory
+                    # user_service.delete_full_user_profile was already updated to take services
+                    success = await user_service.delete_full_user_profile(session, chat_id, services=services)
                 if success:
                     logger.info(f"Successfully deleted all data for blocked/deactivated user {chat_id}.")
                 else:
@@ -49,8 +50,8 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, app:
         if "chat not found" in str(error).lower():
             logger.warning(f"Chat not found for TG ID {chat_id}. Assuming user is gone. Deleting all user data. Error: {error}")
             try:
-                async with app.session_factory() as session: # Use app's session_factory
-                    delete_success = await user_service.delete_full_user_profile(session, chat_id, app=app)
+                async with services.session_factory() as session: # Use services.session_factory
+                    delete_success = await user_service.delete_full_user_profile(session, chat_id, services=services) # Pass services
                 if delete_success:
                     logger.info(f"Successfully deleted all data for TG ID {chat_id} due to chat not found.")
                 else:

@@ -44,8 +44,8 @@ async def _refresh_and_display_subscriber_list(
     session: AsyncSession,
     bot: AiogramBot,
     return_page: int,
-    _: callable,
-    app: "Application"
+    _: callable
+    # app: "Application" # Removed
 ):
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
@@ -75,7 +75,7 @@ async def handle_view_subscriber(
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -89,8 +89,8 @@ async def handle_view_subscriber(
     user_to_view = await session.get(UserSettings, callback_data.telegram_id)
     display_name = str(callback_data.telegram_id)
 
-    # Use app's bot instance for get_chat
-    active_bot = app.tg_bot_event
+    # Use services.bot_event for get_chat
+    active_bot = services.bot_event
     if user_to_view and user_to_view.telegram_id:
         try:
             chat_info = await active_bot.get_chat(user_to_view.telegram_id)
@@ -121,7 +121,7 @@ async def handle_subscriber_action(
     bot: AiogramBot,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -132,10 +132,10 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        success = await user_service.delete_full_user_profile(session, target_telegram_id, app=app)
+        success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services) # Use services
         if success:
             await query.answer(_("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id), show_alert=True)
-            await _refresh_and_display_subscriber_list(query, session, bot, return_page, _, app)
+            await _refresh_and_display_subscriber_list(query, session, bot, return_page, _) # Removed app
         else:
             await query.answer(_("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True)
         return
@@ -159,7 +159,7 @@ async def handle_subscriber_action(
             else:
                 logger.warning(f"Skipping conceptual TeamTalk ban for {tt_username_to_ban} as tt_connection or its instance is None/invalid.")
 
-        await user_service.delete_full_user_profile(session, target_telegram_id, app=app)
+        await user_service.delete_full_user_profile(session, target_telegram_id, services=services) # Use services
 
         ban_messages = []
         if banned_tg: ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
@@ -172,7 +172,7 @@ async def handle_subscriber_action(
             alert_message = _("User already banned or error occurred.")
 
         await query.answer(alert_message, show_alert=True)
-        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _, app)
+        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _) # Removed app
         return
 
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
@@ -199,7 +199,7 @@ async def handle_manage_tt_account(
     session: AsyncSession,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -221,7 +221,7 @@ async def handle_manage_tt_account(
             user_settings.not_on_online_confirmed = False
             await session.commit()
             await session.refresh(user_settings)
-            app.user_settings_cache[user_settings.telegram_id] = user_settings
+            services.user_settings_cache[user_settings.telegram_id] = user_settings # Use services
             await query.answer(_("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True)
         else:
             await query.answer(_("No TeamTalk account was linked."), show_alert=True)
@@ -267,7 +267,7 @@ async def handle_link_tt_account_chosen(
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,
     _: callable,
-    app: "Application"
+    services: "Services" # Changed from app: "Application"
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -301,7 +301,7 @@ async def handle_link_tt_account_chosen(
     user_settings.not_on_online_confirmed = False
     await session.commit()
     await session.refresh(user_settings)
-    app.user_settings_cache[user_settings.telegram_id] = user_settings
+    services.user_settings_cache[user_settings.telegram_id] = user_settings # Use services
 
 
     alert_text = _("TeamTalk account {new_tt_username} linked successfully.").format(new_tt_username=tt_username_to_link)

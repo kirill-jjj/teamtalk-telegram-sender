@@ -45,7 +45,8 @@ async def cq_set_subscription_setting(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    callback_data: SubscriptionCallback
+    callback_data: SubscriptionCallback,
+    services: "Services" # Added services
 ):
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
@@ -93,4 +94,5 @@ async def cq_set_subscription_setting(
         success_toast_text=success_toast_text,
         new_text=menu_text,
         new_markup=updated_builder.as_markup(),
+        services=services # Pass services
     )

@@ -51,10 +51,9 @@ class AdminIdArgs(BaseModel): # This model seems fine as is
 def is_tt_admin(func):
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
-        # app instance should be in kwargs, passed from Application.on_pytalk_message
-        app: "Application" = kwargs.get('app')
-        if not app:
-            raise ValueError("Application instance 'app' not found in kwargs for is_tt_admin decorator.")
+        services: "Services" = kwargs.get('services') # Changed to services
+        if not services:
+            raise ValueError("Services instance 'services' not found in kwargs for is_tt_admin decorator.")
 
         translator = kwargs.get('translator')
         if not translator or not isinstance(translator, gettext.GNUTranslations):
@@ -62,7 +61,7 @@ def is_tt_admin(func):
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
-        admin_username = app.app_config.ADMIN_USERNAME # Use app.app_config
+        admin_username = services.config.ADMIN_USERNAME # Use services.config
 
         if not admin_username or username != admin_username:
             logger.warning(f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}.")
@@ -78,14 +77,14 @@ async def _execute_admin_action_for_id(
     crud_function: Callable[[AsyncSession, int], bool],
     commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]],
     translator: gettext.GNUTranslations,
-    app: "Application" # Pass app instance
+    services: "Services" # Changed from app: "Application"
 ) -> bool:
     _ = translator.gettext
     if await crud_function(session, telegram_id):
         try:
             commands = commands_to_set_getter(_)
-            # Use app's Telegram bot instance
-            await app.tg_bot_event.set_my_commands(
+            # Use services.bot_event
+            await services.bot_event.set_my_commands(
                 commands=commands,
                 scope=BotCommandScopeChat(chat_id=telegram_id)
             )
@@ -130,7 +129,7 @@ async def _manage_admin_ids(
     error_msg_key: str,
     invalid_id_msg_key: str,
     header_msg_key: str,
-    app: "Application" # Pass app instance
+    services: "Services" # Changed from app: "Application"
 ):
     _ = translator.gettext
     args = AdminIdArgs.model_validate(args_str)
@@ -148,12 +147,12 @@ async def _manage_admin_ids(
             crud_function=crud_function,
             commands_to_set_getter=commands_to_set_getter,
             translator=translator,
-            app=app # Pass app
+            services=services # Pass services
         ):
             success_count += 1
-            # Update app's admin cache if successful
-            if crud_function is add_admin: app.admin_ids_cache.add(telegram_id)
-            elif crud_function is remove_admin_db: app.admin_ids_cache.discard(telegram_id)
+            # Update services.admin_ids_cache if successful
+            if crud_function is add_admin: services.admin_ids_cache.add(telegram_id)
+            elif crud_function is remove_admin_db: services.admin_ids_cache.discard(telegram_id)
             logger.info(f"Successfully processed {crud_function.__name__} for TG ID {telegram_id} and set commands.")
         else:
             failed_action_ids.append(telegram_id)
@@ -218,8 +217,8 @@ async def handle_tt_subscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     _: callable,
-    app: "Application", # Add app
-    connection: "TeamTalkConnection" # Add connection (though not directly used by this one)
+    services: "Services", # Changed from app: "Application"
+    connection: "TeamTalkConnection"
 ):
     sender_tt_username = ttstr(tt_message.user.username)
     await _generate_and_reply_deeplink(
@@ -227,8 +226,8 @@ async def handle_tt_subscribe_command(
         action=DeeplinkAction.SUBSCRIBE, payload=sender_tt_username,
         success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_("Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"),
-        error_reply_source=_("An error occurred. Please try again later."), # Unified
-        app=app # Pass app
+        error_reply_source=_("An error occurred. Please try again later."),
+        services=services # Pass services
     )
 
 
@@ -236,16 +235,16 @@ async def handle_tt_unsubscribe_command(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     _: callable,
-    app: "Application", # Add app
-    connection: "TeamTalkConnection" # Add connection
+    services: "Services", # Changed from app: "Application"
+    connection: "TeamTalkConnection"
 ):
     await _generate_and_reply_deeplink(
         tt_message=tt_message, session=session, _=_,
         action=DeeplinkAction.UNSUBSCRIBE, payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_("Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"),
-        error_reply_source=_("An error occurred. Please try again later."), # Unified
-        app=app # Pass app
+        error_reply_source=_("An error occurred. Please try again later."),
+        services=services # Pass services
     )
 
 
@@ -254,12 +253,12 @@ async def handle_tt_add_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
-    app: "Application", # Added app, will be in kwargs for decorator
-    connection: "TeamTalkConnection", # Added connection
-    *, # Force args_str to be keyword-only if it was not already
+    services: "Services", # Changed from app: "Application", will be in kwargs for decorator
+    connection: "TeamTalkConnection",
+    *,
     args_str: Optional[str]
 ):
-    if False: translator.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1) # For pybabel
+    if False: translator.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1)
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message, args_str=args_str, session=session, translator=translator,
@@ -268,7 +267,7 @@ async def handle_tt_add_admin_command(
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        app=app # Pass app
+        services=services # Pass services
     )
 
 
@@ -277,12 +276,12 @@ async def handle_tt_remove_admin_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
-    app: "Application", # Added app
-    connection: "TeamTalkConnection", # Added connection
+    services: "Services", # Changed from app: "Application"
+    connection: "TeamTalkConnection",
     *,
     args_str: Optional[str]
 ):
-    if False: translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1) # For pybabel
+    if False: translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message, args_str=args_str, session=session, translator=translator,
@@ -291,19 +290,19 @@ async def handle_tt_remove_admin_command(
         error_msg_key=_("Admin with ID {telegram_id} not found."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        app=app # Pass app
+        services=services # Pass services
     )
 
 
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
-    _: callable, # This is gettext from the translator passed by Application.on_pytalk_message
-    app: "Application", # Add app
-    connection: "TeamTalkConnection" # Add connection
+    _: callable,
+    services: "Services", # Changed from app: "Application"
+    connection: "TeamTalkConnection"
 ):
     is_main_tt_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
-    admin_username_from_config = app.app_config.ADMIN_USERNAME # Use app.app_config
+    admin_username_from_config = services.config.ADMIN_USERNAME # Use services.config
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True
