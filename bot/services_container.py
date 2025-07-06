@@ -37,6 +37,11 @@ class Services:
         self.bot_event: Bot = Bot(token=config.TG_EVENT_TOKEN)
         self.bot_message: Bot = Bot(token=config.TG_BOT_MESSAGE_TOKEN) if config.TG_BOT_MESSAGE_TOKEN else self.bot_event
 
+        # TeamTalk Bot instance
+        import pytalk # Import pytalk here
+        self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.CLIENT_NAME)
+
+
         # Состояние (кеши)
         self.connections: Dict[str, TeamTalkConnection] = {}
         self.subscribed_users_cache: Set[int] = set()

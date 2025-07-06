@@ -64,12 +64,12 @@ class Application:
 
         # 3. Create components that depend on services or app config
         self.dp: Dispatcher = Dispatcher()
-        # tt_bot needs client_name from config, and is managed by TeamTalkEventHandler
-        self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
+        # tt_bot is now created and stored in self.services.tt_bot
+        # Remove: self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=self.app_config.CLIENT_NAME)
 
         from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
-        # TeamTalkEventHandler now takes services
-        self.tt_event_handler = TeamTalkEventHandler(self.services, self.tt_bot)
+        # TeamTalkEventHandler now takes only services
+        self.tt_event_handler = TeamTalkEventHandler(self.services)
 
 
         self.teamtalk_task: Optional[asyncio.Task] = None
@@ -85,10 +85,10 @@ class Application:
         self.logger.info("Application startup: Initializing TeamTalk components...")
 
         if self.teamtalk_task is None or self.teamtalk_task.done():
-            # tt_bot is initialized in Application.__init__
-            await self.tt_bot._async_setup_hook() # Pytalk's internal setup
-            # tt_bot._start() is the main loop for pytalk, managed by TeamTalkEventHandler or here
-            self.teamtalk_task = asyncio.create_task(self.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
+            # tt_bot is now in services
+            await self.services.tt_bot._async_setup_hook() # Pytalk's internal setup
+            # tt_bot._start() is the main loop for pytalk
+            self.teamtalk_task = asyncio.create_task(self.services.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
             self.logger.info("Pytalk main event loop task started.")
         else:
             self.logger.info("Pytalk main event loop task already running.")

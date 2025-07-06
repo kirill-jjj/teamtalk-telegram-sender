@@ -36,16 +36,18 @@ from bot.teamtalk_bot.utils import (
 # For now, assume self.app.app_config.DEFAULT_LANG
 
 if TYPE_CHECKING:
-    from sender import Application
+    # from sender import Application # No longer Application
+    from bot.services_container import Services # Import Services
 
 logger = logging.getLogger(__name__)
 
 class TeamTalkEventHandler:
-    def __init__(self, app: "Application"):
-        self.app = app
-        self.tt_bot = app.tt_bot
+    def __init__(self, services: "Services"): # Corrected signature
+        self.services = services # Store services
+        self.tt_bot = services.tt_bot # Get tt_bot from services
         self._register_pytalk_event_handlers()
-        self.app.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered via app logger.")
+        # Use services.logger, assuming it's available and configured
+        self.services.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered.")
 
     def _register_pytalk_event_handlers(self):
         event_handlers_map = {
