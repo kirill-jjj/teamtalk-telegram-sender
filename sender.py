@@ -212,19 +212,20 @@ class Application:
 
 # === CONFIGURATION AND CLI BLOCK START ===
 def main_cli():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="TeamTalk Telegram Sender Bot")
     parser.add_argument(
         "--config",
         type=str,
-        default=".env",
-        help="Path to the configuration file (e.g., .env, prod.env). Defaults to '.env'",
+        default="config.toml",  # Changed default to config.toml
+        help="Path to the TOML configuration file (e.g., config.toml, config.prod.toml). Defaults to 'config.toml'",
     )
-    args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args() # Keep known_args if other CLI tools might chain here, otherwise parse_args()
 
-    from bot.config import Settings
+    from bot.config import Settings # Keep for type hinting and access to from_toml
 
     try:
-        app_config_instance = Settings(_env_file=args.config)
+        print(f"Loading configuration from: {args.config}")
+        app_config_instance = Settings.from_toml(args.config)
 
         try:
             import uvloop

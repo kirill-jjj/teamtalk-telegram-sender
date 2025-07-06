@@ -11,14 +11,14 @@ def main():
     --config argument, then passes all other arguments to the Alembic CLI.
     """
     parser = argparse.ArgumentParser(
-        description="Run Alembic commands with a specific .env file for configuration.",
-        usage="migrate [--config ENV_FILE] [alembic_command] [alembic_options...]"
+        description="Run Alembic commands with a specific TOML configuration file.",
+        usage="migrate [--config CONFIG_FILE.toml] [alembic_command] [alembic_options...]"
     )
     parser.add_argument(
         "--config",
-        default=".env",
-        help="Path to the .env file to use for Alembic's database configuration. "
-             "This path is relative to the project root. (default: .env)"
+        default="config.toml", # Changed default from .env to config.toml
+        help="Path to the TOML configuration file for Alembic's database settings. "
+             "This path is relative to the project root. (default: config.toml)"
     )
     # parse_known_args() splits arguments into those recognized by this script's parser
     # and the rest, which are assumed to be for Alembic.

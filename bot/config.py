@@ -1,64 +1,71 @@
-from typing import Any, Optional, Literal
-from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import tomllib # Requires Python 3.11+
+from typing import List, Optional, Literal
+from pydantic import Field
+from pydantic_settings import BaseSettings # Still useful for model features
 
+# Type for gender, can be expanded if needed
 GenderType = Literal["male", "female", "neutral"]
+
+# Nested models for TOML structure
+
+class GeneralSettings(BaseSettings): # Renamed from BotGeneralSettings
+    default_lang: str = Field("en", description="Default language for bot messages.")
+    gender: GenderType = Field("neutral", description="Gender for bot's persona in localized messages.")
+    admin_username: Optional[str] = Field(None, description="Optional admin username for display/identification.")
+
+class DatabaseSettings(BaseSettings):
+    db_file: str = Field("bot_data.db", description="Path to the SQLite database file.")
+
+class TelegramSettings(BaseSettings):
+    event_token: str = Field(description="Main Telegram Bot API token for receiving events.")
+    message_token: str = Field(description="Telegram Bot API token for sending messages (can be same as event_token).")
+    admin_chat_id: int = Field(description="Telegram Chat ID of the administrator for notifications.")
+
+class TeamTalkSettings(BaseSettings):
+    host_name: str = Field("teamtalk.example.com", description="TeamTalk server address.")
+    port: int = Field(10333, description="TeamTalk server port.")
+    encrypted: bool = Field(False, description="Whether the TeamTalk connection is encrypted.")
+    user_name: str = Field("BotUser", description="Bot's username on TeamTalk.")
+    password: str = Field(..., description="Bot's password on TeamTalk.")
+    channel: str = Field("/Root/Public Channel", description="Full path to TeamTalk channel.")
+    channel_password: Optional[str] = Field(None, description="Password for the TeamTalk channel, if any.")
+    nick_name: str = Field("NotifierBot", description="Bot's nickname on TeamTalk.")
+    status_text: str = Field("Forwarding notifications to Telegram", description="Bot's status message on TeamTalk.")
+    client_name: str = Field("TTTelegramBotV1", description="Client name reported to TeamTalk server.")
+    server_name: Optional[str] = Field(None, description="Optional name for the TeamTalk server (for display).")
+    global_ignore_usernames: List[str] = Field(default_factory=list, description="List of TeamTalk usernames to ignore globally.")
+
+class OperationalParameters(BaseSettings):
+    deeplink_ttl_seconds: int = Field(300, description="TTL for deeplinks in seconds.")
+    tt_reconnect_retry_seconds: int = Field(15, description="Retry interval for TeamTalk connection.")
+    tt_reconnect_check_interval_seconds: int = Field(10, description="Check interval for TeamTalk connection status.")
+    online_users_cache_sync_interval_seconds: int = Field(300, description="Sync interval for online TeamTalk users cache.")
 
 class Settings(BaseSettings):
     """
-    Application settings management class.
-    Loads variables from a .env file and validates them.
+    Main application settings class.
+    Loads configuration from a TOML file.
     """
+    general: GeneralSettings # Updated from bot_general
+    database: DatabaseSettings
+    telegram: TelegramSettings
+    teamtalk: TeamTalkSettings
+    operational_parameters: OperationalParameters
 
-    TG_EVENT_TOKEN: Optional[str] = Field(None, validation_alias='TELEGRAM_BOT_EVENT_TOKEN')
-    TG_BOT_MESSAGE_TOKEN: Optional[str] = None
-    TG_ADMIN_CHAT_ID: Optional[int] = None
-
-    HOSTNAME: str = Field(validation_alias='HOST_NAME')
-    PORT: int = 10333
-    ENCRYPTED: bool = False
-    USERNAME: str = Field(validation_alias='USER_NAME')
-    PASSWORD: str
-    CHANNEL: str
-    CHANNEL_PASSWORD: Optional[str] = None
-
-    NICKNAME: str = Field(validation_alias='NICK_NAME')
-    STATUS_TEXT: str = ""
-    CLIENT_NAME: str = "TTTM"
-    SERVER_NAME: Optional[str] = None
-
-    ADMIN_USERNAME: Optional[str] = None
-
-    GLOBAL_IGNORE_USERNAMES: Optional[str] = None
-    DATABASE_FILE: str = "bot_data.db"
-    DEFAULT_LANG: str
-    GENDER: GenderType = "neutral"
-
-    DEEPLINK_TTL_SECONDS: int = 300  # Lifetime of deeplinks in seconds (e.g., for /sub)
-    TT_RECONNECT_RETRY_SECONDS: int = 15 # How often to retry initial connection or full reconnect to TeamTalk
-    TT_RECONNECT_CHECK_INTERVAL_SECONDS: int = 10 # Interval to check for TT connection if bot thinks it's disconnected
-    ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS: int = 300 # How often to sync the list of online TT users
-
-    model_config = SettingsConfigDict(
-            env_file=".env",  # Default value if _env_file is not provided
-            env_file_encoding='utf-8',
-            extra='ignore'
-        )
-
-    @model_validator(mode='after')
-    def process_settings(self) -> 'Settings':
-        """
-        Validator for checking interdependent fields.
-        """
-        if not self.TG_EVENT_TOKEN:
-            raise ValueError("The TELEGRAM_BOT_EVENT_TOKEN environment variable must be set.")
-
-        return self
-
-    @field_validator('GENDER', mode='before')
     @classmethod
-    def gender_to_lower(cls, v: Any) -> str:
-        """Converts GENDER to lowercase before validation."""
-        if isinstance(v, str):
-            return v.lower()
-        return v
+    def from_toml(cls, path: str) -> 'Settings':
+        """
+        Loads configuration from a TOML file.
+        """
+        try:
+            with open(path, 'rb') as f:
+                data = tomllib.load(f)
+        except FileNotFoundError:
+            # Try to construct a more informative path based on common execution patterns
+            import os
+            abs_path = os.path.abspath(path)
+            raise FileNotFoundError(f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path}')")
+        except tomllib.TOMLDecodeError as e:
+            raise ValueError(f"Error decoding TOML file {path}: {e}")
+
+        return cls(**data)

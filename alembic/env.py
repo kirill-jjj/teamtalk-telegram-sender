@@ -50,33 +50,46 @@ def get_db_url():
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
-    # To import dotenv, we need to ensure it's available.
-    # It's a dependency of pydantic-settings, which is in project dependencies.
-    from dotenv import dotenv_values
+    import tomllib # Python 3.11+
 
     if not os.path.exists(config_file):
-        print(f"WARN  [alembic.env] Config file '{config_file}' not found. Will attempt to proceed without it if defaults suffice or vars are set.")
-        env_values = {}
-    else:
-        env_values = dotenv_values(config_file)
+        error_message = f"Alembic configuration file '{config_file}' not found (source: {config_file_source})."
+        print(f"ERROR [alembic.env] {error_message}")
+        raise FileNotFoundError(error_message)
 
-    # Try to get DATABASE_FILE from loaded .env, then from environment variables as a fallback
-    db_file_name = env_values.get("DATABASE_FILE")
-    if not db_file_name:
-        db_file_name = os.environ.get("DATABASE_FILE") # Fallback to actual env var
+    try:
+        with open(config_file, 'rb') as f:
+            config_data = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        error_message = f"Error decoding TOML configuration file '{config_file}': {e}"
+        print(f"ERROR [alembic.env] {error_message}")
+        raise ValueError(error_message)
+    except Exception as e:
+        error_message = f"Error reading configuration file '{config_file}': {e}"
+        print(f"ERROR [alembic.env] {error_message}")
+        raise IOError(error_message)
 
-    if not db_file_name:
-        error_message = (
-            f"'DATABASE_FILE' not found. Please ensure it is set in the "
-            f"configuration file ('{config_file}', source: {config_file_source}) "
-            f"or as an environment variable."
-        )
+    try:
+        db_file_name = config_data['database']['db_file']
+    except KeyError:
+        error_message = f"'database.db_file' not found in TOML configuration file '{config_file}'."
+        print(f"ERROR [alembic.env] {error_message}")
+        # As a fallback, check environment variable if direct key is missing
+        db_file_name_env = os.environ.get("DATABASE_FILE")
+        if db_file_name_env:
+            print(f"INFO  [alembic.env] Found DATABASE_FILE in environment variables as fallback: '{db_file_name_env}'")
+            db_file_name = db_file_name_env
+        else:
+            raise ValueError(error_message + " Also not found as DATABASE_FILE environment variable.")
+
+    if not isinstance(db_file_name, str) or not db_file_name.strip():
+        error_message = f"'database.db_file' in '{config_file}' must be a non-empty string. Found: '{db_file_name}'"
         print(f"ERROR [alembic.env] {error_message}")
         raise ValueError(error_message)
 
     db_path = os.path.abspath(db_file_name)
     db_url = f"sqlite+aiosqlite:///{db_path}"
-    print(f"INFO  [alembic.env] Using database URL: {db_url} (from DATABASE_FILE='{db_file_name}', source_config_file='{config_file}')")
+    print(f"INFO  [alembic.env] Using database URL: {db_url} (from key 'database.db_file' in '{config_file}')")
     return db_url
 
 
