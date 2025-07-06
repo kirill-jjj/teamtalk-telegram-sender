@@ -9,109 +9,231 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import table, column
-
+from sqlalchemy.sql import table, column # Keep for potential use in data migrations if needed
 
 # revision identifiers, used by Alembic.
-revision: str = '1a2b3c4d5e6f'
+revision: str = '8677509804ef'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+# Helper function to check if a table exists
+def _table_exists(table_name, conn):
+    inspector = sa.inspect(conn)
+    return table_name in inspector.get_table_names()
+
+# Helper function to check if a column exists in a table
+def _column_exists(table_name, column_name, conn):
+    if not _table_exists(table_name, conn):
+        return False
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    return column_name in columns
 
 def upgrade() -> None:
     """
     This function updates the database schema from the 'master' branch state
-    to the 'refactor' branch state, preserving all data.
+    to the 'refactor' branch state, OR initializes a new database to the
+    'refactor' branch state.
     """
-    print("Starting upgrade from 'master' schema to 'refactor' schema...")
-
-    # --- Change 1: Convert `muted_users` (string) to a separate `MutedUser` table ---
-    print("Step 1/5: Converting muted_users string to a dedicated MutedUser table...")
-    # 1.1. Create a new table `muted_users`
-    muted_users_table = op.create_table('muted_users',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('muted_teamtalk_username', sa.String(), nullable=False),
-        sa.Column('user_settings_telegram_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['user_settings_telegram_id'], ['user_settings.telegram_id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_muted_users_muted_teamtalk_username'), 'muted_users', ['muted_teamtalk_username'], unique=False)
-    print("  - Table 'muted_users' created.")
-
-    # 1.2. Migrate data from the old `muted_users` column to the new table
     conn = op.get_bind()
-    results = conn.execute(sa.text("SELECT telegram_id, muted_users FROM user_settings")).fetchall()
-    users_to_insert = []
-    for telegram_id, muted_users_str in results:
-        if muted_users_str and muted_users_str.strip():
-            usernames = [name.strip() for name in muted_users_str.split(',') if name.strip()]
-            for username in usernames:
-                users_to_insert.append({
-                    'muted_teamtalk_username': username,
-                    'user_settings_telegram_id': telegram_id
-                })
+    print("Starting database schema setup/upgrade...")
 
-    if users_to_insert:
-        op.bulk_insert(muted_users_table, users_to_insert)
-        print(f"  - Migrated {len(users_to_insert)} muted user entries.")
+    # --- Section 1: Ensure all current tables exist with correct schema ---
+    print("Step 1/N: Ensuring core table structures...")
 
-    # 1.3. Drop the old `muted_users` column, using batch mode for SQLite
-    with op.batch_alter_table('user_settings', schema=None) as batch_op:
-        batch_op.drop_column('muted_users')
-    print("  - Dropped old 'muted_users' column from 'user_settings'.")
+    # UserSettings Table
+    if not _table_exists('user_settings', conn):
+        print("  - Creating 'user_settings' table...")
+        op.create_table('user_settings',
+            sa.Column('telegram_id', sa.Integer(), nullable=False),
+            sa.Column('language_code', sa.String(), nullable=False),
+            sa.Column('notification_settings', sa.String(), nullable=False, server_default='all'), # Adjusted for common enum default
+            sa.Column('mute_list_mode', sa.String(), nullable=False, server_default='blacklist'), # Adjusted
+            sa.Column('teamtalk_username', sa.String(), nullable=True),
+            sa.Column('not_on_online_enabled', sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column('not_on_online_confirmed', sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.PrimaryKeyConstraint('telegram_id')
+        )
+        op.create_index(op.f('ix_user_settings_telegram_id'), 'user_settings', ['telegram_id'], unique=False) # unique=False for PK index is fine
+        op.create_index(op.f('ix_user_settings_teamtalk_username'), 'user_settings', ['teamtalk_username'], unique=False) # Should be unique if it's a lookup key
+        print("  - Table 'user_settings' created.")
+    else:
+        print("  - Table 'user_settings' already exists.")
 
+    # MutedUser Table (FK depends on user_settings)
+    if not _table_exists('muted_users', conn):
+        print("  - Creating 'muted_users' table...")
+        op.create_table('muted_users',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('muted_teamtalk_username', sa.String(), nullable=False),
+            sa.Column('user_settings_telegram_id', sa.Integer(), nullable=False),
+            sa.ForeignKeyConstraint(['user_settings_telegram_id'], ['user_settings.telegram_id'], name=op.f('fk_muted_users_user_settings_telegram_id_user_settings')),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_muted_users_muted_teamtalk_username'), 'muted_users', ['muted_teamtalk_username'], unique=False)
+        print("  - Table 'muted_users' created.")
+    else:
+        print("  - Table 'muted_users' already exists.")
 
-    # --- Change 2: Replace `mute_all` (bool) with `mute_list_mode` (string) ---
-    print("Step 2/5: Replacing 'mute_all' boolean with 'mute_list_mode' string...")
-    with op.batch_alter_table('user_settings', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('mute_list_mode', sa.String(), nullable=False, server_default='blacklist'))
-    print("  - Added 'mute_list_mode' column.")
+    # SubscribedUser Table
+    if not _table_exists('subscribed_users', conn):
+        print("  - Creating 'subscribed_users' table...")
+        op.create_table('subscribed_users',
+            sa.Column('telegram_id', sa.Integer(), nullable=False),
+            sa.PrimaryKeyConstraint('telegram_id')
+        )
+        op.create_index(op.f('ix_subscribed_users_telegram_id'), 'subscribed_users', ['telegram_id'], unique=False)
+        print("  - Table 'subscribed_users' created.")
+    else:
+        print("  - Table 'subscribed_users' already exists.")
 
-    user_settings_table_ref = table('user_settings',
-        column('mute_all', sa.Boolean),
-        column('mute_list_mode', sa.String)
-    )
-    op.execute(
-        user_settings_table_ref.update().
-        where(user_settings_table_ref.c.mute_all == True).
-        values(mute_list_mode='whitelist')
-    )
-    op.execute(
-        user_settings_table_ref.update().
-        where(user_settings_table_ref.c.mute_all == False).
-        values(mute_list_mode='blacklist')
-    )
-    print("  - Migrated data from 'mute_all' to 'mute_list_mode'.")
+    # Admin Table
+    if not _table_exists('admins', conn):
+        print("  - Creating 'admins' table...")
+        op.create_table('admins',
+            sa.Column('telegram_id', sa.Integer(), nullable=False),
+            sa.PrimaryKeyConstraint('telegram_id')
+        )
+        op.create_index(op.f('ix_admins_telegram_id'), 'admins', ['telegram_id'], unique=False)
+        print("  - Table 'admins' created.")
+    else:
+        print("  - Table 'admins' already exists.")
 
-    with op.batch_alter_table('user_settings', schema=None) as batch_op:
-        batch_op.drop_column('mute_all')
-    print("  - Dropped old 'mute_all' column.")
+    # Deeplink Table
+    if not _table_exists('deeplinks', conn):
+        print("  - Creating 'deeplinks' table...")
+        op.create_table('deeplinks',
+            sa.Column('token', sa.String(), nullable=False),
+            sa.Column('action', sa.String(), nullable=False), # Assuming DeeplinkAction enum is string
+            sa.Column('payload', sa.String(), nullable=True),
+            sa.Column('expected_telegram_id', sa.Integer(), nullable=True),
+            sa.Column('expiry_time', sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint('token')
+        )
+        op.create_index(op.f('ix_deeplinks_token'), 'deeplinks', ['token'], unique=False)
+        print("  - Table 'deeplinks' created.")
+    else:
+        print("  - Table 'deeplinks' already exists.")
 
+    # BanList Table
+    if not _table_exists('ban_list', conn):
+        print("  - Creating 'ban_list' table...")
+        op.create_table('ban_list',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('telegram_id', sa.Integer(), nullable=True),
+            sa.Column('teamtalk_username', sa.String(), nullable=True),
+            sa.Column('ban_reason', sa.String(), nullable=True),
+            sa.Column('banned_at', sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_ban_list_telegram_id'), 'ban_list', ['telegram_id'], unique=False)
+        op.create_index(op.f('ix_ban_list_teamtalk_username'), 'ban_list', ['teamtalk_username'], unique=False)
+        print("  - Table 'ban_list' created.")
+    else:
+        print("  - Table 'ban_list' already exists.")
 
-    # --- Change 3: Rename `language` column to `language_code` ---
-    print("Step 3/5: Renaming 'language' column to 'language_code'...")
-    with op.batch_alter_table('user_settings', schema=None) as batch_op:
-        batch_op.alter_column('language', new_column_name='language_code', existing_type=sa.String())
-    print("  - Column renamed.")
+    # --- Section 2: Conditional Data Migrations from old 'master' schema ---
+    print("Step 2/N: Attempting data migrations if old schema elements exist...")
 
+    # Migration for: `muted_users` string to `MutedUser` table
+    if _table_exists('user_settings', conn) and _column_exists('user_settings', 'muted_users', conn):
+        print("  - Old 'user_settings.muted_users' column found. Migrating data...")
+        # This assumes muted_users table was created in Section 1 if it didn't exist.
+        # If muted_users table was pre-existing from an even older state, this logic might need adjustment.
+        # For this specific migration, we assume if user_settings.muted_users exists, we are coming from 'master'.
 
-    # --- Change 4: Create new `BanList` table ---
-    print("Step 4/5: Creating 'ban_list' table...")
-    op.create_table('ban_list',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('telegram_id', sa.Integer(), nullable=True),
-        sa.Column('teamtalk_username', sa.String(), nullable=True),
-        sa.Column('ban_reason', sa.String(), nullable=True),
-        sa.Column('banned_at', sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_ban_list_telegram_id'), 'ban_list', ['telegram_id'], unique=False)
-    op.create_index(op.f('ix_ban_list_teamtalk_username'), 'ban_list', ['teamtalk_username'], unique=False)
-    print("  - Table 'ban_list' created.")
+        # Re-fetch table metadata for bulk_insert if muted_users was just created
+        muted_users_table_ref = sa.Table('muted_users', sa.MetaData(),
+                                sa.Column('id', sa.Integer, primary_key=True),
+                                sa.Column('muted_teamtalk_username', sa.String),
+                                sa.Column('user_settings_telegram_id', sa.Integer))
 
-    print("Step 5/5: Finalizing schema changes...")
-    print("✅ Upgrade to 'refactor' schema complete.")
+        old_user_settings_data = conn.execute(sa.text("SELECT telegram_id, muted_users FROM user_settings")).fetchall()
+        users_to_insert = []
+        for telegram_id, muted_users_str in old_user_settings_data:
+            if muted_users_str and muted_users_str.strip():
+                usernames = [name.strip() for name in muted_users_str.split(',') if name.strip()]
+                for username in usernames:
+                    # Check if this muted user already exists for this telegram_id to prevent duplicates if script is re-runnable
+                    # This check is simplified; a more robust check would query muted_users table.
+                    # For now, assume we insert if the old column existed.
+                    users_to_insert.append({
+                        'muted_teamtalk_username': username,
+                        'user_settings_telegram_id': telegram_id
+                    })
+
+        if users_to_insert:
+            # Before bulk insert, ensure no constraints are violated if this is run multiple times.
+            # This might require deleting existing entries if this script part is re-run on an already partially migrated DB.
+            # For simplicity, we assume this part of script runs once cleanly.
+            op.bulk_insert(muted_users_table_ref, users_to_insert)
+            print(f"    - Migrated {len(users_to_insert)} muted user entries to 'muted_users' table.")
+
+        with op.batch_alter_table('user_settings', schema=None) as batch_op:
+            batch_op.drop_column('muted_users')
+        print("  - Dropped old 'muted_users' column from 'user_settings'.")
+    else:
+        print("  - Old 'user_settings.muted_users' column not found or 'user_settings' table missing. Skipping data migration for muted_users string.")
+
+    # Migration for: `mute_all` (bool) to `mute_list_mode` (string)
+    if _table_exists('user_settings', conn):
+        if _column_exists('user_settings', 'mute_all', conn):
+            print("  - Old 'user_settings.mute_all' column found. Migrating to 'mute_list_mode'...")
+            if not _column_exists('user_settings', 'mute_list_mode', conn):
+                with op.batch_alter_table('user_settings', schema=None) as batch_op:
+                    batch_op.add_column(sa.Column('mute_list_mode', sa.String(), nullable=False, server_default='blacklist'))
+                print("    - Added 'mute_list_mode' column.")
+
+            # Use temporary table objects for data migration
+            user_settings_table_for_mute_all = sa.Table('user_settings', sa.MetaData(),
+                sa.Column('telegram_id', sa.Integer, primary_key=True), # Assuming telegram_id is PK
+                sa.Column('mute_all', sa.Boolean),
+                sa.Column('mute_list_mode', sa.String)
+            )
+            op.execute(
+                user_settings_table_for_mute_all.update().
+                where(user_settings_table_for_mute_all.c.mute_all == True).
+                values(mute_list_mode='whitelist')
+            )
+            op.execute(
+                user_settings_table_for_mute_all.update().
+                where(user_settings_table_for_mute_all.c.mute_all == False).
+                values(mute_list_mode='blacklist')
+            )
+            print("    - Migrated data from 'mute_all' to 'mute_list_mode'.")
+
+            with op.batch_alter_table('user_settings', schema=None) as batch_op:
+                batch_op.drop_column('mute_all')
+            print("  - Dropped old 'mute_all' column.")
+        elif not _column_exists('user_settings', 'mute_list_mode', conn):
+            # mute_all doesn't exist, but mute_list_mode also doesn't (should have been created in Section 1)
+            # This case implies user_settings table was old and didn't get mute_list_mode from Section 1.
+            print("  - 'user_settings.mute_all' not found, ensuring 'mute_list_mode' exists...")
+            with op.batch_alter_table('user_settings', schema=None) as batch_op:
+                batch_op.add_column(sa.Column('mute_list_mode', sa.String(), nullable=False, server_default='blacklist'))
+            print("    - Added 'mute_list_mode' column with default.")
+        else:
+            print("  - 'user_settings.mute_list_mode' already exists or 'mute_all' not found. Skipping mute_all migration.")
+
+    # Migration for: `language` column to `language_code`
+    if _table_exists('user_settings', conn):
+        if _column_exists('user_settings', 'language', conn) and not _column_exists('user_settings', 'language_code', conn):
+            print("  - Old 'user_settings.language' column found. Renaming to 'language_code'...")
+            with op.batch_alter_table('user_settings', schema=None) as batch_op:
+                batch_op.alter_column('language', new_column_name='language_code', existing_type=sa.String())
+            print("  - Column renamed.")
+        elif not _column_exists('user_settings', 'language_code', conn):
+            # language doesn't exist, but language_code also doesn't (should have been created in Section 1)
+            print("  - 'user_settings.language' not found, ensuring 'language_code' exists...")
+            with op.batch_alter_table('user_settings', schema=None) as batch_op:
+                batch_op.add_column(sa.Column('language_code', sa.String(), nullable=False, server_default='en')) # Provide a default
+            print("    - Added 'language_code' column with default.")
+        else:
+            print("  - 'user_settings.language_code' already exists or 'language' not found. Skipping language rename.")
+
+    print("Step 3/N: Finalizing schema setup.")
+    print("✅ Database schema setup/upgrade complete.")
 
 
 def downgrade() -> None:
