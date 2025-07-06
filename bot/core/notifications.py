@@ -4,9 +4,12 @@ from aiogram import Bot as AiogramBot, html
 from typing import TYPE_CHECKING, Optional, Set, Any, Callable, Dict # Added Dict
 from html import escape
 
-# Forward reference for Application
+# Forward reference for Services
 if TYPE_CHECKING:
-    from sender import Application
+    # from sender import Application # No longer Application
+    from bot.services_container import Services # Use Services
+    from sqlalchemy.orm import sessionmaker # Import for DbSessionFactory alias
+    DbSessionFactory = sessionmaker # Create alias
 
 from sqlalchemy import and_, or_
 

@@ -1,9 +1,33 @@
 # bot/database/engine.py
 import logging
-from sqlalchemy.ext.asyncio import create_async_engine # noqa
-from sqlalchemy.orm import sessionmaker # noqa
-from sqlmodel.ext.asyncio.session import AsyncSession # noqa
-from bot.constants import DB_MAIN_NAME # noqa
-from bot import models  # noqa
+
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+# from bot.constants import DB_MAIN_NAME # No longer needed here
+from bot.config import Settings # Needed for config type hint
+from bot import models  # Important for SQLModel to discover models
 
 logger = logging.getLogger(__name__)
+
+def create_session_factory(config: Settings) -> sessionmaker:
+    """
+    Creates and returns a new session factory based on the provided configuration.
+    """
+    # This import is needed for SQLModel/Alembic to correctly see all tables.
+    # The variable `_` is used to prevent linters from complaining about an unused import.
+    _ = models
+
+    db_path = f"sqlite+aiosqlite:///{config.DATABASE_FILE}"
+    logger.info(f"Creating database engine for: {db_path}")
+
+    engine = create_async_engine(db_path)
+
+    # expire_on_commit=False is standard practice for asynchronous applications,
+    # so that objects do not become "detached" from the session after a commit.
+    session_factory = sessionmaker(
+        engine, expire_on_commit=False, class_=AsyncSession
+    )
+
+    return session_factory

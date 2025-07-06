@@ -6,15 +6,11 @@ from datetime import datetime # Keep for potential future use, though not direct
 
 from typing import Optional # Dict, Any removed as direct members of App
 
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
-# UserSettings, SQLAlchemyError, select, selectinload are used by Services or crud
-from bot import models as db_models # For session factory
-from bot.constants import DB_MAIN_NAME
+# create_async_engine, sessionmaker, AsyncSession, db_models, DB_MAIN_NAME are no longer directly used here
 from bot.config import Settings # For type hinting app_config_instance
+from bot.database.engine import create_session_factory # Import the new factory function
 
-from aiogram import Bot, Dispatcher, html # Bot is used by Services, Dispatcher by App
+from aiogram import Dispatcher, html # Bot is imported by services_container
 from aiogram.types import ErrorEvent, Message as AiogramMessage # For _global_error_handler
 # TelegramAPIError not directly used by App now
 # CallbackAnswerMiddleware not directly used by App now
@@ -47,17 +43,8 @@ class Application:
         self.app_config = app_config_instance # Store config for app-level decisions if any
         self.logger = setup_logging()
 
-        # 1. Create session_factory
-        # Ensure db_models is imported for SQLModel side effects if any
-        _ = db_models
-        database_files = {DB_MAIN_NAME: self.app_config.DATABASE_FILE}
-        async_engines = {
-            db_name: create_async_engine(f"sqlite+aiosqlite:///{db_file}")
-            for db_name, db_file in database_files.items()
-        }
-        session_factory: sessionmaker = sessionmaker(
-            async_engines[DB_MAIN_NAME], expire_on_commit=False, class_=AsyncSession
-        )
+        # 1. Create session_factory using the new function
+        session_factory = create_session_factory(app_config_instance)
 
         # 2. Create services container
         self.services = Services(config=app_config_instance, session_factory=session_factory)
