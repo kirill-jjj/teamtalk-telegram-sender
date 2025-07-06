@@ -60,7 +60,7 @@ def is_tt_admin(func):
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
-        admin_username = services.config.ADMIN_USERNAME # Use services.config
+        admin_username = services.config.general.admin_username # Use services.config
 
         if not admin_username or username != admin_username:
             logger.warning(f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}.")
@@ -188,7 +188,7 @@ async def _generate_and_reply_deeplink(
         token = await create_deeplink(
             session,
             action,
-            services.config.DEEPLINK_TTL_SECONDS, # Use services.config
+            services.config.operational_parameters.deeplink_ttl_seconds, # Use services.config
             payload=payload,
             expected_telegram_id=None
         )
@@ -301,7 +301,7 @@ async def handle_tt_help_command(
 ):
     is_main_tt_admin = False
     tt_username_str = ttstr(tt_message.user.username) if tt_message.user and hasattr(tt_message.user, 'username') else None
-    admin_username_from_config = services.config.ADMIN_USERNAME # Use services.config
+    admin_username_from_config = services.config.general.admin_username # Use services.config
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True

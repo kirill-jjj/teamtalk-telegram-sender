@@ -19,10 +19,12 @@ def create_session_factory(config: Settings) -> sessionmaker:
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models
 
-    db_path = f"sqlite+aiosqlite:///{config.DATABASE_FILE}"
-    logger.info(f"Creating database engine for: {db_path}")
+    import os # Required for os.path.abspath
+    absolute_db_path = os.path.abspath(config.database.db_file)
+    db_url = f"sqlite+aiosqlite:///{absolute_db_path}"
+    logger.info(f"Creating database engine for: {db_url}")
 
-    engine = create_async_engine(db_path)
+    engine = create_async_engine(db_url)
 
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.

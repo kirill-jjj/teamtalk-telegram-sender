@@ -105,15 +105,15 @@ class TeamTalkEventHandler:
         connection.start_background_tasks()
 
         try:
-            gender = self.services.config.GENDER.lower() # Use self.services.config
+            gender = self.services.config.general.gender.lower() # Use self.services.config
             status_val = PytalkStatus.online.neutral
             if gender == "male": status_val = PytalkStatus.online.male
             elif gender == "female": status_val = PytalkStatus.online.female
 
-            tt_instance.change_status(status_val, self.services.config.STATUS_TEXT) # Use self.services.config
+            tt_instance.change_status(status_val, self.services.config.teamtalk.status_text) # Use self.services.config
             connection.login_complete_time = datetime.utcnow()
             connection.mark_finalized(True)
-            self.services.logger.debug(f"[{connection.server_info.host}] TeamTalk status set to: '{self.services.config.STATUS_TEXT}'.") # Use self.services.logger
+            self.services.logger.debug(f"[{connection.server_info.host}] TeamTalk status set to: '{self.services.config.teamtalk.status_text}'.") # Use self.services.logger
             self.services.logger.info(f"[{connection.server_info.host}] TeamTalk login sequence finalized at {connection.login_complete_time}.") # Use self.services.logger
         except Exception as e:
             self.services.logger.error(f"[{connection.server_info.host}] Error setting status or login_complete_time for bot: {e}", exc_info=True) # Use self.services.logger
@@ -138,17 +138,18 @@ class TeamTalkEventHandler:
     # --- Pytalk Event Handlers (Moved from Application) ---
     async def on_pytalk_ready(self):
         self.services.logger.info("TeamTalkEventHandler: Pytalk Bot is ready. Initializing TeamTalk connections...") # Use self.services.logger
-        server_config = self.services.config # Use self.services.config
+        # Access nested config for TeamTalk settings
+        tt_config = self.services.config.teamtalk
         pytalk_server_info = pytalk.TeamTalkServerInfo(
-            host=server_config.HOSTNAME,
-            tcp_port=server_config.PORT,
-            udp_port=server_config.PORT,
-            username=server_config.USERNAME,
-            password=server_config.PASSWORD,
-            encrypted=server_config.ENCRYPTED,
-            nickname=server_config.NICKNAME,
-            join_channel_id=int(server_config.CHANNEL) if server_config.CHANNEL.isdigit() else -1,
-            join_channel_password=server_config.CHANNEL_PASSWORD or ""
+            host=tt_config.host_name,
+            tcp_port=tt_config.port,
+            udp_port=tt_config.port, # Assuming UDP port is same as TCP based on old structure
+            username=tt_config.user_name,
+            password=tt_config.password,
+            encrypted=tt_config.encrypted,
+            nickname=tt_config.nick_name,
+            join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else -1,
+            join_channel_password=tt_config.channel_password or ""
         )
         server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
 
@@ -192,8 +193,8 @@ class TeamTalkEventHandler:
         self.services.logger.info(f"[{connection.server_info.host}] Successfully logged in to TeamTalk server: {server_name_display} (Host: {server.info.host}). Current instance: {connection.instance}") # Use self.services.logger
 
         try:
-            channel_id_or_path = self.services.config.CHANNEL # Use self.services.config
-            channel_password = self.services.config.CHANNEL_PASSWORD or "" # Use self.services.config
+            channel_id_or_path = self.services.config.teamtalk.channel # Use self.services.config
+            channel_password = self.services.config.teamtalk.channel_password or "" # Use self.services.config
             target_channel_name_log = channel_id_or_path
 
             final_channel_id = -1
@@ -310,9 +311,10 @@ class TeamTalkEventHandler:
         message_content = message.content.strip()
         self.services.logger.debug(f"[{connection.server_info.host}] Received private TT message from {sender_username}: '{message_content[:100]}...'.") # Use self.services.logger
 
-        bot_reply_language_code = self.services.config.DEFAULT_LANG # Use self.services.config
-        if self.services.config.TG_ADMIN_CHAT_ID: # Use self.services.config
-            admin_settings = self.services.user_settings_cache.get(self.services.config.TG_ADMIN_CHAT_ID) # Use self.services
+        bot_reply_language_code = self.services.config.general.default_lang # Use self.services.config
+        admin_chat_id_for_message = self.services.config.telegram.admin_chat_id # Use self.services.config
+        if admin_chat_id_for_message:
+            admin_settings = self.services.user_settings_cache.get(admin_chat_id_for_message) # Use self.services
             if admin_settings and admin_settings.language_code:
                 bot_reply_language_code = admin_settings.language_code
 

@@ -84,18 +84,18 @@ class TeamTalkConnection:
                     logger.debug(f"[{self.server_info.host}] Online users cache synchronized. Users online: {len(self.online_users_cache)}.")
                 else:
                     logger.warning(f"[{self.server_info.host}] Skipping periodic online users cache sync: TT instance not ready (connected: {self.instance.connected if self.instance else 'N/A'}, logged_in: {self.instance.logged_in if self.instance else 'N/A'}).")
-                    await asyncio.sleep(self.app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS)
+                    await asyncio.sleep(self.app_config.operational_parameters.tt_reconnect_check_interval_seconds)
                     continue
             except TimeoutError as e_timeout:
                 logger.error(f"[{self.server_info.host}] TimeoutError during periodic online users cache sync: {e_timeout}.", exc_info=True)
-                await asyncio.sleep(self.app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS // 2)
+                await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds // 2)
             except pytalk.exceptions.TeamTalkException as e_pytalk:
                 logger.error(f"[{self.server_info.host}] Pytalk error during periodic online users cache sync: {e_pytalk}.", exc_info=True)
-                await asyncio.sleep(self.app_config.TT_RECONNECT_RETRY_SECONDS if self.instance and self.instance.connected and self.instance.logged_in else self.app_config.TT_RECONNECT_CHECK_INTERVAL_SECONDS)
+                await asyncio.sleep(self.app_config.operational_parameters.tt_reconnect_retry_seconds if self.instance and self.instance.connected and self.instance.logged_in else self.app_config.operational_parameters.tt_reconnect_check_interval_seconds)
             except Exception as e:
                 logger.error(f"[{self.server_info.host}] Unexpected error during periodic online users cache sync: {e}", exc_info=True)
-                await asyncio.sleep(self.app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
-            await asyncio.sleep(self.app_config.ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS)
+                await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
+            await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
 
     async def populate_user_accounts_cache(self):
         if not self.is_ready: # Use is_ready property

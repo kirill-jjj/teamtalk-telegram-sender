@@ -34,12 +34,12 @@ class Services:
         self.logger = logger # Or pass a logger instance if preferred
 
         # Боты
-        self.bot_event: Bot = Bot(token=config.TG_EVENT_TOKEN)
-        self.bot_message: Bot = Bot(token=config.TG_BOT_MESSAGE_TOKEN) if config.TG_BOT_MESSAGE_TOKEN else self.bot_event
+        self.bot_event: Bot = Bot(token=config.telegram.event_token)
+        self.bot_message: Bot = Bot(token=config.telegram.message_token) if config.telegram.message_token else self.bot_event
 
         # TeamTalk Bot instance
         import pytalk # Import pytalk here
-        self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.CLIENT_NAME)
+        self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)
 
 
         # Состояние (кеши)
@@ -61,7 +61,7 @@ class Services:
         or if the default language itself fails to load (in which case NullTranslations is used).
         """
         if language_code is None:
-            language_code = self.config.DEFAULT_LANG # Use self.config
+            language_code = self.config.general.default_lang # Use self.config
 
         if language_code in self.translator_cache:
             return self.translator_cache[language_code]
@@ -71,7 +71,7 @@ class Services:
             self.translator_cache[language_code] = translation
             return translation
         except FileNotFoundError:
-            default_lang_code = self.config.DEFAULT_LANG # Use self.config
+            default_lang_code = self.config.general.default_lang # Use self.config
             if language_code != default_lang_code:
                 self.logger.warning(f"Language '{language_code}' not found. Falling back to default '{default_lang_code}'.")
                 return self.get_translator(default_lang_code) # Recursive call
@@ -114,7 +114,7 @@ class Services:
             self.logger.info(f"No settings found for user {telegram_id}, creating new ones.")
             user_settings = UserSettings(
                 telegram_id=telegram_id,
-                language_code=self.config.DEFAULT_LANG # Use self.config
+                language_code=self.config.general.default_lang # Use self.config
             )
             session.add(user_settings)
             try:
@@ -125,7 +125,7 @@ class Services:
                 await session.rollback()
                 self.logger.error(f"Database error creating settings for user {telegram_id}: {e}", exc_info=True)
                 # Return a default non-persistent object on error.
-                return UserSettings(telegram_id=telegram_id, language_code=self.config.DEFAULT_LANG)
+                return UserSettings(telegram_id=telegram_id, language_code=self.config.general.default_lang)
 
         self.user_settings_cache[telegram_id] = user_settings
         return user_settings

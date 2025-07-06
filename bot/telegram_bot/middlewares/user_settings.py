@@ -34,8 +34,8 @@ class UserSettingsMiddleware(BaseMiddleware):
 
         if not user_settings: # Should ideally not happen if get_or_create handles fallback
             logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
-            # Use services.get_translator and config.DEFAULT_LANG
-            _default_tr = services.get_translator(config.DEFAULT_LANG).gettext
+            # Use services.get_translator and config.general.default_lang
+            _default_tr = services.get_translator(config.general.default_lang).gettext
             await _send_error_response(event, _default_tr("An error occurred. Please try again later."), show_alert_for_callback=True)
             return
 
@@ -57,7 +57,7 @@ class UserSettingsMiddleware(BaseMiddleware):
             logger.debug(f"Refreshed muted_users_list for user {user_obj.id} in current session.")
         except Exception as refresh_e: # Catch more specific SQLAlchemy errors if possible
             logger.error(f"Error merging or refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}", exc_info=True)
-            error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else config.DEFAULT_LANG
+            error_lang_code = user_settings.language_code if user_settings and hasattr(user_settings, 'language_code') else config.general.default_lang
             _tr = services.get_translator(error_lang_code).gettext
             await _send_error_response(event, _tr("An error occurred. Please try again later."), show_alert_for_callback=True)
             return

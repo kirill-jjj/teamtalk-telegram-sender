@@ -75,21 +75,25 @@ class Application:
 
         await self.services.load_user_settings_to_app_cache()
 
-        try:
-            tg_admin_chat_id_str = self.app_config.TG_ADMIN_CHAT_ID
-            if tg_admin_chat_id_str is not None:
-                tg_admin_chat_id = int(tg_admin_chat_id_str)
-                if tg_admin_chat_id not in self.services.admin_ids_cache: # Use services cache
-                    async with self.services.session_factory() as session:
-                        await crud.add_admin(session, tg_admin_chat_id)
-                        self.services.admin_ids_cache.add(tg_admin_chat_id) # Update services cache
-                    self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
-                else:
-                    self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
+        # Accessing admin_chat_id from the new nested structure
+        # app_config.telegram.admin_chat_id is now an int, not Optional[str]
+        # Assuming 0 is not a valid/used admin_chat_id if it means "not set",
+        # or that it's always a valid ID if present.
+        # The TOML example has `admin_chat_id = 0`. If 0 means "not set", this logic needs adjustment.
+        # For now, assume if admin_chat_id is present (Pydantic ensures it's an int), it's a valid ID to use.
+        tg_admin_chat_id = self.app_config.telegram.admin_chat_id
+        if tg_admin_chat_id: # Simple check if it's non-zero; adjust if 0 is a valid ID to be added.
+                           # If the field is non-optional in Pydantic, it will always be present.
+            if tg_admin_chat_id not in self.services.admin_ids_cache: # Use services cache
+                async with self.services.session_factory() as session:
+                    await crud.add_admin(session, tg_admin_chat_id)
+                    self.services.admin_ids_cache.add(tg_admin_chat_id) # Update services cache
+                self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
             else:
-                self.logger.info("TG_ADMIN_CHAT_ID is not set in config, no main admin to add.")
-        except (ValueError, TypeError) as e:
-            self.logger.error(f"Could not process TG_ADMIN_CHAT_ID from config. It must be a valid integer. Error: {e}")
+                self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
+        else:
+            self.logger.info("telegram.admin_chat_id is 0 or not configured in a way to be added as main admin.")
+        # Removed original try-except for ValueError/TypeError as Pydantic handles type validation.
 
         self.logger.info(f"Final admin_ids_cache count after startup: {len(self.services.admin_ids_cache)}.")
         self.logger.debug(f"Final admin_ids_cache state after startup: {self.services.admin_ids_cache}")
@@ -142,7 +146,9 @@ class Application:
         self.logger.critical(f"Unhandled exception in Aiogram handler: {event.exception}", exc_info=True)
 
         # Use self.services.get_translator and self.services.bot_event
-        if self.app_config.TG_ADMIN_CHAT_ID:
+        # Access admin_chat_id from the new nested structure
+        admin_chat_id_for_error = self.app_config.telegram.admin_chat_id
+        if admin_chat_id_for_error: # Check if it's non-zero or configured
             try:
                 admin_critical_translator = self.services.get_translator('ru')
                 # Вся структура сообщения теперь одна переводимая строка
@@ -154,9 +160,9 @@ class Application:
                     error_type=type(event.exception).__name__,
                     error_message=escaped_exception_text
                 )
-                await self.services.bot_event.send_message(self.app_config.TG_ADMIN_CHAT_ID, error_text, parse_mode="HTML")
+                await self.services.bot_event.send_message(admin_chat_id_for_error, error_text, parse_mode="HTML")
             except Exception as e:
-                self.logger.error(f"Error sending critical error message to admin chat: {e}", exc_info=True)
+                self.logger.error(f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}", exc_info=True)
 
         update = event.update
         user_id = None
@@ -174,7 +180,9 @@ class Application:
         user_message_key = "An unexpected error occurred. The administrator has been notified. Please try again later."
         user_message_text = translator.gettext(user_message_key)
 
-        if not (user_id and self.app_config.TG_ADMIN_CHAT_ID and str(user_id) == str(self.app_config.TG_ADMIN_CHAT_ID)):
+        # Compare user_id with the (potentially zero) admin_chat_id from config
+        # admin_chat_id_for_error is already defined above
+        if not (user_id and admin_chat_id_for_error and user_id == admin_chat_id_for_error):
             try:
                 if update.message:
                     await update.message.answer(user_message_text)
