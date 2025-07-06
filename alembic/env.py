@@ -50,17 +50,41 @@ def get_db_url():
 
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file} (source: {config_file_source})")
 
-    # To import Settings, we need to temporarily add the current directory to the path
-    import sys
-    sys.path.insert(0, '.')
-    from bot.config import Settings
+    # To import dotenv, we need to ensure it's available.
+    # It's a dependency of pydantic-settings, which is in project dependencies.
+    from dotenv import dotenv_values
 
-    # Create an instance of settings using the required file
-    app_config = Settings(_env_file=config_file)
+    if not os.path.exists(config_file):
+        print(f"WARN  [alembic.env] Config file '{config_file}' not found. Will attempt to proceed without it if defaults suffice or vars are set.")
+        env_values = {}
+    else:
+        env_values = dotenv_values(config_file)
 
-    db_path = os.path.abspath(app_config.DATABASE_FILE)
+    # Try to get DATABASE_FILE from loaded .env, then from environment variables as a fallback
+    db_file_name = env_values.get("DATABASE_FILE")
+    if not db_file_name:
+        db_file_name = os.environ.get("DATABASE_FILE") # Fallback to actual env var
+
+    if not db_file_name:
+        # If still not found, use a default or raise error
+        # For this project, DATABASE_FILE is expected.
+        # Raising an error might be too strict if other ways of configuring URL are available.
+        # However, the original script relied on it being in the .env.
+        print(f"ERROR [alembic.env] 'DATABASE_FILE' not found in '{config_file}' or environment variables.")
+        print(f"INFO  [alembic.env] Please ensure DATABASE_FILE is set in {config_file_source} or as an environment variable.")
+        # Fallback to a default name, though this might not be what user wants.
+        # Or, better, raise an informative error.
+        # For now, let's try a default and print a clear warning.
+        default_db_name = "bot_data.db" # Default from original .env.example
+        print(f"WARN  [alembic.env] Falling back to default DATABASE_FILE name: '{default_db_name}'")
+        db_file_name = default_db_name
+        # Alternatively, to be stricter:
+        # raise ValueError(f"DATABASE_FILE not found in {config_file_source} or environment variables. "
+        #                  "Cannot determine database URL for Alembic.")
+
+    db_path = os.path.abspath(db_file_name)
     db_url = f"sqlite+aiosqlite:///{db_path}"
-    print(f"INFO  [alembic.env] Using database URL: {db_url} (from DATABASE_FILE='{app_config.DATABASE_FILE}')")
+    print(f"INFO  [alembic.env] Using database URL: {db_url} (from DATABASE_FILE='{db_file_name}', source_config_file='{config_file}')")
     return db_url
 
 
