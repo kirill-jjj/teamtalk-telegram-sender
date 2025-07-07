@@ -126,9 +126,9 @@ asyncio_mode = "auto"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.2",
-    "pytest-asyncio>=0.23.8",
-    "pytest-cov>=5.0.0",
-    "mypy>=1.11.1",
-    "ruff>=0.5.5"
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "mypy",
+    "ruff"
 ]
