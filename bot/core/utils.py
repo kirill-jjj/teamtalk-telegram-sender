@@ -27,7 +27,7 @@ def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable,
     Returns:
         The server name string.
     """
-    server_name = app_cfg.SERVER_NAME  # Use passed app_cfg
+    server_name = app_cfg.teamtalk.server_name  # Use passed app_cfg
     if not server_name:
         if tt_instance and tt_instance.connected:
             try:
