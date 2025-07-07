@@ -153,7 +153,8 @@ async def forward_tt_message_to_telegram_admin(
         services: The application's services container.
         server_host_for_display: The display name of the TeamTalk server.
     """
-    if not services.config.telegram.admin_chat_id or not services.bot_message:  # Use services.config, services.bot_message
+    # Use services.config for settings and services.bot_message for the bot instance
+    if not services.config.telegram.admin_chat_id or not services.bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
