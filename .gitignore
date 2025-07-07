@@ -42,3 +42,8 @@ venv.bak/
 # Файлы системы локализации (gettext)
 locales/*.pot
 locales/**/*.mo
+
+# Файлы конфигурации TOML (кроме примеров и pyproject)
+*.toml
+!config.example.toml
+!pyproject.toml

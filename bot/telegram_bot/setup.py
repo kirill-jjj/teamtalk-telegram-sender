@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from aiogram import Dispatcher  # For type hinting dp
+from aiogram import Dispatcher
 
 if TYPE_CHECKING:
     from sender import Application  # For app_callbacks type hint
@@ -28,6 +28,11 @@ from bot.telegram_bot.middlewares import (
     SubscriptionCheckMiddleware,
     UserSettingsMiddleware,
 )
+
+
+def create_telegram_dispatcher() -> Dispatcher:
+    """Creates an Aiogram Dispatcher instance."""
+    return Dispatcher()
 
 
 def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):

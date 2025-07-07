@@ -21,7 +21,7 @@ from bot.logging_setup import setup_logging
 from bot.services_container import Services
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import set_telegram_commands
-from bot.telegram_bot.setup import setup_telegram_dispatcher
+from bot.telegram_bot.setup import setup_telegram_dispatcher, create_telegram_dispatcher
 
 uvloop: ModuleType | None = None
 try:
@@ -52,7 +52,8 @@ class Application:
         self.services = Services(config=app_config_instance, session_factory=session_factory)
 
         # 3. Create components that depend on services or app config
-        self.dp: Dispatcher = Dispatcher()
+        # Dispatcher initialization moved to bot/telegram_bot/setup.py
+        self.dp: Dispatcher | None = None # Will be initialized in run()
 
         # Moved import to top: from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
         # TeamTalkEventHandler now takes only services
@@ -229,16 +230,18 @@ class Application:
         self.logger.info("Initializing available languages in services...")
         self.services.initialize_languages()  # Moved from direct App responsibility
 
-        # setup_telegram_dispatcher will be modified to accept services
-        setup_telegram_dispatcher(dp=self.dp, services=self.services, app_callbacks=self)  # Pass app for callbacks
+        # Initialize the dispatcher using the new function
+        self.dp = create_telegram_dispatcher()
+
+        # Setup the dispatcher
+        setup_telegram_dispatcher(dp=self.dp, services=self.services, app_callbacks=self)
 
         self.logger.info("Starting Telegram polling...")
         try:
-            # Poll with bot_event from services. Pass services or specific components to dispatcher/handlers.
+            # Poll with bot_event from services.
             await self.dp.start_polling(
                 self.services.bot_event,
                 allowed_updates=self.dp.resolve_used_update_types(),
-                # Removed app=self, dispatcher workflow_data will be used instead
             )
         finally:
             self.logger.info("Application finished.")
