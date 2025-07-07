@@ -140,7 +140,7 @@ async def send_join_leave_notification_logic(
         online_users_cache_for_instance: Cache of online users for the specific TT instance.
         services: The application's services container.
     """
-    default_lang_for_markup_and_log = services.config.DEFAULT_LANG
+    default_lang_for_markup_and_log = services.config.general.default_lang
     _log_markup_translator = services.get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
 

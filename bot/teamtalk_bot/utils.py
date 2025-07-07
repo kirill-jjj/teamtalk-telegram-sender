@@ -153,16 +153,16 @@ async def forward_tt_message_to_telegram_admin(
         services: The application's services container.
         server_host_for_display: The display name of the TeamTalk server.
     """
-    if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message:  # Use services.config, services.bot_message
+    if not services.config.telegram.admin_chat_id or not services.bot_message:  # Use services.config, services.bot_message
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = services.config.TG_ADMIN_CHAT_ID
+    admin_chat_id = services.config.telegram.admin_chat_id
     admin_settings = services.user_settings_cache.get(admin_chat_id)
     if admin_settings and admin_settings.language_code:
         admin_language_code = admin_settings.language_code
     else:
-        admin_language_code = services.config.DEFAULT_LANG
+        admin_language_code = services.config.general.default_lang # Also update DEFAULT_LANG access here
 
     translator = services.get_translator(admin_language_code)
     _ = translator.gettext
