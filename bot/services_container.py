@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Union # Added Dict, List, Uni
 from aiogram import Bot
 import pytalk  # Moved here for PLC0415
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import select, selectinload # type: ignore[attr-defined] # SQLModel's select and selectinload
+from sqlalchemy.orm import selectinload # Standard SQLAlchemy selectinload
+from sqlmodel import select # SQLModel's select
 from sqlmodel.ext.asyncio.session import AsyncSession  # For type hinting
 
 from bot.config import Settings
@@ -97,7 +98,7 @@ class Services:
         """Loads all user settings from DB into the service's cache."""
         async with self.session_factory() as session:
             # Ensure muted_users are loaded
-            stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))
+            stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
             result = await session.exec(stmt)
             all_settings = result.all()
             for setting in all_settings:
@@ -113,7 +114,7 @@ class Services:
         user_settings = await session.get(
             UserSettings,
             telegram_id,
-            options=[selectinload(UserSettings.muted_users_list)],  # Eager load related data
+            options=[selectinload(UserSettings.muted_users_list)],  # type: ignore[arg-type] # Eager load related data
         )
         if not user_settings:
             self.logger.info("No settings found for user %s, creating new ones.", telegram_id)
