@@ -55,11 +55,13 @@ def _should_ignore_initial_event(
 
 
 def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool:  # Pass app_cfg
-    global_ignore_str = app_cfg.GLOBAL_IGNORE_USERNAMES or ""
-    if not global_ignore_str:
+    # app_cfg is expected to be an instance of Settings
+    # Accessing teamtalk.global_ignore_usernames which is a list[str]
+    global_ignore_list = app_cfg.teamtalk.global_ignore_usernames
+    if not global_ignore_list:
         return False
-    ignored_set = {name.strip() for name in global_ignore_str.split(",") if name.strip()}
-    return username in ignored_set
+    # Usernames in the list are expected to be already stripped and valid
+    return username in global_ignore_list
 
 
 async def _get_recipients_for_notification(
@@ -204,7 +206,10 @@ async def send_join_leave_notification_logic(
             continue
 
         if user_specific_settings.not_on_online_enabled and tt_user.id != tt_instance.getMyUserID():
-            is_event_user_tt_admin = user_username == services.config.ADMIN_USERNAME
+            # Check if the event user is the configured admin_username
+            is_event_user_tt_admin = (
+                services.config.general.admin_username and user_username == services.config.general.admin_username
+            )
 
             if not is_event_user_tt_admin:
                 other_users_online_in_instance = False

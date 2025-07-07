@@ -85,24 +85,32 @@ source $HOME/.local/bin/env
         uv run i18n compile
         ```
     (Typically, after initial setup, developers will run `uv run i18n extract` when new text is added, then `uv run i18n update`, then translate, then `uv run i18n compile` to compile.)
-5.  **Configure environment variables**: Copy the `.env.example` file to `.env` and fill in your actual configuration values (API tokens, admin IDs, etc.).
+5.  **Configure the bot**: Copy the `config.example.toml` file to `config.toml` and fill in your actual configuration values (API tokens, admin IDs, TeamTalk server details, etc.).
     ```bash
-    cp .env.example .env
-    # Now edit .env with your values
+    cp config.example.toml config.toml
+    # Now edit config.toml with your values.
+    # Pay close attention to mandatory fields like tokens and passwords.
     ```
+    All fields that do not have default values in `config.example.toml` (e.g., `event_token`, `message_token`, `admin_chat_id` in the `[telegram]` section, and `password` in the `[teamtalk]` section) are mandatory.
+
 6.  **Apply database migrations**:
     Before the first run or after updating database models, apply migrations:
     ```bash
     uv run migrate upgrade head
     ```
+    If you use a custom configuration file name, specify it:
+    ```bash
+    uv run migrate --config custom_config.toml upgrade head
+    ```
 7.  **Run the bot**:
     ```bash
     uv run sender.py
     ```
-    You can also specify a particular configuration file (instead of the default `.env`) using the `--config` option:
+    If you use a custom configuration file name (e.g., `my_settings.toml`), specify it using the `--config` option:
     ```bash
-    uv run sender.py --config custom.env
+    uv run sender.py --config my_settings.toml
     ```
+    If the `--config` argument is not provided, the bot will default to looking for `config.toml` in the project's root directory.
 
 ## Database Migrations
 

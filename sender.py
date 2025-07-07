@@ -163,9 +163,16 @@ class Application:
         # Use self.services.get_translator and self.services.bot_event
         # Access admin_chat_id from the new nested structure
         admin_chat_id_for_error = self.app_config.telegram.admin_chat_id
+        admin_lang_code = self.app_config.general.default_lang  # Default to general default_lang
+
         if admin_chat_id_for_error:  # Check if it's non-zero or configured
+            # Try to get admin's specific language if available
+            admin_user_settings = self.services.user_settings_cache.get(admin_chat_id_for_error)
+            if admin_user_settings and admin_user_settings.language_code:
+                admin_lang_code = admin_user_settings.language_code
+
             try:
-                admin_critical_translator = self.services.get_translator("ru")
+                admin_critical_translator = self.services.get_translator(admin_lang_code)
                 # Вся структура сообщения теперь одна переводимая строка
                 error_text = admin_critical_translator.gettext(
                     "<b>Critical error!</b>\n<b>Error type:</b> {error_type}\n<b>Message:</b> {error_message}"
@@ -268,7 +275,8 @@ def main_cli():
     except (KeyboardInterrupt, SystemExit):
         print("Bot stopped by user.")
     except (ValueError, KeyError) as config_error:
-        print(f"CRITICAL: Configuration Error: {config_error}. Please check your .env file or environment variables.")
+        print(f"CRITICAL: Configuration Error: {config_error}.")
+        print("Please check your config.toml file or environment variables.")
         traceback.print_exc()
     except Exception as e:
         print(f"CRITICAL: An unexpected critical error occurred at CLI level: {e}")

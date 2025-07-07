@@ -163,7 +163,7 @@ async def forward_tt_message_to_telegram_admin(
     if admin_settings and admin_settings.language_code:
         admin_language_code = admin_settings.language_code
     else:
-        admin_language_code = services.config.general.default_lang # Also update DEFAULT_LANG access here
+        admin_language_code = services.config.general.default_lang  # Also update DEFAULT_LANG access here
 
     translator = services.get_translator(admin_language_code)
     _ = translator.gettext
