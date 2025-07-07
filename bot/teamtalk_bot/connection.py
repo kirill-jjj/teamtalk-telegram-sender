@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime
 import logging
-from typing import Any  # For app_config_instance type hint
+from typing import Any, Optional  # For app_config_instance type hint and Optional
 
 import pytalk
 from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
@@ -40,8 +40,8 @@ class TeamTalkConnection:
         self.online_users_cache: dict[int, pytalk.user.User] = {}
         self.user_accounts_cache: dict[str, pytalk.UserAccount] = {}  # Key is username string
 
-        self._periodic_sync_task: asyncio.Task | None = None
-        self._populate_accounts_task: asyncio.Task | None = None
+        self._periodic_sync_task: Optional[asyncio.Task[Any]] = None
+        self._populate_accounts_task: Optional[asyncio.Task[Any]] = None
         self._is_finalized = False
 
     async def connect(self) -> bool:
@@ -72,7 +72,7 @@ class TeamTalkConnection:
             logger.exception("Exception during pytalk_bot.add_server for %s: %s", self.server_info.host, e)
             return False
 
-    async def _periodic_cache_sync(self):
+    async def _periodic_cache_sync(self) -> None:
         if not self.instance:
             logger.error("[%s] Cannot start periodic cache sync: TeamTalk instance is not set.", self.server_info.host)
             return
@@ -145,7 +145,7 @@ class TeamTalkConnection:
                 await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
             await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
 
-    async def populate_user_accounts_cache(self):
+    async def populate_user_accounts_cache(self) -> None:
         """Populates the cache of user accounts from the TeamTalk server.
 
         Requires the bot to be an administrator on the server.
@@ -159,15 +159,17 @@ class TeamTalkConnection:
         logger.info("[%s] Populating user accounts cache...", self.server_info.host)
         ttstr = pytalk.instance.sdk.ttstr
         try:
-            all_accounts = await self.instance.list_user_accounts()
-            self.user_accounts_cache.clear()
-            for acc in all_accounts:
-                username_str = ttstr(acc.username) if isinstance(acc.username, bytes) else str(acc.username)
-                if username_str:
-                    self.user_accounts_cache[username_str] = acc
-            logger.info(
-                "[%s] User accounts cache populated with %s accounts.",
-                self.server_info.host,
+            if self.instance: # Ensure instance is not None
+                all_accounts = await self.instance.list_user_accounts()
+                if all_accounts: # Ensure all_accounts is not None before iterating
+                    self.user_accounts_cache.clear()
+                    for acc in all_accounts:
+                        username_str = ttstr(acc.username) if isinstance(acc.username, bytes) else str(acc.username)
+                        if username_str:
+                            self.user_accounts_cache[username_str] = acc
+                logger.info(
+                    "[%s] User accounts cache populated with %s accounts.",
+                    self.server_info.host,
                 len(self.user_accounts_cache),
             )
         except TimeoutError as e_timeout:
@@ -187,7 +189,7 @@ class TeamTalkConnection:
         except Exception as e:
             logger.exception("[%s] Unexpected error populating user accounts cache: %s", self.server_info.host, e)
 
-    def start_background_tasks(self):
+    def start_background_tasks(self) -> None:
         """Starts background tasks for this connection, like cache synchronization."""
         if not self.instance:
             logger.error("[%s] Cannot start background tasks: TT instance N/A.", self.server_info.host)
@@ -199,7 +201,7 @@ class TeamTalkConnection:
             self._populate_accounts_task = asyncio.create_task(self.populate_user_accounts_cache())
             logger.info("[%s] User accounts cache population task started/restarted.", self.server_info.host)
 
-    async def stop_background_tasks(self):
+    async def stop_background_tasks(self) -> None:
         """Stops all running background tasks for this connection."""
         logger.info("[%s] Stopping background tasks...", self.server_info.host)
         task_definitions = [
@@ -219,7 +221,7 @@ class TeamTalkConnection:
             setattr(self, task_obj_attr, None)
         logger.info("[%s] Background tasks stopped.", self.server_info.host)
 
-    async def disconnect_instance(self):
+    async def disconnect_instance(self) -> None:
         """Disconnects the TeamTalk instance and cleans up resources."""
         await self.stop_background_tasks()
         if self.instance:
@@ -245,7 +247,7 @@ class TeamTalkConnection:
         """Checks if the connection's login sequence has been finalized."""
         return self._is_finalized
 
-    def mark_finalized(self, status: bool = True):
+    def mark_finalized(self, status: bool = True) -> None:
         """Marks the connection's login sequence as finalized or not."""
         self._is_finalized = status
         logger.info(
@@ -254,7 +256,7 @@ class TeamTalkConnection:
             "finalized" if status else "NOT finalized",
         )
 
-    def update_caches_on_event(self, event_type: str, data: Any):
+    def update_caches_on_event(self, event_type: str, data: Any) -> None:
         """Updates internal caches based on incoming TeamTalk user or account events.
 
         Args:
@@ -267,9 +269,9 @@ class TeamTalkConnection:
         username_str = ttstr(username_attr) if username_attr else "UnknownUser"
 
         if event_type in ["user_login", "user_join", "user_update"]:
-            user: pytalk.user.User = data
+            user_data: pytalk.user.User = data
             if user_id is not None:
-                self.online_users_cache[user_id] = user
+                self.online_users_cache[user_id] = user_data
                 logger.debug(
                     "[%s] User %s (%s) %s -> online_users_cache. Size: %s",
                     self.server_info.host,
@@ -286,7 +288,7 @@ class TeamTalkConnection:
                     username_str,
                 )
         elif event_type == "user_logout":
-            user: pytalk.user.User = data
+            logged_out_user: pytalk.user.User = data
             if user_id is not None and user_id in self.online_users_cache:
                 del self.online_users_cache[user_id]
                 logger.debug(
@@ -308,10 +310,10 @@ class TeamTalkConnection:
                     "[%s] User logout for %s but no ID. Cache not updated.", self.server_info.host, username_str
                 )
         elif event_type == "user_account_new":
-            account: pytalk.UserAccount = data
-            acc_username_str = ttstr(account.username) if isinstance(account.username, bytes) else str(account.username)
+            new_account: pytalk.UserAccount = data
+            acc_username_str = ttstr(new_account.username) if isinstance(new_account.username, bytes) else str(new_account.username)
             if acc_username_str:
-                self.user_accounts_cache[acc_username_str] = account
+                self.user_accounts_cache[acc_username_str] = new_account
                 logger.debug(
                     "[%s] User account '%s' added. user_accounts_cache size: %s",
                     self.server_info.host,
@@ -319,8 +321,8 @@ class TeamTalkConnection:
                     len(self.user_accounts_cache),
                 )
         elif event_type == "user_account_remove":
-            account: pytalk.UserAccount = data
-            acc_username_str = ttstr(account.username) if isinstance(account.username, bytes) else str(account.username)
+            removed_account: pytalk.UserAccount = data
+            acc_username_str = ttstr(removed_account.username) if isinstance(removed_account.username, bytes) else str(removed_account.username)
             if acc_username_str and acc_username_str in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username_str]
                 logger.debug(

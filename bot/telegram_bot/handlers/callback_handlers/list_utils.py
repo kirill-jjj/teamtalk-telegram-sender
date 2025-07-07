@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession # Changed to SQLModel's AsyncSession
 
 if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, Message

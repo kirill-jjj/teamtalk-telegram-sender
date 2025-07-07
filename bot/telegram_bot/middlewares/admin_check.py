@@ -1,6 +1,6 @@
 """Middleware to check if a Telegram user is an administrator."""
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Awaitable # Added Awaitable
 import gettext  # For translator type hint
 import logging
 
@@ -25,7 +25,7 @@ class AdminCheckMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
@@ -51,24 +51,25 @@ class AdminCheckMiddleware(BaseMiddleware):
         admin_ids_cache: set[int] = data.get("admin_ids_cache", set())
 
         if user.id not in admin_ids_cache:
-            translator: gettext.GNUTranslations | None = data.get("translator")
+            # Initialize translator: try from data, then services, else NullTranslations
+            current_translator: gettext.GNUTranslations | gettext.NullTranslations
+            translator_from_data = data.get("translator")
 
-            # Fallback to get translator from services if not directly available
-            if not translator:
+            if translator_from_data and isinstance(translator_from_data, (gettext.GNUTranslations, gettext.NullTranslations)):
+                current_translator = translator_from_data
+            else:
                 services: Services | None = data.get("services")
                 if services:
-                    # Determine language code for user, or default
-                    user_settings = data.get("user_settings")  # Might be populated by UserSettingsMiddleware
-                    lang_code = user_settings.language_code if user_settings else None
-                    translator = services.get_translator(lang_code)
+                    user_settings = data.get("user_settings")
+                    lang_code = getattr(user_settings, 'language_code', None) if user_settings else None
+                    current_translator = services.get_translator(lang_code)
                 else:
                     logger.warning(
-                        "AdminCheckMiddleware: Translator and Services not found in data. "
-                        "Using temporary default translator."
+                        "AdminCheckMiddleware: Translator and Services not found in data. Using NullTranslations."
                     )
-                    translator = gettext.NullTranslations()  # Should not happen in normal flow
+                    current_translator = gettext.NullTranslations()
 
-            _ = translator.gettext
+            _ = current_translator.gettext
             unauthorized_message = _("You are not authorized to perform this action.")
 
             if isinstance(event, CallbackQuery):

@@ -1,30 +1,30 @@
 """Middleware to provide a database session to Telegram handlers."""
 
-from collections.abc import Callable, Coroutine
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, Dict
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-from sqlalchemy.orm import sessionmaker
+from bot.database.engine import AsyncSessionFactoryType # Import the specific session factory type
 
 
 class DbSessionMiddleware(BaseMiddleware):
     """Middleware to provide a database session to handlers."""
 
-    def __init__(self, session_factory: sessionmaker):  # type: ignore
+    def __init__(self, session_factory: AsyncSessionFactoryType):  # type: ignore[type-var]
         """Initializes DbSessionMiddleware.
 
         Args:
-            session_factory: The SQLAlchemy session factory.
+            session_factory: The SQLModel/SQLAlchemy session factory.
         """
         super().__init__()
         self.session_factory = session_factory
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any],
+        data: Dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 

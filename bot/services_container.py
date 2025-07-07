@@ -1,22 +1,26 @@
 """Provides a container for managing application-wide services and dependencies."""
 
 import gettext
+from gettext import GNUTranslations, NullTranslations # Added for precise typing
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Union # Added Dict, List, Union
 
 from aiogram import Bot
 import pytalk  # Moved here for PLC0415
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import selectinload, sessionmaker
-from sqlmodel import select
+from sqlmodel import select, selectinload # type: ignore[attr-defined] # SQLModel's select and selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession  # For type hinting
 
 from bot.config import Settings
-
-# Assuming discover_languages and DEFAULT_LANGUAGE_CODE are correctly importable
-from bot.core.languages import discover_languages
+from bot.core.languages import LanguageInfo, discover_languages # Import LanguageInfo
+from bot.database.engine import AsyncSessionFactoryType # Import the session factory type
 from bot.models import UserSettings
-from bot.teamtalk_bot.connection import TeamTalkConnection  # Assuming this path is correct
+from bot.teamtalk_bot.connection import TeamTalkConnection
+
+if TYPE_CHECKING:
+    from bot.models import MutedUser # Forward reference for selectinload, though might not be needed with plugin
+
 
 # These might be passed to __init__ or defined globally if they are static
 LOCALE_DIR = Path("locales")
@@ -28,15 +32,15 @@ logger = logging.getLogger(__name__)
 class Services:
     """Контейнер для всех зависимостей и сервисов приложения."""
 
-    def __init__(self, config: Settings, session_factory: sessionmaker):
+    def __init__(self, config: Settings, session_factory: AsyncSessionFactoryType):  # type: ignore[type-var]
         """Initializes the Services container.
 
         Args:
             config: The application settings instance.
-            session_factory: The SQLAlchemy session factory.
+            session_factory: The SQLModel session factory.
         """
         self.config = config
-        self.session_factory: sessionmaker[AsyncSession] = session_factory  # Added type hint
+        self.session_factory: AsyncSessionFactoryType = session_factory
 
         self.logger = logger
 
@@ -45,7 +49,7 @@ class Services:
         if config.telegram.message_token:
             self.bot_message: Bot = Bot(token=config.telegram.message_token)
         else:
-            self.bot_message: Bot = self.bot_event
+            self.bot_message = self.bot_event # No redundant type hint
 
         # TeamTalk Bot instance
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)
@@ -56,10 +60,10 @@ class Services:
         self.user_settings_cache: dict[int, UserSettings] = {}  # Changed Any to UserSettings
 
         # Инструменты
-        self.translator_cache: dict[str, gettext.GNUTranslations] = {}
-        self.available_languages: list[dict[str, str]] = []  # More specific type hint
+        self.translator_cache: Dict[str, Union[GNUTranslations, NullTranslations]] = {}
+        self.available_languages: List[LanguageInfo] = []
 
-    def get_translator(self, language_code: str | None = None) -> gettext.GNUTranslations:
+    def get_translator(self, language_code: str | None = None) -> Union[GNUTranslations, NullTranslations]:
         """Returns a translator object for the specified language code.
 
         Caches translators after first load.
@@ -89,7 +93,7 @@ class Services:
                 self.translator_cache[language_code] = null_trans  # Cache even null translation
                 return null_trans
 
-    async def load_user_settings_to_app_cache(self):  # Renamed from load_user_settings_to_app_cache for clarity
+    async def load_user_settings_to_app_cache(self) -> None:
         """Loads all user settings from DB into the service's cache."""
         async with self.session_factory() as session:
             # Ensure muted_users are loaded
@@ -132,9 +136,9 @@ class Services:
         self.user_settings_cache[telegram_id] = user_settings
         return user_settings
 
-    def initialize_languages(self):
+    def initialize_languages(self) -> None:
         """Discovers and caches available languages."""
-        self.available_languages = discover_languages(locales_path=LOCALE_DIR)
+        self.available_languages = discover_languages(locales_path=str(LOCALE_DIR))
         if not self.available_languages:
             self.logger.critical("No languages discovered. Check locales setup.")
             # Decide error handling: raise, or operate with default only

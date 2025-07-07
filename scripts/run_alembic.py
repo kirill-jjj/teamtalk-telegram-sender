@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 
-def main():
+def main() -> None:
     """Proxy script to run Alembic commands.
 
     It sets the ALEMBIC_ENV_CONFIG_FILE environment variable based on the

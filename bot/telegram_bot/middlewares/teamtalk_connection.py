@@ -1,19 +1,21 @@
 """Middlewares for managing and checking TeamTalk connections for Telegram handlers."""
 
-from collections.abc import Callable, Coroutine
-import gettext  # For translator type hint
+from collections.abc import Awaitable, Callable
+import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict, Union # Added Dict, Union
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
-from bot.teamtalk_bot.connection import TeamTalkConnection  # Assuming this is the correct path
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
 from .utils import _send_error_response
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Import Services
+    from bot.models import UserSettings # For user_settings type hint
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +39,9 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any],
+        data: Dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 
@@ -101,9 +103,9 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any],
+        data: Dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 
@@ -119,29 +121,27 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
             The result of the next handler if connection is ready, or None otherwise.
         """
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
-        translator: gettext.GNUTranslations | None = data.get("translator")
+        current_translator: Union[GNUTranslations, NullTranslations, None] = data.get("translator")
 
         # Fallback to get translator from services if not directly available
-        if not translator:
+        if not current_translator:
             services: Services | None = data.get("services")
             if services:
-                # Assuming UserSettingsMiddleware ran and set a language-specific translator
-                # If not, this will get the default one based on user_settings or config.
-                # This part depends on UserSettingsMiddleware having run or a default being available.
-                # For simplicity, we assume `data['translator']` is usually populated by UserSettingsMiddleware.
-                # If UserSettingsMiddleware hasn't run (e.g. error before it), we might need a more robust fallback.
-                # For now, let's assume user_settings is in data IF a user is involved.
-                user_settings = data.get("user_settings")
-                lang_code = user_settings.language_code if user_settings else None
-                translator = services.get_translator(lang_code)
+                user_settings: UserSettings | None = data.get("user_settings")
+                lang_code = user_settings.language_code if user_settings and hasattr(user_settings, "language_code") else None
+                current_translator = services.get_translator(lang_code)
             else:  # Absolute fallback: create a temporary default translator
                 logger.warning(
                     "TeamTalkConnectionCheckMiddleware: Translator and Services not found in data. "
                     "Using temporary default translator."
                 )
-                translator = gettext.NullTranslations()  # Should not happen in normal flow
+                current_translator = gettext.NullTranslations()
 
-        _ = translator.gettext
+        # current_translator is now GNUTranslations or NullTranslations
+        _ = current_translator.gettext
+        data["translator"] = current_translator # Ensure data reflects the potentially defaulted translator
+        data["_"] = _
+
 
         if not tt_connection:
             error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")

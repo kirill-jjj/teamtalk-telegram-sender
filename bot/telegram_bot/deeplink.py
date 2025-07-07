@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiogram.types import Message
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession # Changed to SQLModel's AsyncSession
 
 from bot.core.enums import DeeplinkAction
 from bot.core.user_settings import (

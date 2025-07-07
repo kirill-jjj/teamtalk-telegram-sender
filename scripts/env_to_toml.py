@@ -19,9 +19,14 @@ def parse_comma_separated_string_to_list(v: Any) -> list[str]:
     return []
 
 
+from typing import Callable, Any, Dict, Tuple, Union
+
+ConversionRule = Union[Callable[[Any], Any], type]
+EnvMappingType = Dict[str, Tuple[str, str, ConversionRule]]
+
 # Define the mapping from .env keys to TOML structure
 # Format: env_key: (toml_section, toml_key, type_conversion_function_or_literal)
-ENV_TO_TOML_MAPPING = {
+ENV_TO_TOML_MAPPING: EnvMappingType = {
     "TELEGRAM_BOT_EVENT_TOKEN": ("telegram", "event_token", str),
     "TG_BOT_MESSAGE_TOKEN": ("telegram", "message_token", str),
     "TG_ADMIN_CHAT_ID": ("telegram", "admin_chat_id", int),
@@ -54,8 +59,7 @@ ENV_TO_TOML_MAPPING = {
 # Added alembic and scripts
 DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"]
 
-
-def convert_value(raw_value, conversion_rule, env_key):
+def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:
     """Applies the specified conversion rule to the raw value from .env."""
     # dotenv_values typically returns None if the key exists but has no value (e.g. KEY=)
     # or if the key is not in the file at all when iterating its result.
@@ -111,10 +115,10 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
     print(f"Processing '{input_env_path}' -> '{output_toml_path}'...")
     env_vars = dotenv_values(input_env_path)
-    toml_data = {}
+    toml_data: Dict[str, Dict[str, Any]] = {}
 
     for env_key_orig, env_value in env_vars.items():
-        env_key = env_key_orig.strip()
+        env_key = str(env_key_orig).strip()
         if not env_key:
             continue  # Skip empty keys that might result from comment lines etc.
 
@@ -142,7 +146,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
     return False
 
 
-def main():  # noqa: PLR0912
+def main() -> None:
     """Main function to handle CLI arguments and orchestrate .env to .toml conversion."""
     parser = argparse.ArgumentParser(
         description="Convert .env file(s) to structured TOML format.", formatter_class=argparse.RawTextHelpFormatter

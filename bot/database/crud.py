@@ -3,10 +3,11 @@
 from datetime import datetime, timedelta
 import logging
 import secrets
+from typing import TypeVar
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, select # SQLModel's select
+from sqlmodel.ext.asyncio.session import AsyncSession # SQLModel's AsyncSession
 
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 from bot.core.enums import DeeplinkAction
@@ -14,8 +15,10 @@ from bot.models import Admin, BanList, Deeplink, SubscribedUser, UserSettings
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=SQLModel)
 
-async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> bool:
+
+async def db_add_generic(session: AsyncSession, model_instance: T) -> bool:
     """Adds a generic SQLModel instance to the database and commits.
 
     Args:
@@ -39,7 +42,7 @@ async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> boo
         return False
 
 
-async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | None) -> bool:
+async def db_remove_generic(session: AsyncSession, record_to_remove: T | None) -> bool:
     """Removes a generic SQLModel instance from the database and commits.
 
     Args:
@@ -54,7 +57,8 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
             table_name = record_to_remove.__tablename__
             # Using SQLAlchemy's __mapper__ to access the primary key column(s).
             # This is a reliable and documented method.
-            pk_col = record_to_remove.__mapper__.primary_key[0]
+            # Mypy struggles with __mapper__ on TypeVar T bound to SQLModel.
+            pk_col = record_to_remove.__mapper__.primary_key[0]  # type: ignore[attr-defined]
             pk_col_name = pk_col.name
             record_pk = getattr(record_to_remove, pk_col_name, "N/A")
 
@@ -69,17 +73,17 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
     return False
 
 
-async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[SQLModel], telegram_id: int) -> bool:
+async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[T], telegram_id: int) -> bool:
     existing_entity = await session.get(model_class, telegram_id)
     if existing_entity:
         logger.debug("User %s already exists in %s.", telegram_id, model_class.__tablename__)
         return False
 
-    entity = model_class(telegram_id=telegram_id)  # type: ignore
+    entity = model_class(telegram_id=telegram_id)
     return await db_add_generic(session, entity)
 
 
-async def _remove_entity(session: AsyncSession, model_class: type[SQLModel], telegram_id: int) -> bool:
+async def _remove_entity(session: AsyncSession, model_class: type[T], telegram_id: int) -> bool:
     entity = await session.get(model_class, telegram_id)
     if not entity:
         logger.debug("Entity with ID %s not found in %s for removal.", telegram_id, model_class.__tablename__)
@@ -87,12 +91,13 @@ async def _remove_entity(session: AsyncSession, model_class: type[SQLModel], tel
     return await db_remove_generic(session, entity)
 
 
-async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]) -> list[int]:
+async def _get_all_entity_ids(session: AsyncSession, model_class: type[T]) -> list[int]:
     table_name = model_class.__tablename__
     try:
-        statement = select(model_class.telegram_id)  # type: ignore
+        # Assuming all models used with this function have 'telegram_id'
+        statement = select(getattr(model_class, "telegram_id"))
         result = await session.exec(statement)
-        return result.all()
+        return list(result.all())
     except SQLAlchemyError as e:
         logger.exception("Error getting all IDs from %s: %s", table_name, e)
         return []
@@ -298,11 +303,11 @@ async def get_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: in
     """Retrieves all ban list entries associated with a Telegram ID."""
     statement = select(BanList).where(BanList.telegram_id == telegram_id)
     result = await session.exec(statement)
-    return result.all()
+    return list(result.all())
 
 
 async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_username: str) -> list[BanList]:
     """Retrieves all ban list entries associated with a TeamTalk username."""
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
     result = await session.exec(statement)
-    return result.all()
+    return list(result.all())

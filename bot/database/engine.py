@@ -3,18 +3,23 @@
 # bot/database/engine.py
 import logging
 import os  # Moved here for PLC0415
+from typing import TypeAlias # For sessionmaker type hint
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import sessionmaker # Standard SQLAlchemy sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession # SQLModel's AsyncSession
 
 from bot import models  # Important for SQLModel to discover models
 from bot.config import Settings  # Needed for config type hint
 
 logger = logging.getLogger(__name__)
 
+# Define a type alias for the specific sessionmaker we're creating
+# It's a sessionmaker that produces AsyncSession instances
+AsyncSessionFactoryType: TypeAlias = sessionmaker[AsyncSession]  # type: ignore[type-var]
 
-def create_session_factory(config: Settings) -> sessionmaker:
+
+def create_session_factory(config: Settings) -> AsyncSessionFactoryType:  # type: ignore[type-var]
     """Creates and returns a new session factory based on the provided configuration."""
     # This import is needed for SQLModel/Alembic to correctly see all tables.
     # The variable `_` is used to prevent linters from complaining about an unused import.
@@ -28,6 +33,7 @@ def create_session_factory(config: Settings) -> sessionmaker:
 
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.
-    session_factory = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    # Use keyword arguments for clarity and to match mypy's expected signature when class_ is specified.
+    session_factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
 
-    return session_factory
+    return session_factory  # type: ignore[no-any-return]

@@ -10,7 +10,7 @@ from aiogram import Router  # Renamed Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
 import pytalk
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession # Changed to SQLModel's AsyncSession
 
 from bot.core.enums import ManageTTAccountAction, SubscriberAction
 from bot.database import crud

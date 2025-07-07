@@ -46,7 +46,7 @@ def get_project_version() -> str:
         return "0.0.0"  # Fallback version
 
 
-def extract():
+def extract() -> None:
     """Extracts translatable strings from source code into a .pot template file."""
     version = get_project_version()
     command = [
@@ -74,7 +74,7 @@ def extract():
         sys.exit(e.returncode)
 
 
-def update():
+def update() -> None:
     """Updates existing .po translation files from the .pot template file."""
     command = [
         "pybabel",
@@ -99,7 +99,7 @@ def update():
         sys.exit(e.returncode)
 
 
-def compile_cmd():
+def compile_cmd() -> None:
     """Compiles .po translation files into binary .mo files for runtime use."""
     command = ["pybabel", "compile", "-d", str(LOCALE_DIR), "-D", LOCALE_DOMAIN, "--statistics"]
     print(f"▶️  Executing: {' '.join(command)}")
@@ -118,7 +118,7 @@ def compile_cmd():
         sys.exit(e.returncode)
 
 
-def main():
+def main() -> None:
     """Main function to handle CLI arguments for locale management."""
     if len(sys.argv) < 2:  # noqa: PLR2004 - 2 is standard for checking script name + one argument
         print("Usage: python manage-locales.py [extract|update|compile]")

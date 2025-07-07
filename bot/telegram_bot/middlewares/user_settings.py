@@ -1,13 +1,12 @@
 """Middleware to load and provide user settings to Telegram handlers."""
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message
-from aiogram.types import User as AiogramUser
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import CallbackQuery, Message, TelegramObject, User as AiogramUser # Added TelegramObject
+from sqlmodel.ext.asyncio.session import AsyncSession # Use SQLModel's AsyncSession for type hint
 
 from .utils import _send_error_response  # Import from local utils
 
@@ -23,9 +22,9 @@ class UserSettingsMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[Message | CallbackQuery, dict[str, Any]], Coroutine[Any, Any, Any]],
-        event: Message | CallbackQuery,
-        data: dict[str, Any],
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject, # Changed to TelegramObject
+        data: Dict[str, Any], # Changed to Dict
     ) -> Any:
         """Executes the middleware.
 

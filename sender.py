@@ -4,11 +4,15 @@ import argparse
 import asyncio
 import logging
 import traceback
+from types import ModuleType # For uvloop typing
+from typing import Optional, Any # For Optional and Any
 
+uvloop: Optional[ModuleType] = None
 try:
-    import uvloop
+    import uvloop as uvloop_module # type: ignore
+    uvloop = uvloop_module
 except ImportError:
-    uvloop = None
+    pass # uvloop remains None
 
 from aiogram import Dispatcher, html
 from aiogram.types import ErrorEvent  # For _global_error_handler

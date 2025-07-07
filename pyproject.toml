@@ -132,3 +132,19 @@ dev = [
     "mypy",
     "ruff"
 ]
+
+[tool.mypy]
+strict = true
+files = ["bot", "scripts", "sender.py"]
+exclude = [
+    "alembic/versions/.*\\.py$",
+    "\\.venv",
+]
+ignore_missing_imports = true
+plugins = [
+  "pydantic.mypy",
+  "sqlalchemy.ext.mypy.plugin"
+]
+warn_return_any = true
+warn_unused_configs = true
+python_version = "3.11"
