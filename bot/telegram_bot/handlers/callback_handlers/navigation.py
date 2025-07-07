@@ -12,12 +12,9 @@ from ._helpers import safe_edit_text
 logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")
 
+
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
-async def cq_back_to_main_settings_menu(
-    callback_query: CallbackQuery,
-    _: callable,
-    callback_data: SettingsCallback
-):
+async def cq_back_to_main_settings_menu(callback_query: CallbackQuery, _: callable, callback_data: SettingsCallback):
     await callback_query.answer()
 
     main_settings_builder = await create_main_settings_keyboard(_)
@@ -29,5 +26,5 @@ async def cq_back_to_main_settings_menu(
             text=main_settings_text,
             reply_markup=main_settings_builder.as_markup(),
             logger_instance=logger,
-            log_context="cq_back_to_main_settings_menu"
+            log_context="cq_back_to_main_settings_menu",
         )

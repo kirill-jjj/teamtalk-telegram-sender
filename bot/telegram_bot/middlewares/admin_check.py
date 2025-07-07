@@ -1,6 +1,6 @@
+from collections.abc import Callable, Coroutine
 import gettext  # For translator type hint
 import logging
-from collections.abc import Callable, Coroutine
 
 # Для типизации
 from typing import TYPE_CHECKING, Any
@@ -15,11 +15,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class AdminCheckMiddleware(BaseMiddleware):
-    """
-    Этот middleware проверяет, является ли пользователь, вызвавший команду или нажавший кнопку, администратором.
+    """Этот middleware проверяет, является ли пользователь, вызвавший команду или нажавший кнопку, администратором.
     Relies on 'event_from_user', 'admin_ids_cache', and optionally 'translator' or 'services' being in workflow_data.
     """
+
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
@@ -41,7 +42,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                 services: Services | None = data.get("services")
                 if services:
                     # Determine language code for user, or default
-                    user_settings = data.get("user_settings") # Might be populated by UserSettingsMiddleware
+                    user_settings = data.get("user_settings")  # Might be populated by UserSettingsMiddleware
                     lang_code = user_settings.language_code if user_settings else None
                     translator = services.get_translator(lang_code)
                 else:
@@ -49,7 +50,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                         "AdminCheckMiddleware: Translator and Services not found in data. "
                         "Using temporary default translator."
                     )
-                    translator = gettext.NullTranslations() # Should not happen in normal flow
+                    translator = gettext.NullTranslations()  # Should not happen in normal flow
 
             _ = translator.gettext
             unauthorized_message = _("You are not authorized to perform this action.")
@@ -60,7 +61,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                     f"Unauthorized access denied for user {user.id} (Username: {user.username}) "
                     f"in CallbackQuery to event: {type(event).__name__}."
                 )
-                return # Stop processing
+                return  # Stop processing
 
             if isinstance(event, Message):
                 # Check if UserSettingsMiddleware provided a gettext function directly
@@ -76,7 +77,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                     f"Unauthorized access denied for user {user.id} (Username: {user.username}) "
                     f"in Message handler for command: {event.text}."
                 )
-                return # Stop processing
+                return  # Stop processing
 
             logger.warning(
                 f"AdminCheckMiddleware: Unauthorized user {user.id} (Username: {user.username}) "

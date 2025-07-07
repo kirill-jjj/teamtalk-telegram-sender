@@ -5,17 +5,13 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
 if TYPE_CHECKING:
-    pass # No specific type hints needed from sender.Application here yet
+    pass  # No specific type hints needed from sender.Application here yet
 
 logger = logging.getLogger(__name__)
 
-async def _send_error_response(
-    event: TelegramObject,
-    text: str,
-    show_alert_for_callback: bool = True
-) -> None:
-    """
-    Internal helper to send an error response based on event type.
+
+async def _send_error_response(event: TelegramObject, text: str, show_alert_for_callback: bool = True) -> None:
+    """Internal helper to send an error response based on event type.
     """
     if isinstance(event, Message):
         try:

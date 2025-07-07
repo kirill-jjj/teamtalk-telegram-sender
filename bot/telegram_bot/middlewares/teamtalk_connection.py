@@ -1,6 +1,6 @@
+from collections.abc import Callable, Coroutine
 import gettext  # For translator type hint
 import logging
-from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
@@ -16,12 +16,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
-    """
-    Injects an active TeamTalkConnection instance into the event data.
+    """Injects an active TeamTalkConnection instance into the event data.
     For now, assumes a single primary connection if multiple exist.
     Relies on 'connections' (Dict[str, TeamTalkConnection]) being in workflow_data.
     """
+
     def __init__(self, default_server_key: str | None = None):
         super().__init__()
         self.default_server_key = default_server_key
@@ -45,9 +46,9 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
         if self.default_server_key and self.default_server_key in connections:
             determined_connection = connections[self.default_server_key]
-        elif connections: # Get the first one if no specific key or key not found
+        elif connections:  # Get the first one if no specific key or key not found
             determined_connection = next(iter(connections.values()), None)
-            if self.default_server_key and not determined_connection: # Log if key was given but not found
+            if self.default_server_key and not determined_connection:  # Log if key was given but not found
                 logger.warning(
                     f"ActiveTeamTalkConnectionMiddleware: Default server key '{self.default_server_key}' "
                     f"not found. Falling back to first available connection if any."
@@ -72,12 +73,12 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
 
 class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
-    """
-    Checks if the provided TeamTalkConnection (from ActiveTeamTalkConnectionMiddleware)
+    """Checks if the provided TeamTalkConnection (from ActiveTeamTalkConnectionMiddleware)
     is connected and logged in (ready for use).
     If not, it replies to the user and prevents the handler from executing.
     Relies on 'tt_connection' and 'translator' (or 'services') being in workflow_data.
     """
+
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Coroutine[Any, Any, Any]],
@@ -100,29 +101,29 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
                 user_settings = data.get("user_settings")
                 lang_code = user_settings.language_code if user_settings else None
                 translator = services.get_translator(lang_code)
-            else: # Absolute fallback: create a temporary default translator
+            else:  # Absolute fallback: create a temporary default translator
                 logger.warning(
                     "TeamTalkConnectionCheckMiddleware: Translator and Services not found in data. "
                     "Using temporary default translator."
                 )
-                translator = gettext.NullTranslations() # Should not happen in normal flow
+                translator = gettext.NullTranslations()  # Should not happen in normal flow
 
         _ = translator.gettext
 
         if not tt_connection:
             error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
-            user_id_info = data.get('event_from_user', {}).get('id', 'Unknown User')
+            user_id_info = data.get("event_from_user", {}).get("id", "Unknown User")
             logger.warning(
                 f"TeamTalkConnectionCheckMiddleware: Blocked access for user {user_id_info} "
                 f"because no TeamTalkConnection object was found in context. Event type: {type(event).__name__}"
             )
-            return None # Stop processing
+            return None  # Stop processing
 
         if not tt_connection.is_ready or not tt_connection.is_finalized:
             error_message_text = _("TeamTalk bot is not connected or not fully initialized. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
-            user_id_info = data.get('event_from_user', {}).get('id', 'Unknown User')
+            user_id_info = data.get("event_from_user", {}).get("id", "Unknown User")
             logger.warning(
                 f"TeamTalkConnectionCheckMiddleware: Blocked access for user {user_id_info} "
                 f"for server {tt_connection.server_info.host} due to TeamTalk not being ready "
@@ -130,7 +131,7 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
                 f"logged_in: {tt_connection.instance.logged_in if tt_connection.instance else 'N/A'}, "
                 f"finalized: {tt_connection.is_finalized}). Event type: {type(event).__name__}"
             )
-            return None # Stop processing
+            return None  # Stop processing
 
         logger.debug(
             f"TeamTalkConnectionCheckMiddleware: Access granted for server "

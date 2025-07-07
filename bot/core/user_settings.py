@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 async def update_user_settings_in_db(session: AsyncSession, settings: UserSettings) -> bool:
-    """
-    Updates user settings in the database.
+    """Updates user settings in the database.
     Cache update is handled by the caller.
     Returns True on success, False on failure.
     """
@@ -21,7 +20,7 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
         # Ensure muted_users_list is refreshed for consistency,
         # though eager loading in get_or_create_user_settings and
         # explicit refresh in middleware should typically cover this.
-        await session.refresh(settings, attribute_names=['muted_users_list'])
+        await session.refresh(settings, attribute_names=["muted_users_list"])
         logger.debug(f"Updated settings for user {settings.telegram_id} in DB.")
         return True
     except SQLAlchemyError as e:

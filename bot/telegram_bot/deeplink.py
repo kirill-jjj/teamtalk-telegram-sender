@@ -1,6 +1,5 @@
-
-import logging
 from collections.abc import Callable, Coroutine
+import logging
 from typing import TYPE_CHECKING, Any
 
 from aiogram.types import Message
@@ -30,8 +29,7 @@ logger = logging.getLogger(__name__)
 async def _validate_deeplink_token(
     session: AsyncSession, token: str, message_from_user_id: int, message: Message, _: callable
 ) -> DeeplinkModel | None:
-    """
-    Validates the deeplink token and checks if it's intended for the current user.
+    """Validates the deeplink token and checks if it's intended for the current user.
     Sends a reply and returns None if validation fails.
     """
     deeplink_obj = await db_get_deeplink(session, token)
@@ -53,10 +51,9 @@ async def _execute_deeplink_action(
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
     token: str,
-    services: "Services" # Changed from app: "Application"
+    services: "Services",  # Changed from app: "Application"
 ) -> str:
-    """
-    Executes the action specified by the deeplink object and returns a reply text.
+    """Executes the action specified by the deeplink object and returns a reply text.
     """
     action_enum_member = deeplink_obj.action
 
@@ -77,8 +74,7 @@ async def _execute_deeplink_action(
 
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.error(
-            f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}",
-            exc_info=True
+            f"Handler error for deeplink action '{action_enum_member}', token {token}: {e_handler}", exc_info=True
         )
         return _("An error occurred. Please try again later.")
 
@@ -87,13 +83,11 @@ async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     _: callable,
-    services: "Services" # Changed from app: "Application"
+    services: "Services",  # Changed from app: "Application"
 ) -> str:
     # Pass services to delete_full_user_profile
     if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, services=services):
-        logger.info(
-            f"User {telegram_id} unsubscribed and all data was deleted via deeplink (using user_service)."
-        )
+        logger.info(f"User {telegram_id} unsubscribed and all data was deleted via deeplink (using user_service).")
         return _("You have successfully unsubscribed from notifications.")
     else:
         logger.warning(
@@ -109,7 +103,7 @@ async def _handle_subscribe_deeplink(
     _: callable,
     payload: str | None,
     user_settings: UserSettings,
-    services: "Services" # Changed from app: "Application"
+    services: "Services",  # Changed from app: "Application"
 ) -> str:
     # Ban check remains the same as it uses session (crud)
     if await crud.is_telegram_id_banned(session, telegram_id):
@@ -117,15 +111,14 @@ async def _handle_subscribe_deeplink(
         return _("Your Telegram account is banned from using this service.")
 
     tt_username_from_payload = payload
-    if tt_username_from_payload and \
-       await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
+    if tt_username_from_payload and await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
         logger.warning(
             f"Subscription attempt with banned TeamTalk username: {tt_username_from_payload} "
             f"by Telegram ID: {telegram_id}"
         )
-        return _(
-            "The TeamTalk username '{tt_username}' is banned and cannot be linked."
-        ).format(tt_username=tt_username_from_payload)
+        return _("The TeamTalk username '{tt_username}' is banned and cannot be linked.").format(
+            tt_username=tt_username_from_payload
+        )
 
     await add_subscriber(session, telegram_id)
     # Update cache using services
@@ -141,8 +134,7 @@ async def _handle_subscribe_deeplink(
     tt_username_from_payload = payload
     if not tt_username_from_payload:
         logger.error(
-            f"Deeplink for '{DeeplinkAction.SUBSCRIBE}' missing TeamTalk username in payload "
-            f"for user {telegram_id}."
+            f"Deeplink for '{DeeplinkAction.SUBSCRIBE}' missing TeamTalk username in payload for user {telegram_id}."
         )
         return _("Error: Missing required information for subscription. Please try the link again or contact support.")
 
@@ -160,13 +152,13 @@ async def _handle_subscribe_deeplink(
 
 
 DeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable, Any, UserSettings, "Services"], # Added Services
-    Coroutine[Any, Any, str]
+    [AsyncSession, int, callable, Any, UserSettings, "Services"],  # Added Services
+    Coroutine[Any, Any, str],
 ]
 
 UnsubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable, "Services"], # Added Services
-    Coroutine[Any, Any, str]
+    [AsyncSession, int, callable, "Services"],  # Added Services
+    Coroutine[Any, Any, str],
 ]
 
 DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, Any] = {
@@ -181,7 +173,7 @@ async def handle_deeplink_payload(
     session: AsyncSession,
     _: callable,
     user_settings: UserSettings,
-    services: "Services" # Changed from app: "Application"
+    services: "Services",  # Changed from app: "Application"
 ):
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
@@ -203,7 +195,7 @@ async def handle_deeplink_payload(
         deeplink_obj,
         user_settings,
         token,
-        services=services # Pass services
+        services=services,  # Pass services
     )
 
     await message.reply(reply_text)

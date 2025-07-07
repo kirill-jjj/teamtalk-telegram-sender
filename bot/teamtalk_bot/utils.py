@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import html
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import pytalk
@@ -25,7 +25,7 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
     """Safely shuts down a single TeamTalk instance."""
     try:
         host_info = "Unknown Host"
-        if hasattr(instance, 'server_info') and instance.server_info and hasattr(instance.server_info, 'host'):
+        if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
             host_info = ttstr(instance.server_info.host)
 
         if instance.logged_in:
@@ -36,14 +36,14 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
             instance.disconnect()
         # Check for closeTeamTalk attribute as it might not always be present
         # (though in typical TeamTalkInstance it should be)
-        if hasattr(instance, 'closeTeamTalk'):
+        if hasattr(instance, "closeTeamTalk"):
             logger.debug(f"Closing TT instance: {host_info}")
             instance.closeTeamTalk()
         logger.info(f"Successfully shut down TT instance for host: {host_info}")
     except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e:
         # Attempt to get host_info again in case it was not available before error
         host_info_err = "Unknown Host (during error)"
-        if hasattr(instance, 'server_info') and instance.server_info and hasattr(instance.server_info, 'host'):
+        if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
             host_info_err = ttstr(instance.server_info.host)
         logger.error(f"Error during TT instance shutdown for {host_info_err}: {e}", exc_info=True)
 
@@ -78,10 +78,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
             current_chunk_str += char_code
             current_chunk_bytes_len += char_bytes_len
 
-            if char_code == '\n':
-                last_safe_split_index_in_chunk = len(current_chunk_str)
-                last_safe_split_index_in_remaining = i + 1
-            elif char_code == ' ':
+            if char_code == "\n" or char_code == " ":
                 last_safe_split_index_in_chunk = len(current_chunk_str)
                 last_safe_split_index_in_remaining = i + 1
 
@@ -96,18 +93,17 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
             # The logic inside the loop should handle appending the last chunk.
             # If current_chunk_str has content and remaining_text is now empty,
             # it implies it was the last piece.
-            if current_chunk_str and not remaining_text: # Should have been appended already
+            if current_chunk_str and not remaining_text:  # Should have been appended already
                 # This condition might indicate a slight redundancy in the loop's final append,
                 # but it's safer to ensure the last piece isn't missed.
                 # However, the primary logic for appending the final chunk is within the loop.
-                pass # logger.debug("_split_text_for_tt: Final chunk logic handled within loop.")
-            remaining_text = "" # Ensure it's cleared
+                pass  # logger.debug("_split_text_for_tt: Final chunk logic handled within loop.")
+            remaining_text = ""  # Ensure it's cleared
     return parts_to_send_list
 
 
 async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
-    """
-    Splits a long text message into parts suitable for TeamTalk and sends them.
+    """Splits a long text message into parts suitable for TeamTalk and sends them.
     Uses asyncio.to_thread for the potentially CPU-bound splitting logic.
     """
     if not text:
@@ -119,10 +115,9 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
         if part_to_send_str.strip():
             try:
                 reply_method(part_to_send_str)
-                encoded_len = len(part_to_send_str.encode('utf-8', errors='ignore'))
+                encoded_len = len(part_to_send_str.encode("utf-8", errors="ignore"))
                 logger.debug(
-                    f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, "
-                    f"length {encoded_len} bytes."
+                    f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, length {encoded_len} bytes."
                 )
                 if part_idx < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
@@ -133,10 +128,10 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    services: Services, # Changed from app: "Application"
-    server_host_for_display: str
+    services: Services,  # Changed from app: "Application"
+    server_host_for_display: str,
 ):
-    if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message: # Use services.config, services.bot_message
+    if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message:  # Use services.config, services.bot_message
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
@@ -150,29 +145,25 @@ async def forward_tt_message_to_telegram_admin(
     translator = services.get_translator(admin_language_code)
     _ = translator.gettext
 
-    server_name_to_display = get_effective_server_name(
-        message.teamtalk_instance, _, services.config
-    )
+    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, services.config)
     sender_display = get_tt_user_display_name(message.user, _)
     message_content = message.content
 
     template_text_parts = _(
-        "Message from server <b>{server_name}</b>\n"
-        "From <b>{sender_name}</b>:\n\n"
-        "{message_content}"
+        "Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}"
     ).format(
         server_name=html.escape(server_name_to_display),
         sender_name=html.escape(sender_display),
-        message_content=html.escape(message_content)
+        message_content=html.escape(message_content),
     )
 
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=services.bot_message, # Corrected: Use services.bot_message
+        bot_instance=services.bot_message,  # Corrected: Use services.bot_message
         chat_id=admin_chat_id,
         language=admin_language_code,
-        services=services, # Corrected: Pass services
+        services=services,  # Corrected: Pass services
         text=template_text_parts,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
     if was_sent:

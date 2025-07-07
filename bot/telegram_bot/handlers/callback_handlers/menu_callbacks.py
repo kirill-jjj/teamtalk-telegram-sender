@@ -35,67 +35,71 @@ admin_menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMidd
 
 # --- User Handlers ---
 
+
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "who"))
 @ensure_message_context
 async def menu_who_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int], # Injected from workflow_data
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
+    admin_ids_cache: set[int],  # Injected from workflow_data
+    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     # Ensure query.message exists due to @ensure_message_context
     await who_command_handler(
-        message=query.message, # type: ignore
+        message=query.message,  # type: ignore
         translator=translator,
-        admin_ids_cache=admin_ids_cache, # Pass admin_ids_cache
-        tt_connection=tt_connection
+        admin_ids_cache=admin_ids_cache,  # Pass admin_ids_cache
+        tt_connection=tt_connection,
     )
     await query.answer()
+
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "help"))
 @ensure_message_context
 async def menu_help_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations", # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int] # Injected from workflow_data
+    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
+    admin_ids_cache: set[int],  # Injected from workflow_data
 ):
     # Ensure query.message exists
     await help_command_handler(
-        message=query.message, # type: ignore
+        message=query.message,  # type: ignore
         _=translator.gettext,
-        admin_ids_cache=admin_ids_cache # Pass admin_ids_cache
+        admin_ids_cache=admin_ids_cache,  # Pass admin_ids_cache
     )
     await query.answer()
+
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "settings"))
 @ensure_message_context
 async def menu_settings_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations" # Injected by UserSettingsMiddleware
+    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
 ):
     # Ensure query.message exists
     await settings_command_handler(
-        message=query.message, # type: ignore
-        _=translator.gettext
+        message=query.message,  # type: ignore
+        _=translator.gettext,
     )
     await query.answer()
 
 
 # --- Administrator Handlers ---
 
+
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations", # Injected
-    tt_connection: TeamTalkConnection | None # Injected
+    translator: "gettext.GNUTranslations",  # Injected
+    tt_connection: TeamTalkConnection | None,  # Injected
 ):
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection) # type: ignore
+    await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection)  # type: ignore
     await query.answer()
 
 
@@ -104,11 +108,11 @@ async def menu_kick_handler(
 async def menu_ban_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations", # Injected
-    tt_connection: TeamTalkConnection | None # Injected
+    translator: "gettext.GNUTranslations",  # Injected
+    tt_connection: TeamTalkConnection | None,  # Injected
 ):
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection) # type: ignore
+    await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection)  # type: ignore
     await query.answer()
 
 
@@ -117,10 +121,10 @@ async def menu_ban_handler(
 async def menu_subscribers_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
-    session: AsyncSession, # Injected
-    bot: AiogramBot, # Injected
-    translator: "gettext.GNUTranslations" # Injected
+    session: AsyncSession,  # Injected
+    bot: AiogramBot,  # Injected
+    translator: "gettext.GNUTranslations",  # Injected
 ):
     # Ensure query.message exists
-    await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0) # type: ignore
+    await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0)  # type: ignore
     await query.answer()

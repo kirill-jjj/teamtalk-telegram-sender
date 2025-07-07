@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+import sys
 
 from bot.config import Settings
 
@@ -10,7 +10,7 @@ if __name__ == "__main__":
         # Add project root to sys.path to allow 'from bot.config import Settings'
         # This simulates how the application might run if 'bot' is in PYTHONPATH
         project_root = Path(__file__).resolve().parent
-        sys.path.insert(0, str(project_root)) # Add project root
+        sys.path.insert(0, str(project_root))  # Add project root
 
         settings = Settings.from_toml(config_path)
         print("Configuration loaded successfully!")
@@ -21,5 +21,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)

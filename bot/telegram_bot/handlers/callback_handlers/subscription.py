@@ -22,17 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionUpdate(BaseModel):
-    setting: NotificationSetting = Field(validation_alias='setting_value')
+    setting: NotificationSetting = Field(validation_alias="setting_value")
 
 
 subscription_router = Router(name="callback_handlers.subscription")
 
+
 @subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
 async def cq_show_subscriptions_menu(
-    callback_query: CallbackQuery,
-    _: callable,
-    user_settings: UserSettings,
-    callback_data: SettingsCallback
+    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: SettingsCallback
 ):
     await callback_query.answer()
 
@@ -44,8 +42,9 @@ async def cq_show_subscriptions_menu(
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_builder.as_markup(),
         logger_instance=logger,
-        log_context="cq_show_subscriptions_menu"
+        log_context="cq_show_subscriptions_menu",
     )
+
 
 @subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionAction.SET_SUB))
 async def cq_set_subscription_setting(
@@ -54,7 +53,7 @@ async def cq_set_subscription_setting(
     _: callable,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
-    services: Services
+    services: Services,
 ):
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
@@ -105,5 +104,5 @@ async def cq_set_subscription_setting(
         success_toast_text=success_toast_text,
         new_text=menu_text,
         new_markup=updated_builder.as_markup(),
-        services=services # Pass services
+        services=services,  # Pass services
     )

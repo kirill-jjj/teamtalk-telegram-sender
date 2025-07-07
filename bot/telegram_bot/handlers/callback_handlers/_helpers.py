@@ -1,6 +1,6 @@
+from collections.abc import Callable
 import functools
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 async def process_setting_update(
     callback_query: CallbackQuery,
     session: AsyncSession,
@@ -26,7 +27,7 @@ async def process_setting_update(
     success_toast_text: str,
     new_text: str,
     new_markup: InlineKeyboardMarkup,
-    services: "Services"
+    services: "Services",
 ) -> None:
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
@@ -49,13 +50,12 @@ async def process_setting_update(
             text=new_text,
             reply_markup=new_markup,
             logger_instance=logger,
-            log_context="process_setting_update_ui_refresh"
+            log_context="process_setting_update_ui_refresh",
         )
 
     except SQLAlchemyError as e_db:
         logger.error(
-            f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}",
-            exc_info=True
+            f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True
         )
         revert_action()
         try:
@@ -79,10 +79,9 @@ async def safe_edit_text(
     parse_mode: str | None = None,
     disable_web_page_preview: bool | None = None,
     logger_instance: logging.Logger | None = None,
-    log_context: str = ""
+    log_context: str = "",
 ) -> bool:
-    """
-    Safely edits a message text, handling common Telegram API errors.
+    """Safely edits a message text, handling common Telegram API errors.
     """
     current_logger = logger_instance or logger
     context_for_log = f" ({log_context})" if log_context else ""
@@ -92,7 +91,7 @@ async def safe_edit_text(
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode,
-            disable_web_page_preview=disable_web_page_preview
+            disable_web_page_preview=disable_web_page_preview,
         )
         return True
     except TelegramBadRequest as e:
@@ -104,26 +103,27 @@ async def safe_edit_text(
         current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
         return False
 
+
 # Decorator for checking query.message context
 def ensure_message_context(func: Callable):
-    """
-    Decorator to ensure that a callback query handler has a message context.
+    """Decorator to ensure that a callback query handler has a message context.
     If query.message is None, it logs an error and attempts to answer the callback query.
     """
+
     @functools.wraps(func)
     async def wrapper(query: CallbackQuery, *args, **kwargs):
         if not query.message:
             translator_func = None
-            if 'translator' in kwargs:
-                translator_instance = kwargs['translator']
-                if hasattr(translator_instance, 'gettext'):
+            if "translator" in kwargs:
+                translator_instance = kwargs["translator"]
+                if hasattr(translator_instance, "gettext"):
                     translator_func = translator_instance.gettext
                 elif callable(translator_instance):
                     translator_func = translator_instance
-            elif '_' in kwargs:
-                 translator_instance = kwargs['_']
-                 if callable(translator_instance):
-                     translator_func = translator_instance
+            elif "_" in kwargs:
+                translator_instance = kwargs["_"]
+                if callable(translator_instance):
+                    translator_func = translator_instance
 
             error_message = "Error: Message context lost for callback query."
             if translator_func:
@@ -131,18 +131,16 @@ def ensure_message_context(func: Callable):
                     error_message = translator_func("Error processing command.")
                 except TypeError as te:
                     logger.error(
-                        f"Translator function not callable or wrong arguments in decorator "
-                        f"for {func.__name__}: {te}", exc_info=True
+                        f"Translator function not callable or wrong arguments in decorator for {func.__name__}: {te}",
+                        exc_info=True,
                     )
                 except Exception as e:
                     logger.error(
-                        f"Failed to translate error message in decorator for {func.__name__}: {e}",
-                        exc_info=True
+                        f"Failed to translate error message in decorator for {func.__name__}: {e}", exc_info=True
                     )
             else:
                 logger.warning(
-                    f"Translator function not found for handler {func.__name__}, "
-                    f"using default error message."
+                    f"Translator function not found for handler {func.__name__}, using default error message."
                 )
 
             logger.error(
@@ -156,4 +154,5 @@ def ensure_message_context(func: Callable):
             return None
 
         return await func(query, *args, **kwargs)
+
     return wrapper

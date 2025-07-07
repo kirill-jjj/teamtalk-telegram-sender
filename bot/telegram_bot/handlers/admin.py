@@ -17,17 +17,17 @@ logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
 
+
 async def _show_user_buttons(
     message: Message,
     command_type: AdminAction,
-    _: callable, # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    _: callable,  # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     if not tt_connection or not tt_connection.instance:
         # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
         logger.error(
-            "tt_connection or its instance is None in _show_user_buttons. "
-            "This should have been caught by middleware."
+            "tt_connection or its instance is None in _show_user_buttons. This should have been caught by middleware."
         )
         await message.reply(_("TeamTalk connection is not available. Please try again later."))
         return
@@ -44,9 +44,7 @@ async def _show_user_buttons(
 
     if not online_users:
         await message.reply(
-            _("No users found online on server {server_host}.").format(
-                server_host=tt_connection.server_info.host
-            )
+            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host)
         )
         return
 
@@ -59,7 +57,7 @@ async def _show_user_buttons(
         ),
         AdminAction.BAN: _("Select a user to ban from {server_host}:").format(
             server_host=tt_connection.server_info.host
-        )
+        ),
     }
     reply_text = command_text_map.get(command_type, _("Select a user:"))
 
@@ -69,8 +67,8 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"))
 async def kick_command_handler(
     message: Message,
-    _: callable, # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    _: callable,  # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
@@ -78,8 +76,8 @@ async def kick_command_handler(
 @admin_router.message(Command("ban"))
 async def ban_command_handler(
     message: Message,
-    _: callable, # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    _: callable,  # Injected by UserSettingsMiddleware
+    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
@@ -87,8 +85,8 @@ async def ban_command_handler(
 @admin_router.message(Command("subscribers"))
 async def subscribers_command_handler(
     message: Message,
-    session: AsyncSession, # Injected by DbSessionMiddleware
-    bot: AiogramBot,       # Injected by Aiogram (Dispatcher has it)
-    _: callable           # Injected by UserSettingsMiddleware
+    session: AsyncSession,  # Injected by DbSessionMiddleware
+    bot: AiogramBot,  # Injected by Aiogram (Dispatcher has it)
+    _: callable,  # Injected by UserSettingsMiddleware
 ):
     await _show_subscriber_list_page(message, session, bot, _, page=0)

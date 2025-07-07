@@ -1,25 +1,24 @@
 import argparse
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def main():
-    """
-    Proxy script to run Alembic commands.
+    """Proxy script to run Alembic commands.
     It sets the ALEMBIC_ENV_CONFIG_FILE environment variable based on the
     --config argument, then passes all other arguments to the Alembic CLI.
     """
     parser = argparse.ArgumentParser(
         description="Run Alembic commands with a specific TOML configuration file.",
-        usage="migrate [--config CONFIG_FILE.toml] [alembic_command] [alembic_options...]"
+        usage="migrate [--config CONFIG_FILE.toml] [alembic_command] [alembic_options...]",
     )
     parser.add_argument(
         "--config",
-        default="config.toml", # Changed default from .env to config.toml
+        default="config.toml",  # Changed default from .env to config.toml
         help="Path to the TOML configuration file for Alembic's database settings. "
-             "This path is relative to the project root. (default: config.toml)"
+        "This path is relative to the project root. (default: config.toml)",
     )
     # parse_known_args() splits arguments into those recognized by this script's parser
     # and the rest, which are assumed to be for Alembic.
@@ -53,7 +52,6 @@ def main():
     # else:
     #     print(f"WARN [run_alembic.py] Alembic executable not found at {venv_alembic_path}, relying on PATH.")
 
-
     command = [alembic_executable, *alembic_cli_args]
 
     # For display, convert Path objects in command to string if any were used
@@ -68,12 +66,13 @@ def main():
         print(
             f"Error: '{alembic_executable}' command not found. "
             f"Make sure Alembic is installed and in your PATH, or the virtual environment is active.",
-            file=sys.stderr
+            file=sys.stderr,
         )
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         # Alembic usually provides good error messages, so just exit with its return code.
         sys.exit(e.returncode)
+
 
 if __name__ == "__main__":
     main()

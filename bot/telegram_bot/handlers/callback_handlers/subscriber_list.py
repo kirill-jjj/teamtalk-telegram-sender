@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 subscriber_list_router = Router(name="subscriber_list_actions_router")
 
+
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
 async def handle_subscriber_list_actions(
     query: CallbackQuery,
@@ -28,7 +29,7 @@ async def handle_subscriber_list_actions(
     session: AsyncSession,
     bot: AiogramBot,
     _: callable,
-    services: "Services"
+    services: "Services",
 ):
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
@@ -41,18 +42,15 @@ async def handle_subscriber_list_actions(
         telegram_id_to_delete = callback_data.telegram_id
         success = await user_service.delete_full_user_profile(
             session, telegram_id_to_delete, services=services
-        ) # Pass services
+        )  # Pass services
 
         if success:
             await query.answer(
-                _("Subscriber {telegram_id} deleted successfully.").format(
-                    telegram_id=telegram_id_to_delete
-                )
+                _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=telegram_id_to_delete)
             )
         else:
             await query.answer(
-                _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete),
-                show_alert=True
+                _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True
             )
 
         await _show_subscriber_list_page(query, session, bot, _, page=page_from_callback)

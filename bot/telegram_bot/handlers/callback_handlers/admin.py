@@ -1,10 +1,10 @@
-import logging
 from html import escape
+import logging
 
-import pytalk
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
+import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
@@ -23,15 +23,11 @@ admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware
 
 ttstr = pytalk.instance.sdk.ttstr
 
+
 async def _execute_tt_user_action(
-    action: AdminAction,
-    user_to_act_on: pytalk.user.User,
-    _: callable,
-    admin_tg_id: int,
-    server_host: str
+    action: AdminAction, user_to_act_on: pytalk.user.User, _: callable, admin_tg_id: int, server_host: str
 ) -> tuple[bool, str]:
-    """
-    Executes a moderation action on a TeamTalk user.
+    """Executes a moderation action on a TeamTalk user.
     Returns a tuple of (success_boolean, message_string).
     """
     user_nickname = get_tt_user_display_name(user_to_act_on, _)
@@ -58,76 +54,65 @@ async def _execute_tt_user_action(
                 user_nickname=quoted_nickname, server_host=server_host
             )
         else:
-            logger.warning(
-                f"Unknown action '{action}' passed to _execute_tt_user_action for server {server_host}."
-            )
+            logger.warning(f"Unknown action '{action}' passed to _execute_tt_user_action for server {server_host}.")
             return False, _("Unknown action.")
 
     except PytalkPermissionError as e:
         logger.error(
-            f"PermissionError during '{action}' on TT user ID {user_to_act_on.id} "
-            f"on server {server_host}: {e}"
+            f"PermissionError during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}"
         )
         return False, _(
-            "An error occurred while performing the action on server {server_host}. "
-            "Please try again later."
+            "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except PytalkException as e:
         logger.error(
-            f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id} "
-            f"on server {server_host}: {e}", exc_info=True
+            f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}",
+            exc_info=True,
         )
         return False, _(
-            "An error occurred while performing the action on server {server_host}. "
-            "Please try again later."
+            "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except (ValueError, TypeError, AttributeError) as e_data:
-        user_id_log = user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'
+        user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
         logger.error(
-            f"Data error during '{action}' on TT user (ID: {user_id_log}) "
-            f"on server {server_host}: {e_data}", exc_info=True
+            f"Data error during '{action}' on TT user (ID: {user_id_log}) on server {server_host}: {e_data}",
+            exc_info=True,
         )
         return False, _(
-            "An error occurred while performing the action on server {server_host}. "
-            "Please try again later."
+            "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except (TimeoutError, OSError) as e_net:
-        user_id_log = user_to_act_on.id if hasattr(user_to_act_on, 'id') else 'UNKNOWN'
+        user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
         logger.critical(
             f"CRITICAL: Network/OS error during '{action}' on TT user (ID: {user_id_log}) "
-            f"on server {server_host}: {e_net}", exc_info=True
+            f"on server {server_host}: {e_net}",
+            exc_info=True,
         )
         return False, _(
-            "An error occurred while performing the action on server {server_host}. "
-            "Please try again later."
+            "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
 
 
-@admin_actions_router.callback_query(
-    AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN}))
-)
+@admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
-    _: callable, # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int], # Injected from workflow_data
-    tt_connection: TeamTalkConnection | None # Injected by ActiveTeamTalkConnectionMiddleware
+    _: callable,  # Injected by UserSettingsMiddleware
+    admin_ids_cache: set[int],  # Injected from workflow_data
+    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     if not callback_query.message:
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
 
-    if callback_query.from_user.id not in admin_ids_cache: # Use injected admin_ids_cache
+    if callback_query.from_user.id not in admin_ids_cache:  # Use injected admin_ids_cache
         await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
         return
 
     # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection and instance are valid
     if not tt_connection or not tt_connection.instance:
-         # This check is somewhat redundant if TeamTalkConnectionCheckMiddleware is effective
-        await callback_query.answer(
-            _("TeamTalk connection is not available. Please try again later."),
-            show_alert=True
-        )
+        # This check is somewhat redundant if TeamTalkConnectionCheckMiddleware is effective
+        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
     tt_instance = tt_connection.instance
@@ -136,14 +121,12 @@ async def process_user_action_selection(
     user_to_act_on = tt_instance.get_user(callback_data.user_id)
     if not user_to_act_on:
         await callback_query.answer(
-            _("User not found on server {server_host} anymore.").format(
-                server_host=server_host_for_display
-            ),
-            show_alert=True
+            _("User not found on server {server_host} anymore.").format(server_host=server_host_for_display),
+            show_alert=True,
         )
         try:
             if callback_query.message:
-                 await callback_query.message.edit_reply_markup(reply_markup=None)
+                await callback_query.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError:
             logger.debug(
                 f"Failed to remove reply markup when user {callback_data.user_id} "
@@ -156,7 +139,7 @@ async def process_user_action_selection(
         user_to_act_on=user_to_act_on,
         _=_,
         admin_tg_id=callback_query.from_user.id,
-        server_host=server_host_for_display
+        server_host=server_host_for_display,
     )
 
     if success:
@@ -173,8 +156,7 @@ async def process_user_action_selection(
                     await callback_query.message.edit_reply_markup(reply_markup=None)
                 except TelegramAPIError as e_markup:
                     logger.error(
-                        f"Failed to even remove reply markup after user action on "
-                        f"{server_host_for_display}: {e_markup}"
+                        f"Failed to even remove reply markup after user action on {server_host_for_display}: {e_markup}"
                     )
     else:
         await callback_query.answer(message_text, show_alert=True)

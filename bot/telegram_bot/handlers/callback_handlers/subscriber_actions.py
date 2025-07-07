@@ -3,11 +3,11 @@ import logging
 # For type hinting app instance
 from typing import TYPE_CHECKING
 
-import pytalk
 from aiogram import Bot as AiogramBot
 from aiogram import Router  # Renamed Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
+import pytalk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import ManageTTAccountAction, SubscriberAction
@@ -37,25 +37,21 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
-subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None)) # Added
-subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware()) # Existing
+subscriber_actions_router.callback_query.middleware(
+    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+)  # Added
+subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())  # Existing
 
 
 async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery,
-    session: AsyncSession,
-    bot: AiogramBot,
-    return_page: int,
-    _: callable
+    query: CallbackQuery, session: AsyncSession, bot: AiogramBot, return_page: int, _: callable
 ):
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
-        session, bot, return_page
-    )
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(session, bot, return_page)
     if total_pages == 0 or not page_subscribers_info:
         await query.message.edit_text(_("No subscribers found."))
     else:
@@ -66,8 +62,9 @@ async def _refresh_and_display_subscriber_list(
             _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
                 current_page_display=current_page + 1, total_pages=total_pages
             ),
-            reply_markup=new_keyboard
+            reply_markup=new_keyboard,
         )
+
 
 @subscriber_actions_router.callback_query(ViewSubscriberCallback.filter())
 async def handle_view_subscriber(
@@ -75,16 +72,14 @@ async def handle_view_subscriber(
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
     _: callable,
-    services: "Services"
+    services: "Services",
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     keyboard = await create_subscriber_action_menu_keyboard(
-        _,
-        target_telegram_id=callback_data.telegram_id,
-        page=callback_data.page
+        _, target_telegram_id=callback_data.telegram_id, page=callback_data.page
     )
     user_to_view = await session.get(UserSettings, callback_data.telegram_id)
     display_name = str(callback_data.telegram_id)
@@ -97,19 +92,14 @@ async def handle_view_subscriber(
             display_name = format_telegram_user_display_name(chat_info)
         except TelegramAPIError as e_tg:
             logger.error(
-                f"Could not fetch chat info for {user_to_view.telegram_id} via Telegram API: {e_tg}",
-                exc_info=True
+                f"Could not fetch chat info for {user_to_view.telegram_id} via Telegram API: {e_tg}", exc_info=True
             )
         except Exception as e:
-            logger.error(
-                f"Unexpected error fetching chat info for {user_to_view.telegram_id}: {e}",
-                exc_info=True
-            )
+            logger.error(f"Unexpected error fetching chat info for {user_to_view.telegram_id}: {e}", exc_info=True)
 
     if user_to_view and user_to_view.teamtalk_username:
         text = _("Actions for subscriber: {display_name}\nLinked TeamTalk account: {tt_username}").format(
-            display_name=display_name,
-            tt_username=user_to_view.teamtalk_username
+            display_name=display_name, tt_username=user_to_view.teamtalk_username
         )
     else:
         text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
@@ -126,7 +116,7 @@ async def handle_subscriber_action(
     bot: AiogramBot,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    services: "Services"
+    services: "Services",
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -137,19 +127,16 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        success = await user_service.delete_full_user_profile(
-            session, target_telegram_id, services=services
-        )
+        success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
         if success:
             await query.answer(
                 _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
-                show_alert=True
+                show_alert=True,
             )
             await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
         else:
             await query.answer(
-                _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id),
-                show_alert=True
+                _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
             )
         return
 
@@ -165,7 +152,7 @@ async def handle_subscriber_action(
             banned_tt = await crud.add_to_ban_list(
                 session,
                 teamtalk_username=tt_username_to_ban,
-                reason=f"Banned by admin (linked to TG ID: {target_telegram_id})"
+                reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
             )
             if tt_connection and tt_connection.instance:
                 try:
@@ -177,12 +164,14 @@ async def handle_subscriber_action(
                 except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt:
                     logger.error(
                         f"Error during conceptual TeamTalk ban for {tt_username_to_ban} on "
-                        f"{tt_connection.server_info.host}: {e_tt}", exc_info=True
+                        f"{tt_connection.server_info.host}: {e_tt}",
+                        exc_info=True,
                     )
                 except Exception as e:
                     logger.error(
                         f"Unexpected error during conceptual TeamTalk ban for {tt_username_to_ban} on "
-                        f"{tt_connection.server_info.host}: {e}", exc_info=True
+                        f"{tt_connection.server_info.host}: {e}",
+                        exc_info=True,
                     )
             else:
                 logger.warning(
@@ -194,13 +183,9 @@ async def handle_subscriber_action(
 
         ban_messages = []
         if banned_tg:
-            ban_messages.append(
-                _("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id)
-            )
+            ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
         if tt_username_to_ban and banned_tt:
-            ban_messages.append(
-                _("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban)
-            )
+            ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
 
         alert_message = " ".join(ban_messages)
         if alert_message:
@@ -216,14 +201,11 @@ async def handle_subscriber_action(
         user_settings = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_settings.teamtalk_username if user_settings else None
         keyboard = await create_manage_tt_account_keyboard(
-            _, target_telegram_id=target_telegram_id,
-            current_tt_username=current_tt_username, page=return_page
+            _, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
         )
         await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-                telegram_id=target_telegram_id
-            ),
-            reply_markup=keyboard
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard,
         )
         await query.answer()
         return
@@ -240,7 +222,7 @@ async def handle_manage_tt_account(
     session: AsyncSession,
     tt_connection: TeamTalkConnection | None,
     _: callable,
-    services: "Services"
+    services: "Services",
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -264,8 +246,7 @@ async def handle_manage_tt_account(
             await session.refresh(user_settings)
             services.user_settings_cache[user_settings.telegram_id] = user_settings
             await query.answer(
-                _("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username),
-                show_alert=True
+                _("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True
             )
         else:
             await query.answer(_("No TeamTalk account was linked."), show_alert=True)
@@ -274,10 +255,8 @@ async def handle_manage_tt_account(
             _, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page
         )
         await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-                telegram_id=target_telegram_id
-            ),
-            reply_markup=keyboard
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard,
         )
         return
 
@@ -285,9 +264,8 @@ async def handle_manage_tt_account(
         if not tt_connection or not tt_connection.user_accounts_cache:
             logger.warning("USER_ACCOUNTS_CACHE is empty or tt_connection not available for LINK_NEW.")
             await query.answer(
-                _("TeamTalk server accounts cache is not populated or connection error. "
-                  "Please try again later."),
-                show_alert=True
+                _("TeamTalk server accounts cache is not populated or connection error. Please try again later."),
+                show_alert=True,
             )
             return
 
@@ -297,19 +275,23 @@ async def handle_manage_tt_account(
                 _("No TeamTalk server accounts found on {server_host} or unable to fetch.").format(
                     server_host=tt_connection.server_info.host
                 ),
-                show_alert=True
+                show_alert=True,
             )
             return
 
         link_keyboard = await create_linkable_tt_account_list_keyboard(
-            _, page_items=server_accounts, current_page_idx=0, total_pages=1,
-            target_telegram_id=target_telegram_id, subscriber_list_page=return_page
+            _,
+            page_items=server_accounts,
+            current_page_idx=0,
+            total_pages=1,
+            target_telegram_id=target_telegram_id,
+            subscriber_list_page=return_page,
         )
         await query.message.edit_text(
             _("Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:").format(
                 server_host=tt_connection.server_info.host, telegram_id=target_telegram_id
             ),
-            reply_markup=link_keyboard
+            reply_markup=link_keyboard,
         )
         await query.answer()
         return
@@ -325,7 +307,7 @@ async def handle_link_tt_account_chosen(
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,
     _: callable,
-    services: "Services"
+    services: "Services",
 ):
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -340,18 +322,14 @@ async def handle_link_tt_account_chosen(
             _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(
                 tt_username=tt_username_to_link
             ),
-            show_alert=True
+            show_alert=True,
         )
         user_s = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_s.teamtalk_username if user_s else None
-        kb = await create_manage_tt_account_keyboard(
-            _, target_telegram_id, current_tt_username, return_page
-        )
+        kb = await create_manage_tt_account_keyboard(_, target_telegram_id, current_tt_username, return_page)
         await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-                telegram_id=target_telegram_id
-            ),
-            reply_markup=kb
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=kb,
         )
         return
 
@@ -367,7 +345,6 @@ async def handle_link_tt_account_chosen(
     await session.refresh(user_settings)
     services.user_settings_cache[user_settings.telegram_id] = user_settings
 
-
     alert_text = _("TeamTalk account {new_tt_username} linked successfully.").format(
         new_tt_username=tt_username_to_link
     )
@@ -376,12 +353,9 @@ async def handle_link_tt_account_chosen(
     await query.answer(alert_text, show_alert=True)
 
     keyboard = await create_manage_tt_account_keyboard(
-        _, target_telegram_id=target_telegram_id,
-        current_tt_username=tt_username_to_link, page=return_page
+        _, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page
     )
     await query.message.edit_text(
-         _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-             telegram_id=target_telegram_id
-         ),
-        reply_markup=keyboard
+        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+        reply_markup=keyboard,
     )

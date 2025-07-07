@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+from pathlib import Path
 import subprocess
 import sys
 import tomllib
-from pathlib import Path
 
 PROJECT_NAME = "teamtalk-telegram-sender"
 COPYRIGHT_HOLDER = "kirill-jjj"
@@ -12,12 +12,13 @@ LOCALE_DOMAIN = "messages"
 try:
     # Correct BASE_DIR to be the project root (parent of the 'scripts' directory)
     BASE_DIR = Path(__file__).resolve().parent.parent
-    LOCALE_DIR = BASE_DIR / "locales" # Now relative to project root
+    LOCALE_DIR = BASE_DIR / "locales"  # Now relative to project root
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
-except NameError: # Fallback for __file__ not defined
-    BASE_DIR = Path.cwd() # If run directly from project root, cwd() is fine
+except NameError:  # Fallback for __file__ not defined
+    BASE_DIR = Path.cwd()  # If run directly from project root, cwd() is fine
     LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
+
 
 def get_project_version() -> str:
     """Reads the version from pyproject.toml."""
@@ -30,25 +31,29 @@ def get_project_version() -> str:
         if version:
             return str(version)
         print("⚠️ Warning: Version not found in pyproject.toml under project.version.", file=sys.stderr)
-        return "0.0.0" # Fallback version
+        return "0.0.0"  # Fallback version
     except FileNotFoundError:
         print(
-            f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. "
-            f"Cannot determine project version.", file=sys.stderr
+            f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. Cannot determine project version.",
+            file=sys.stderr,
         )
-        return "0.0.0" # Fallback version
+        return "0.0.0"  # Fallback version
     # Broader catch for TOML issues or structure changes
     except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e:
         print(f"⚠️ Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
-        return "0.0.0" # Fallback version
+        return "0.0.0"  # Fallback version
+
 
 def extract():
     """Extracts translatable strings into a .pot file."""
     version = get_project_version()
     command = [
-        "pybabel", "extract",
-        "-F", str(BASE_DIR / BABEL_CONFIG),
-        "-o", str(POT_FILE),
+        "pybabel",
+        "extract",
+        "-F",
+        str(BASE_DIR / BABEL_CONFIG),
+        "-o",
+        str(POT_FILE),
         f"--project={PROJECT_NAME}",
         f"--version={version}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
@@ -70,11 +75,15 @@ def extract():
 def update():
     """Updates .po files based on the .pot template."""
     command = [
-        "pybabel", "update",
-        "-i", str(POT_FILE),
-        "-d", str(LOCALE_DIR),
-        "-D", LOCALE_DOMAIN,
-        "--previous" # Use .po~ backup files
+        "pybabel",
+        "update",
+        "-i",
+        str(POT_FILE),
+        "-d",
+        str(LOCALE_DIR),
+        "-D",
+        LOCALE_DOMAIN,
+        "--previous",  # Use .po~ backup files
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
@@ -87,14 +96,10 @@ def update():
         print(f"❌ Error executing 'pybabel update': {e.stderr}", file=sys.stderr)
         sys.exit(e.returncode)
 
+
 def compile_cmd():
     """Compiles .po files into binary .mo files."""
-    command = [
-        "pybabel", "compile",
-        "-d", str(LOCALE_DIR),
-        "-D", LOCALE_DOMAIN,
-        "--statistics"
-    ]
+    command = ["pybabel", "compile", "-d", str(LOCALE_DIR), "-D", LOCALE_DOMAIN, "--statistics"]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
         result = subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
@@ -106,9 +111,10 @@ def compile_cmd():
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel compile': {e.stderr}", file=sys.stderr)
-        if e.stdout: # Babel compile might print stats to stdout even on error
+        if e.stdout:  # Babel compile might print stats to stdout even on error
             print(f"Output from compile: {e.stdout}", file=sys.stderr)
         sys.exit(e.returncode)
+
 
 def main():
     if len(sys.argv) < 2:
@@ -126,6 +132,7 @@ def main():
     else:
         print(f"Unknown command: {action}. Valid commands are 'extract', 'update', 'compile'.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

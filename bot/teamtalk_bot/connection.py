@@ -1,6 +1,6 @@
 import asyncio
-import logging
 from datetime import datetime
+import logging
 from typing import Any  # For app_config_instance type hint
 
 import pytalk
@@ -8,27 +8,28 @@ from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
 
 logger = logging.getLogger(__name__)
 
+
 class TeamTalkConnection:
+    """Manages the state of a single connection to a TeamTalk server.
     """
-    Manages the state of a single connection to a TeamTalk server.
-    """
+
     def __init__(
         self,
         server_info: PytalkTeamTalkServerInfo,
         pytalk_bot: pytalk.TeamTalkBot,
         session_factory: Any,
-        app_config: Any
+        app_config: Any,
     ):
         self.server_info = server_info
         self.pytalk_bot = pytalk_bot
         self.session_factory = session_factory
-        self.app_config = app_config # Store app_config for intervals etc.
+        self.app_config = app_config  # Store app_config for intervals etc.
 
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
 
         self.online_users_cache: dict[int, pytalk.user.User] = {}
-        self.user_accounts_cache: dict[str, pytalk.UserAccount] = {} # Key is username string
+        self.user_accounts_cache: dict[str, pytalk.UserAccount] = {}  # Key is username string
 
         self._periodic_sync_task: asyncio.Task | None = None
         self._populate_accounts_task: asyncio.Task | None = None
@@ -67,7 +68,7 @@ class TeamTalkConnection:
                 if self.instance and self.instance.connected and self.instance.logged_in:
                     logger.debug(f"[{self.server_info.host}] Performing periodic online users cache synchronization...")
                     server_users = self.instance.server.get_users()
-                    new_cache = {user.id: user for user in server_users if hasattr(user, 'id')}
+                    new_cache = {user.id: user for user in server_users if hasattr(user, "id")}
 
                     current_ids = set(self.online_users_cache.keys())
                     new_ids = set(new_cache.keys())
@@ -98,7 +99,7 @@ class TeamTalkConnection:
             except TimeoutError as e_timeout:
                 logger.error(
                     f"[{self.server_info.host}] TimeoutError during periodic online users cache sync: {e_timeout}.",
-                    exc_info=True
+                    exc_info=True,
                 )
                 await asyncio.sleep(
                     self.app_config.operational_parameters.online_users_cache_sync_interval_seconds // 2
@@ -106,24 +107,24 @@ class TeamTalkConnection:
             except pytalk.exceptions.TeamTalkException as e_pytalk:
                 logger.error(
                     f"[{self.server_info.host}] Pytalk error during periodic online users cache sync: {e_pytalk}.",
-                    exc_info=True
+                    exc_info=True,
                 )
                 sleep_duration = (
                     self.app_config.operational_parameters.tt_reconnect_retry_seconds
-                    if self.instance and self.instance.connected and self.instance.logged_in else
-                    self.app_config.operational_parameters.tt_reconnect_check_interval_seconds
+                    if self.instance and self.instance.connected and self.instance.logged_in
+                    else self.app_config.operational_parameters.tt_reconnect_check_interval_seconds
                 )
                 await asyncio.sleep(sleep_duration)
             except Exception as e:
                 logger.error(
                     f"[{self.server_info.host}] Unexpected error during periodic online users cache sync: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
             await asyncio.sleep(self.app_config.operational_parameters.online_users_cache_sync_interval_seconds)
 
     async def populate_user_accounts_cache(self):
-        if not self.is_ready: # Use is_ready property
+        if not self.is_ready:  # Use is_ready property
             logger.warning(
                 f"[{self.server_info.host}] Cannot populate user accounts cache: TeamTalk instance not ready."
             )
@@ -144,23 +145,21 @@ class TeamTalkConnection:
             )
         except TimeoutError as e_timeout:
             logger.error(
-                f"[{self.server_info.host}] TimeoutError populating user accounts cache: "
-                f"{e_timeout}.", exc_info=True
+                f"[{self.server_info.host}] TimeoutError populating user accounts cache: {e_timeout}.", exc_info=True
             )
         except pytalk.exceptions.PermissionError as e_perm:
             logger.error(
                 f"[{self.server_info.host}] Pytalk PermissionError populating user accounts cache "
-                f"(Bot might not be admin): {e_perm}.", exc_info=True
+                f"(Bot might not be admin): {e_perm}.",
+                exc_info=True,
             )
         except pytalk.exceptions.TeamTalkException as e_pytalk:
             logger.error(
-                f"[{self.server_info.host}] Pytalk error populating user accounts cache: "
-                f"{e_pytalk}.", exc_info=True
+                f"[{self.server_info.host}] Pytalk error populating user accounts cache: {e_pytalk}.", exc_info=True
             )
         except Exception as e:
             logger.error(
-                f"[{self.server_info.host}] Unexpected error populating user accounts cache: {e}",
-                exc_info=True
+                f"[{self.server_info.host}] Unexpected error populating user accounts cache: {e}", exc_info=True
             )
 
     def start_background_tasks(self):
@@ -178,7 +177,7 @@ class TeamTalkConnection:
         logger.info(f"[{self.server_info.host}] Stopping background tasks...")
         task_definitions = [
             ("_periodic_sync_task", "_periodic_sync_task"),
-            ("_populate_accounts_task", "_populate_accounts_task")
+            ("_populate_accounts_task", "_populate_accounts_task"),
         ]
         for task_name, task_obj_attr in task_definitions:
             task = getattr(self, task_obj_attr, None)
@@ -189,9 +188,7 @@ class TeamTalkConnection:
                 except asyncio.CancelledError:
                     logger.info(f"[{self.server_info.host}] Task {task_name} cancelled.")
                 except Exception as e:
-                    logger.error(
-                        f"[{self.server_info.host}] Error stopping task {task_name}: {e}", exc_info=True
-                    )
+                    logger.error(f"[{self.server_info.host}] Error stopping task {task_name}: {e}", exc_info=True)
             setattr(self, task_obj_attr, None)
         logger.info(f"[{self.server_info.host}] Background tasks stopped.")
 
@@ -224,9 +221,9 @@ class TeamTalkConnection:
 
     def update_caches_on_event(self, event_type: str, data: Any):
         ttstr = pytalk.instance.sdk.ttstr
-        user_id = getattr(data, 'id', None)
-        username_attr = getattr(data, 'username', None)
-        username_str = ttstr(username_attr) if username_attr else 'UnknownUser'
+        user_id = getattr(data, "id", None)
+        username_attr = getattr(data, "username", None)
+        username_str = ttstr(username_attr) if username_attr else "UnknownUser"
 
         if event_type in ["user_login", "user_join", "user_update"]:
             user: pytalk.user.User = data
@@ -256,8 +253,7 @@ class TeamTalkConnection:
                 )
             else:
                 logger.warning(
-                    f"[{self.server_info.host}] User logout for {username_str} but no ID. "
-                    f"Cache not updated."
+                    f"[{self.server_info.host}] User logout for {username_str} but no ID. Cache not updated."
                 )
         elif event_type == "user_account_new":
             account: pytalk.UserAccount = data

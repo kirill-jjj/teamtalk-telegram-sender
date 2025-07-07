@@ -20,9 +20,10 @@ from bot.telegram_bot.commands import set_telegram_commands
 
 logger = logging.getLogger(__name__)
 
+
 class Application:
     def __init__(self, app_config_instance: Settings):
-        self.app_config = app_config_instance # Store config for app-level decisions if any
+        self.app_config = app_config_instance  # Store config for app-level decisions if any
         self.logger = setup_logging()
 
         # 1. Create session_factory using the new function
@@ -35,12 +36,11 @@ class Application:
         self.dp: Dispatcher = Dispatcher()
 
         from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
+
         # TeamTalkEventHandler now takes only services
         self.tt_event_handler = TeamTalkEventHandler(self.services)
 
-
         self.teamtalk_task: asyncio.Task | None = None
-
 
     # --- Application Lifecycle Methods ---
     async def _on_startup_logic(self, dispatcher: Dispatcher):
@@ -49,7 +49,7 @@ class Application:
 
         if self.teamtalk_task is None or self.teamtalk_task.done():
             # tt_bot is now in services
-            await self.services.tt_bot._async_setup_hook() # Pytalk's internal setup
+            await self.services.tt_bot._async_setup_hook()  # Pytalk's internal setup
             # tt_bot._start() is the main loop for pytalk
             self.teamtalk_task = asyncio.create_task(self.services.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
             self.logger.info("Pytalk main event loop task started.")
@@ -76,12 +76,12 @@ class Application:
         # The TOML example has `admin_chat_id = 0`. If 0 means "not set", this logic needs adjustment.
         # For now, assume if admin_chat_id is present (Pydantic ensures it's an int), it's a valid ID to use.
         tg_admin_chat_id = self.app_config.telegram.admin_chat_id
-        if tg_admin_chat_id: # Simple check if it's non-zero; adjust if 0 is a valid ID to be added.
-                           # If the field is non-optional in Pydantic, it will always be present.
-            if tg_admin_chat_id not in self.services.admin_ids_cache: # Use services cache
+        if tg_admin_chat_id:  # Simple check if it's non-zero; adjust if 0 is a valid ID to be added.
+            # If the field is non-optional in Pydantic, it will always be present.
+            if tg_admin_chat_id not in self.services.admin_ids_cache:  # Use services cache
                 async with self.services.session_factory() as session:
                     await crud.add_admin(session, tg_admin_chat_id)
-                    self.services.admin_ids_cache.add(tg_admin_chat_id) # Update services cache
+                    self.services.admin_ids_cache.add(tg_admin_chat_id)  # Update services cache
                 self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
             else:
                 self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
@@ -96,10 +96,9 @@ class Application:
         await set_telegram_commands(services=self.services)
         self.logger.info("Telegram bot commands set.")
 
-
     async def _on_shutdown_logic(self, dispatcher: Dispatcher):
         """Internal logic for shutdown."""
-        self.logger.warning('Application shutting down...')
+        self.logger.warning("Application shutting down...")
 
         if self.teamtalk_task and not self.teamtalk_task.done():
             self.logger.info("Cancelling Pytalk main event loop task...")
@@ -123,12 +122,14 @@ class Application:
         self.logger.info("All TeamTalk connections processed for shutdown.")
 
         # Bot sessions are in self.services
-        if hasattr(self.services.bot_event, 'session') and self.services.bot_event.session:
+        if hasattr(self.services.bot_event, "session") and self.services.bot_event.session:
             await self.services.bot_event.session.close()
-        if self.services.bot_message and \
-           hasattr(self.services.bot_message, 'session') and \
-           self.services.bot_message.session and \
-           self.services.bot_message is not self.services.bot_event:
+        if (
+            self.services.bot_message
+            and hasattr(self.services.bot_message, "session")
+            and self.services.bot_message.session
+            and self.services.bot_message is not self.services.bot_event
+        ):
             await self.services.bot_message.session.close()
         self.logger.info("Telegram bot sessions closed.")
         self.logger.info("Application shutdown sequence complete.")
@@ -142,23 +143,17 @@ class Application:
         # Use self.services.get_translator and self.services.bot_event
         # Access admin_chat_id from the new nested structure
         admin_chat_id_for_error = self.app_config.telegram.admin_chat_id
-        if admin_chat_id_for_error: # Check if it's non-zero or configured
+        if admin_chat_id_for_error:  # Check if it's non-zero or configured
             try:
-                admin_critical_translator = self.services.get_translator('ru')
+                admin_critical_translator = self.services.get_translator("ru")
                 # Вся структура сообщения теперь одна переводимая строка
                 error_text = admin_critical_translator.gettext(
-                    "<b>Critical error!</b>\n"
-                    "<b>Error type:</b> {error_type}\n"
-                    "<b>Message:</b> {error_message}"
-                ).format(
-                    error_type=type(event.exception).__name__,
-                    error_message=escaped_exception_text
-                )
+                    "<b>Critical error!</b>\n<b>Error type:</b> {error_type}\n<b>Message:</b> {error_message}"
+                ).format(error_type=type(event.exception).__name__, error_message=escaped_exception_text)
                 await self.services.bot_event.send_message(admin_chat_id_for_error, error_text, parse_mode="HTML")
             except Exception as e:
                 self.logger.error(
-                    f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}",
-                    exc_info=True
+                    f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}", exc_info=True
                 )
 
         update = event.update
@@ -168,7 +163,7 @@ class Application:
         elif update.callback_query and update.callback_query.from_user:
             user_id = update.callback_query.from_user.id
 
-        lang_code = DEFAULT_LANGUAGE_CODE # Fallback
+        lang_code = DEFAULT_LANGUAGE_CODE  # Fallback
         if user_id:
             # Access user_settings_cache via self.services
             user_settings = self.services.user_settings_cache.get(user_id)
@@ -187,33 +182,32 @@ class Application:
                     await update.message.answer(user_message_text)
                 elif update.callback_query and isinstance(update.callback_query.message, AiogramMessage):
                     await update.callback_query.message.answer(user_message_text)
-                elif user_id: # Try direct send if no reply context
-                     await self.services.bot_event.send_message(chat_id=user_id, text=user_message_text)
+                elif user_id:  # Try direct send if no reply context
+                    await self.services.bot_event.send_message(chat_id=user_id, text=user_message_text)
             except Exception as e:
                 self.logger.error(
-                    f"Error sending error message to user {user_id if user_id else 'Unknown'}: {e}",
-                    exc_info=True
+                    f"Error sending error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True
                 )
-
 
     async def run(self):
         """Sets up and runs the application."""
         self.logger.info("Application starting...")
 
         self.logger.info("Initializing available languages in services...")
-        self.services.initialize_languages() # Moved from direct App responsibility
+        self.services.initialize_languages()  # Moved from direct App responsibility
 
         # Import here to avoid circularity at module level
         from bot.telegram_bot.setup import setup_telegram_dispatcher
+
         # setup_telegram_dispatcher will be modified to accept services
-        setup_telegram_dispatcher(dp=self.dp, services=self.services, app_callbacks=self) # Pass app for callbacks
+        setup_telegram_dispatcher(dp=self.dp, services=self.services, app_callbacks=self)  # Pass app for callbacks
 
         self.logger.info("Starting Telegram polling...")
         try:
             # Poll with bot_event from services. Pass services or specific components to dispatcher/handlers.
             await self.dp.start_polling(
                 self.services.bot_event,
-                allowed_updates=self.dp.resolve_used_update_types()
+                allowed_updates=self.dp.resolve_used_update_types(),
                 # Removed app=self, dispatcher workflow_data will be used instead
             )
         finally:
@@ -229,7 +223,7 @@ def main_cli():
         default="config.toml",  # Changed default to config.toml
         help="Path to the TOML configuration file (e.g., config.toml, config.prod.toml). Defaults to 'config.toml'",
     )
-    args, _ = parser.parse_known_args() # Keep known_args if other CLI tools might chain here, otherwise parse_args()
+    args, _ = parser.parse_known_args()  # Keep known_args if other CLI tools might chain here, otherwise parse_args()
 
     from bot.config import Settings  # Keep for type hinting and access to from_toml
 
@@ -239,6 +233,7 @@ def main_cli():
 
         try:
             import uvloop
+
             uvloop.install()
             print("uvloop installed and used.")
         except ImportError:
@@ -255,6 +250,7 @@ def main_cli():
     except Exception as e:
         print(f"CRITICAL: An unexpected critical error occurred at CLI level: {e}")
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     main_cli()

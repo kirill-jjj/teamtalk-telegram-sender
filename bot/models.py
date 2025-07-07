@@ -1,5 +1,5 @@
-import enum
 from datetime import datetime
+import enum
 
 from sqlalchemy import CheckConstraint
 from sqlmodel import Field, Relationship, SQLModel
@@ -84,7 +84,6 @@ class BanList(SQLModel, table=True):
     # Constraint to ensure at least one identifier is present
     __table_args__ = (
         CheckConstraint(
-            "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL",
-            name="ck_ban_list_identifier_not_both_null"
+            "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL", name="ck_ban_list_identifier_not_both_null"
         ),
     )

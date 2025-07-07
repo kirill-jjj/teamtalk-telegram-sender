@@ -1,8 +1,7 @@
 from logging.config import fileConfig
 
-from sqlalchemy import pool
-
 from alembic import context
+from sqlalchemy import pool
 
 config = context.config
 
@@ -22,8 +21,7 @@ import os  # noqa: E402
 
 
 def process_revision_directives(context, revision, directives):
-    """
-    This hook prevents Alembic from creating empty migration files
+    """This hook prevents Alembic from creating empty migration files
     if no actual structural changes are detected.
     """
     if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
@@ -57,7 +55,7 @@ def get_db_url():
         raise FileNotFoundError(error_message)
 
     try:
-        with open(config_file, 'rb') as f:
+        with open(config_file, "rb") as f:
             config_data = tomllib.load(f)
     except tomllib.TOMLDecodeError as e:
         error_message = f"Error decoding TOML configuration file '{config_file}': {e}"
@@ -69,7 +67,7 @@ def get_db_url():
         raise OSError(error_message) from e
 
     try:
-        db_file_name = config_data['database']['db_file']
+        db_file_name = config_data["database"]["db_file"]
     except KeyError as e:
         error_message = f"'database.db_file' not found in TOML configuration file '{config_file}'."
         print(f"ERROR [alembic.env] {error_message}")
@@ -108,7 +106,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         process_revision_directives=process_revision_directives,
-        render_as_batch=True
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -124,7 +122,7 @@ async def run_migrations_online_async() -> None:
     connectable = create_async_engine(
         db_url,
         poolclass=pool.NullPool,
-        future=True, # Ensure to use the new style execution
+        future=True,  # Ensure to use the new style execution
     )
 
     async with connectable.connect() as connection:
@@ -132,18 +130,21 @@ async def run_migrations_online_async() -> None:
 
     await connectable.dispose()
 
+
 def do_run_migrations(connection):
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
         process_revision_directives=process_revision_directives,
-        render_as_batch=True
+        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
     import asyncio
+
     asyncio.run(run_migrations_online_async())

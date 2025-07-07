@@ -22,13 +22,11 @@ logger = logging.getLogger(__name__)
 
 SUBSCRIBERS_PER_PAGE = 10
 
+
 async def _get_paginated_subscribers_info(
-    session: AsyncSession,
-    bot: Bot,
-    requested_page: int
+    session: AsyncSession, bot: Bot, requested_page: int
 ) -> tuple[list[SubscriberInfo], int, int]:
-    """
-    Fetches all subscriber IDs, gets their details, and returns a paginated list.
+    """Fetches all subscriber IDs, gets their details, and returns a paginated list.
     Returns: (page_subscriber_info_list, current_page, total_pages)
     """
     all_subscriber_ids = await get_all_subscribers_ids(session)
@@ -38,15 +36,14 @@ async def _get_paginated_subscribers_info(
     total_pages = (len(all_subscriber_ids) + SUBSCRIBERS_PER_PAGE - 1) // SUBSCRIBERS_PER_PAGE
 
     current_page_num = requested_page
-    if current_page_num < 0:
-        current_page_num = 0
+    current_page_num = max(current_page_num, 0)
 
     # Adjust if requested_page is too high
-    if current_page_num >= total_pages and total_pages > 0:
+    if current_page_num >= total_pages > 0:
         current_page_num = total_pages - 1
-    elif total_pages == 0: # No pages, so page 0
+    elif total_pages == 0:  # No pages, so page 0
         current_page_num = 0
-        return [], 0, 0 # No subscribers, no pages
+        return [], 0, 0  # No subscribers, no pages
 
     # Initial slice for page_ids
     start_idx = current_page_num * SUBSCRIBERS_PER_PAGE
@@ -60,7 +57,7 @@ async def _get_paginated_subscribers_info(
         end_idx = start_idx + SUBSCRIBERS_PER_PAGE
         page_ids_to_fetch = all_subscriber_ids[start_idx:end_idx]
 
-    if not page_ids_to_fetch: # If still no IDs for any valid page
+    if not page_ids_to_fetch:  # If still no IDs for any valid page
         return [], current_page_num, total_pages
 
     # Fetch chat info concurrently for the current page's IDs
@@ -74,7 +71,7 @@ async def _get_paginated_subscribers_info(
 
     page_subscribers_info = []
     for i, telegram_id in enumerate(page_ids_to_fetch):
-        display_name = str(telegram_id) # Default display name
+        display_name = str(telegram_id)  # Default display name
         chat_info = None
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
@@ -94,21 +91,19 @@ async def _get_paginated_subscribers_info(
         elif user_setting_result:
             tt_username = user_setting_result.teamtalk_username
 
-        page_subscribers_info.append(SubscriberInfo(
-            telegram_id=telegram_id,
-            display_name=display_name,
-            teamtalk_username=tt_username
-        ))
+        page_subscribers_info.append(
+            SubscriberInfo(telegram_id=telegram_id, display_name=display_name, teamtalk_username=tt_username)
+        )
 
     return page_subscribers_info, current_page_num, total_pages
 
 
 async def _show_subscriber_list_page(
-    target: Message | CallbackQuery, # Use quotes for forward reference if Message/CallbackQuery not imported
+    target: Message | CallbackQuery,  # Use quotes for forward reference if Message/CallbackQuery not imported
     session: AsyncSession,
     bot: Bot,
     _: callable,
-    page: int = 0
+    page: int = 0,
 ):
     """Fetches and displays a specific page of the subscriber list."""
     from bot.telegram_bot.keyboards import create_subscriber_list_keyboard  # Local import
@@ -119,26 +114,18 @@ async def _show_subscriber_list_page(
     )
 
     if total_pages == 0 or not page_subscribers_info:
-        await send_or_edit_paginated_list(
-            target=target,
-            text=_("No subscribers found."),
-            bot=bot
-        )
+        await send_or_edit_paginated_list(target=target, text=_("No subscribers found."), bot=bot)
         return
 
     keyboard = await create_subscriber_list_keyboard(
-        _,
-        page_subscribers_info=page_subscribers_info,
-        current_page=current_page,
-        total_pages=total_pages
+        _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
     )
 
     await send_or_edit_paginated_list(
         target=target,
         text=_("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
-            current_page_display=current_page + 1,
-            total_pages=total_pages
+            current_page_display=current_page + 1, total_pages=total_pages
         ),
         reply_markup=keyboard,
-        bot=bot
+        bot=bot,
     )

@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel
 
 
@@ -7,8 +6,10 @@ class SubscriberInfo(BaseModel):
     display_name: str
     teamtalk_username: str | None = None
 
+
 class WhoUser(BaseModel):
     nickname: str
+
 
 class WhoChannelGroup(BaseModel):
     channel_name: str

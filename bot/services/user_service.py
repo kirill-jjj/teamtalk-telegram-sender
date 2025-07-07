@@ -11,13 +11,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 async def delete_full_user_profile(
     session: AsyncSession,
     telegram_id: int,
-    services: "Services" # Changed from app: "Application"
+    services: "Services",  # Changed from app: "Application"
 ) -> bool:
-    """
-    Orchestrates the full deletion of a user's profile,
+    """Orchestrates the full deletion of a user's profile,
     including database records and cache entries via the services container.
     """
     logger.info(f"Attempting to delete full user profile for Telegram ID: {telegram_id}")
@@ -38,9 +38,8 @@ async def delete_full_user_profile(
         services.subscribed_users_cache.discard(telegram_id)
         logger.info(f"User {telegram_id} discarded from services.subscribed_users_cache.")
 
-        services.admin_ids_cache.discard(telegram_id) # Also remove from admin cache if they were an admin
+        services.admin_ids_cache.discard(telegram_id)  # Also remove from admin cache if they were an admin
         logger.info(f"User {telegram_id} discarded from services.admin_ids_cache (if present).")
-
 
         logger.info(
             f"Full user profile deletion process completed for Telegram ID: {telegram_id}. "
@@ -51,8 +50,7 @@ async def delete_full_user_profile(
     except SQLAlchemyError as e_sql:
         await session.rollback()
         logger.error(
-            f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.",
-            exc_info=True
+            f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.", exc_info=True
         )
         return False
     except Exception as e:

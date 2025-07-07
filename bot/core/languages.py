@@ -7,7 +7,8 @@ from typing import TypedDict
 # For robustness, this might need to be derived from app_config or a known structure
 _LOCALE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "locales")
 
-DEFAULT_LANGUAGE_CODE = "en" # Default language
+DEFAULT_LANGUAGE_CODE = "en"  # Default language
+
 
 class LanguageInfo(TypedDict):
     code: str
@@ -15,14 +16,11 @@ class LanguageInfo(TypedDict):
 
 
 def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
-    """
-    Scans the locales directory for translated languages and always includes English as the base language.
+    """Scans the locales directory for translated languages and always includes English as the base language.
     """
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.
-    discovered: list[LanguageInfo] = [
-        {"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}
-    ]
+    discovered: list[LanguageInfo] = [{"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}]
 
     discovered_codes = {DEFAULT_LANGUAGE_CODE}
 
@@ -33,7 +31,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
     # 2. Search for and add all other translated languages.
     for lang_code in os.listdir(locales_path):
         if lang_code in discovered_codes:
-            continue # Skip if it's 'en' (which shouldn't be the case anymore)
+            continue  # Skip if it's 'en' (which shouldn't be the case anymore)
 
         lang_path = os.path.join(locales_path, lang_code)
         mo_file_path = os.path.join(lang_path, "LC_MESSAGES", "messages.mo")
@@ -41,9 +39,7 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
         if os.path.isdir(lang_path) and os.path.isfile(mo_file_path):
             native_name = lang_code
             try:
-                translator = gettext.translation(
-                    "messages", localedir=locales_path, languages=[lang_code]
-                )
+                translator = gettext.translation("messages", localedir=locales_path, languages=[lang_code])
                 native_name_translated = translator.gettext("language_native_name")
                 if native_name_translated and native_name_translated != "language_native_name":
                     native_name = native_name_translated
@@ -59,4 +55,3 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
     discovered.sort(key=lambda x: x["native_name"])
 
     return discovered
-

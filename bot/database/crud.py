@@ -1,6 +1,6 @@
+from datetime import datetime, timedelta
 import logging
 import secrets
-from datetime import datetime, timedelta
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from bot.core.enums import DeeplinkAction
 from bot.models import Admin, BanList, Deeplink, SubscribedUser, UserSettings
 
 logger = logging.getLogger(__name__)
+
 
 async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> bool:
     try:
@@ -26,6 +27,7 @@ async def db_add_generic(session: AsyncSession, model_instance: SQLModel) -> boo
         await session.rollback()
         return False
 
+
 async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | None) -> bool:
     if record_to_remove:
         try:
@@ -34,7 +36,7 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
             # This is a reliable and documented method.
             pk_col = record_to_remove.__mapper__.primary_key[0]
             pk_col_name = pk_col.name
-            record_pk = getattr(record_to_remove, pk_col_name, 'N/A')
+            record_pk = getattr(record_to_remove, pk_col_name, "N/A")
 
             await session.delete(record_to_remove)
             await session.commit()
@@ -46,13 +48,14 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: SQLModel | 
             return False
     return False
 
+
 async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[SQLModel], telegram_id: int) -> bool:
     existing_entity = await session.get(model_class, telegram_id)
     if existing_entity:
         logger.debug(f"User {telegram_id} already exists in {model_class.__tablename__}.")
         return False
 
-    entity = model_class(telegram_id=telegram_id) # type: ignore
+    entity = model_class(telegram_id=telegram_id)  # type: ignore
     return await db_add_generic(session, entity)
 
 
@@ -67,34 +70,40 @@ async def _remove_entity(session: AsyncSession, model_class: type[SQLModel], tel
 async def _get_all_entity_ids(session: AsyncSession, model_class: type[SQLModel]) -> list[int]:
     table_name = model_class.__tablename__
     try:
-        statement = select(model_class.telegram_id) # type: ignore
+        statement = select(model_class.telegram_id)  # type: ignore
         result = await session.exec(statement)
         return result.all()
     except SQLAlchemyError as e:
         logger.error(f"Error getting all IDs from {table_name}: {e}", exc_info=True)
         return []
 
+
 async def add_subscriber(session: AsyncSession, telegram_id: int) -> bool:
     return await _add_entity_if_not_exists(session, SubscribedUser, telegram_id)
+
 
 async def get_all_subscribers_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, SubscribedUser)
 
+
 async def add_admin(session: AsyncSession, telegram_id: int) -> bool:
     return await _add_entity_if_not_exists(session, Admin, telegram_id)
+
 
 async def remove_admin_db(session: AsyncSession, telegram_id: int) -> bool:
     return await _remove_entity(session, Admin, telegram_id)
 
+
 async def get_all_admins_ids(session: AsyncSession) -> list[int]:
     return await _get_all_entity_ids(session, Admin)
+
 
 async def create_deeplink(
     session: AsyncSession,
     action: DeeplinkAction,
     deeplink_ttl_seconds: int,
     payload: str | None = None,
-    expected_telegram_id: int | None = None
+    expected_telegram_id: int | None = None,
 ) -> str | None:
     token_str = secrets.token_urlsafe(DEEPLINK_TOKEN_LENGTH_BYTES)
     expiry_time = datetime.utcnow() + timedelta(seconds=deeplink_ttl_seconds)
@@ -103,7 +112,7 @@ async def create_deeplink(
         action=action,
         payload=payload,
         expected_telegram_id=expected_telegram_id,
-        expiry_time=expiry_time
+        expiry_time=expiry_time,
     )
     if await db_add_generic(session, deeplink_obj):
         logger.debug(
@@ -125,6 +134,7 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
             return None
     return deeplink_obj
 
+
 async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
     deeplink_obj = await session.get(Deeplink, token)
     if deeplink_obj:
@@ -132,9 +142,9 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
     logger.debug(f"Deeplink {token} not found for deletion.")
     return False
 
+
 async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> tuple[bool, bool]:
-    """
-    Deletes UserSettings (and related MutedUser) and SubscribedUser records from the database.
+    """Deletes UserSettings (and related MutedUser) and SubscribedUser records from the database.
     Does NOT commit the session.
     Returns a tuple of booleans: (user_settings_deleted, subscribed_user_deleted)
     """
@@ -160,28 +170,25 @@ async def _delete_user_data_from_db(session: AsyncSession, telegram_id: int) -> 
 
 # --- BanList CRUD Functions ---
 
+
 async def add_to_ban_list(
     session: AsyncSession,
     telegram_id: int | None = None,
     teamtalk_username: str | None = None,
-    reason: str | None = None
+    reason: str | None = None,
 ) -> bool:
     if not telegram_id and not teamtalk_username:
         logger.error("Attempted to add to ban list without telegram_id or teamtalk_username.")
         return False
 
-    ban_entry = BanList(
-        telegram_id=telegram_id,
-        teamtalk_username=teamtalk_username,
-        ban_reason=reason
-    )
+    ban_entry = BanList(telegram_id=telegram_id, teamtalk_username=teamtalk_username, ban_reason=reason)
     added = await db_add_generic(session, ban_entry)
     if added:
         logger.info(
-            f"Added to ban list: telegram_id={telegram_id}, "
-            f"teamtalk_username='{teamtalk_username}', reason='{reason}'"
+            f"Added to ban list: telegram_id={telegram_id}, teamtalk_username='{teamtalk_username}', reason='{reason}'"
         )
     return added
+
 
 async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool:
     ban_entry = await session.get(BanList, ban_id)
@@ -190,20 +197,24 @@ async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool
         logger.info(f"Removed from ban list by id: {ban_id}")
     return removed
 
+
 async def is_telegram_id_banned(session: AsyncSession, telegram_id: int) -> bool:
     statement = select(BanList).where(BanList.telegram_id == telegram_id)
     result = await session.exec(statement)
     return result.first() is not None
+
 
 async def is_teamtalk_username_banned(session: AsyncSession, teamtalk_username: str) -> bool:
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
     result = await session.exec(statement)
     return result.first() is not None
 
+
 async def get_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: int) -> list[BanList]:
     statement = select(BanList).where(BanList.telegram_id == telegram_id)
     result = await session.exec(statement)
     return result.all()
+
 
 async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_username: str) -> list[BanList]:
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)

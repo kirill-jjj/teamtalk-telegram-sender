@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 class DbSessionMiddleware(BaseMiddleware):
-    def __init__(self, session_factory: sessionmaker): # type: ignore
+    def __init__(self, session_factory: sessionmaker):  # type: ignore
         super().__init__()
         self.session_factory = session_factory
 

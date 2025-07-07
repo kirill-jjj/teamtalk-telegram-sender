@@ -1,5 +1,5 @@
-import logging
 from collections.abc import Awaitable, Callable
+import logging
 from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     pass  # Import Services
 
 logger = logging.getLogger(__name__)
+
 
 class SubscriptionCheckMiddleware(BaseMiddleware):
     async def __call__(
@@ -24,7 +25,6 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         # It's more efficient to get specific cache if that's all that's needed
         subscribed_users_cache: set[int] = data["subscribed_users_cache"]
 
-
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
             return await handler(event, data)
@@ -36,12 +36,11 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             if command_parts[0].lower() == "/start" and len(command_parts) > 1:
                 # This allows /start <token> for deeplinking, which might be used for initial subscription
                 logger.debug(
-                    f"SubscriptionCheckMiddleware: Allowing /start command with potential token "
-                    f"for user {telegram_id}."
+                    f"SubscriptionCheckMiddleware: Allowing /start command with potential token for user {telegram_id}."
                 )
                 return await handler(event, data)
 
-        if telegram_id not in subscribed_users_cache: # Use injected cache
+        if telegram_id not in subscribed_users_cache:  # Use injected cache
             logger.info(
                 f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id} "
                 f"(Event type: {type(event).__name__})."
@@ -52,7 +51,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             #     await event.answer("You are not subscribed.")
             # elif isinstance(event, CallbackQuery):
             #     await event.answer("You are not subscribed.", show_alert=True)
-            return # Stop processing for non-subscribed users
+            return  # Stop processing for non-subscribed users
 
         logger.debug(
             f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. "

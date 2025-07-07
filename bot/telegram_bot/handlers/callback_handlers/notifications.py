@@ -21,12 +21,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
 
+
 @notifications_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS))
 async def cq_show_notifications_menu(
-    callback_query: CallbackQuery,
-    _: callable,
-    user_settings: UserSettings,
-    callback_data: SettingsCallback
+    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: SettingsCallback
 ):
     await callback_query.answer()
     notification_settings_builder = await create_notification_settings_keyboard(_, user_settings)
@@ -35,8 +33,9 @@ async def cq_show_notifications_menu(
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),
         logger_instance=logger,
-        log_context="cq_show_notifications_menu"
+        log_context="cq_show_notifications_menu",
     )
+
 
 @notifications_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.TOGGLE_NOON))
 async def cq_toggle_noon_setting_action(
@@ -45,7 +44,7 @@ async def cq_toggle_noon_setting_action(
     _: callable,
     user_settings: UserSettings,
     callback_data: NotificationActionCallback,
-    services: Services
+    services: Services,
 ):
     if not callback_query.message:
         logger.warning("cq_toggle_noon_setting_action: Callback query is missing message.")
@@ -56,7 +55,7 @@ async def cq_toggle_noon_setting_action(
     user_settings.not_on_online_enabled = not original_noon_status
 
     if not await update_user_settings_in_db(session, user_settings):
-        user_settings.not_on_online_enabled = original_noon_status # Revert in-memory change
+        user_settings.not_on_online_enabled = original_noon_status  # Revert in-memory change
         await callback_query.answer(_("An error occurred while saving. Please try again."), show_alert=True)
         return
 
@@ -79,5 +78,5 @@ async def cq_toggle_noon_setting_action(
         text=menu_text,
         reply_markup=updated_builder.as_markup(),
         logger_instance=logger,
-        log_context="cq_toggle_noon_setting_action"
+        log_context="cq_toggle_noon_setting_action",
     )

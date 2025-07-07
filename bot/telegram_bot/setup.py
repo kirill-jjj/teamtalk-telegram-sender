@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 from aiogram import Dispatcher  # For type hinting dp
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
     from sender import Application  # For app_callbacks type hint
+
+    from bot.services_container import Services
 
 # Aiogram компоненты
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
@@ -28,17 +29,16 @@ from bot.telegram_bot.middlewares import (
 
 
 def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):
-    """
-    Configures the Aiogram Dispatcher with middlewares, routers,
+    """Configures the Aiogram Dispatcher with middlewares, routers,
     and lifecycle handlers.
     Dependencies are injected via dp.workflow_data.
     """
-    services.logger.info("Setting up Telegram dispatcher...") # Use logger from services
+    services.logger.info("Setting up Telegram dispatcher...")  # Use logger from services
 
     # Populate workflow_data for DI
     dp["services"] = services
     dp["config"] = services.config
-    dp["session_factory"] = services.session_factory # For DbSessionMiddleware
+    dp["session_factory"] = services.session_factory  # For DbSessionMiddleware
     # Individual caches/components for direct injection if preferred by handlers later
     dp["admin_ids_cache"] = services.admin_ids_cache
     dp["user_settings_cache"] = services.user_settings_cache
@@ -46,9 +46,8 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
     dp["connections"] = services.connections
     dp["bot_event"] = services.bot_event
     dp["bot_message"] = services.bot_message
-    dp["translator_cache"] = services.translator_cache # Though get_translator is preferred
+    dp["translator_cache"] = services.translator_cache  # Though get_translator is preferred
     dp["available_languages"] = services.available_languages
-
 
     # Register Middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
@@ -66,13 +65,11 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
     dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
     dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
-
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     # Admin check middleware for specific routers
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
-
 
     # Include routers
     dp.include_router(user_commands_router)
