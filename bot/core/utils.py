@@ -1,3 +1,5 @@
+"""General utility functions for the bot's core logic."""
+
 import logging
 from typing import Any  # Added Any
 
@@ -11,6 +13,20 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable, app_cfg: Any) -> str:  # Added app_cfg
+    """Determines the effective server name to display.
+
+    It prioritizes the server name from `app_cfg.SERVER_NAME`.
+    If not set, it attempts to fetch it from the TeamTalk instance.
+    Falls back to "Unknown Server" if unavailable.
+
+    Args:
+        tt_instance: The TeamTalk instance, or None.
+        _: A gettext-like callable for localization (though not used for server name itself).
+        app_cfg: The application configuration object.
+
+    Returns:
+        The server name string.
+    """
     server_name = app_cfg.SERVER_NAME  # Use passed app_cfg
     if not server_name:
         if tt_instance and tt_instance.connected:
@@ -20,15 +36,16 @@ def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable,
                     server_name = _("Unknown Server")
             except (TimeoutError, pytalk.exceptions.TeamTalkException) as e:
                 logger.error(
-                    f"Error getting server name from TT instance "
-                    f"{tt_instance.server_info.host if tt_instance.server_info else 'N/A'}: {e}"
+                    "Error getting server name from TT instance %s: %s",
+                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
+                    e,
                 )
                 server_name = _("Unknown Server")
             except Exception as e_unexp:  # Catch any other unexpected error
-                logger.error(
-                    f"Unexpected error getting server name from TT instance "
-                    f"{tt_instance.server_info.host if tt_instance.server_info else 'N/A'}: {e_unexp}",
-                    exc_info=True,
+                logger.exception(
+                    "Unexpected error getting server name from TT instance %s: %s",
+                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
+                    e_unexp,
                 )
                 server_name = _("Unknown Server")
         else:
@@ -39,6 +56,17 @@ def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable,
 def get_tt_user_display_name(
     user: TeamTalkUser, translator_gettext_func: callable
 ) -> str:  # Changed translator to translator_gettext_func
+    """Gets a display-friendly name for a TeamTalk user.
+
+    Prioritizes nickname, then username. Falls back to a localized "unknown user".
+
+    Args:
+        user: The TeamTalkUser object.
+        translator_gettext_func: A gettext-like callable for localization.
+
+    Returns:
+        The display name string.
+    """
     # This function seems fine, uses passed translator.
     display_name = ttstr(user.nickname)
     if not display_name:
@@ -49,6 +77,14 @@ def get_tt_user_display_name(
 
 
 def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> str:
+    """Extracts the username as a string from a TeamTalkUser or TeamTalkUserAccount object.
+
+    Args:
+        user_or_account: The TeamTalk user or account object.
+
+    Returns:
+        The username as a string, or an empty string if not found.
+    """
     # This function is fine as is.
     username = None
     if hasattr(user_or_account, "username"):
@@ -63,6 +99,17 @@ def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> 
 
 
 def build_help_message(_: callable, platform: str, is_telegram_admin: bool, is_teamtalk_admin: bool) -> str:
+    """Builds a help message tailored to the platform and user's admin status.
+
+    Args:
+        _: A gettext-like callable for localization.
+        platform: The platform for which to generate help ("telegram" or "teamtalk").
+        is_telegram_admin: Whether the user is a Telegram admin.
+        is_teamtalk_admin: Whether the user is a TeamTalk admin.
+
+    Returns:
+        The formatted help message string.
+    """
     # This function is fine as is, relies on passed parameters.
     parts = []
     if platform == "telegram":
@@ -129,9 +176,9 @@ async def get_online_teamtalk_users(
         online_users = tt_instance.server.get_users()
         return list(online_users) if online_users else []
     except Exception as e:
-        logger.error(
-            f"Error fetching online users from tt_instance "
-            f"({tt_instance.server_info.host if tt_instance.server_info else 'N/A'}): {e}",
-            exc_info=True,
+        logger.exception(
+            "Error fetching online users from tt_instance (%s): %s",
+            tt_instance.server_info.host if tt_instance.server_info else "N/A",
+            e,
         )
         return []

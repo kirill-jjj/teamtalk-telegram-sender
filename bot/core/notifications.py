@@ -1,3 +1,5 @@
+"""Handles the logic for sending notifications based on TeamTalk events."""
+
 from collections.abc import Callable
 from datetime import datetime, timedelta
 import gettext
@@ -43,7 +45,11 @@ def _should_ignore_initial_event(
         return False
     if event_type == NOTIFICATION_EVENT_JOIN:
         logger.debug(
-            f"Ignoring potential initial sync {event_type} for {username} ({user_id}). Reason: {reason_for_ignore}."
+            "Ignoring potential initial sync %s for %s (%s). Reason: %s.",
+            event_type,
+            username,
+            user_id,
+            reason_for_ignore,
         )
     return True
 
@@ -121,6 +127,19 @@ async def send_join_leave_notification_logic(
     online_users_cache_for_instance: dict[int, "pytalk.user.User"],
     services: "Services",
 ):
+    """Core logic for sending join/leave notifications.
+
+    This function determines who should receive a notification based on their settings,
+    the event type (join/leave), and the NOON (Not On Online) feature.
+
+    Args:
+        event_type: The type of event ("join" or "leave").
+        tt_user: The TeamTalkUser object for the user who triggered the event.
+        tt_instance: The TeamTalkInstance where the event occurred.
+        login_complete_time: Timestamp when the bot's login to this instance was finalized.
+        online_users_cache_for_instance: Cache of online users for the specific TT instance.
+        services: The application's services container.
+    """
     default_lang_for_markup_and_log = services.config.DEFAULT_LANG
     _log_markup_translator = services.get_translator(default_lang_for_markup_and_log).gettext
     user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
@@ -130,8 +149,11 @@ async def send_join_leave_notification_logic(
 
     if not user_username:
         logger.warning(
-            f"User {event_type} with empty username (Nickname: {user_nickname}, ID: {user_id}) "
-            f"on server {tt_instance.server_info.host}. Skipping."
+            "User %s with empty username (Nickname: %s, ID: %s) on server %s. Skipping.",
+            event_type,
+            user_nickname,
+            user_id,
+            tt_instance.server_info.host,
         )
         return
 
@@ -140,8 +162,10 @@ async def send_join_leave_notification_logic(
 
     if _is_user_globally_ignored(user_username, services.config):
         logger.debug(
-            f"User {user_username} is globally ignored on server {tt_instance.server_info.host}. "
-            f"Skipping {event_type} notification."
+            "User %s is globally ignored on server %s. Skipping %s notification.",
+            user_username,
+            tt_instance.server_info.host,
+            event_type,
         )
         return
 
@@ -151,14 +175,19 @@ async def send_join_leave_notification_logic(
 
     if not recipients:
         logger.debug(
-            f"No recipients found for {event_type} event for user {user_username} "
-            f"on server {tt_instance.server_info.host}."
+            "No recipients found for %s event for user %s on server %s.",
+            event_type,
+            user_username,
+            tt_instance.server_info.host,
         )
         return
 
     logger.info(
-        f"Notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} "
-        f"will be sent to {len(recipients)} initial recipients."
+        "Notifications for %s of %s on server %s will be sent to %s initial recipients.",
+        event_type,
+        user_username,
+        tt_instance.server_info.host,
+        len(recipients),
     )
     server_name = get_effective_server_name(tt_instance, _log_markup_translator, services.config)
 
@@ -168,8 +197,8 @@ async def send_join_leave_notification_logic(
         user_specific_settings = services.user_settings_cache.get(tg_user_id)
         if not user_specific_settings:
             logger.warning(
-                f"User settings not found in cache for recipient {tg_user_id} "
-                f"during final NOON check. Skipping NOON for them."
+                "User settings not found in cache for recipient %s during final NOON check. Skipping NOON for them.",
+                tg_user_id,
             )
             final_recipients.append(tg_user_id)
             continue
@@ -188,23 +217,30 @@ async def send_join_leave_notification_logic(
                         break
                 if not other_users_online_in_instance:
                     logger.debug(
-                        f"NOON: User {user_nickname} is the only one online (besides bot) "
-                        f"for TG user {tg_user_id} on server {tt_instance.server_info.host}. "
-                        f"Skipping notification for this recipient."
+                        "NOON: User %s is the only one online (besides bot) for TG user %s "
+                        "on server %s. Skipping notification for this recipient.",
+                        user_nickname,
+                        tg_user_id,
+                        tt_instance.server_info.host,
                     )
                     continue
         final_recipients.append(tg_user_id)
 
     if not final_recipients:
         logger.info(
-            f"No recipients left after NOON filtering for {event_type} of {user_username} "
-            f"on server {tt_instance.server_info.host}."
+            "No recipients left after NOON filtering for %s of %s on server %s.",
+            event_type,
+            user_username,
+            tt_instance.server_info.host,
         )
         return
 
     logger.info(
-        f"Final notifications for {event_type} of {user_username} on server {tt_instance.server_info.host} "
-        f"will be sent to {len(final_recipients)} users."
+        "Final notifications for %s of %s on server %s will be sent to %s users.",
+        event_type,
+        user_username,
+        tt_instance.server_info.host,
+        len(final_recipients),
     )
 
     await send_telegram_messages_to_list(

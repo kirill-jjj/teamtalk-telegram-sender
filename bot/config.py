@@ -1,3 +1,6 @@
+"""Configuration models for the bot application."""
+
+import os  # Moved here for PLC0415
 import tomllib  # Requires Python 3.11+
 from typing import Literal
 
@@ -11,22 +14,30 @@ GenderType = Literal["male", "female", "neutral"]
 
 
 class GeneralSettings(BaseSettings):  # Renamed from BotGeneralSettings
+    """General bot settings."""
+
     default_lang: str = Field("en", description="Default language for bot messages.")
     gender: GenderType = Field("neutral", description="Gender for bot's persona in localized messages.")
     admin_username: str | None = Field(None, description="Optional admin username for display/identification.")
 
 
 class DatabaseSettings(BaseSettings):
+    """Database-specific settings."""
+
     db_file: str = Field("bot_data.db", description="Path to the SQLite database file.")
 
 
 class TelegramSettings(BaseSettings):
+    """Telegram-specific settings."""
+
     event_token: str = Field(description="Main Telegram Bot API token for receiving events.")
     message_token: str = Field(description="Telegram Bot API token for sending messages (can be same as event_token).")
     admin_chat_id: int = Field(description="Telegram Chat ID of the administrator for notifications.")
 
 
 class TeamTalkSettings(BaseSettings):
+    """TeamTalk-specific settings."""
+
     host_name: str = Field("teamtalk.example.com", description="TeamTalk server address.")
     port: int = Field(10333, description="TeamTalk server port.")
     encrypted: bool = Field(False, description="Whether the TeamTalk connection is encrypted.")
@@ -44,6 +55,8 @@ class TeamTalkSettings(BaseSettings):
 
 
 class OperationalParameters(BaseSettings):
+    """Settings for operational parameters like TTLs and retry intervals."""
+
     deeplink_ttl_seconds: int = Field(300, description="TTL for deeplinks in seconds.")
     tt_reconnect_retry_seconds: int = Field(15, description="Retry interval for TeamTalk connection.")
     tt_reconnect_check_interval_seconds: int = Field(10, description="Check interval for TeamTalk connection status.")
@@ -54,6 +67,7 @@ class OperationalParameters(BaseSettings):
 
 class Settings(BaseSettings):
     """Main application settings class.
+
     Loads configuration from a TOML file.
     """
 
@@ -71,9 +85,7 @@ class Settings(BaseSettings):
                 data = tomllib.load(f)
         except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns
-            import os
-
-            abs_path = os.path.abspath(path)
+            abs_path = os.path.abspath(path)  # os will be available once import is moved
             raise FileNotFoundError(
                 f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path}')"
             ) from e

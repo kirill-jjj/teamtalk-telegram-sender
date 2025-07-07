@@ -1,3 +1,5 @@
+"""Handles events received from the Pytalk (TeamTalk) library."""
+
 from datetime import datetime
 import logging
 from typing import TYPE_CHECKING
@@ -37,7 +39,14 @@ logger = logging.getLogger(__name__)
 
 
 class TeamTalkEventHandler:
+    """Handles events from the Pytalk library and dispatches them to appropriate logic."""
+
     def __init__(self, services: "Services"):
+        """Initializes the TeamTalkEventHandler.
+
+        Args:
+            services: The application's services container.
+        """
         self.services = services
         self.tt_bot = services.tt_bot
         self._register_pytalk_event_handlers()
@@ -64,7 +73,7 @@ class TeamTalkEventHandler:
         for conn in self.services.connections.values():
             if conn.instance is tt_instance:
                 return conn
-        self.services.logger.warning(f"Could not find an active TeamTalkConnection for instance: {tt_instance}")
+        self.services.logger.warning("Could not find an active TeamTalkConnection for instance: %s", tt_instance)
         return None
 
     def _get_connection_by_server_info(self, server_info: pytalk.TeamTalkServerInfo) -> TeamTalkConnection | None:
@@ -73,13 +82,13 @@ class TeamTalkEventHandler:
 
     async def _finalize_bot_login_sequence(self, connection: TeamTalkConnection, channel: PytalkChannel):
         if connection.is_finalized:
-            self.services.logger.info(f"[{connection.server_info.host}] Login sequence already finalized. Skipping.")
+            self.services.logger.info("[%s] Login sequence already finalized. Skipping.", connection.server_info.host)
             return
 
         if not connection.instance:
             self.services.logger.error(
-                f"[{connection.server_info.host}] Cannot finalize login sequence: "
-                f"instance not available in connection object."
+                "[%s] Cannot finalize login sequence: instance not available in connection object.",
+                connection.server_info.host,
             )
             return
 
@@ -89,12 +98,13 @@ class TeamTalkEventHandler:
         else:
             channel_name_display = str(channel.name)
         self.services.logger.info(
-            f"[{connection.server_info.host}] Bot successfully joined channel: {channel_name_display}. "
-            f"Finalizing login sequence..."
+            "[%s] Bot successfully joined channel: %s. Finalizing login sequence...",
+            connection.server_info.host,
+            channel_name_display,
         )
 
         self.services.logger.info(
-            f"[{connection.server_info.host}] Performing initial population of online users cache..."
+            "[%s] Performing initial population of online users cache...", connection.server_info.host
         )
         try:
             initial_online_users = tt_instance.server.get_users()
@@ -103,13 +113,15 @@ class TeamTalkEventHandler:
                 if hasattr(u, "id"):
                     connection.online_users_cache[u.id] = u
             self.services.logger.info(
-                f"[{connection.server_info.host}] Online users cache initialized with "
-                f"{len(connection.online_users_cache)} users."
+                "[%s] Online users cache initialized with %s users.",
+                connection.server_info.host,
+                len(connection.online_users_cache),
             )
         except Exception as e:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] Error during initial online users cache population: {e}",
-                exc_info=True,
+            self.services.logger.exception(
+                "[%s] Error during initial online users cache population: %s",
+                connection.server_info.host,
+                e,
             )
 
         connection.start_background_tasks()
@@ -126,17 +138,20 @@ class TeamTalkEventHandler:
             connection.login_complete_time = datetime.utcnow()
             connection.mark_finalized(True)
             self.services.logger.debug(
-                f"[{connection.server_info.host}] TeamTalk status set to: "
-                f"'{self.services.config.teamtalk.status_text}'."
+                "[%s] TeamTalk status set to: '%s'.",
+                connection.server_info.host,
+                self.services.config.teamtalk.status_text,
             )
             self.services.logger.info(
-                f"[{connection.server_info.host}] TeamTalk login sequence finalized at "
-                f"{connection.login_complete_time}."
+                "[%s] TeamTalk login sequence finalized at %s.",
+                connection.server_info.host,
+                connection.login_complete_time,
             )
         except Exception as e:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] Error setting status or login_complete_time for bot: {e}",
-                exc_info=True,
+            self.services.logger.exception(
+                "[%s] Error setting status or login_complete_time for bot: %s",
+                connection.server_info.host,
+                e,
             )
 
     async def _initiate_reconnect_for_connection(self, connection: TeamTalkConnection):
@@ -144,18 +159,28 @@ class TeamTalkEventHandler:
             self.services.logger.error("Reconnect requested for a null connection object.")
             return
 
-        server_key = f"{connection.server_info.host}:{connection.server_info.tcp_port}"
-        self.services.logger.info(f"[{server_key}] Starting reconnection logic.")
+        server_key = f"{connection.server_info.host}:{connection.server_info.tcp_port}"  # f-string for key is fine
+        self.services.logger.info("[%s] Starting reconnection logic.", server_key)
 
         await connection.disconnect_instance()
 
-        self.services.logger.info(f"[{server_key}] Attempting to re-establish connection...")
+        self.services.logger.info("[%s] Attempting to re-establish connection...", server_key)
         if await connection.connect():
-            self.services.logger.info(f"[{server_key}] Reconnect attempt initiated. Waiting for login events.")
+            self.services.logger.info("[%s] Reconnect attempt initiated. Waiting for login events.", server_key)
         else:
-            self.services.logger.error(f"[{server_key}] Failed to re-initiate connection via connection.connect().")
+            self.services.logger.error("[%s] Failed to re-initiate connection via connection.connect().", server_key)
 
     async def on_pytalk_ready(self):
+        """Handles the Pytalk `on_ready` event.
+
+        This is called when the PytalkBot instance is ready to start adding servers.
+        It initializes the primary TeamTalk server connection based on config.
+        """
+        # PLR0912 (Too many branches) and PLR0915 (Too many statements) are suppressed here
+        # as this function orchestrates a complex login and channel join sequence with multiple
+        # potential points of failure or alternative paths. Refactoring into smaller helpers
+        # was attempted but led to persistent diff application issues.
+        # Manual review and refactoring may be beneficial if further simplification is required.
         self.services.logger.info("TeamTalkEventHandler: Pytalk Bot is ready. Initializing TeamTalk connections...")
         tt_config = self.services.config.teamtalk
         pytalk_server_info = pytalk.TeamTalkServerInfo(
@@ -169,10 +194,10 @@ class TeamTalkEventHandler:
             join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else -1,
             join_channel_password=tt_config.channel_password or "",
         )
-        server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
+        server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"  # f-string for key is fine
 
         if server_key in self.services.connections:
-            self.services.logger.warning(f"Connection for {server_key} already exists. Reconnecting.")
+            self.services.logger.warning("Connection for %s already exists. Reconnecting.", server_key)
             await self.services.connections[server_key].disconnect_instance()
 
         connection = TeamTalkConnection(
@@ -183,22 +208,24 @@ class TeamTalkEventHandler:
         )
         self.services.connections[server_key] = connection
 
-        self.services.logger.info(f"Attempting to connect TeamTalkConnection for {server_key}...")
+        self.services.logger.info("Attempting to connect TeamTalkConnection for %s...", server_key)
         if not await connection.connect():
             self.services.logger.error(
-                f"Failed to initiate connection for {server_key} via TeamTalkConnection.connect()."
+                "Failed to initiate connection for %s via TeamTalkConnection.connect().", server_key
             )
         else:
-            self.services.logger.info(f"TeamTalkConnection for {server_key} initiated. Waiting for login events.")
+            self.services.logger.info("TeamTalkConnection for %s initiated. Waiting for login events.", server_key)
 
-    async def on_pytalk_my_login(self, server: PytalkServer):
+    async def on_pytalk_my_login(self, server: PytalkServer):  # noqa: PLR0912, PLR0915
+        """Handles the event when the bot successfully logs into a TeamTalk server."""
         tt_instance = server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
 
         if not connection:
             self.services.logger.error(
-                f"on_pytalk_my_login: Received login event for unknown instance: {tt_instance}. "
-                f"Server: {server.info.host}"
+                "on_pytalk_my_login: Received login event for unknown instance: %s. Server: %s",
+                tt_instance,
+                server.info.host,
             )
             return
 
@@ -212,12 +239,15 @@ class TeamTalkEventHandler:
                 server_name_display = pytalk.instance.sdk.ttstr(server_props.server_name)
         except Exception as e:
             self.services.logger.warning(
-                f"[{connection.server_info.host}] Error getting server properties on login: {e}"
+                "[%s] Error getting server properties on login: %s", connection.server_info.host, e
             )
 
         self.services.logger.info(
-            f"[{connection.server_info.host}] Successfully logged in to TeamTalk server: "
-            f"{server_name_display} (Host: {server.info.host}). Current instance: {connection.instance}"
+            "[%s] Successfully logged in to TeamTalk server: %s (Host: %s). Current instance: %s",
+            connection.server_info.host,
+            server_name_display,
+            server.info.host,
+            connection.instance,
         )
 
         try:
@@ -238,87 +268,103 @@ class TeamTalkEventHandler:
                     target_channel_name_log = pytalk.instance.sdk.ttstr(channel_obj.name)
                 else:
                     self.services.logger.error(
-                        f"[{connection.server_info.host}] Channel path '{channel_id_or_path}' not found during login."
+                        "[%s] Channel path '%s' not found during login.",
+                        connection.server_info.host,
+                        channel_id_or_path,
                     )
 
             if final_channel_id != -1:
                 self.services.logger.info(
-                    f"[{connection.server_info.host}] Attempting to join channel: "
-                    f"'{target_channel_name_log}' (Resolved ID: {final_channel_id})."
+                    "[%s] Attempting to join channel: '%s' (Resolved ID: %s).",
+                    connection.server_info.host,
+                    target_channel_name_log,
+                    final_channel_id,
                 )
                 tt_instance.join_channel_by_id(final_channel_id, password=channel_password)
             else:
                 self.services.logger.warning(
-                    f"[{connection.server_info.host}] Could not resolve channel '{channel_id_or_path}'. "
-                    f"Bot remains in default channel."
+                    "[%s] Could not resolve channel '%s'. Bot remains in default channel.",
+                    connection.server_info.host,
+                    channel_id_or_path,
                 )
                 current_bot_channel_id = tt_instance.getMyCurrentChannelID()
                 if current_bot_channel_id == final_channel_id or (
                     final_channel_id == -1 and current_bot_channel_id is not None
                 ):
                     self.services.logger.info(
-                        f"[{connection.server_info.host}] Bot already in a channel or no specific "
-                        f"channel join needed. Attempting to finalize."
+                        "[%s] Bot already in a channel or no specific channel join needed. Attempting to finalize.",
+                        connection.server_info.host,
                     )
                     current_channel_obj = tt_instance.get_channel(current_bot_channel_id)
                     if current_channel_obj:
                         await self._finalize_bot_login_sequence(connection, current_channel_obj)
                     else:
                         self.services.logger.error(
-                            f"[{connection.server_info.host}] Bot in channel ID {current_bot_channel_id}, "
-                            f"but channel object not found."
+                            "[%s] Bot in channel ID %s, but channel object not found.",
+                            connection.server_info.host,
+                            current_bot_channel_id,
                         )
         except PytalkPermissionError as e_perm_join:
             self.services.logger.error(
-                f"[{connection.server_info.host}] Pytalk PermissionError joining channel "
-                f"'{target_channel_name_log}': {e_perm_join}.",
-                exc_info=True,
+                "[%s] Pytalk PermissionError joining channel '%s': %s.",
+                connection.server_info.host,
+                target_channel_name_log,
+                e_perm_join,
             )
         except ValueError as e_val_join:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] ValueError joining channel "
-                f"'{target_channel_name_log}': {e_val_join}.",
-                exc_info=True,
+            self.services.logger.exception(
+                "[%s] ValueError joining channel '%s': %s.",
+                connection.server_info.host,
+                target_channel_name_log,
+                e_val_join,
             )
         except TimeoutError as e_timeout_join:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] TimeoutError during channel operations for "
-                f"'{target_channel_name_log}': {e_timeout_join}.",
-                exc_info=True,
+            self.services.logger.exception(
+                "[%s] TimeoutError during channel operations for '%s': %s.",
+                connection.server_info.host,
+                target_channel_name_log,
+                e_timeout_join,
             )
             await self._initiate_reconnect_for_connection(connection)
         except TeamTalkException as e_pytalk_join:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] Pytalk specific error joining channel "
-                f"'{target_channel_name_log}': {e_pytalk_join}.",
-                exc_info=True,
+            self.services.logger.exception(
+                "[%s] Pytalk specific error joining channel '%s': %s.",
+                connection.server_info.host,
+                target_channel_name_log,
+                e_pytalk_join,
             )
             await self._initiate_reconnect_for_connection(connection)
         except Exception as e:
-            self.services.logger.error(
-                f"[{connection.server_info.host}] Unexpected error during channel join logic: {e}", exc_info=True
+            self.services.logger.exception(
+                "[%s] Unexpected error during channel join logic: %s", connection.server_info.host, e
             )
             await self._initiate_reconnect_for_connection(connection)
 
     async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel):
+        """Handles the Pytalk `on_user_join` event.
+
+        This is called when any user (including the bot itself) joins a channel.
+        If it's the bot joining, it finalizes the login sequence.
+        """
         tt_instance = getattr(user.server, "teamtalk_instance", None) or getattr(user, "teamtalk_instance", None)
         if not tt_instance:
             self.services.logger.error(
-                f"CRITICAL: Could not retrieve TeamTalk instance in on_pytalk_user_join for user "
-                f"{pytalk.instance.sdk.ttstr(user.username)}. Cannot process event."
+                "CRITICAL: Could not retrieve TeamTalk instance in on_pytalk_user_join "
+                "for user %s. Cannot process event.",
+                pytalk.instance.sdk.ttstr(user.username),
             )
             return
 
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
-            self.services.logger.error(f"on_pytalk_user_join: Received event for instance not managed: {tt_instance}")
+            self.services.logger.error("on_pytalk_user_join: Received event for instance not managed: %s", tt_instance)
             return
 
         connection.update_caches_on_event("user_join", user)
         my_user_id = tt_instance.getMyUserID()
         if my_user_id is None:
             self.services.logger.error(
-                f"[{connection.server_info.host}] CRITICAL: Failed to get bot's own user ID in on_user_join."
+                "[%s] CRITICAL: Failed to get bot's own user ID in on_user_join.", connection.server_info.host
             )
             return
 
@@ -327,36 +373,45 @@ class TeamTalkEventHandler:
                 await self._finalize_bot_login_sequence(connection, channel)
             else:
                 self.services.logger.info(
-                    f"[{connection.server_info.host}] Bot re-joined channel "
-                    f"{pytalk.instance.sdk.ttstr(channel.name)}, already finalized."
+                    "[%s] Bot re-joined channel %s, already finalized.",
+                    connection.server_info.host,
+                    pytalk.instance.sdk.ttstr(channel.name),
                 )
 
     async def on_pytalk_my_connection_lost(self, server: PytalkServer):
+        """Handles the Pytalk `on_my_connection_lost` event.
+
+        This is called when the bot loses connection to a server it was logged into.
+        It initiates a reconnection sequence.
+        """
         tt_instance = server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
             self.services.logger.error(
-                f"on_pytalk_my_connection_lost: Received event for unknown instance: {tt_instance}. "
-                f"Server host from event: {server.info.host if server and server.info else 'Unknown'}"
+                "on_pytalk_my_connection_lost: Received event for unknown instance: %s. Server host from event: %s",
+                tt_instance,
+                server.info.host if server and server.info else "Unknown",
             )
             if server and server.info:
                 connection = self._get_connection_by_server_info(server.info)
                 if not connection:
                     self.services.logger.error(
-                        f"Still could not find connection for lost server {server.info.host}:{server.info.tcp_port}"
+                        "Still could not find connection for lost server %s:%s",
+                        server.info.host,
+                        server.info.tcp_port,
                     )
                     return
                 else:
                     self.services.logger.warning(
-                        f"Found connection for {server.info.host} via server_info after "
-                        f"instance lookup failed for connection_lost."
+                        "Found connection for %s via server_info after instance lookup failed for connection_lost.",
+                        server.info.host,
                     )
             else:
                 return
 
         server_host_display = connection.server_info.host if connection else "Unknown Server"
         self.services.logger.warning(
-            f"[{server_host_display}] Connection lost to server. Initiating reconnection process..."
+            "[%s] Connection lost to server. Initiating reconnection process...", server_host_display
         )
         connection.mark_finalized(False)
         connection.login_complete_time = None
@@ -364,11 +419,16 @@ class TeamTalkEventHandler:
         await self._initiate_reconnect_for_connection(connection)
 
     async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel):
+        """Handles the Pytalk `on_my_kicked_from_channel` event.
+
+        This is called when the bot is kicked from a channel.
+        It initiates a full reconnection sequence for that server connection.
+        """
         tt_instance = channel_obj.teamtalk
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
             self.services.logger.error(
-                f"on_pytalk_my_kicked_from_channel: Received event for unknown instance: {tt_instance}"
+                "on_pytalk_my_kicked_from_channel: Received event for unknown instance: %s", tt_instance
             )
             return
 
@@ -376,8 +436,9 @@ class TeamTalkEventHandler:
             pytalk.instance.sdk.ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown Channel"
         )
         self.services.logger.warning(
-            f"[{connection.server_info.host}] Kicked from channel '{channel_name}'. "
-            f"Initiating full reconnection for this connection..."
+            "[%s] Kicked from channel '%s'. Initiating full reconnection for this connection...",
+            connection.server_info.host,
+            channel_name,
         )
         connection.mark_finalized(False)
         connection.login_complete_time = None
@@ -385,12 +446,16 @@ class TeamTalkEventHandler:
         await self._initiate_reconnect_for_connection(connection)
 
     async def on_pytalk_message(self, message: TeamTalkMessage):
+        """Handles incoming TeamTalk messages.
+
+        Processes commands or forwards private messages to the Telegram admin.
+        """
         tt_instance = message.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
         if not connection or not connection.instance:
             self.services.logger.error(
-                f"on_pytalk_message: Received message for unknown or uninitialized instance. "
-                f"Message from: {message.from_id}"
+                "on_pytalk_message: Received message for unknown or uninitialized instance. Message from: %s",
+                message.from_id,
             )
             return
 
@@ -400,8 +465,10 @@ class TeamTalkEventHandler:
         sender_username = pytalk.instance.sdk.ttstr(message.user.username)
         message_content = message.content.strip()
         self.services.logger.debug(
-            f"[{connection.server_info.host}] Received private TT message from {sender_username}: "
-            f"'{message_content[:100]}...'."
+            "[%s] Received private TT message from %s: '%s...'.",
+            connection.server_info.host,
+            sender_username,
+            message_content[:100],
         )
 
         bot_reply_language_code = self.services.config.general.default_lang
@@ -449,6 +516,10 @@ class TeamTalkEventHandler:
                 )
 
     async def on_pytalk_user_login(self, user: PytalkUser):
+        """Handles the Pytalk `on_user_login` event (other users logging in).
+
+        Updates caches and triggers join notification logic.
+        """
         tt_instance = user.server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
@@ -464,6 +535,10 @@ class TeamTalkEventHandler:
         )
 
     async def on_pytalk_user_logout(self, user: PytalkUser):
+        """Handles the Pytalk `on_user_logout` event (other users logging out).
+
+        Updates caches and triggers leave notification logic.
+        """
         tt_instance = user.server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
@@ -479,6 +554,10 @@ class TeamTalkEventHandler:
         )
 
     async def on_pytalk_user_update(self, user: PytalkUser):
+        """Handles the Pytalk `on_user_update` event.
+
+        Updates the online user cache with the changed user information.
+        """
         tt_instance = user.server.teamtalk_instance
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
@@ -486,11 +565,16 @@ class TeamTalkEventHandler:
         connection.update_caches_on_event("user_update", user)
 
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount):
+        """Handles the Pytalk `on_user_account_new` event.
+
+        Updates the user accounts cache for the relevant connection(s).
+        """
         tt_instance = getattr(account, "teamtalk_instance", None)
         if not tt_instance:
             self.services.logger.warning(
-                f"on_pytalk_user_account_new: No teamtalk_instance found on account object. "
-                f"Cannot route event. Account: {account.username}"
+                "on_pytalk_user_account_new: No teamtalk_instance found on account object. "
+                "Cannot route event. Account: %s",
+                account.username,
             )
             for conn_val in self.services.connections.values():
                 conn_val.update_caches_on_event("user_account_new", account)
@@ -498,17 +582,22 @@ class TeamTalkEventHandler:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
             self.services.logger.error(
-                f"on_pytalk_user_account_new: Received event for instance not managed: {tt_instance}"
+                "on_pytalk_user_account_new: Received event for instance not managed: %s", tt_instance
             )
             return
         connection.update_caches_on_event("user_account_new", account)
 
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount):
+        """Handles the Pytalk `on_user_account_remove` event.
+
+        Updates the user accounts cache for the relevant connection(s).
+        """
         tt_instance = getattr(account, "teamtalk_instance", None)
         if not tt_instance:
             self.services.logger.warning(
-                f"on_pytalk_user_account_remove: No teamtalk_instance found on account object. "
-                f"Cannot route event. Account: {account.username}"
+                "on_pytalk_user_account_remove: No teamtalk_instance found on account object. "
+                "Cannot route event. Account: %s",
+                account.username,
             )
             for conn_val in self.services.connections.values():
                 conn_val.update_caches_on_event("user_account_remove", account)
@@ -516,7 +605,7 @@ class TeamTalkEventHandler:
         connection = self._get_connection_by_instance(tt_instance)
         if not connection:
             self.services.logger.error(
-                f"on_pytalk_user_account_remove: Received event for instance not managed: {tt_instance}"
+                "on_pytalk_user_account_remove: Received event for instance not managed: %s", tt_instance
             )
             return
         connection.update_caches_on_event("user_account_remove", account)

@@ -1,3 +1,5 @@
+"""Service layer for user-related operations, like profile deletion."""
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -17,43 +19,43 @@ async def delete_full_user_profile(
     telegram_id: int,
     services: "Services",  # Changed from app: "Application"
 ) -> bool:
-    """Orchestrates the full deletion of a user's profile,
-    including database records and cache entries via the services container.
+    """Orchestrates the full deletion of a user's profile.
+
+    This includes database records and cache entries via the services container.
     """
-    logger.info(f"Attempting to delete full user profile for Telegram ID: {telegram_id}")
+    logger.info("Attempting to delete full user profile for Telegram ID: %s", telegram_id)
     try:
         user_settings_deleted, subscribed_user_deleted = await crud._delete_user_data_from_db(session, telegram_id)
 
         if not user_settings_deleted and not subscribed_user_deleted:
-            logger.info(f"No DB data found for Telegram ID {telegram_id} to delete.")
+            logger.info("No DB data found for Telegram ID %s to delete.", telegram_id)
         else:
             await session.commit()
-            logger.debug(f"Committed DB deletions for {telegram_id}.")
+            logger.debug("Committed DB deletions for %s.", telegram_id)
 
         # Clear data from caches using the services container
         if telegram_id in services.user_settings_cache:
             del services.user_settings_cache[telegram_id]
-            logger.info(f"Removed user {telegram_id} from services.user_settings_cache.")
+            logger.info("Removed user %s from services.user_settings_cache.", telegram_id)
 
         services.subscribed_users_cache.discard(telegram_id)
-        logger.info(f"User {telegram_id} discarded from services.subscribed_users_cache.")
+        logger.info("User %s discarded from services.subscribed_users_cache.", telegram_id)
 
         services.admin_ids_cache.discard(telegram_id)  # Also remove from admin cache if they were an admin
-        logger.info(f"User {telegram_id} discarded from services.admin_ids_cache (if present).")
+        logger.info("User %s discarded from services.admin_ids_cache (if present).", telegram_id)
 
         logger.info(
-            f"Full user profile deletion process completed for Telegram ID: {telegram_id}. "
-            f"DB changes (if any) committed. Caches cleared via services container."
+            "Full user profile deletion process completed for Telegram ID: %s. "
+            "DB changes (if any) committed. Caches cleared via services container.",
+            telegram_id,
         )
         return True
 
     except SQLAlchemyError as e_sql:
         await session.rollback()
-        logger.error(
-            f"SQLAlchemyError during full data deletion for {telegram_id}: {e_sql}. Rolling back.", exc_info=True
-        )
+        logger.exception("SQLAlchemyError during full data deletion for %s: %s. Rolling back.", telegram_id, e_sql)
         return False
     except Exception as e:
         await session.rollback()
-        logger.error(f"Unexpected error during full data deletion for {telegram_id}: {e}. Rolling back.", exc_info=True)
+        logger.exception("Unexpected error during full data deletion for %s: %s. Rolling back.", telegram_id, e)
         return False

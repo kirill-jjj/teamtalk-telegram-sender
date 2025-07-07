@@ -1,3 +1,5 @@
+"""Telegram bot command handlers for administrator actions."""
+
 import logging
 
 from aiogram import Bot as AiogramBot
@@ -36,7 +38,7 @@ async def _show_user_buttons(
 
     my_user_id = tt_instance.getMyUserID()
     if my_user_id is None:
-        logger.error(f"[{tt_connection.server_info.host}] Could not get own user ID in _show_user_buttons.")
+        logger.error("[%s] Could not get own user ID in _show_user_buttons.", tt_connection.server_info.host)
         await message.reply(_("An error occurred. Please try again later."))
         return
 
@@ -70,6 +72,7 @@ async def kick_command_handler(
     _: callable,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    """Handles the /kick command for administrators."""
     await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
 
 
@@ -79,6 +82,7 @@ async def ban_command_handler(
     _: callable,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    """Handles the /ban command for administrators."""
     await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
 
 
@@ -89,4 +93,5 @@ async def subscribers_command_handler(
     bot: AiogramBot,  # Injected by Aiogram (Dispatcher has it)
     _: callable,  # Injected by UserSettingsMiddleware
 ):
+    """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(message, session, bot, _, page=0)

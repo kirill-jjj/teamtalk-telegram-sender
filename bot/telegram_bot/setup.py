@@ -1,3 +1,5 @@
+"""Sets up the Aiogram Dispatcher with middlewares, routers, and lifecycle handlers."""
+
 from typing import TYPE_CHECKING
 
 from aiogram import Dispatcher  # For type hinting dp
@@ -29,8 +31,8 @@ from bot.telegram_bot.middlewares import (
 
 
 def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):
-    """Configures the Aiogram Dispatcher with middlewares, routers,
-    and lifecycle handlers.
+    """Configures the Aiogram Dispatcher with middlewares, routers, and lifecycle handlers.
+
     Dependencies are injected via dp.workflow_data.
     """
     services.logger.info("Setting up Telegram dispatcher...")  # Use logger from services

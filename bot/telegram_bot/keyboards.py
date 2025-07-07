@@ -4,7 +4,7 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
-from collections.abc import Callable  # Added Any for the generic helper
+from collections.abc import Callable
 import html
 from typing import Any
 
@@ -52,9 +52,23 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 def _is_username_effectively_muted(username: str, user_settings: UserSettings, muted_usernames_set: set[str]) -> bool:
-    """Determines if a username is effectively muted based on user settings and a provided set of muted/allowed usernames.
-    - If user_settings.mute_all is True, the set is an allow list; user is muted if NOT in the set.
-    - If user_settings.mute_all is False, the set is a block list; user is muted if IN the set.
+    """Determines if a username is effectively muted based on user settings.
+
+    - If `user_settings.mute_list_mode` is `MuteListMode.whitelist`, the
+      `muted_usernames_set` is treated as an allow list; the user is considered
+      muted if their username is NOT in this set.
+    - If `user_settings.mute_list_mode` is `MuteListMode.blacklist`, the
+      `muted_usernames_set` is treated as a block list; the user is considered
+      muted if their username IS in this set.
+
+    Args:
+        username: The TeamTalk username to check.
+        user_settings: The UserSettings object for the Telegram user.
+        muted_usernames_set: A set of TeamTalk usernames, acting as either an
+                             allow list or a block list based on `user_settings.mute_list_mode`.
+
+    Returns:
+        True if the user is effectively muted, False otherwise.
     """
     is_in_set = username in muted_usernames_set
     if user_settings.mute_list_mode == MuteListMode.whitelist:
@@ -113,10 +127,7 @@ async def create_subscription_settings_keyboard(
     }
 
     for setting_enum, (text_source, val_str) in settings_map_source.items():
-        if current_setting == setting_enum:
-            button_text = _("✅ {text}").format(text=_(text_source))
-        else:
-            button_text = _(text_source)
+        button_text = _("✅ {text}").format(text=_(text_source)) if current_setting == setting_enum else _(text_source)
 
         builder.button(
             text=button_text,
@@ -314,6 +325,7 @@ async def _create_generic_paginated_list_keyboard(
     additional_buttons_bottom: list[list[InlineKeyboardButton]] | None = None,
 ) -> InlineKeyboardMarkup:
     """Generic helper to create a keyboard for a paginated list of items.
+
     item_button_former should be a synchronous function.
     """
     builder = InlineKeyboardBuilder()
@@ -400,7 +412,9 @@ async def create_user_selection_keyboard(
 async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     builder = InlineKeyboardBuilder()
-    builder.button(text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack())
+    builder.button(
+        text=_("[Info] Who is online?"), callback_data=MenuCallback(command="who").pack()
+    )  # Previously contained an emoji
     builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:
@@ -455,8 +469,9 @@ async def _create_generic_user_toggle_list_keyboard(
     back_button_callback_data: str,
     back_button_text_key: str,
 ) -> InlineKeyboardMarkup:
-    """Generic helper to create a keyboard for a paginated list of users
-    with mute/unmute toggle buttons.
+    """Generic helper to create a keyboard for a paginated list of users.
+
+    Includes mute/unmute toggle buttons.
     """
     builder = InlineKeyboardBuilder()
     muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
@@ -507,7 +522,7 @@ async def create_manage_tt_account_keyboard(
         )
 
     builder.button(
-        text=_("➕ Link/Change TeamTalk Account"),
+        text=_("(+) Link/Change TeamTalk Account"),  # RUF001 fix applied
         callback_data=ManageTTAccountCallback(
             action=ManageTTAccountAction.LINK_NEW, target_telegram_id=target_telegram_id, page=page
         ).pack(),

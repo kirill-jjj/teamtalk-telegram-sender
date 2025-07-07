@@ -1,3 +1,4 @@
+"""Functions for setting and managing Telegram bot commands."""
 # bot/telegram_bot/commands.py
 
 from collections.abc import Callable
@@ -58,9 +59,9 @@ async def set_telegram_commands(services: "Services"):  # Changed app to service
                 scope=BotCommandScopeAllPrivateChats(),
                 language_code=lang_code if lang_code != services.config.general.default_lang else None,  # Use services
             )
-            logger.info(f"Successfully set global user commands for language: '{lang_code}'.")
+            logger.info("Successfully set global user commands for language: '%s'.", lang_code)
         except TelegramAPIError as e:
-            logger.error(f"Failed to set global commands for language '{lang_code}': {e}")
+            logger.error("Failed to set global commands for language '%s': %s", lang_code, e)
 
     # --- 2. Set individual commands for each administrator ---
     async with services.session_factory() as session:  # Use services
@@ -81,17 +82,19 @@ async def set_telegram_commands(services: "Services"):  # Changed app to service
 
             try:
                 await services.bot_event.set_my_commands(commands=admin_commands, scope=admin_scope)  # Use services
-                logger.info(f"Successfully set custom commands for admin {admin_id} in language '{admin_lang_code}'.")
+                logger.info(
+                    "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
+                )
             except TelegramAPIError as e:
-                logger.error(f"Failed to set commands for admin {admin_id}: {e}")
+                logger.error("Failed to set commands for admin %s: %s", admin_id, e)
 
 
 async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int):  # bot: Bot is fine, it's a direct Bot instance
     """Clears all custom commands for a specific chat."""
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
-        logger.info(f"Successfully cleared commands for chat_id {chat_id}.")
+        logger.info("Successfully cleared commands for chat_id %s.", chat_id)
     except TelegramAPIError as e:
-        logger.error(f"Failed to clear commands for chat_id {chat_id}: {e}")
+        logger.error("Failed to clear commands for chat_id %s: %s", chat_id, e)
     except Exception as e:
-        logger.error(f"An unexpected error occurred while clearing commands for chat_id {chat_id}: {e}")
+        logger.error("An unexpected error occurred while clearing commands for chat_id %s: %s", chat_id, e)

@@ -1,3 +1,5 @@
+"""Proxy script to run Alembic migrations with environment-specific configurations."""
+
 import argparse
 import os
 from pathlib import Path
@@ -7,6 +9,7 @@ import sys
 
 def main():
     """Proxy script to run Alembic commands.
+
     It sets the ALEMBIC_ENV_CONFIG_FILE environment variable based on the
     --config argument, then passes all other arguments to the Alembic CLI.
     """
@@ -45,13 +48,6 @@ def main():
     # Determine Alembic executable.
     # Prefer 'alembic' directly, assuming PATH is correctly set up by `uv run` or similar.
     alembic_executable = "alembic"
-    # Fallback for older setups or direct script runs if needed:
-    # venv_alembic_path = project_root / ".venv" / "bin" / "alembic"
-    # if venv_alembic_path.exists():
-    #     alembic_executable = str(venv_alembic_path)
-    # else:
-    #     print(f"WARN [run_alembic.py] Alembic executable not found at {venv_alembic_path}, relying on PATH.")
-
     command = [alembic_executable, *alembic_cli_args]
 
     # For display, convert Path objects in command to string if any were used
@@ -75,4 +71,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter (if main were Click command)

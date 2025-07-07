@@ -1,3 +1,5 @@
+"""Utility functions specific to TeamTalk bot operations."""
+
 from __future__ import annotations
 
 import asyncio
@@ -29,26 +31,35 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
             host_info = ttstr(instance.server_info.host)
 
         if instance.logged_in:
-            logger.debug(f"Logging out from TT instance: {host_info}")
+            logger.debug("Logging out from TT instance: %s", host_info)
             instance.logout()
         if instance.connected:
-            logger.debug(f"Disconnecting from TT instance: {host_info}")
+            logger.debug("Disconnecting from TT instance: %s", host_info)
             instance.disconnect()
         # Check for closeTeamTalk attribute as it might not always be present
         # (though in typical TeamTalkInstance it should be)
         if hasattr(instance, "closeTeamTalk"):
-            logger.debug(f"Closing TT instance: {host_info}")
+            logger.debug("Closing TT instance: %s", host_info)
             instance.closeTeamTalk()
-        logger.info(f"Successfully shut down TT instance for host: {host_info}")
+        logger.info("Successfully shut down TT instance for host: %s", host_info)
     except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e:
         # Attempt to get host_info again in case it was not available before error
         host_info_err = "Unknown Host (during error)"
         if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
             host_info_err = ttstr(instance.server_info.host)
-        logger.error(f"Error during TT instance shutdown for {host_info_err}: {e}", exc_info=True)
+        logger.exception("Error during TT instance shutdown for %s: %s", host_info_err, e)
 
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
+    """Splits a long text message into parts suitable for TeamTalk.
+
+    Args:
+        text: The text to split.
+        max_len_bytes: The maximum number of bytes per part.
+
+    Returns:
+        A list of text parts.
+    """
     parts_to_send_list = []
     remaining_text = text
 
@@ -78,7 +89,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
             current_chunk_str += char_code
             current_chunk_bytes_len += char_bytes_len
 
-            if char_code == "\n" or char_code == " ":
+            if char_code in ("\n", " "):
                 last_safe_split_index_in_chunk = len(current_chunk_str)
                 last_safe_split_index_in_remaining = i + 1
 
@@ -104,6 +115,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
 
 async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
     """Splits a long text message into parts suitable for TeamTalk and sends them.
+
     Uses asyncio.to_thread for the potentially CPU-bound splitting logic.
     """
     if not text:
@@ -117,12 +129,15 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
                 reply_method(part_to_send_str)
                 encoded_len = len(part_to_send_str.encode("utf-8", errors="ignore"))
                 logger.debug(
-                    f"Sent part {part_idx + 1}/{len(parts_to_send_list)} of TT message, length {encoded_len} bytes."
+                    "Sent part %s/%s of TT message, length %s bytes.",
+                    part_idx + 1,
+                    len(parts_to_send_list),
+                    encoded_len,
                 )
                 if part_idx < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
             except pytalk.exceptions.TeamTalkException as e:
-                logger.error(f"Error sending part {part_idx + 1} of TT message: {e}")
+                logger.error("Error sending part %s of TT message: %s", part_idx + 1, e)
                 break
 
 
@@ -131,6 +146,13 @@ async def forward_tt_message_to_telegram_admin(
     services: Services,  # Changed from app: "Application"
     server_host_for_display: str,
 ):
+    """Forwards a private TeamTalk message to the configured Telegram admin.
+
+    Args:
+        message: The TeamTalkMessage object.
+        services: The application's services container.
+        server_host_for_display: The display name of the TeamTalk server.
+    """
     if not services.config.TG_ADMIN_CHAT_ID or not services.bot_message:  # Use services.config, services.bot_message
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return

@@ -1,3 +1,5 @@
+"""Global constants used throughout the application."""
+
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
 MUTE_ACTION_MUTE = "mute"

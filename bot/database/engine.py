@@ -1,5 +1,8 @@
+"""Database engine and session factory setup."""
+
 # bot/database/engine.py
 import logging
+import os  # Moved here for PLC0415
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -17,11 +20,9 @@ def create_session_factory(config: Settings) -> sessionmaker:
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models
 
-    import os  # Required for os.path.abspath
-
-    absolute_db_path = os.path.abspath(config.database.db_file)
+    absolute_db_path = os.path.abspath(config.database.db_file)  # os will be available
     db_url = f"sqlite+aiosqlite:///{absolute_db_path}"
-    logger.info(f"Creating database engine for: {db_url}")
+    logger.info("Creating database engine for: %s", db_url)
 
     engine = create_async_engine(db_url)
 

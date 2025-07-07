@@ -35,7 +35,7 @@ async def process_setting_update(
             # Assuming _ is available in this scope for the error message
             await callback_query.answer(_("Error: Callback query is missing essential data."), show_alert=True)
         except TelegramAPIError as ans_err_crit:
-            logger.error(f"Critical error: Failed to answer callback for missing data: {ans_err_crit}")
+            logger.error("Critical error: Failed to answer callback for missing data: %s", ans_err_crit)
         return
 
     update_action()
@@ -54,21 +54,24 @@ async def process_setting_update(
         )
 
     except SQLAlchemyError as e_db:
-        logger.error(
-            f"Failed to update settings in DB for user {callback_query.from_user.id}. Error: {e_db}", exc_info=True
+        logger.exception(
+            "Failed to update settings in DB for user %s. Error: %s",
+            callback_query.from_user.id,
+            e_db,
         )
         revert_action()
         try:
             # Assuming _ is available
             await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         except TelegramAPIError as ans_err_revert:
-            logger.warning(f"Could not send error alert for DB update failure/revert: {ans_err_revert}")
+            logger.warning("Could not send error alert for DB update failure/revert: %s", ans_err_revert)
         return
 
     except TelegramAPIError as e_tg:
         logger.warning(
-            f"Telegram API error during UI update for user {callback_query.from_user.id} "
-            f"after settings were saved. Error: {e_tg}"
+            "Telegram API error during UI update for user %s after settings were saved. Error: %s",
+            callback_query.from_user.id,
+            e_tg,
         )
 
 
@@ -95,17 +98,18 @@ async def safe_edit_text(
         return True
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            current_logger.error(f"TelegramBadRequest editing message{context_for_log}: {e}", exc_info=True)
+            current_logger.exception("TelegramBadRequest editing message%s: %s", context_for_log, e)
             return False
         return True
     except TelegramAPIError as e:
-        current_logger.error(f"TelegramAPIError editing message{context_for_log}: {e}", exc_info=True)
+        current_logger.exception("TelegramAPIError editing message%s: %s", context_for_log, e)
         return False
 
 
 # Decorator for checking query.message context
 def ensure_message_context(func: Callable):
     """Decorator to ensure that a callback query handler has a message context.
+
     If query.message is None, it logs an error and attempts to answer the callback query.
     """
 
@@ -129,27 +133,28 @@ def ensure_message_context(func: Callable):
                 try:
                     error_message = translator_func("Error processing command.")
                 except TypeError as te:
-                    logger.error(
-                        f"Translator function not callable or wrong arguments in decorator for {func.__name__}: {te}",
-                        exc_info=True,
+                    logger.exception(
+                        "Translator function not callable or wrong arguments in decorator for %s: %s",
+                        func.__name__,
+                        te,
                     )
                 except Exception as e:
-                    logger.error(
-                        f"Failed to translate error message in decorator for {func.__name__}: {e}", exc_info=True
-                    )
+                    logger.exception("Failed to translate error message in decorator for %s: %s", func.__name__, e)
             else:
                 logger.warning(
-                    f"Translator function not found for handler {func.__name__}, using default error message."
+                    "Translator function not found for handler %s, using default error message.", func.__name__
                 )
 
             logger.error(
-                f"Handler {func.__name__}: query.message is None. "
-                f"Callback data: {query.data}. User: {query.from_user.id}"
+                "Handler %s: query.message is None. Callback data: %s. User: %s",
+                func.__name__,
+                query.data,
+                query.from_user.id,
             )
             try:
                 await query.answer(error_message, show_alert=True)
             except TelegramAPIError as e:
-                logger.error(f"Failed to answer callback query in decorator for {func.__name__}: {e}")
+                logger.error("Failed to answer callback query in decorator for %s: %s", func.__name__, e)
             return None
 
         return await func(query, *args, **kwargs)

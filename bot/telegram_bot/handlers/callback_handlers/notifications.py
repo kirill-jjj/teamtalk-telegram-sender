@@ -1,3 +1,5 @@
+"""Callback query handlers for notification settings."""
+
 from __future__ import annotations
 
 import logging
@@ -26,6 +28,7 @@ notifications_router = Router(name="callback_handlers.notifications")
 async def cq_show_notifications_menu(
     callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: SettingsCallback
 ):
+    """Shows the notification settings menu."""
     await callback_query.answer()
     notification_settings_builder = await create_notification_settings_keyboard(_, user_settings)
     await safe_edit_text(
@@ -46,6 +49,7 @@ async def cq_toggle_noon_setting_action(
     callback_data: NotificationActionCallback,
     services: Services,
 ):
+    """Handles toggling the NOON (Not On Online) setting."""
     if not callback_query.message:
         logger.warning("cq_toggle_noon_setting_action: Callback query is missing message.")
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -61,8 +65,9 @@ async def cq_toggle_noon_setting_action(
 
     services.user_settings_cache[user_settings.telegram_id] = user_settings
     logger.debug(
-        f"NOON setting for user {user_settings.telegram_id} toggled to "
-        f"{user_settings.not_on_online_enabled} and saved to DB/cache."
+        "NOON setting for user %s toggled to %s and saved to DB/cache.",
+        user_settings.telegram_id,
+        user_settings.not_on_online_enabled,
     )
 
     new_status_display_text = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")

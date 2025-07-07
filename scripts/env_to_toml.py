@@ -1,3 +1,5 @@
+"""Converts .env configuration files to a structured TOML format."""
+
 import argparse
 from pathlib import Path
 import sys
@@ -8,6 +10,10 @@ import toml  # For writing TOML
 
 
 def parse_comma_separated_string_to_list(v: Any) -> list[str]:
+    """Parses a comma-separated string into a list of stripped strings.
+
+    Returns an empty list if the input is not a string or is an empty/whitespace string.
+    """
     if isinstance(v, str) and v.strip():
         return [s.strip() for s in v.split(",")]
     return []
@@ -67,6 +73,7 @@ def convert_value(raw_value, conversion_rule, env_key):
         # For other types, if the .env value is empty, it's problematic for int/bool.
         # Let Pydantic handle defaults for these if they are not in TOML.
         # So, if value is empty and not one of above, we skip it (return None).
+        # This print is acceptable for a CLI script's direct feedback.
         print(
             f"Info: Empty value for '{env_key}' in .env, will be omitted from TOML. Pydantic defaults may apply.",
             file=sys.stderr,
@@ -89,7 +96,15 @@ def convert_value(raw_value, conversion_rule, env_key):
 
 
 def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> bool:
-    """Converts a single .env file to a .toml file. Returns True on success."""
+    """Converts a single .env file to a .toml file.
+
+    Args:
+        input_env_path: Path to the input .env file.
+        output_toml_path: Path for the output .toml file.
+
+    Returns:
+        True on successful conversion, False otherwise.
+    """
     if not input_env_path.is_file():
         print(f"Error: Input file not found: {input_env_path}", file=sys.stderr)
         return False
@@ -127,7 +142,8 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
     return False
 
 
-def main():
+def main():  # noqa: PLR0912
+    """Main function to handle CLI arguments and orchestrate .env to .toml conversion."""
     parser = argparse.ArgumentParser(
         description="Convert .env file(s) to structured TOML format.", formatter_class=argparse.RawTextHelpFormatter
     )

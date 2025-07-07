@@ -1,3 +1,5 @@
+"""Callback query handlers for navigating back in settings menus."""
+
 import logging
 
 from aiogram import F, Router
@@ -15,6 +17,7 @@ navigation_router = Router(name="callback_handlers.navigation")
 
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
 async def cq_back_to_main_settings_menu(callback_query: CallbackQuery, _: callable, callback_data: SettingsCallback):
+    """Handles navigating back to the main settings menu."""
     await callback_query.answer()
 
     main_settings_builder = await create_main_settings_keyboard(_)

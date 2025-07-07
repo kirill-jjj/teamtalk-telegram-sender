@@ -1,3 +1,5 @@
+"""Middleware to check if a Telegram user is subscribed to bot notifications."""
+
 from collections.abc import Awaitable, Callable
 import logging
 from typing import TYPE_CHECKING, Any
@@ -7,22 +9,35 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.types import User as AiogramUser
 
 if TYPE_CHECKING:
-    # from sender import Application # No longer needed
-    pass  # Import Services
+    pass  # Import Services for type hinting if needed by Services instance
 
 logger = logging.getLogger(__name__)
 
 
 class SubscriptionCheckMiddleware(BaseMiddleware):
+    """Middleware to check if a user is subscribed before allowing access to certain handlers."""
+
     async def __call__(
         self,
         handler: Callable[[Message | CallbackQuery, dict[str, Any]], Awaitable[Any]],
         event: Message | CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
+        """Executes the middleware.
+
+        Checks if the user is subscribed. If not, and the command is not a /start command
+        with a token, it stops processing. Otherwise, allows subscribed users or
+        specific /start commands to proceed.
+
+        Args:
+            handler: The next handler in the chain.
+            event: The incoming Telegram event (Message or CallbackQuery).
+            data: Data to be passed to the handler.
+
+        Returns:
+            The result of the next handler if authorized, or None if not.
+        """
         user: AiogramUser | None = data.get("event_from_user")
-        # services: "Services" = data["services"] # Get services from workflow_data
-        # It's more efficient to get specific cache if that's all that's needed
         subscribed_users_cache: set[int] = data["subscribed_users_cache"]
 
         if not user:
@@ -36,25 +51,22 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             if command_parts[0].lower() == "/start" and len(command_parts) > 1:
                 # This allows /start <token> for deeplinking, which might be used for initial subscription
                 logger.debug(
-                    f"SubscriptionCheckMiddleware: Allowing /start command with potential token for user {telegram_id}."
+                    "SubscriptionCheckMiddleware: Allowing /start command with potential token for user %s.",
+                    telegram_id,
                 )
                 return await handler(event, data)
 
         if telegram_id not in subscribed_users_cache:  # Use injected cache
             logger.info(
-                f"SubscriptionCheckMiddleware: Ignored event from non-subscribed user {telegram_id} "
-                f"(Event type: {type(event).__name__})."
+                "SubscriptionCheckMiddleware: Ignored event from non-subscribed user %s (Event type: %s).",
+                telegram_id,
+                type(event).__name__,
             )
-            # Consider sending a message here if desired behavior changes
-            # For example:
-            # if isinstance(event, Message):
-            #     await event.answer("You are not subscribed.")
-            # elif isinstance(event, CallbackQuery):
-            #     await event.answer("You are not subscribed.", show_alert=True)
             return  # Stop processing for non-subscribed users
 
         logger.debug(
-            f"SubscriptionCheckMiddleware: User {telegram_id} is subscribed. "
-            f"Proceeding (Event type: {type(event).__name__})."
+            "SubscriptionCheckMiddleware: User %s is subscribed. Proceeding (Event type: %s).",
+            telegram_id,
+            type(event).__name__,
         )
         return await handler(event, data)

@@ -1,3 +1,5 @@
+"""Manages localization files using pybabel for string extraction, updates, and compilation."""
+
 #!/usr/bin/env python3
 from pathlib import Path
 import subprocess
@@ -45,7 +47,7 @@ def get_project_version() -> str:
 
 
 def extract():
-    """Extracts translatable strings into a .pot file."""
+    """Extracts translatable strings from source code into a .pot template file."""
     version = get_project_version()
     command = [
         "pybabel",
@@ -73,7 +75,7 @@ def extract():
 
 
 def update():
-    """Updates .po files based on the .pot template."""
+    """Updates existing .po translation files from the .pot template file."""
     command = [
         "pybabel",
         "update",
@@ -98,7 +100,7 @@ def update():
 
 
 def compile_cmd():
-    """Compiles .po files into binary .mo files."""
+    """Compiles .po translation files into binary .mo files for runtime use."""
     command = ["pybabel", "compile", "-d", str(LOCALE_DIR), "-D", LOCALE_DOMAIN, "--statistics"]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
@@ -117,7 +119,8 @@ def compile_cmd():
 
 
 def main():
-    if len(sys.argv) < 2:
+    """Main function to handle CLI arguments for locale management."""
+    if len(sys.argv) < 2:  # noqa: PLR2004 - 2 is standard for checking script name + one argument
         print("Usage: python manage-locales.py [extract|update|compile]")
         sys.exit(1)
 

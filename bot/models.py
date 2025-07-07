@@ -1,3 +1,5 @@
+"""SQLModel definitions for database tables."""
+
 from datetime import datetime
 import enum
 
@@ -8,6 +10,8 @@ from bot.core.enums import DeeplinkAction
 
 
 class NotificationSetting(str, enum.Enum):
+    """Enum for user notification preferences."""
+
     ALL = "all"
     JOIN_OFF = "join_off"
     LEAVE_OFF = "leave_off"
@@ -15,11 +19,15 @@ class NotificationSetting(str, enum.Enum):
 
 
 class MuteListMode(str, enum.Enum):
+    """Enum for mute list behavior (blacklist or whitelist)."""
+
     blacklist = "blacklist"
     whitelist = "whitelist"
 
 
 class UserSettings(SQLModel, table=True):
+    """Represents user-specific settings stored in the database."""
+
     __tablename__ = "user_settings"
 
     telegram_id: int = Field(default=None, primary_key=True, index=True)
@@ -35,6 +43,8 @@ class UserSettings(SQLModel, table=True):
 
 
 class MutedUser(SQLModel, table=True):
+    """Represents a TeamTalk user muted by a specific Telegram user."""
+
     __tablename__ = "muted_users"
 
     id: int | None = Field(default=None, primary_key=True)
@@ -48,16 +58,22 @@ class MutedUser(SQLModel, table=True):
 
 
 class SubscribedUser(SQLModel, table=True):
+    """Represents a Telegram user subscribed to notifications."""
+
     __tablename__ = "subscribed_users"
     telegram_id: int = Field(default=None, primary_key=True, index=True)
 
 
 class Admin(SQLModel, table=True):
+    """Represents a Telegram user with administrator privileges for the bot."""
+
     __tablename__ = "admins"
     telegram_id: int = Field(default=None, primary_key=True, index=True)
 
 
 class Deeplink(SQLModel, table=True):
+    """Represents a deeplink token for actions like subscribe/unsubscribe."""
+
     __tablename__ = "deeplinks"
     token: str = Field(default=None, primary_key=True, index=True)
     action: DeeplinkAction = Field(nullable=False)
@@ -67,6 +83,8 @@ class Deeplink(SQLModel, table=True):
 
 
 class BanList(SQLModel, table=True):
+    """Represents an entry in the ban list (for Telegram IDs or TeamTalk usernames)."""
+
     __tablename__ = "ban_list"
 
     id: int | None = Field(default=None, primary_key=True)

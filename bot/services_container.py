@@ -1,8 +1,11 @@
+"""Provides a container for managing application-wide services and dependencies."""
+
 import gettext
 import logging
 from pathlib import Path
 
 from aiogram import Bot
+import pytalk  # Moved here for PLC0415
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload, sessionmaker
 from sqlmodel import select
@@ -26,6 +29,12 @@ class Services:
     """Контейнер для всех зависимостей и сервисов приложения."""
 
     def __init__(self, config: Settings, session_factory: sessionmaker):
+        """Initializes the Services container.
+
+        Args:
+            config: The application settings instance.
+            session_factory: The SQLAlchemy session factory.
+        """
         self.config = config
         self.session_factory: sessionmaker[AsyncSession] = session_factory  # Added type hint
 
@@ -39,11 +48,8 @@ class Services:
             self.bot_message: Bot = self.bot_event
 
         # TeamTalk Bot instance
-        import pytalk  # Import pytalk here
-
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)
 
-        # Состояние (кеши)
         self.connections: dict[str, TeamTalkConnection] = {}
         self.subscribed_users_cache: set[int] = set()
         self.admin_ids_cache: set[int] = set()
@@ -55,6 +61,7 @@ class Services:
 
     def get_translator(self, language_code: str | None = None) -> gettext.GNUTranslations:
         """Returns a translator object for the specified language code.
+
         Caches translators after first load.
         Falls back to DEFAULT_LANGUAGE_CODE if the requested language is not found
         or if the default language itself fails to load (in which case NullTranslations is used).
@@ -73,11 +80,11 @@ class Services:
             default_lang_code = self.config.general.default_lang  # Use self.config
             if language_code != default_lang_code:
                 self.logger.warning(
-                    f"Language '{language_code}' not found. Falling back to default '{default_lang_code}'."
+                    "Language '%s' not found. Falling back to default '%s'.", language_code, default_lang_code
                 )
                 return self.get_translator(default_lang_code)  # Recursive call
             else:
-                self.logger.error(f"Default language '{default_lang_code}' not found. Using NullTranslations.")
+                self.logger.error("Default language '%s' not found. Using NullTranslations.", default_lang_code)
                 null_trans = gettext.NullTranslations()
                 self.translator_cache[language_code] = null_trans  # Cache even null translation
                 return null_trans
@@ -91,7 +98,7 @@ class Services:
             all_settings = result.all()
             for setting in all_settings:
                 self.user_settings_cache[setting.telegram_id] = setting
-            self.logger.info(f"Loaded {len(self.user_settings_cache)} user settings into services cache.")
+            self.logger.info("Loaded %s user settings into services cache.", len(self.user_settings_cache))
 
     async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings:
         """Gets user settings from service cache or DB, creates if not exists."""
@@ -105,7 +112,7 @@ class Services:
             options=[selectinload(UserSettings.muted_users_list)],  # Eager load related data
         )
         if not user_settings:
-            self.logger.info(f"No settings found for user {telegram_id}, creating new ones.")
+            self.logger.info("No settings found for user %s, creating new ones.", telegram_id)
             user_settings = UserSettings(
                 telegram_id=telegram_id,
                 language_code=self.config.general.default_lang,  # Use self.config
@@ -115,10 +122,10 @@ class Services:
                 await session.commit()
                 # Refresh all, including relationships
                 await session.refresh(user_settings, attribute_names=["muted_users_list"])
-                self.logger.info(f"Successfully created and saved new settings for user {telegram_id}.")
+                self.logger.info("Successfully created and saved new settings for user %s.", telegram_id)
             except SQLAlchemyError as e:
                 await session.rollback()
-                self.logger.error(f"Database error creating settings for user {telegram_id}: {e}", exc_info=True)
+                self.logger.exception("Database error creating settings for user %s: %s", telegram_id, e)
                 # Return a default non-persistent object on error.
                 return UserSettings(telegram_id=telegram_id, language_code=self.config.general.default_lang)
 
@@ -133,5 +140,5 @@ class Services:
             # Decide error handling: raise, or operate with default only
         else:
             self.logger.info(
-                f"Available languages loaded into services: {[lang['code'] for lang in self.available_languages]}"
+                "Available languages loaded into services: %s", [lang["code"] for lang in self.available_languages]
             )

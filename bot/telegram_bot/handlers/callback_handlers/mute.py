@@ -1,3 +1,5 @@
+"""Callback query handlers for mute list management and user muting/unmuting."""
+
 from collections.abc import Callable
 import logging
 import math
@@ -49,7 +51,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 def _paginate_list_util(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
     total_items = len(full_list)
-    total_pages = int(math.ceil(total_items / page_size)) if total_items > 0 else 1
+    total_pages = int(math.ceil(total_items / page_size)) if total_items > 0 else 1  # noqa: RUF046 - math.ceil returns float
     page = max(0, min(page, total_pages - 1))  # Ensure page is within valid range
     start_index = page * page_size
     end_index = start_index + page_size
@@ -85,7 +87,7 @@ async def _display_paginated_list_ui(
 
     # Ensure callback_query.message is not None
     if not callback_query.message:
-        logger.warning(f"Cannot display paginated list for '{header_text_key}', callback_query.message is None.")
+        logger.warning("Cannot display paginated list for '%s', callback_query.message is None.", header_text_key)
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
@@ -125,8 +127,10 @@ async def _display_internal_user_list(
         users_to_process = [str(username) for username in results.all()]
         sorted_items = sorted(users_to_process)
     except SQLAlchemyError as e:
-        logger.error(
-            f"Database error fetching internal user list for user {user_settings.telegram_id}: {e}", exc_info=True
+        logger.exception(
+            "Database error fetching internal user list for user %s: %s",
+            user_settings.telegram_id,
+            e,
         )
         await callback_query.answer(
             _("An error occurred while loading the list. Please try again later."), show_alert=True
@@ -141,7 +145,7 @@ async def _display_internal_user_list(
         header_text_str = _("Whitelisted Users (Allow List)")
         empty_list_text_str = _("Your whitelist is empty.")
     else:
-        logger.error(f"Unknown mute_list_mode '{user_settings.mute_list_mode}' in _display_internal_user_list")
+        logger.error("Unknown mute_list_mode '%s' in _display_internal_user_list", user_settings.mute_list_mode)
         await callback_query.answer(
             _("An error occurred due to an invalid mode. Please try again later."), show_alert=True
         )
@@ -182,7 +186,7 @@ async def _display_all_server_accounts_list(
                 )
             )
         except TelegramAPIError as e:
-            logger.error(f"Error informing user about empty user_accounts_cache for {server_host}: {e}")
+            logger.error("Error informing user about empty user_accounts_cache for %s: %s", server_host, e)
         return
 
     all_accounts_tt = list(user_accounts_cache.values())
@@ -244,7 +248,9 @@ async def _get_username_to_toggle_from_callback(
             return page_items[user_idx]
 
     list_type_val = list_type.value if isinstance(list_type, UserListAction) else list_type
-    logger.warning(f"Could not find username for toggle. Idx: {user_idx}, List: {list_type_val}, Page: {current_page}")
+    logger.warning(
+        "Could not find username for toggle. Idx: %s, List: %s, Page: %s", user_idx, list_type_val, current_page
+    )
     return None
 
 
@@ -293,7 +299,7 @@ async def _commit_mute_changes_and_notify(
         await callback_query.answer(toast_message, show_alert=False)
         return True
     except SQLAlchemyError as e:
-        logger.error(f"DB commit/Answer error during mute toggle: {e}", exc_info=True)
+        logger.exception("DB commit/Answer error during mute toggle: %s", e)
         await session.rollback()
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return False
@@ -319,9 +325,9 @@ async def _refresh_mute_related_ui(
         # Force refresh user_settings and "eagerly" load the muted_users_list relationship
         # before passing the object further for UI rendering.
         await session.refresh(user_settings, attribute_names=["muted_users_list"])
-        logger.debug(f"Explicitly refreshed muted_users_list for user {user_settings.telegram_id} before UI refresh.")
+        logger.debug("Explicitly refreshed muted_users_list for user %s before UI refresh.", user_settings.telegram_id)
     except Exception as e:
-        logger.error(f"Failed to refresh user_settings relations for {user_settings.telegram_id}: {e}", exc_info=True)
+        logger.exception("Failed to refresh user_settings relations for %s: %s", user_settings.telegram_id, e)
         # If update failed, it's better to interrupt to avoid a crash later
         await callback_query.answer(_("A database error occurred while refreshing the list."), show_alert=True)
         return
@@ -352,6 +358,7 @@ async def _refresh_mute_related_ui(
 async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: NotificationActionCallback
 ):
+    """Shows the main menu for managing muted users and mute list mode."""
     await callback_query.answer()
     manage_muted_builder = await create_manage_muted_users_keyboard(_, user_settings)
 
@@ -386,6 +393,7 @@ async def cq_set_mute_mode_action(
     callback_data: SetMuteModeCallback,
     services: "Services",
 ):
+    """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     managed_user_settings = await session.merge(user_settings)
     new_mode = callback_data.mode
 
@@ -440,6 +448,7 @@ async def cq_list_internal_users_action(
     user_settings: UserSettings,
     callback_data: UserListCallback,
 ):
+    """Displays the first page of the internal muted/allowed user list."""
     await callback_query.answer()
     await _display_internal_user_list(callback_query, _, user_settings, callback_data.action, 0, session)
 
@@ -454,6 +463,7 @@ async def cq_paginate_internal_user_list_action(
     user_settings: UserSettings,
     callback_data: PaginateUsersCallback,
 ):
+    """Handles pagination for the internal muted/allowed user list."""
     await callback_query.answer()
     await _display_internal_user_list(
         callback_query, _, user_settings, callback_data.list_type, callback_data.page, session
@@ -464,6 +474,7 @@ async def cq_paginate_internal_user_list_action(
 async def cq_show_all_accounts_list_action(
     callback_query: CallbackQuery, _: callable, user_settings: UserSettings, tt_connection: TeamTalkConnection | None
 ):
+    """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
     await callback_query.answer()
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
@@ -480,6 +491,7 @@ async def cq_paginate_all_accounts_list_action(
     tt_connection: TeamTalkConnection | None,
     callback_data: PaginateUsersCallback,
 ):
+    """Handles pagination for the list of all TeamTalk server accounts."""
     await callback_query.answer()
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
@@ -498,6 +510,7 @@ async def cq_toggle_specific_user_mute_action(
     callback_data: ToggleMuteSpecificCallback,
     services: "Services",
 ):
+    """Handles the action of toggling the mute status for a specific user."""
     if not tt_connection:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return

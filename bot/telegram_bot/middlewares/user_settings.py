@@ -1,3 +1,5 @@
+"""Middleware to load and provide user settings to Telegram handlers."""
+
 from collections.abc import Callable, Coroutine
 import logging
 from typing import TYPE_CHECKING, Any
@@ -10,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .utils import _send_error_response  # Import from local utils
 
 if TYPE_CHECKING:
-    # from sender import Application # No longer needed
     from bot.config import Settings  # Import Settings for config type hint
     from bot.services_container import Services  # Import Services
 
@@ -18,12 +19,27 @@ logger = logging.getLogger(__name__)
 
 
 class UserSettingsMiddleware(BaseMiddleware):
+    """Middleware to load user settings and provide them to handlers, along with a translator."""
+
     async def __call__(
         self,
         handler: Callable[[Message | CallbackQuery, dict[str, Any]], Coroutine[Any, Any, Any]],
         event: Message | CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
+        """Executes the middleware.
+
+        Loads or creates user settings, merges them into the current session,
+        and injects user settings and a translator function into the data dictionary.
+
+        Args:
+            handler: The next handler in the chain.
+            event: The incoming Telegram event (Message or CallbackQuery).
+            data: Data to be passed to the handler.
+
+        Returns:
+            The result of the next handler, or None if critical error occurs.
+        """
         user_obj: AiogramUser = data["event_from_user"]
         session_obj: AsyncSession = data["session"]
         services: Services = data["services"]  # Get services from workflow_data
@@ -36,7 +52,7 @@ class UserSettingsMiddleware(BaseMiddleware):
             user_settings = await services.get_or_create_user_settings(user_obj.id, session_obj)
 
         if not user_settings:  # Should ideally not happen if get_or_create handles fallback
-            logger.error(f"CRITICAL: Could not get or create user settings for user {user_obj.id}")
+            logger.error("CRITICAL: Could not get or create user settings for user %s", user_obj.id)
             _default_tr = services.get_translator(config.general.default_lang).gettext
             await _send_error_response(
                 event, _default_tr("An error occurred. Please try again later."), show_alert_for_callback=True
@@ -54,15 +70,16 @@ class UserSettingsMiddleware(BaseMiddleware):
                     # If it's not in the current session's identity map, merge it.
                     # This handles cases where the cached object might be from a different session context.
                     user_settings = await session_obj.merge(user_settings)
-                    logger.debug(f"User settings for {user_obj.id} merged into current session.")
+                    logger.debug("User settings for %s merged into current session.", user_obj.id)
 
             # Refresh to ensure relationship data is up-to-date for this session
             await session_obj.refresh(user_settings, attribute_names=["muted_users_list"])
-            logger.debug(f"Refreshed muted_users_list for user {user_obj.id} in current session.")
+            logger.debug("Refreshed muted_users_list for user %s in current session.", user_obj.id)
         except Exception as refresh_e:  # Catch more specific SQLAlchemy errors if possible
-            logger.error(
-                f"Error merging or refreshing muted_users_list for user {user_obj.id} in session: {refresh_e}",
-                exc_info=True,
+            logger.exception(
+                "Error merging or refreshing muted_users_list for user %s in session: %s",
+                user_obj.id,
+                refresh_e,
             )
             error_lang_code = (
                 user_settings.language_code

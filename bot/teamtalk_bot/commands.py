@@ -1,3 +1,5 @@
+"""Command handlers for the TeamTalk bot interface."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -29,13 +31,16 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-class AdminIdArgs(BaseModel):  # This model seems fine as is
+class AdminIdArgs(BaseModel):
+    """Parses and validates arguments for admin commands that take Telegram IDs."""
+
     valid_ids: list[int] = Field(default_factory=list)
     invalid_entries: list[str] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
     def parse_str_to_dict(cls, data: Any) -> dict[str, list]:
+        """Parses a string of space-separated arguments into valid IDs and invalid entries."""
         if data is None or not isinstance(data, str):
             return {"valid_ids": [], "invalid_entries": []}
         command_args_str = data.strip()
@@ -52,7 +57,9 @@ class AdminIdArgs(BaseModel):  # This model seems fine as is
         return {"valid_ids": valid_ids, "invalid_entries": invalid_entries}
 
 
-def is_tt_admin(func):
+def is_tt_admin(func: Callable) -> Callable:
+    """Decorator to check if a TeamTalk user is the configured main admin."""
+
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
         services: Services = kwargs.get("services")  # Changed to services
@@ -68,7 +75,7 @@ def is_tt_admin(func):
         admin_username = services.config.general.admin_username  # Use services.config
 
         if not admin_username or username != admin_username:
-            logger.warning(f"Unauthorized admin command attempt by TT user {username} for function {func.__name__}.")
+            logger.warning("Unauthorized admin command attempt by TT user %s for function %s.", username, func.__name__)
             tt_message.reply(_("You are not authorized to perform this action."))
             return None
         return await func(tt_message, *args, **kwargs)
@@ -91,7 +98,7 @@ async def _execute_admin_action_for_id(
             # Use services.bot_event
             await services.bot_event.set_my_commands(commands=commands, scope=BotCommandScopeChat(chat_id=telegram_id))
         except TelegramAPIError as e:
-            logger.error(f"Failed to set commands for TG ID {telegram_id} after {crud_function.__name__}: {e}")
+            logger.error("Failed to set commands for TG ID %s after %s: %s", telegram_id, crud_function.__name__, e)
         return True
     return False
 
@@ -147,8 +154,10 @@ async def _manage_admin_ids(
     failed_action_ids = []
     for telegram_id in args.valid_ids:
         logger.info(
-            f"Attempting to {crud_function.__name__} for TG ID {telegram_id} "
-            f"by TT admin {ttstr(tt_message.user.username)}."
+            "Attempting to %s for TG ID %s by TT admin %s.",
+            crud_function.__name__,
+            telegram_id,
+            ttstr(tt_message.user.username),
         )
         if await _execute_admin_action_for_id(
             session=session,
@@ -164,12 +173,13 @@ async def _manage_admin_ids(
                 services.admin_ids_cache.add(telegram_id)
             elif crud_function is remove_admin_db:
                 services.admin_ids_cache.discard(telegram_id)
-            logger.info(f"Successfully processed {crud_function.__name__} for TG ID {telegram_id} and set commands.")
+            logger.info("Successfully processed %s for TG ID %s and set commands.", crud_function.__name__, telegram_id)
         else:
             failed_action_ids.append(telegram_id)
             logger.warning(
-                f"Failed to process {crud_function.__name__} for TG ID {telegram_id} "
-                f"(e.g., already in state or DB error)."
+                "Failed to process %s for TG ID %s (e.g., already in state or DB error).",
+                crud_function.__name__,
+                telegram_id,
             )
 
     success_message_formatted = ""
@@ -218,44 +228,54 @@ async def _generate_and_reply_deeplink(
         # Use services.bot_event
         bot_info = await services.bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
-        logger.info(success_log_message.format(token=token, sender_username=sender_tt_username))
+        logger.info("%s Token: %s, User: %s", success_log_message, token, sender_tt_username)
         if "{deeplink_url}" in reply_text_source:
             reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
         else:
             reply_text = _(reply_text_source)
         tt_message.reply(reply_text)
     except TelegramAPIError as e_tg:
-        logger.error(
-            f"Telegram API error processing deeplink action {action} for TT user {sender_tt_username}: {e_tg}",
-            exc_info=True,
+        logger.exception(
+            "Telegram API error processing deeplink action %s for TT user %s: %s",
+            action,
+            sender_tt_username,
+            e_tg,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply:
-            logger.error(f"Failed to send Telegram API error reply to TT user {sender_tt_username}: {e_reply}")
+            logger.error("Failed to send Telegram API error reply to TT user %s: %s", sender_tt_username, e_reply)
     except SQLAlchemyError as e_db:
-        logger.error(
-            f"Database error creating deeplink for action {action} for TT user {sender_tt_username}: {e_db}",
-            exc_info=True,
+        logger.exception(
+            "Database error creating deeplink for action %s for TT user %s: %s",
+            action,
+            sender_tt_username,
+            e_db,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply:
-            logger.error(f"Failed to send DB error reply to TT user {sender_tt_username}: {e_reply}")
+            logger.error("Failed to send DB error reply to TT user %s: %s", sender_tt_username, e_reply)
     except TeamTalkException as e_tt:
-        logger.error(
-            f"TeamTalk error processing deeplink action {action} for TT user {sender_tt_username}: {e_tt}",
-            exc_info=True,
+        logger.exception(
+            "TeamTalk error processing deeplink action %s for TT user %s: %s",
+            action,
+            sender_tt_username,
+            e_tt,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
         except Exception as e_reply:
-            logger.error(f"Failed to send TT error reply to TT user {sender_tt_username}: {e_reply}")
+            logger.error("Failed to send TT error reply to TT user %s: %s", sender_tt_username, e_reply)
 
 
 async def handle_tt_subscribe_command(
     tt_message: TeamTalkMessage, session: AsyncSession, _: callable, services: Services, connection: TeamTalkConnection
 ):
+    """Handles the /sub command from a TeamTalk user.
+
+    Generates a subscription deeplink and replies to the user.
+    """
     sender_tt_username = ttstr(tt_message.user.username)
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
@@ -275,6 +295,10 @@ async def handle_tt_subscribe_command(
 async def handle_tt_unsubscribe_command(
     tt_message: TeamTalkMessage, session: AsyncSession, _: callable, services: Services, connection: TeamTalkConnection
 ):
+    """Handles the /unsub command from a TeamTalk user.
+
+    Generates an unsubscription deeplink and replies to the user.
+    """
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
@@ -300,6 +324,10 @@ async def handle_tt_add_admin_command(
     *,
     args_str: str | None,
 ):
+    """Handles the /add_admin command from a TeamTalk admin.
+
+    Adds specified Telegram IDs as bot administrators.
+    """
     # The following line is a placeholder for ngettext extraction by pybabel or similar tools.
     # It ensures that the singular and plural forms are available for translation.
     # It is not meant to be executed directly in this form.
@@ -331,6 +359,10 @@ async def handle_tt_remove_admin_command(
     *,
     args_str: str | None,
 ):
+    """Handles the /remove_admin command from a TeamTalk admin.
+
+    Removes bot administrator privileges from specified Telegram IDs.
+    """
     # Placeholder for ngettext extraction
     if False:
         translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
@@ -353,6 +385,10 @@ async def handle_tt_remove_admin_command(
 async def handle_tt_help_command(
     tt_message: TeamTalkMessage, _: callable, services: Services, connection: TeamTalkConnection
 ):
+    """Handles the /help command from a TeamTalk user.
+
+    Sends a help message tailored to the user's admin status.
+    """
     is_main_tt_admin = False
     tt_username_str = None
     if tt_message.user and hasattr(tt_message.user, "username"):
@@ -369,9 +405,12 @@ async def handle_tt_help_command(
 
 
 async def handle_tt_unknown_command(tt_message: TeamTalkMessage, _: callable, connection: TeamTalkConnection):
+    """Handles unknown commands received from a TeamTalk user."""
     reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")
     tt_message.reply(reply_text)
     logger.warning(
-        f"Received unknown TT command from {ttstr(tt_message.user.username)} on server "
-        f"{connection.server_info.host if connection else 'Unknown'}: {tt_message.content[:100]}"
+        "Received unknown TT command from %s on server %s: %s",
+        ttstr(tt_message.user.username),
+        connection.server_info.host if connection and connection.server_info else "Unknown",
+        tt_message.content[:100],
     )

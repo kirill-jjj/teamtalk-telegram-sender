@@ -1,3 +1,5 @@
+"""Callback query handlers for managing user subscription settings."""
+
 from __future__ import annotations
 
 import logging
@@ -22,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionUpdate(BaseModel):
+    """Pydantic model for validating subscription update callback data."""
+
     setting: NotificationSetting = Field(validation_alias="setting_value")
 
 
@@ -32,6 +36,7 @@ subscription_router = Router(name="callback_handlers.subscription")
 async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: SettingsCallback
 ):
+    """Shows the subscription settings menu to the user."""
     await callback_query.answer()
 
     current_notification_setting = user_settings.notification_settings
@@ -55,14 +60,17 @@ async def cq_set_subscription_setting(
     callback_data: SubscriptionCallback,
     services: Services,
 ):
+    """Sets the user's subscription notification preference."""
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
 
     except ValidationError as e:
         logger.error(
-            f"Invalid subscription setting value received in callback: {e} for user "
-            f"{callback_query.from_user.id}. Raw value: {callback_data.setting_value}"
+            "Invalid subscription setting value received in callback: %s for user %s. Raw value: %s",
+            e,
+            callback_query.from_user.id,
+            callback_data.setting_value,
         )
         await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
         return

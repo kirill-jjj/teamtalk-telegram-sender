@@ -1,10 +1,20 @@
+"""Logging configuration for the application."""
+
 import logging
 import sys
 
 from bot.constants import LOG_FORMAT
 
 
-def setup_logging():
+def setup_logging() -> logging.Logger:
+    """Configures and returns the root logger for the application.
+
+    Sets up console handlers with specified formatting and levels.
+    Also adjusts levels for noisy Aiogram loggers.
+
+    Returns:
+        The configured root logger instance.
+    """
     log_formatter = logging.Formatter(LOG_FORMAT)
 
     root_logger = logging.getLogger()

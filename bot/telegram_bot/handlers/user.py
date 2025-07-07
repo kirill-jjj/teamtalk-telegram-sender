@@ -1,3 +1,5 @@
+"""Telegram bot command handlers for regular user interactions."""
+
 import asyncio
 import gettext  # For type hinting translator
 from html import escape
@@ -53,6 +55,7 @@ async def start_command_handler(
     user_settings: UserSettings,
     services: "Services",  # Changed from app: "Application"
 ):
+    """Handles the /start command, processing deeplinks or showing a welcome message."""
     if not message.from_user:
         return
 
@@ -88,12 +91,12 @@ def _get_user_display_channel_name(
             logger.warning(log_msg)
         except TypeError as e_chan_type:
             log_msg = f"TypeError checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan_type}"
-            logger.error(log_msg, exc_info=True)
+            logger.exception(log_msg)
         except Exception as e_chan:
             log_msg = (
                 f"Unexpected error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}"
             )
-            logger.error(log_msg, exc_info=True)
+            logger.exception(log_msg)
 
     server_root_ids = [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]
     if channel_obj and channel_obj.id not in server_root_ids:
@@ -198,6 +201,7 @@ async def who_command_handler(
     admin_ids_cache: set[int],  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    """Handles the /who command, showing online users in TeamTalk."""
     if not message.from_user:
         return
 
@@ -211,8 +215,9 @@ async def who_command_handler(
     try:
         all_users_list = await get_online_teamtalk_users(tt_instance)
     except Exception as e:
+        # Keep f-string for log_msg as it's constructing a message before logging
         log_msg = f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}"
-        logger.error(log_msg, exc_info=True)
+        logger.exception(log_msg)  # logger.exception will add exc_info
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
@@ -242,6 +247,7 @@ async def help_command_handler(
     _: callable,  # Injected by UserSettingsMiddleware
     admin_ids_cache: set[int],  # Injected from workflow_data
 ):
+    """Handles the /help command, showing available commands."""
     if not message.from_user:
         return
 
@@ -255,6 +261,7 @@ async def settings_command_handler(
     message: Message,
     _: callable,  # Injected by UserSettingsMiddleware
 ):
+    """Handles the /settings command, showing the main settings menu."""
     if not message.from_user:
         return
 
@@ -263,7 +270,7 @@ async def settings_command_handler(
     try:
         await message.answer(text=_("Settings"), reply_markup=settings_builder.as_markup())
     except TelegramAPIError as e:
-        logger.error(f"Could not send settings menu: {e}")
+        logger.error("Could not send settings menu: %s", e)
 
 
 @user_commands_router.message(Command("menu"))
@@ -272,6 +279,7 @@ async def menu_command_handler(
     _: callable,  # Injected by UserSettingsMiddleware
     admin_ids_cache: set[int],  # Injected from workflow_data
 ):
+    """Handles the /menu command, showing the main command menu."""
     if not message.from_user:
         return
 
@@ -281,4 +289,4 @@ async def menu_command_handler(
     try:
         await message.answer(text=_("Main Menu:"), reply_markup=menu_builder.as_markup())
     except TelegramAPIError as e:
-        logger.error(f"Could not send main menu: {e}")
+        logger.error("Could not send main menu: %s", e)

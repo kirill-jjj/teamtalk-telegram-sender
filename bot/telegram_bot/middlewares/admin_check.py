@@ -1,3 +1,5 @@
+"""Middleware to check if a Telegram user is an administrator."""
+
 from collections.abc import Callable, Coroutine
 import gettext  # For translator type hint
 import logging
@@ -10,7 +12,6 @@ from aiogram.types import CallbackQuery, Message, TelegramObject
 from aiogram.types import User as AiogramUser
 
 if TYPE_CHECKING:
-    # from sender import Application # No longer needed
     from bot.services_container import Services  # Import Services
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class AdminCheckMiddleware(BaseMiddleware):
     """Этот middleware проверяет, является ли пользователь, вызвавший команду или нажавший кнопку, администратором.
+
     Relies on 'event_from_user', 'admin_ids_cache', and optionally 'translator' or 'services' being in workflow_data.
     """
 
@@ -27,6 +29,20 @@ class AdminCheckMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
+        """Executes the middleware.
+
+        Checks if the user is an admin. If not, and the event is a CallbackQuery or Message,
+        it sends an unauthorized message and stops processing. Otherwise, allows admin users
+        or unhandled event types to proceed.
+
+        Args:
+            handler: The next handler in the chain.
+            event: The incoming Telegram event.
+            data: Data to be passed to the handler.
+
+        Returns:
+            The result of the next handler if authorized, or None if unauthorized.
+        """
         user: AiogramUser | None = data.get("event_from_user")
         if not user:
             logger.debug("AdminCheckMiddleware: No 'event_from_user' in data. Skipping check.")
@@ -58,8 +74,10 @@ class AdminCheckMiddleware(BaseMiddleware):
             if isinstance(event, CallbackQuery):
                 await event.answer(unauthorized_message, show_alert=True)
                 logger.warning(
-                    f"Unauthorized access denied for user {user.id} (Username: {user.username}) "
-                    f"in CallbackQuery to event: {type(event).__name__}."
+                    "Unauthorized access denied for user %s (Username: %s) in CallbackQuery to event: %s.",
+                    user.id,
+                    user.username,
+                    type(event).__name__,
                 )
                 return  # Stop processing
 
@@ -74,22 +92,28 @@ class AdminCheckMiddleware(BaseMiddleware):
                     await event.reply(unauthorized_message)
 
                 logger.warning(
-                    f"Unauthorized access denied for user {user.id} (Username: {user.username}) "
-                    f"in Message handler for command: {event.text}."
+                    "Unauthorized access denied for user %s (Username: %s) in Message handler for command: %s.",
+                    user.id,
+                    user.username,
+                    event.text,
                 )
                 return  # Stop processing
 
             logger.warning(
-                f"AdminCheckMiddleware: Unauthorized user {user.id} (Username: {user.username}) "
-                f"for unhandled event type {type(event).__name__}. "
-                f"Behavior for this event type is undefined."
+                "AdminCheckMiddleware: Unauthorized user %s (Username: %s) "
+                "for unhandled event type %s. Behavior for this event type is undefined.",
+                user.id,
+                user.username,
+                type(event).__name__,
             )
             # Depending on policy, you might want to stop processing here too, or let it pass.
             # For safety, let's stop it.
             return
 
         logger.debug(
-            f"AdminCheckMiddleware: User {user.id} (Username: {user.username}) authorized. "
-            f"Proceeding to handler for {type(event).__name__}."
+            "AdminCheckMiddleware: User %s (Username: %s) authorized. Proceeding to handler for %s.",
+            user.id,
+            user.username,
+            type(event).__name__,
         )
         return await handler(event, data)

@@ -1,3 +1,4 @@
+"""Utility functions for displaying paginated lists in Telegram messages."""
 # This module contains utility functions for list display,
 # pagination, and keyboard creation, moved here to avoid circular dependencies.
 
@@ -15,8 +16,9 @@ if TYPE_CHECKING:
 
 from bot.database.crud import get_all_subscribers_ids
 from bot.models import UserSettings  # For UserSettings model
+from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.models import SubscriberInfo
-from bot.telegram_bot.utils import format_telegram_user_display_name
+from bot.telegram_bot.utils import format_telegram_user_display_name, send_or_edit_paginated_list
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,9 @@ async def _get_paginated_subscribers_info(
     session: AsyncSession, bot: Bot, requested_page: int
 ) -> tuple[list[SubscriberInfo], int, int]:
     """Fetches all subscriber IDs, gets their details, and returns a paginated list.
-    Returns: (page_subscriber_info_list, current_page, total_pages)
+
+    Returns:
+        (page_subscriber_info_list, current_page, total_pages)
     """
     all_subscriber_ids = await get_all_subscribers_ids(session)
     if not all_subscriber_ids:
@@ -75,7 +79,7 @@ async def _get_paginated_subscribers_info(
         chat_info = None
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
-            logger.error(f"Could not fetch chat info for Telegram ID {telegram_id}: {chat_result}")
+            logger.error("Could not fetch chat info for Telegram ID %s: %s", telegram_id, chat_result)
             # display_name remains str(telegram_id)
         else:
             chat_info = chat_result
@@ -87,7 +91,7 @@ async def _get_paginated_subscribers_info(
         tt_username: str | None = None
         user_setting_result = user_settings_results[i]
         if isinstance(user_setting_result, Exception):
-            logger.error(f"Could not fetch user settings for Telegram ID {telegram_id}: {user_setting_result}")
+            logger.error("Could not fetch user settings for Telegram ID %s: %s", telegram_id, user_setting_result)
         elif user_setting_result:
             tt_username = user_setting_result.teamtalk_username
 
@@ -99,16 +103,13 @@ async def _get_paginated_subscribers_info(
 
 
 async def _show_subscriber_list_page(
-    target: Message | CallbackQuery,  # Use quotes for forward reference if Message/CallbackQuery not imported
+    target: Message | CallbackQuery,
     session: AsyncSession,
     bot: Bot,
     _: callable,
     page: int = 0,
 ):
     """Fetches and displays a specific page of the subscriber list."""
-    from bot.telegram_bot.keyboards import create_subscriber_list_keyboard  # Local import
-    from bot.telegram_bot.utils import send_or_edit_paginated_list  # Local import
-
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
         session, bot, requested_page=page
     )

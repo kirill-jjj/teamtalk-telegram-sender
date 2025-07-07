@@ -1,3 +1,5 @@
+"""Callback query handlers for actions related to specific subscribers."""
+
 import logging
 
 # For type hinting app instance
@@ -74,7 +76,9 @@ async def handle_view_subscriber(
     _: callable,
     services: "Services",
 ):
-    if not query.message:
+    """Handles viewing details and actions for a specific subscriber."""
+    if not query.message:  # Should be caught by @ensure_message_context if applied, but good practice.
+        logger.warning("handle_view_subscriber called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
@@ -91,11 +95,13 @@ async def handle_view_subscriber(
             chat_info = await active_bot.get_chat(user_to_view.telegram_id)
             display_name = format_telegram_user_display_name(chat_info)
         except TelegramAPIError as e_tg:
-            logger.error(
-                f"Could not fetch chat info for {user_to_view.telegram_id} via Telegram API: {e_tg}", exc_info=True
+            logger.exception(
+                "Could not fetch chat info for %s via Telegram API: %s",
+                user_to_view.telegram_id,
+                e_tg,
             )
         except Exception as e:
-            logger.error(f"Unexpected error fetching chat info for {user_to_view.telegram_id}: {e}", exc_info=True)
+            logger.exception("Unexpected error fetching chat info for %s: %s", user_to_view.telegram_id, e)
 
     if user_to_view and user_to_view.teamtalk_username:
         text = _("Actions for subscriber: {display_name}\nLinked TeamTalk account: {tt_username}").format(
@@ -108,6 +114,35 @@ async def handle_view_subscriber(
     await query.answer()
 
 
+async def _handle_delete_subscriber_action(
+    query: CallbackQuery,
+    session: AsyncSession,
+    bot: AiogramBot,
+    target_telegram_id: int,
+    return_page: int,
+    _: callable,
+    services: "Services",
+):
+    """Handles the deletion of a subscriber."""
+    if not query.message:  # Should be caught by @ensure_message_context if applied
+        logger.warning("_handle_delete_subscriber_action called without message context.")
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
+    success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
+    if success:
+        await query.answer(
+            _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
+            show_alert=True,
+        )
+        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
+    else:
+        await query.answer(
+            _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
+        )
+
+
+# The main dispatcher function will call these helpers.
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter())
 async def handle_subscriber_action(
     query: CallbackQuery,
@@ -118,6 +153,7 @@ async def handle_subscriber_action(
     _: callable,
     services: "Services",
 ):
+    """Handles actions performed on a subscriber (delete, ban, manage TT account)."""
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -127,96 +163,120 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
-        if success:
-            await query.answer(
-                _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
-                show_alert=True,
-            )
-            await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
-        else:
-            await query.answer(
-                _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
-            )
-        return
-
+        await _handle_delete_subscriber_action(query, session, bot, target_telegram_id, return_page, _, services)
     elif action == SubscriberAction.BAN:
-        user_settings = await session.get(UserSettings, target_telegram_id)
-        tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
-
-        banned_tg = await crud.add_to_ban_list(
-            session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu"
+        await _handle_ban_subscriber_action(
+            query, session, bot, tt_connection, target_telegram_id, return_page, _, services
         )
-        banned_tt = False
-        if tt_username_to_ban:
-            banned_tt = await crud.add_to_ban_list(
-                session,
-                teamtalk_username=tt_username_to_ban,
-                reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
-            )
-            if tt_connection and tt_connection.instance:
-                try:
-                    # Conceptual: Actual TT server ban would happen here.
-                    logger.info(
-                        f"Conceptual TeamTalk server ban for {tt_username_to_ban} on "
-                        f"{tt_connection.server_info.host} (not implemented in this step)"
-                    )
-                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt:
-                    logger.error(
-                        f"Error during conceptual TeamTalk ban for {tt_username_to_ban} on "
-                        f"{tt_connection.server_info.host}: {e_tt}",
-                        exc_info=True,
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Unexpected error during conceptual TeamTalk ban for {tt_username_to_ban} on "
-                        f"{tt_connection.server_info.host}: {e}",
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    f"Skipping conceptual TeamTalk ban for {tt_username_to_ban} as "
-                    f"tt_connection or its instance is None/invalid."
-                )
-
-        await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
-
-        ban_messages = []
-        if banned_tg:
-            ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
-        if tt_username_to_ban and banned_tt:
-            ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
-
-        alert_message = " ".join(ban_messages)
-        if alert_message:
-            alert_message = _("{ban_report} Subscriber data also deleted.").format(ban_report=alert_message)
-        else:
-            alert_message = _("User already banned or error occurred.")
-
-        await query.answer(alert_message, show_alert=True)
-        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
-        return
-
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
-        user_settings = await session.get(UserSettings, target_telegram_id)
-        current_tt_username = user_settings.teamtalk_username if user_settings else None
-        keyboard = await create_manage_tt_account_keyboard(
-            _, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
-        )
-        await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-            reply_markup=keyboard,
-        )
-        await query.answer()
-        return
-
+        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, _)
     else:
         await query.answer(_("Unknown action."), show_alert=True)
-        logger.warning(f"Unknown subscriber action: {action}")
+        logger.warning("Unknown subscriber action: %s", action)
+
+
+async def _handle_ban_subscriber_action(
+    query: CallbackQuery,
+    session: AsyncSession,
+    bot: AiogramBot,
+    tt_connection: TeamTalkConnection | None,
+    target_telegram_id: int,
+    return_page: int,
+    _: callable,
+    services: "Services",
+):
+    """Handles banning a subscriber (TG and linked TT account)."""
+    if not query.message:  # Should be caught by @ensure_message_context if applied
+        logger.warning("_handle_ban_subscriber_action called without message context.")
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
+
+    banned_tg = await crud.add_to_ban_list(
+        session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu"
+    )
+    banned_tt = False
+    if tt_username_to_ban:
+        banned_tt = await crud.add_to_ban_list(
+            session,
+            teamtalk_username=tt_username_to_ban,
+            reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
+        )
+        if tt_connection and tt_connection.instance:
+            try:
+                # Conceptual: Actual TT server ban would happen here.
+                logger.info(
+                    "Conceptual TeamTalk server ban for %s on %s (not implemented in this step)",
+                    tt_username_to_ban,
+                    tt_connection.server_info.host,
+                )
+            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt:
+                logger.exception(
+                    "Error during conceptual TeamTalk ban for %s on %s: %s",
+                    tt_username_to_ban,
+                    tt_connection.server_info.host,
+                    e_tt,
+                )
+            except Exception as e:
+                logger.exception(
+                    "Unexpected error during conceptual TeamTalk ban for %s on %s: %s",
+                    tt_username_to_ban,
+                    tt_connection.server_info.host,
+                    e,
+                )
+        else:
+            logger.warning(
+                "Skipping conceptual TeamTalk ban for %s as tt_connection or its instance is None/invalid.",
+                tt_username_to_ban,
+            )
+
+    await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
+
+    ban_messages = []
+    if banned_tg:
+        ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
+    if tt_username_to_ban and banned_tt:
+        ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
+
+    alert_message = " ".join(ban_messages)
+    if alert_message:
+        alert_message = _("{ban_report} Subscriber data also deleted.").format(ban_report=alert_message)
+    else:
+        alert_message = _("User already banned or error occurred.")
+
+    await query.answer(alert_message, show_alert=True)
+    await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
+
+
+async def _handle_manage_tt_account_action(
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    _: callable,
+):
+    """Handles showing the menu to manage a subscriber's linked TT account."""
+    if not query.message:  # Should be caught by @ensure_message_context if applied
+        logger.warning("_handle_manage_tt_account_action called without message context.")
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    current_tt_username = user_settings.teamtalk_username if user_settings else None
+    keyboard = await create_manage_tt_account_keyboard(
+        _, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
+    )
+    await query.message.edit_text(
+        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+        reply_markup=keyboard,
+    )
+    await query.answer()
 
 
 @subscriber_actions_router.callback_query(ManageTTAccountCallback.filter())
-async def handle_manage_tt_account(
+async def handle_manage_tt_account(  # This function itself might become a dispatcher for sub-actions
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     session: AsyncSession,
@@ -224,6 +284,7 @@ async def handle_manage_tt_account(
     _: callable,
     services: "Services",
 ):
+    """Handles managing a subscriber's linked TeamTalk account (unlink, link new)."""
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -298,7 +359,7 @@ async def handle_manage_tt_account(
 
     else:
         await query.answer(_("Unknown action."), show_alert=True)
-        logger.warning(f"Unknown manage TT account action: {action}")
+        logger.warning("Unknown subscriber action: %s", action)
 
 
 @subscriber_actions_router.callback_query(LinkTTAccountChosenCallback.filter())
@@ -309,6 +370,7 @@ async def handle_link_tt_account_chosen(
     _: callable,
     services: "Services",
 ):
+    """Handles linking a chosen TeamTalk account to a subscriber."""
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return

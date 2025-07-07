@@ -1,9 +1,15 @@
+"""Main application entry point for the TeamTalk Telegram Sender bot."""
+
 import argparse
 import asyncio
 import logging
 import traceback
 
-# from datetime import datetime # No longer needed here
+try:
+    import uvloop
+except ImportError:
+    uvloop = None
+
 from aiogram import Dispatcher, html
 from aiogram.types import ErrorEvent  # For _global_error_handler
 from aiogram.types import Message as AiogramMessage
@@ -16,13 +22,22 @@ from bot.logging_setup import setup_logging
 
 # Import Services container
 from bot.services_container import Services
+from bot.teamtalk_bot.event_handler import TeamTalkEventHandler  # Moved here for PLC0415
 from bot.telegram_bot.commands import set_telegram_commands
+from bot.telegram_bot.setup import setup_telegram_dispatcher
 
 logger = logging.getLogger(__name__)
 
 
 class Application:
+    """Main application class orchestrating the bot's lifecycle and components."""
+
     def __init__(self, app_config_instance: Settings):
+        """Initializes the Application.
+
+        Args:
+            app_config_instance: The loaded application settings.
+        """
         self.app_config = app_config_instance  # Store config for app-level decisions if any
         self.logger = setup_logging()
 
@@ -35,8 +50,7 @@ class Application:
         # 3. Create components that depend on services or app config
         self.dp: Dispatcher = Dispatcher()
 
-        from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
-
+        # Moved import to top: from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
         # TeamTalkEventHandler now takes only services
         self.tt_event_handler = TeamTalkEventHandler(self.services)
 
@@ -63,9 +77,9 @@ class Application:
 
             db_subscriber_ids = await crud.get_all_subscribers_ids(session)
             self.services.subscribed_users_cache.update(db_subscriber_ids)
-        self.logger.info(f"Admin IDs cache populated from DB with {len(self.services.admin_ids_cache)} IDs.")
-        self.logger.debug(f"Admin IDs cache populated from DB: {self.services.admin_ids_cache}")
-        self.logger.info(f"Subscribed users cache populated with {len(self.services.subscribed_users_cache)} IDs.")
+        self.logger.info("Admin IDs cache populated from DB with %s IDs.", len(self.services.admin_ids_cache))
+        self.logger.debug("Admin IDs cache populated from DB: %s", self.services.admin_ids_cache)
+        self.logger.info("Subscribed users cache populated with %s IDs.", len(self.services.subscribed_users_cache))
 
         await self.services.load_user_settings_to_app_cache()
 
@@ -82,22 +96,28 @@ class Application:
                 async with self.services.session_factory() as session:
                     await crud.add_admin(session, tg_admin_chat_id)
                     self.services.admin_ids_cache.add(tg_admin_chat_id)  # Update services cache
-                self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config has been added to DB and cache.")
+                self.logger.debug("Main admin ID %s from config has been added to DB and cache.", tg_admin_chat_id)
             else:
-                self.logger.debug(f"Main admin ID {tg_admin_chat_id} from config was already in admin cache.")
+                self.logger.debug("Main admin ID %s from config was already in admin cache.", tg_admin_chat_id)
         else:
             self.logger.info("telegram.admin_chat_id is 0 or not configured in a way to be added as main admin.")
         # Removed original try-except for ValueError/TypeError as Pydantic handles type validation.
 
-        self.logger.info(f"Final admin_ids_cache count after startup: {len(self.services.admin_ids_cache)}.")
-        self.logger.debug(f"Final admin_ids_cache state after startup: {self.services.admin_ids_cache}")
+        self.logger.info("Final admin_ids_cache count after startup: %s.", len(self.services.admin_ids_cache))
+        self.logger.debug("Final admin_ids_cache state after startup: %s", self.services.admin_ids_cache)
 
         # set_telegram_commands now expects only services
         await set_telegram_commands(services=self.services)
         self.logger.info("Telegram bot commands set.")
 
     async def _on_shutdown_logic(self, dispatcher: Dispatcher):
-        """Internal logic for shutdown."""
+        """Handles application shutdown logic.
+
+        Cancels running tasks and closes connections.
+
+        Args:
+            dispatcher: The Aiogram Dispatcher instance.
+        """
         self.logger.warning("Application shutting down...")
 
         if self.teamtalk_task and not self.teamtalk_task.done():
@@ -108,7 +128,7 @@ class Application:
             except asyncio.CancelledError:
                 self.logger.info("Pytalk main event loop task cancelled successfully.")
             except Exception as e:
-                self.logger.error(f"Error awaiting cancelled Pytalk task: {e}", exc_info=True)
+                self.logger.exception("Error awaiting cancelled Pytalk task: %s", e)
         elif self.teamtalk_task:
             self.logger.info("Pytalk main event loop task was already done.")
         else:
@@ -117,7 +137,7 @@ class Application:
         self.logger.info("Disconnecting TeamTalk instances...")
         # Connections are now in self.services.connections
         for conn_key, connection in self.services.connections.items():
-            self.logger.info(f"Shutting down connection for {conn_key}...")
+            self.logger.info("Shutting down connection for %s...", conn_key)
             await connection.disconnect_instance()
         self.logger.info("All TeamTalk connections processed for shutdown.")
 
@@ -138,7 +158,7 @@ class Application:
     async def _global_error_handler(self, event: ErrorEvent, dispatcher: Dispatcher):
         """Global error handler for uncaught exceptions in Aiogram handlers."""
         escaped_exception_text = html.quote(str(event.exception))
-        self.logger.critical(f"Unhandled exception in Aiogram handler: {event.exception}", exc_info=True)
+        self.logger.critical("Unhandled exception in Aiogram handler: %s", event.exception, exc_info=True)
 
         # Use self.services.get_translator and self.services.bot_event
         # Access admin_chat_id from the new nested structure
@@ -152,8 +172,10 @@ class Application:
                 ).format(error_type=type(event.exception).__name__, error_message=escaped_exception_text)
                 await self.services.bot_event.send_message(admin_chat_id_for_error, error_text, parse_mode="HTML")
             except Exception as e:
-                self.logger.error(
-                    f"Error sending critical error message to admin chat {admin_chat_id_for_error}: {e}", exc_info=True
+                self.logger.exception(
+                    "Error sending critical error message to admin chat %s: %s",
+                    admin_chat_id_for_error,
+                    e,
                 )
 
         update = event.update
@@ -185,19 +207,16 @@ class Application:
                 elif user_id:  # Try direct send if no reply context
                     await self.services.bot_event.send_message(chat_id=user_id, text=user_message_text)
             except Exception as e:
-                self.logger.error(
-                    f"Error sending error message to user {user_id if user_id else 'Unknown'}: {e}", exc_info=True
+                self.logger.exception(
+                    "Error sending error message to user %s: %s", user_id if user_id else "Unknown", e
                 )
 
     async def run(self):
-        """Sets up and runs the application."""
+        """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
         self.logger.info("Initializing available languages in services...")
         self.services.initialize_languages()  # Moved from direct App responsibility
-
-        # Import here to avoid circularity at module level
-        from bot.telegram_bot.setup import setup_telegram_dispatcher
 
         # setup_telegram_dispatcher will be modified to accept services
         setup_telegram_dispatcher(dp=self.dp, services=self.services, app_callbacks=self)  # Pass app for callbacks
@@ -216,6 +235,11 @@ class Application:
 
 # === CONFIGURATION AND CLI BLOCK START ===
 def main_cli():
+    """Main command-line interface function to start the bot.
+
+    Parses arguments, loads configuration, sets up uvloop if available,
+    and runs the application.
+    """
     parser = argparse.ArgumentParser(description="TeamTalk Telegram Sender Bot")
     parser.add_argument(
         "--config",
@@ -225,19 +249,18 @@ def main_cli():
     )
     args, _ = parser.parse_known_args()  # Keep known_args if other CLI tools might chain here, otherwise parse_args()
 
-    from bot.config import Settings  # Keep for type hinting and access to from_toml
-
     try:
         print(f"Loading configuration from: {args.config}")
         app_config_instance = Settings.from_toml(args.config)
 
         try:
-            import uvloop
-
-            uvloop.install()
-            print("uvloop installed and used.")
-        except ImportError:
-            print("uvloop not found, using default asyncio event loop.")
+            if uvloop:  # Check if uvloop was successfully imported
+                uvloop.install()
+                print("uvloop installed and used.")
+            else:
+                print("uvloop not found (ImportError at top), using default asyncio event loop.")
+        except Exception as e_uvloop:  # Catch potential errors during uvloop.install() itself
+            print(f"Error during uvloop.install(): {e_uvloop}. Using default asyncio event loop.")
 
         app = Application(app_config_instance)
         asyncio.run(app.run())

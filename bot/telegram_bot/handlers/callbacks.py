@@ -1,3 +1,5 @@
+"""Main router for aggregating all callback query handlers."""
+
 from aiogram import Router
 
 from .callback_handlers.admin import admin_actions_router

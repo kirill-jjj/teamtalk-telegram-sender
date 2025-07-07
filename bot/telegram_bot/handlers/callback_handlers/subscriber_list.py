@@ -1,3 +1,5 @@
+"""Callback query handlers for displaying and paginating the list of subscribers."""
+
 import logging
 
 # For type hinting app instance
@@ -31,6 +33,7 @@ async def handle_subscriber_list_actions(
     _: callable,
     services: "Services",
 ):
+    """Handles actions from the subscriber list, like deletion or pagination."""
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
 
@@ -63,5 +66,5 @@ async def handle_subscriber_list_actions(
 
         await _show_subscriber_list_page(query, session, bot, _, page=requested_page)
     else:
-        logger.warning(f"Unhandled SubscriberListAction: {action} from user {query.from_user.id}")
+        logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

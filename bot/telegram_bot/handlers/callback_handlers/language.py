@@ -1,3 +1,5 @@
+"""Callback query handlers for language settings."""
+
 from collections.abc import Callable  # Added List, Dict
 import logging
 
@@ -32,6 +34,7 @@ async def cq_show_language_menu(
     _: callable,  # Injected by UserSettingsMiddleware
     available_languages: list[dict[str, str]],  # Injected from workflow_data
 ):
+    """Shows the language selection menu."""
     await callback_query.answer()
 
     language_menu_builder = await create_language_selection_keyboard(_, available_languages=available_languages)
@@ -58,6 +61,7 @@ async def cq_set_language(
     callback_data: LanguageCallback,
     services: "Services",  # Injected from workflow_data
 ):
+    """Sets the user's language preference."""
     if callback_data.lang_code is None:
         logger.warning("LanguageCallback received with lang_code=None")
         await callback_query.answer(_("Invalid language selection."), show_alert=True)
@@ -81,7 +85,7 @@ async def cq_set_language(
         (lang for lang in services.available_languages if lang["code"] == new_lang_code_str), None
     )
     if not selected_lang_info:
-        logger.error(f"Attempt to set unknown language code: {new_lang_code_str}")
+        logger.error("Attempt to set unknown language code: %s", new_lang_code_str)
         await callback_query.answer(_("Selected language is not available."), show_alert=True)
         return
 
@@ -111,7 +115,9 @@ async def cq_set_language(
         await active_bot_instance.delete_my_commands(scope=scope)
         await active_bot_instance.set_my_commands(commands=commands_to_set, scope=scope)
         logger.info(
-            f"Updated Telegram commands for user {callback_query.from_user.id} to language '{new_lang_code_str}'."
+            "Updated Telegram commands for user %s to language '%s'.",
+            callback_query.from_user.id,
+            new_lang_code_str,
         )
 
         main_settings_builder = await create_main_settings_keyboard(new_gettext_func)
@@ -125,21 +131,25 @@ async def cq_set_language(
             log_context="cq_set_language_ui_refresh",
         )
     except SQLAlchemyError as e_db:
-        logger.error(
-            f"Failed to update language settings in DB for user {callback_query.from_user.id}. Error: {e_db}",
-            exc_info=True,
+        logger.exception(
+            "Failed to update language settings in DB for user %s. Error: %s",
+            callback_query.from_user.id,
+            e_db,
         )
         managed_user_settings.language_code = original_lang_code_str  # Revert in-memory object
-        # Also revert cache if it was updated prematurely, though here it's after DB save attempt.
-        # services.user_settings_cache[managed_user_settings.telegram_id].language_code = original_lang_code_str
-        # The above comment is long, but it's a comment.
+        # The cache would be reverted if the operation truly failed and we wanted to ensure
+        # consistency with the DB. However, user_settings_cache is usually updated *after*
+        # a successful DB operation. If DB op fails, cache isn't touched by this path.
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
     except TelegramAPIError as e_tg:
-        logger.error(
-            f"Telegram API error setting commands for user {callback_query.from_user.id} after language change: {e_tg}",
-            exc_info=True,
+        logger.exception(
+            "Telegram API error setting commands for user %s after language change: %s",
+            callback_query.from_user.id,
+            e_tg,
         )
         # Language is updated in DB and cache, just commands failed. Inform user.
+        # The .format() method here is for constructing the user-facing message, not for logging itself.
+        # So, this f-string like usage for the user message is acceptable and not a G004 violation.
         await callback_query.answer(
             new_gettext_func("Language updated, but commands might not refresh immediately. Error: {error_msg}").format(
                 error_msg=str(e_tg)
@@ -157,13 +167,15 @@ async def cq_set_language(
             log_context="cq_set_language_ui_refresh_after_tg_error",
         )
     except Exception as e:
-        logger.error(
-            f"An unexpected error occurred while changing language for user {callback_query.from_user.id}: {e}",
-            exc_info=True,
+        logger.exception(
+            "An unexpected error occurred while changing language for user %s: %s",
+            callback_query.from_user.id,
+            e,
         )
         # Revert if not a DB or TG specific error where partial success might be okay
         if not isinstance(e, SQLAlchemyError | TelegramAPIError):
             managed_user_settings.language_code = original_lang_code_str
-            # Revert cache as well
-            # services.user_settings_cache[managed_user_settings.telegram_id].language_code = original_lang_code_str
+            # If cache was updated optimistically before this generic exception, revert it.
+            # This depends on the exact flow, but if services.user_settings_cache was updated
+            # before this path, it should be reverted.
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)

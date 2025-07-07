@@ -1,3 +1,5 @@
+"""Callback query handlers for administrator actions originating from inline keyboards."""
+
 from html import escape
 import logging
 
@@ -24,10 +26,11 @@ admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware
 ttstr = pytalk.instance.sdk.ttstr
 
 
-async def _execute_tt_user_action(
+async def _execute_tt_user_action(  # noqa: PLR0911
     action: AdminAction, user_to_act_on: pytalk.user.User, _: callable, admin_tg_id: int, server_host: str
 ) -> tuple[bool, str]:
     """Executes a moderation action on a TeamTalk user.
+
     Returns a tuple of (success_boolean, message_string).
     """
     user_nickname = get_tt_user_display_name(user_to_act_on, _)
@@ -37,8 +40,11 @@ async def _execute_tt_user_action(
         if action == AdminAction.KICK:
             user_to_act_on.kick(from_server=True)
             logger.info(
-                f"Admin {admin_tg_id} kicked TT user '{user_nickname}' (ID: {user_to_act_on.id}) "
-                f"from server {server_host}"
+                "Admin %s kicked TT user '%s' (ID: %s) from server %s",
+                admin_tg_id,
+                user_nickname,
+                user_to_act_on.id,
+                server_host,
             )
             return True, _("User {user_nickname} kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
@@ -47,45 +53,63 @@ async def _execute_tt_user_action(
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
             logger.info(
-                f"Admin {admin_tg_id} banned and kicked TT user '{user_nickname}' "
-                f"(ID: {user_to_act_on.id}) from server {server_host}"
+                "Admin %s banned and kicked TT user '%s' (ID: %s) from server %s",
+                admin_tg_id,
+                user_nickname,
+                user_to_act_on.id,
+                server_host,
             )
             return True, _("User {user_nickname} banned and kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
         else:
-            logger.warning(f"Unknown action '{action}' passed to _execute_tt_user_action for server {server_host}.")
+            logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
             return False, _("Unknown action.")
 
     except PytalkPermissionError as e:
         logger.error(
-            f"PermissionError during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}"
+            "PermissionError during '%s' on TT user ID %s on server %s: %s",
+            action,
+            user_to_act_on.id,
+            server_host,
+            e,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except PytalkException as e:
         logger.error(
-            f"TeamTalkException during '{action}' on TT user ID {user_to_act_on.id} on server {server_host}: {e}",
-            exc_info=True,
+            "TeamTalkException during '%s' on TT user ID %s on server %s: %s",
+            action,
+            user_to_act_on.id,
+            server_host,
+            e,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except (ValueError, TypeError, AttributeError) as e_data:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        logger.error(
-            f"Data error during '{action}' on TT user (ID: {user_id_log}) on server {server_host}: {e_data}",
-            exc_info=True,
+        logger.exception(
+            "Data error during '%s' on TT user (ID: %s) on server %s: %s",
+            action,
+            user_id_log,
+            server_host,
+            e_data,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
     except (TimeoutError, OSError) as e_net:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
+        # For critical errors, logger.critical with exc_info=True is appropriate if not using .exception
         logger.critical(
-            f"CRITICAL: Network/OS error during '{action}' on TT user (ID: {user_id_log}) "
-            f"on server {server_host}: {e_net}",
+            "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on server %s: %s",
+            action,
+            user_id_log,
+            server_host,
+            e_net,
+            # Retaining exc_info for critical, as .exception might not be semantically identical to critical
             exc_info=True,
         )
         return False, _(
@@ -101,6 +125,7 @@ async def process_user_action_selection(
     admin_ids_cache: set[int],  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    """Processes admin actions (kick/ban) selected from an inline keyboard."""
     if not callback_query.message:
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
@@ -129,8 +154,9 @@ async def process_user_action_selection(
                 await callback_query.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError:
             logger.debug(
-                f"Failed to remove reply markup when user {callback_data.user_id} "
-                f"was not found on {server_host_for_display}."
+                "Failed to remove reply markup when user %s was not found on %s.",
+                callback_data.user_id,
+                server_host_for_display,
             )
         return
 
@@ -149,14 +175,17 @@ async def process_user_action_selection(
                 await callback_query.message.edit_text(message_text, reply_markup=None)
             except TelegramAPIError as e:
                 logger.warning(
-                    f"Failed to edit message text after user action on {server_host_for_display}: {e}. "
-                    f"Trying to edit reply markup only."
+                    "Failed to edit message text after user action on %s: %s. Trying to edit reply markup only.",
+                    server_host_for_display,
+                    e,
                 )
                 try:
                     await callback_query.message.edit_reply_markup(reply_markup=None)
                 except TelegramAPIError as e_markup:
                     logger.error(
-                        f"Failed to even remove reply markup after user action on {server_host_for_display}: {e_markup}"
+                        "Failed to even remove reply markup after user action on %s: %s",
+                        server_host_for_display,
+                        e_markup,
                     )
     else:
         await callback_query.answer(message_text, show_alert=True)
