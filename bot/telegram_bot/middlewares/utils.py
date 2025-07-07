@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _send_error_response(event: TelegramObject, text: str, show_alert_for_callback: bool = True) -> None:
-    """Internal helper to send an error response based on event type.
-    """
+    """Internal helper to send an error response based on event type."""
     if isinstance(event, Message):
         try:
             await event.reply(text)

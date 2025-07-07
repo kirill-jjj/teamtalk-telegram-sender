@@ -16,8 +16,7 @@ class LanguageInfo(TypedDict):
 
 
 def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
-    """Scans the locales directory for translated languages and always includes English as the base language.
-    """
+    """Scans the locales directory for translated languages and always includes English as the base language."""
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.
     discovered: list[LanguageInfo] = [{"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}]

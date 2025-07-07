@@ -81,8 +81,7 @@ async def safe_edit_text(
     logger_instance: logging.Logger | None = None,
     log_context: str = "",
 ) -> bool:
-    """Safely edits a message text, handling common Telegram API errors.
-    """
+    """Safely edits a message text, handling common Telegram API errors."""
     current_logger = logger_instance or logger
     context_for_log = f" ({log_context})" if log_context else ""
 

@@ -381,8 +381,7 @@ async def create_subscriber_list_keyboard(
 async def create_user_selection_keyboard(
     _: callable, users_to_display: list[pytalk.user.User], command_type: AdminAction
 ) -> InlineKeyboardBuilder:
-    """Creates a keyboard with buttons for each user in the provided list.
-    """
+    """Creates a keyboard with buttons for each user in the provided list."""
     builder = InlineKeyboardBuilder()
 
     for user_obj in users_to_display:

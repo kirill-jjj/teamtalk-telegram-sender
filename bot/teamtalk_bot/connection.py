@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class TeamTalkConnection:
-    """Manages the state of a single connection to a TeamTalk server.
-    """
+    """Manages the state of a single connection to a TeamTalk server."""
 
     def __init__(
         self,

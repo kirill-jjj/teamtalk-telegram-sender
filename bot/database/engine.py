@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_session_factory(config: Settings) -> sessionmaker:
-    """Creates and returns a new session factory based on the provided configuration.
-    """
+    """Creates and returns a new session factory based on the provided configuration."""
     # This import is needed for SQLModel/Alembic to correctly see all tables.
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models

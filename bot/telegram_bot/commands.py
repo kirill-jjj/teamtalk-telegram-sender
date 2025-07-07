@@ -43,8 +43,7 @@ if TYPE_CHECKING:
 
 
 async def set_telegram_commands(services: "Services"):  # Changed app to services
-    """Sets bot commands globally for all supported languages and individually for administrators.
-    """
+    """Sets bot commands globally for all supported languages and individually for administrators."""
     logger.info("Setting up global and admin-specific Telegram commands...")
 
     # --- 1. Set global commands for each supported language ---

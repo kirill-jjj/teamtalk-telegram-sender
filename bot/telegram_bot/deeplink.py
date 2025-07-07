@@ -53,8 +53,7 @@ async def _execute_deeplink_action(
     token: str,
     services: "Services",  # Changed from app: "Application"
 ) -> str:
-    """Executes the action specified by the deeplink object and returns a reply text.
-    """
+    """Executes the action specified by the deeplink object and returns a reply text."""
     action_enum_member = deeplink_obj.action
 
     if not isinstance(action_enum_member, DeeplinkAction):

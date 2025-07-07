@@ -28,8 +28,7 @@ logger = logging.getLogger(__name__)
 async def _handle_telegram_api_error(
     error: TelegramAPIError, chat_id: int, services: "Services"
 ):  # Changed app to services
-    """Handles specific Telegram API errors.
-    """
+    """Handles specific Telegram API errors."""
     if not services:  # Check for services
         logger.error(
             f"Telegram API error for chat_id {chat_id} but services context was missing for full cleanup: {error}"

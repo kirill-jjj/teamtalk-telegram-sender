@@ -65,8 +65,7 @@ class Settings(BaseSettings):
 
     @classmethod
     def from_toml(cls, path: str) -> "Settings":
-        """Loads configuration from a TOML file.
-        """
+        """Loads configuration from a TOML file."""
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
