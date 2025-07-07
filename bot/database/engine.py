@@ -3,11 +3,11 @@
 # bot/database/engine.py
 import logging
 import os  # Moved here for PLC0415
-from typing import TypeAlias # For sessionmaker type hint
+from typing import TypeAlias  # For sessionmaker type hint
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker # Standard SQLAlchemy sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession # SQLModel's AsyncSession
+from sqlalchemy.orm import sessionmaker  # Standard SQLAlchemy sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession  # SQLModel's AsyncSession
 
 from bot import models  # Important for SQLModel to discover models
 from bot.config import Settings  # Needed for config type hint

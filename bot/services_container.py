@@ -1,26 +1,26 @@
 """Provides a container for managing application-wide services and dependencies."""
 
 import gettext
-from gettext import GNUTranslations, NullTranslations # Added for precise typing
+from gettext import GNUTranslations, NullTranslations  # Added for precise typing
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Union # Added Dict, List, Union
+from typing import TYPE_CHECKING  # Added Dict, List, Union
 
 from aiogram import Bot
 import pytalk  # Moved here for PLC0415
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import selectinload # Standard SQLAlchemy selectinload
-from sqlmodel import select # SQLModel's select
+from sqlalchemy.orm import selectinload  # Standard SQLAlchemy selectinload
+from sqlmodel import select  # SQLModel's select
 from sqlmodel.ext.asyncio.session import AsyncSession  # For type hinting
 
 from bot.config import Settings
-from bot.core.languages import LanguageInfo, discover_languages # Import LanguageInfo
-from bot.database.engine import AsyncSessionFactoryType # Import the session factory type
+from bot.core.languages import LanguageInfo, discover_languages  # Import LanguageInfo
+from bot.database.engine import AsyncSessionFactoryType  # Import the session factory type
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 if TYPE_CHECKING:
-    from bot.models import MutedUser # Forward reference for selectinload, though might not be needed with plugin
+    pass  # Forward reference for selectinload, though might not be needed with plugin
 
 
 # These might be passed to __init__ or defined globally if they are static
@@ -61,10 +61,10 @@ class Services:
         self.user_settings_cache: dict[int, UserSettings] = {}  # Changed Any to UserSettings
 
         # Инструменты
-        self.translator_cache: Dict[str, Union[GNUTranslations, NullTranslations]] = {}
-        self.available_languages: List[LanguageInfo] = []
+        self.translator_cache: dict[str, GNUTranslations | NullTranslations] = {}
+        self.available_languages: list[LanguageInfo] = []
 
-    def get_translator(self, language_code: str | None = None) -> Union[GNUTranslations, NullTranslations]:
+    def get_translator(self, language_code: str | None = None) -> GNUTranslations | NullTranslations:
         """Returns a translator object for the specified language code.
 
         Caches translators after first load.

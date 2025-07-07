@@ -1,9 +1,10 @@
 """Converts .env configuration files to a structured TOML format."""
 
 import argparse
+from collections.abc import Callable  # Moved E402
 from pathlib import Path
 import sys
-from typing import Any
+from typing import Any  # Moved E402, added Union
 
 from dotenv import dotenv_values  # For reading .env files
 import toml  # For writing TOML
@@ -19,10 +20,8 @@ def parse_comma_separated_string_to_list(v: Any) -> list[str]:
     return []
 
 
-from typing import Callable, Any, Dict, Tuple, Union
-
-ConversionRule = Union[Callable[[Any], Any], type]
-EnvMappingType = Dict[str, Tuple[str, str, ConversionRule]]
+ConversionRule = Callable[[Any], Any] | type # UP007
+EnvMappingType = dict[str, tuple[str, str, ConversionRule]]
 
 # Define the mapping from .env keys to TOML structure
 # Format: env_key: (toml_section, toml_key, type_conversion_function_or_literal)
@@ -115,7 +114,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
     print(f"Processing '{input_env_path}' -> '{output_toml_path}'...")
     env_vars = dotenv_values(input_env_path)
-    toml_data: Dict[str, Dict[str, Any]] = {}
+    toml_data: dict[str, dict[str, Any]] = {}
 
     for env_key_orig, env_value in env_vars.items():
         env_key = str(env_key_orig).strip()

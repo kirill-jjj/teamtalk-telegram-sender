@@ -15,7 +15,7 @@ import pytalk
 from pytalk.exceptions import TeamTalkException
 from pytalk.message import Message as TeamTalkMessage
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
 
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message

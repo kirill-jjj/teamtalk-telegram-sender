@@ -1,11 +1,12 @@
 """Middleware to provide a database session to Telegram handlers."""
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Dict
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-from bot.database.engine import AsyncSessionFactoryType # Import the specific session factory type
+
+from bot.database.engine import AsyncSessionFactoryType  # Import the specific session factory type
 
 
 class DbSessionMiddleware(BaseMiddleware):
@@ -22,9 +23,9 @@ class DbSessionMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 

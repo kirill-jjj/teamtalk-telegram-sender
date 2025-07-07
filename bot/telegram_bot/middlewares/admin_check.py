@@ -1,6 +1,6 @@
 """Middleware to check if a Telegram user is an administrator."""
 
-from collections.abc import Callable, Coroutine, Awaitable # Added Awaitable
+from collections.abc import Awaitable, Callable  # Added Awaitable
 import gettext  # For translator type hint
 import logging
 
@@ -55,7 +55,10 @@ class AdminCheckMiddleware(BaseMiddleware):
             current_translator: gettext.GNUTranslations | gettext.NullTranslations
             translator_from_data = data.get("translator")
 
-            if translator_from_data and isinstance(translator_from_data, (gettext.GNUTranslations, gettext.NullTranslations)):
+            is_valid_translator = isinstance(
+                translator_from_data, gettext.GNUTranslations | gettext.NullTranslations
+            )
+            if translator_from_data and is_valid_translator:
                 current_translator = translator_from_data
             else:
                 services: Services | None = data.get("services")

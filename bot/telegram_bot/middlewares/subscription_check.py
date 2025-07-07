@@ -2,14 +2,14 @@
 
 from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any, Dict # Added Dict
+from typing import TYPE_CHECKING, Any  # Added Dict
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, TelegramObject # Import TelegramObject
+from aiogram.types import Message, TelegramObject  # Import TelegramObject
 from aiogram.types import User as AiogramUser
 
 if TYPE_CHECKING:
-    from bot.services_container import Services # Import Services for type hinting
+    pass  # Import Services for type hinting
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +19,9 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 

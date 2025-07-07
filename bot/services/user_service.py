@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
 
 from bot.database import crud
 

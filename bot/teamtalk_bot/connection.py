@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime
 import logging
-from typing import Any, Optional  # For app_config_instance type hint and Optional
+from typing import Any  # For app_config_instance type hint and Optional
 
 import pytalk
 from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
@@ -40,8 +40,8 @@ class TeamTalkConnection:
         self.online_users_cache: dict[int, pytalk.user.User] = {}
         self.user_accounts_cache: dict[str, pytalk.UserAccount] = {}  # Key is username string
 
-        self._periodic_sync_task: Optional[asyncio.Task[Any]] = None
-        self._populate_accounts_task: Optional[asyncio.Task[Any]] = None
+        self._periodic_sync_task: asyncio.Task[Any] | None = None
+        self._populate_accounts_task: asyncio.Task[Any] | None = None
         self._is_finalized = False
 
     async def connect(self) -> bool:
@@ -288,7 +288,6 @@ class TeamTalkConnection:
                     username_str,
                 )
         elif event_type == "user_logout":
-            logged_out_user: pytalk.user.User = data
             if user_id is not None and user_id in self.online_users_cache:
                 del self.online_users_cache[user_id]
                 logger.debug(
@@ -311,7 +310,8 @@ class TeamTalkConnection:
                 )
         elif event_type == "user_account_new":
             new_account: pytalk.UserAccount = data
-            acc_username_str = ttstr(new_account.username) if isinstance(new_account.username, bytes) else str(new_account.username)
+            raw_username = new_account.username
+            acc_username_str = ttstr(raw_username) if isinstance(raw_username, bytes) else str(raw_username)
             if acc_username_str:
                 self.user_accounts_cache[acc_username_str] = new_account
                 logger.debug(
@@ -322,7 +322,8 @@ class TeamTalkConnection:
                 )
         elif event_type == "user_account_remove":
             removed_account: pytalk.UserAccount = data
-            acc_username_str = ttstr(removed_account.username) if isinstance(removed_account.username, bytes) else str(removed_account.username)
+            raw_username = removed_account.username
+            acc_username_str = ttstr(raw_username) if isinstance(raw_username, bytes) else str(raw_username)
             if acc_username_str and acc_username_str in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username_str]
                 logger.debug(

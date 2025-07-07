@@ -4,31 +4,31 @@ import argparse
 import asyncio
 import logging
 import traceback
-from types import ModuleType # For uvloop typing
-from typing import Optional, Any # For Optional and Any
+from types import ModuleType  # For uvloop typing
 
-uvloop: Optional[ModuleType] = None
+# Project specific imports should be after standard library and before uvloop logic generally,
+# but ruff E402 wants them at the very top if they don't depend on conditional uvloop.
+# Let's place them here, before uvloop, to satisfy E402.
+from aiogram import Dispatcher, html
+from aiogram.types import ErrorEvent
+from aiogram.types import Message as AiogramMessage
+
+from bot.config import Settings
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
+from bot.database import crud
+from bot.database.engine import create_session_factory
+from bot.logging_setup import setup_logging
+from bot.services_container import Services
+from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
+from bot.telegram_bot.commands import set_telegram_commands
+from bot.telegram_bot.setup import setup_telegram_dispatcher
+
+uvloop: ModuleType | None = None
 try:
-    import uvloop as uvloop_module # type: ignore
+    import uvloop as uvloop_module  # type: ignore
     uvloop = uvloop_module
 except ImportError:
     pass # uvloop remains None
-
-from aiogram import Dispatcher, html
-from aiogram.types import ErrorEvent  # For _global_error_handler
-from aiogram.types import Message as AiogramMessage
-
-from bot.config import Settings  # For type hinting app_config_instance
-from bot.core.languages import DEFAULT_LANGUAGE_CODE  # For _global_error_handler fallback
-from bot.database import crud  # Used in _on_startup_logic
-from bot.database.engine import create_session_factory
-from bot.logging_setup import setup_logging
-
-# Import Services container
-from bot.services_container import Services
-from bot.teamtalk_bot.event_handler import TeamTalkEventHandler  # Moved here for PLC0415
-from bot.telegram_bot.commands import set_telegram_commands
-from bot.telegram_bot.setup import setup_telegram_dispatcher
 
 logger = logging.getLogger(__name__)
 

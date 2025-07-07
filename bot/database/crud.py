@@ -6,8 +6,8 @@ import secrets
 from typing import TypeVar
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import SQLModel, select # SQLModel's select
-from sqlmodel.ext.asyncio.session import AsyncSession # SQLModel's AsyncSession
+from sqlmodel import SQLModel, select  # SQLModel's select
+from sqlmodel.ext.asyncio.session import AsyncSession  # SQLModel's AsyncSession
 
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 from bot.core.enums import DeeplinkAction
@@ -95,7 +95,7 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[T]) -> li
     table_name = model_class.__tablename__
     try:
         # Assuming all models used with this function have 'telegram_id'
-        statement = select(getattr(model_class, "telegram_id"))
+        statement = select(model_class.telegram_id)
         result = await session.exec(statement)
         return list(result.all())
     except SQLAlchemyError as e:

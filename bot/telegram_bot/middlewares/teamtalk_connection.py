@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 import gettext
 from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Union # Added Dict, Union
+from typing import TYPE_CHECKING, Any  # Added Dict, Union
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
@@ -14,7 +14,7 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from .utils import _send_error_response
 
 if TYPE_CHECKING:
-    from bot.models import UserSettings # For user_settings type hint
+    from bot.models import UserSettings  # For user_settings type hint
     from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
@@ -39,9 +39,9 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 
@@ -103,9 +103,9 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         """Executes the middleware.
 
@@ -121,14 +121,14 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
             The result of the next handler if connection is ready, or None otherwise.
         """
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
-        current_translator: Union[GNUTranslations, NullTranslations, None] = data.get("translator")
+        current_translator: GNUTranslations | NullTranslations | None = data.get("translator")
 
         # Fallback to get translator from services if not directly available
         if not current_translator:
             services: Services | None = data.get("services")
             if services:
                 user_settings: UserSettings | None = data.get("user_settings")
-                lang_code = user_settings.language_code if user_settings and hasattr(user_settings, "language_code") else None
+                lang_code = user_settings.language_code if user_settings else None
                 current_translator = services.get_translator(lang_code)
             else:  # Absolute fallback: create a temporary default translator
                 logger.warning(
