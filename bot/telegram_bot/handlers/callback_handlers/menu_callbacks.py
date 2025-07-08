@@ -44,15 +44,16 @@ async def menu_who_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Handles the 'Who is online?' menu button click."""
     # Ensure query.message exists due to @ensure_message_context
+    # who_command_handler will be refactored to use services.cache.is_admin or accept is_admin
     await who_command_handler(
         message=query.message,  # type: ignore
         translator=translator,
-        admin_ids_cache=admin_ids_cache,  # Pass admin_ids_cache
+        services=services, # Pass services
         tt_connection=tt_connection,
     )
     await query.answer()
@@ -64,14 +65,15 @@ async def menu_help_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
 ):
     """Handles the 'Help' menu button click."""
     # Ensure query.message exists
+    # help_command_handler will be refactored to use services.cache.is_admin or accept is_admin
     await help_command_handler(
         message=query.message,  # type: ignore
         translator=translator,
-        admin_ids_cache=admin_ids_cache,  # Pass admin_ids_cache
+        services=services, # Pass services
     )
     await query.answer()
 

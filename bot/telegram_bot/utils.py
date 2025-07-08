@@ -87,7 +87,7 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Serv
     """Checks if a message to a given chat_id should be sent silently.
 
     This is based on NOON settings and the provided online status of their linked TeamTalk user.
-    Uses services.user_settings_cache and notification_service.
+    Uses `services.cache.get_user_settings()` and `notification_service`.
     """
     recipient_settings = services.cache.get_user_settings(chat_id)
 

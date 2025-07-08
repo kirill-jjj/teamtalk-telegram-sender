@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class AdminCheckMiddleware(BaseMiddleware):
     """This middleware checks if the user who triggered a command or pressed a button is an administrator.
 
-    Relies on 'event_from_user', 'admin_ids_cache', and optionally 'translator' or 'services' being in workflow_data.
+    Relies on 'event_from_user', 'services' (for CacheService), and 'translator' being in workflow_data.
     """
 
     async def __call__(
@@ -48,9 +48,14 @@ class AdminCheckMiddleware(BaseMiddleware):
             logger.debug("AdminCheckMiddleware: No 'event_from_user' in data. Skipping check.")
             return await handler(event, data)
 
-        admin_ids_cache: set[int] = data.get("admin_ids_cache", set())
+        services = data.get("services")
+        if not services:
+            logger.critical("AdminCheckMiddleware: 'services' not found in data. Cannot perform admin check.")
+            # Optionally, send a generic error message to the user before returning
+            # This situation should ideally not happen if middlewares are set up correctly.
+            return # Or raise an exception
 
-        if user.id not in admin_ids_cache:
+        if not services.cache.is_admin(user.id):
             # I18nMiddleware runs before this, so 'translator' is guaranteed to be in data.
             current_translator: gettext.GNUTranslations | gettext.NullTranslations = data["translator"]
             _ = current_translator.gettext

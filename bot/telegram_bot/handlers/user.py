@@ -199,7 +199,7 @@ def _format_who_message(
 async def who_command_handler(
     message: Message,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Handles the /who command, showing online users in TeamTalk."""
@@ -222,7 +222,7 @@ async def who_command_handler(
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
-    is_caller_admin = message.from_user.id in admin_ids_cache
+    is_caller_admin = services.cache.is_admin(message.from_user.id)
     bot_user_id = tt_instance.getMyUserID()
 
     if bot_user_id is None:
@@ -246,14 +246,14 @@ async def who_command_handler(
 async def help_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
 ):
     """Handles the /help command, showing available commands."""
     _ = translator.gettext
     if not message.from_user:
         return
 
-    is_telegram_admin = message.from_user.id in admin_ids_cache
+    is_telegram_admin = services.cache.is_admin(message.from_user.id)
     help_text = build_help_message(translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text)
 
@@ -280,7 +280,7 @@ async def settings_command_handler(
 async def menu_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
 ):
     """Handles the /menu command, showing the main command menu."""
     _ = translator.gettext
@@ -288,7 +288,7 @@ async def menu_command_handler(
         return
 
     await safe_delete_message(message, log_context_message="user menu command")
-    is_admin = message.from_user.id in admin_ids_cache
+    is_admin = services.cache.is_admin(message.from_user.id)
     # Pass the full translator object to create_main_menu_keyboard
     menu_builder = await create_main_menu_keyboard(translator, is_admin)
     try:

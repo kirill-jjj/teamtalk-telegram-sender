@@ -38,7 +38,13 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             The result of the next handler if authorized, or None if not.
         """
         user: AiogramUser | None = data.get("event_from_user")
-        subscribed_users_cache: set[int] = data["subscribed_users_cache"]
+        services = data.get("services")
+
+        if not services:
+            logger.critical("SubscriptionCheckMiddleware: 'services' not found in data. Cannot perform subscription check.")
+            # This situation should ideally not happen.
+            # Depending on policy, might want to inform user or just block.
+            return
 
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
@@ -56,7 +62,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
                 )
                 return await handler(event, data)
 
-        if telegram_id not in subscribed_users_cache:  # Use injected cache
+        if not services.cache.is_subscribed(telegram_id):
             logger.info(
                 "SubscriptionCheckMiddleware: Ignored event from non-subscribed user %s (Event type: %s).",
                 telegram_id,

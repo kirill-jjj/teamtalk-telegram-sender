@@ -128,7 +128,7 @@ async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    admin_ids_cache: set[int],  # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
@@ -137,7 +137,7 @@ async def process_user_action_selection(
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
 
-    if callback_query.from_user.id not in admin_ids_cache:  # Use injected admin_ids_cache
+    if not services.cache.is_admin(callback_query.from_user.id):
         await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
         return
 
