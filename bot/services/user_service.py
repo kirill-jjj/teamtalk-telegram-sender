@@ -33,20 +33,13 @@ async def delete_full_user_profile(
             await session.commit()
             logger.debug("Committed DB deletions for %s.", telegram_id)
 
-        # Clear data from caches using the services container
-        if telegram_id in services.user_settings_cache:
-            del services.user_settings_cache[telegram_id]
-            logger.info("Removed user %s from services.user_settings_cache.", telegram_id)
-
-        services.subscribed_users_cache.discard(telegram_id)
-        logger.info("User %s discarded from services.subscribed_users_cache.", telegram_id)
-
-        services.admin_ids_cache.discard(telegram_id)  # Also remove from admin cache if they were an admin
-        logger.info("User %s discarded from services.admin_ids_cache (if present).", telegram_id)
+        # Clear data from caches using CacheService
+        services.cache.remove_full_user_profile(telegram_id)
+        # Logging for this is now handled within CacheService.remove_full_user_profile
 
         logger.info(
             "Full user profile deletion process completed for Telegram ID: %s. "
-            "DB changes (if any) committed. Caches cleared via services container.",
+            "DB changes (if any) committed. Caches cleared via CacheService.",
             telegram_id,
         )
         return True

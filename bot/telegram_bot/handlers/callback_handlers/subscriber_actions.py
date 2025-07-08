@@ -315,7 +315,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
             user_settings.not_on_online_confirmed = False
             await session.commit()
             await session.refresh(user_settings)
-            services.user_settings_cache[user_settings.telegram_id] = user_settings
+            services.cache.update_user_settings(user_settings) # Use CacheService
             await query.answer(
                 _("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True
             )
@@ -413,10 +413,10 @@ async def handle_link_tt_account_chosen(
 
     old_tt_username = user_settings.teamtalk_username
     user_settings.teamtalk_username = tt_username_to_link
-    user_settings.not_on_online_confirmed = False
+    user_settings.not_on_online_confirmed = True # Linking by admin implies confirmation for NOON
     await session.commit()
     await session.refresh(user_settings)
-    services.user_settings_cache[user_settings.telegram_id] = user_settings
+    services.cache.update_user_settings(user_settings) # Use CacheService
 
     alert_text = _("TeamTalk account {new_tt_username} linked successfully.").format(
         new_tt_username=tt_username_to_link

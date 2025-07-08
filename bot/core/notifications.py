@@ -68,9 +68,12 @@ async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
     session_factory: "DbEngineSessionFactoryType",  # Use renamed alias
-    subscribed_users_cache: set[int],
+    # The subscribed_users_cache parameter is no longer directly used here.
+    # It's fetched via services.cache.get_all_subscriber_ids()
+    services: "Services",
 ) -> list[int]:
-    subscriber_ids = list(subscribed_users_cache)
+    # Fetch subscriber IDs using CacheService
+    subscriber_ids = list(services.cache.get_all_subscriber_ids())
     if not subscriber_ids:
         return []
 
@@ -179,7 +182,10 @@ async def send_join_leave_notification_logic(
         return
 
     recipients = await _get_recipients_for_notification(
-        user_username, event_type, services.session_factory, services.subscribed_users_cache
+        username_to_check=user_username,
+        event_type=event_type,
+        session_factory=services.session_factory,
+        services=services, # Pass the whole services object
     )
 
     if not recipients:

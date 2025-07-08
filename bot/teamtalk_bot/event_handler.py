@@ -475,7 +475,7 @@ class TeamTalkEventHandler:
         bot_reply_language_code = self.services.config.general.default_lang
         admin_chat_id_for_message = self.services.config.telegram.admin_chat_id
         if admin_chat_id_for_message:
-            admin_settings = self.services.user_settings_cache.get(admin_chat_id_for_message)
+            admin_settings = self.services.cache.get_user_settings(admin_chat_id_for_message) # Use CacheService
             if admin_settings and admin_settings.language_code:
                 bot_reply_language_code = admin_settings.language_code
 

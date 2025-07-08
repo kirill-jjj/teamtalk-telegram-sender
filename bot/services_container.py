@@ -20,6 +20,7 @@ from bot.core.languages import LanguageInfo, discover_languages  # Import Langua
 from bot.database.engine import AsyncSessionFactoryType  # Import the session factory type
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.services.cache_service import CacheService
 
 if TYPE_CHECKING:
     pass  # Forward reference for selectinload, though might not be needed with plugin
@@ -67,6 +68,9 @@ class Services:
         self.translator_cache: dict[str, GNUTranslations | NullTranslations] = {}
         self.available_languages: list[LanguageInfo] = []
 
+        # Новый сервис для управления кэшами
+        self.cache = CacheService(self)
+
     def get_translator(self, language_code: str | None = None) -> GNUTranslations | NullTranslations:
         """Returns a translator object for the specified language code.
 
@@ -104,16 +108,18 @@ class Services:
             stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
             result = await session.exec(stmt)
             all_settings = result.all()
-            for setting in all_settings:
-                self.user_settings_cache[setting.telegram_id] = setting
-            self.logger.info("Loaded %s user settings into services cache.", len(self.user_settings_cache))
+            # Use CacheService to load settings
+            self.cache.load_all_user_settings(all_settings)
+            # Logging is handled by cache_service.load_all_user_settings
 
     async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings:
-        """Gets user settings from service cache or DB, creates if not exists."""
-        cached_settings = self.user_settings_cache.get(telegram_id)
+        """Gets user settings from CacheService or DB, creates if not exists, updates cache."""
+        # Try to get from cache first
+        cached_settings = self.cache.get_user_settings(telegram_id)
         if cached_settings:
             return cached_settings
 
+        # If not in cache, get from DB
         user_settings = await session.get(
             UserSettings,
             telegram_id,
@@ -137,7 +143,8 @@ class Services:
                 # Return a default non-persistent object on error.
                 return UserSettings(telegram_id=telegram_id, language_code=self.config.general.default_lang)
 
-        self.user_settings_cache[telegram_id] = user_settings
+        # Update cache with the retrieved or newly created settings
+        self.cache.update_user_settings(user_settings)
         return user_settings
 
     def initialize_languages(self) -> None:

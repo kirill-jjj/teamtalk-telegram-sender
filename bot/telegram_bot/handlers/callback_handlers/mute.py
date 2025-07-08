@@ -288,9 +288,9 @@ async def _commit_mute_changes_and_notify(
 
     try:
         await session.commit()
-        await session.refresh(user_settings)
+        await session.refresh(user_settings) # Refresh to get any DB-side changes like IDs
 
-        services.user_settings_cache[user_settings.telegram_id] = user_settings
+        services.cache.update_user_settings(user_settings) # Use CacheService
 
         await callback_query.answer(toast_message, show_alert=False)
         return True
@@ -423,8 +423,8 @@ async def cq_set_mute_mode_action(
         await session.commit()
         await session.refresh(managed_user_settings)  # Ensure the object is up-to-date
 
-        # If successfully committed, update the cache
-        services.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
+        # If successfully committed, update the cache via CacheService
+        services.cache.update_user_settings(managed_user_settings)
 
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)

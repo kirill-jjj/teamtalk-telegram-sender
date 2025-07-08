@@ -98,13 +98,11 @@ async def cq_set_language(
     new_gettext_func = new_lang_translator_obj.gettext
 
     managed_user_settings.language_code = new_lang_code_str
-    # Use services.admin_ids_cache
-    is_admin = managed_user_settings.telegram_id in services.admin_ids_cache
+    is_admin = services.cache.is_admin(managed_user_settings.telegram_id) # Use CacheService
 
     try:
         await update_user_settings_in_db(session, managed_user_settings)
-        # Use services.user_settings_cache
-        services.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
+        services.cache.update_user_settings(managed_user_settings) # Use CacheService
 
         await callback_query.answer(
             new_gettext_func("Language updated to {lang_name}.").format(lang_name=selected_lang_info["native_name"]),

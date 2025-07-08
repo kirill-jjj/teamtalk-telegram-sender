@@ -69,9 +69,9 @@ async def cq_toggle_noon_setting_action(
         await callback_query.answer(_("An error occurred while saving. Please try again."), show_alert=True)
         return
 
-    services.user_settings_cache[user_settings.telegram_id] = user_settings
+    services.cache.update_user_settings(user_settings) # Use CacheService
     logger.debug(
-        "NOON setting for user %s toggled to %s and saved to DB/cache.",
+        "NOON setting for user %s toggled to %s and saved to DB/cache via CacheService.",
         user_settings.telegram_id,
         user_settings.not_on_online_enabled,
     )

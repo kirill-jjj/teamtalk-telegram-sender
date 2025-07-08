@@ -65,12 +65,13 @@ async def set_telegram_commands(services: "Services"):  # Changed app to service
 
     # --- 2. Set individual commands for each administrator ---
     async with services.session_factory() as session:  # Use services
-        for admin_id in services.admin_ids_cache:  # Use services
+        # Iterate over admin IDs obtained from CacheService
+        for admin_id in services.cache.get_all_admin_ids():
             admin_lang_code = services.config.general.default_lang  # Use services
 
-            admin_settings = services.user_settings_cache.get(admin_id)  # Use services
+            # Get user settings via CacheService or DB
+            admin_settings = services.cache.get_user_settings(admin_id)
             if not admin_settings:
-                # Use services.get_or_create_user_settings
                 admin_settings = await services.get_or_create_user_settings(admin_id, session)
 
             if admin_settings and admin_settings.language_code:

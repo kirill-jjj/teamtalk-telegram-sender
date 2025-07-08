@@ -168,12 +168,12 @@ async def _manage_admin_ids(
             services=services,  # Pass services
         ):
             success_count += 1
-            # Update services.admin_ids_cache if successful
+            # Update admin_ids_cache via CacheService if successful
             if crud_function is add_admin:
-                services.admin_ids_cache.add(telegram_id)
+                services.cache.add_admin(telegram_id)
             elif crud_function is remove_admin_db:
-                services.admin_ids_cache.discard(telegram_id)
-            logger.info("Successfully processed %s for TG ID %s and set commands.", crud_function.__name__, telegram_id)
+                services.cache.remove_admin(telegram_id)
+            logger.info("Successfully processed %s for TG ID %s and set commands (cache updated via CacheService).", crud_function.__name__, telegram_id)
         else:
             failed_action_ids.append(telegram_id)
             logger.warning(

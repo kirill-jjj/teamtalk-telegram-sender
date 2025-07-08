@@ -54,30 +54,31 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
 
     async with services.session_factory() as session:
         db_admin_ids = await crud.get_all_admins_ids(session)
-        services.admin_ids_cache.update(db_admin_ids)
+        services.cache.load_admins_from_db(db_admin_ids) # Use CacheService
 
         db_subscriber_ids = await crud.get_all_subscribers_ids(session)
-        services.subscribed_users_cache.update(db_subscriber_ids)
-    logger.info("Admin IDs cache populated from DB with %s IDs.", len(services.admin_ids_cache))
-    logger.debug("Admin IDs cache populated from DB: %s", services.admin_ids_cache)
-    logger.info("Subscribed users cache populated with %s IDs.", len(services.subscribed_users_cache))
+        services.cache.load_subscribers_from_db(db_subscriber_ids) # Use CacheService
 
+    # load_user_settings_to_app_cache will be modified in services_container.py to use CacheService
     await services.load_user_settings_to_app_cache()
 
     tg_admin_chat_id = app_config.telegram.admin_chat_id
     if tg_admin_chat_id:
-        if tg_admin_chat_id not in services.admin_ids_cache:
+        # is_admin will also be routed through CacheService if we decide to make reads consistent,
+        # but for now, direct read for check is fine as per CacheService internal comment.
+        # However, for modification consistency, we use the service.
+        if not services.cache.is_admin(tg_admin_chat_id): # Use CacheService for checking
             async with services.session_factory() as session:
                 await crud.add_admin(session, tg_admin_chat_id)
-                services.admin_ids_cache.add(tg_admin_chat_id)
-            logger.debug("Main admin ID %s from config has been added to DB and cache.", tg_admin_chat_id)
+                services.cache.add_admin(tg_admin_chat_id) # Use CacheService for adding
+            logger.debug("Main admin ID %s from config has been added to DB and cache via CacheService.", tg_admin_chat_id)
         else:
-            logger.debug("Main admin ID %s from config was already in admin cache.", tg_admin_chat_id)
+            logger.debug("Main admin ID %s from config was already in admin cache (checked via CacheService).", tg_admin_chat_id)
     else:
         logger.info("telegram.admin_chat_id is 0 or not configured in a way to be added as main admin.")
 
-    logger.info("Final admin_ids_cache count after startup: %s.", len(services.admin_ids_cache))
-    logger.debug("Final admin_ids_cache state after startup: %s", services.admin_ids_cache)
+    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count()) # Use CacheService
+    logger.debug("Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()) # Use CacheService
 
     await set_telegram_commands(services=services)
     logger.info("Telegram bot commands set.")

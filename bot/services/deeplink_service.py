@@ -47,13 +47,13 @@ async def process_subscribe_deeplink(
         )
 
     await add_subscriber(session, telegram_id)
-    services.subscribed_users_cache.add(telegram_id)
-    logger.info("User %s added to subscribers list and cache.", telegram_id)
+    services.cache.add_subscriber(telegram_id) # Use CacheService
+    logger.info("User %s added to subscribers list and cache via CacheService.", telegram_id)
 
     admin_record = await session.get(crud.Admin, telegram_id)
     if admin_record:
-        services.admin_ids_cache.add(telegram_id)
-        logger.info("User %s is an admin, added to admin_ids_cache.", telegram_id)
+        services.cache.add_admin(telegram_id) # Use CacheService
+        logger.info("User %s is an admin, added to admin_ids_cache via CacheService.", telegram_id)
 
     current_settings = user_settings
     if not tt_username_from_payload:  # Should be caught by DeeplinkModel validation if payload is non-optional
@@ -67,9 +67,9 @@ async def process_subscribe_deeplink(
     current_settings.teamtalk_username = tt_username_from_payload
     current_settings.not_on_online_confirmed = True  # Assuming subscription implies confirmation
     await update_user_settings_in_db(session, current_settings)
-    services.user_settings_cache[telegram_id] = current_settings
+    services.cache.update_user_settings(current_settings) # Use CacheService
     logger.info(
-        "User %s linked to TT user '%s' and settings updated during subscription and in cache.",
+        "User %s linked to TT user '%s' and settings updated during subscription and in cache via CacheService.",
         telegram_id,
         tt_username_from_payload,
     )
