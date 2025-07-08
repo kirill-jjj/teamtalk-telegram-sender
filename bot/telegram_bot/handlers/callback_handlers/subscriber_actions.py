@@ -6,8 +6,8 @@ import logging
 # For type hinting app instance
 from typing import TYPE_CHECKING
 
-from aiogram import Bot as AiogramBot
-from aiogram import Router  # Renamed Bot
+from aiogram import Bot as AiogramBot # Keep for type hints within functions for now
+from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
 import pytalk
@@ -47,7 +47,7 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddl
 
 
 async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery, session: AsyncSession, bot: AiogramBot, return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery, session: AsyncSession, active_bot: AiogramBot, return_page: int, translator: gettext.GNUTranslations
 ):
     _ = translator.gettext
     if not query.message:
@@ -55,7 +55,7 @@ async def _refresh_and_display_subscriber_list(
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(session, bot, return_page)
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(session, active_bot, return_page)
     if total_pages == 0 or not page_subscribers_info:
         await query.message.edit_text(_("No subscribers found."))
     else:
@@ -120,7 +120,7 @@ async def handle_view_subscriber(
 async def _handle_delete_subscriber_action(
     query: CallbackQuery,
     session: AsyncSession,
-    bot: AiogramBot,
+    active_bot: AiogramBot, # Changed from bot
     target_telegram_id: int,
     return_page: int,
     translator: gettext.GNUTranslations,
@@ -139,7 +139,7 @@ async def _handle_delete_subscriber_action(
             _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
             show_alert=True,
         )
-        await _refresh_and_display_subscriber_list(query, session, bot, return_page, translator)
+        await _refresh_and_display_subscriber_list(query, session, active_bot, return_page, translator) # Changed from bot
     else:
         await query.answer(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
@@ -152,7 +152,7 @@ async def handle_subscriber_action(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
-    bot: AiogramBot,
+    # bot: AiogramBot, # Removed
     tt_connection: TeamTalkConnection | None,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -169,11 +169,11 @@ async def handle_subscriber_action(
 
     if action == SubscriberAction.DELETE:
         await _handle_delete_subscriber_action(
-            query, session, bot, target_telegram_id, return_page, translator, services
+            query, session, services.bot_event, target_telegram_id, return_page, translator, services # Pass services.bot_event
         )
     elif action == SubscriberAction.BAN:
         await _handle_ban_subscriber_action(
-            query, session, bot, tt_connection, target_telegram_id, return_page, translator, services
+            query, session, services.bot_event, tt_connection, target_telegram_id, return_page, translator, services # Pass services.bot_event
         )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
         await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator)
@@ -185,7 +185,7 @@ async def handle_subscriber_action(
 async def _handle_ban_subscriber_action(
     query: CallbackQuery,
     session: AsyncSession,
-    bot: AiogramBot,
+    active_bot: AiogramBot, # Changed from bot
     tt_connection: TeamTalkConnection | None,
     target_telegram_id: int,
     return_page: int,
@@ -255,7 +255,7 @@ async def _handle_ban_subscriber_action(
         alert_message = _("User already banned or error occurred.")
 
     await query.answer(alert_message, show_alert=True)
-    await _refresh_and_display_subscriber_list(query, session, bot, return_page, translator)
+    await _refresh_and_display_subscriber_list(query, session, active_bot, return_page, translator) # Changed from bot
 
 
 async def _handle_manage_tt_account_action(

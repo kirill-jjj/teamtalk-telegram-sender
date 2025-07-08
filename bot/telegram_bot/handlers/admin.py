@@ -3,11 +3,14 @@
 import gettext
 import logging
 
-from aiogram import Bot as AiogramBot
+# Removed: from aiogram import Bot as AiogramBot
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# For type hinting Services
+from typing import TYPE_CHECKING
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -15,6 +18,9 @@ from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_displa
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
 from .callback_handlers.list_utils import _show_subscriber_list_page
+
+if TYPE_CHECKING:
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +98,8 @@ async def ban_command_handler(
 async def subscribers_command_handler(
     message: Message,
     session: AsyncSession,  # Injected by DbSessionMiddleware
-    bot: AiogramBot,  # Injected by Aiogram (Dispatcher has it)
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
+    services: "Services", # Injected from workflow_data
 ):
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(message, session, bot, translator, page=0)
+    await _show_subscriber_list_page(message, session, services.bot_event, translator, page=0)

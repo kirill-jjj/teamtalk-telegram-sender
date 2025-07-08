@@ -4,7 +4,7 @@ import gettext
 import logging
 from typing import TYPE_CHECKING
 
-from aiogram import Bot as AiogramBot
+# Removed: from aiogram import Bot as AiogramBot
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -133,10 +133,10 @@ async def menu_subscribers_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     session: AsyncSession,  # Injected
-    bot: AiogramBot,  # Injected
     translator: "gettext.GNUTranslations",  # Injected
+    services: "Services", # Injected
 ):
     """Handles the 'Subscribers' admin menu button click."""
     # Ensure query.message exists
-    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)  # type: ignore
+    await _show_subscriber_list_page(query.message, session, services.bot_event, translator, page=0)  # type: ignore
     await query.answer()
