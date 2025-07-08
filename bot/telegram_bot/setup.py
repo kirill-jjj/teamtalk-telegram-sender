@@ -194,8 +194,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services"):
     dp["services"] = services
     dp["config"] = services.config
     dp["session_factory"] = services.session_factory
-    # dp["admin_ids_cache"] = services.admin_ids_cache # Refactored: No longer directly injecting admin_ids_cache
-    # dp["subscribed_users_cache"] = services.subscribed_users_cache # Refactored: No longer directly injecting subscribed_users_cache
     dp["connections"] = services.connections
     dp["bot_event"] = services.bot_event
     dp["bot_message"] = services.bot_message
