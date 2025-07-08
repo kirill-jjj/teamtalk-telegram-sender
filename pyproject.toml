@@ -53,7 +53,7 @@ Repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender"
 Issues = "https://github.com/kirill-jjj/teamtalk-telegram-sender/issues"
 
 [tool.setuptools]
-py-modules = ["sender"] # Changed underscore to hyphen
+py-modules = ["sender"]
 
 [tool.setuptools.packages.find]
 where = ["."]  # Search for packages in the root directory
@@ -73,7 +73,11 @@ indent-width = 4
 [tool.ruff.lint]
 select = [
     "E", "W", "F", "I", "UP", "B", "C4", "A", "SIM", "T20", "PT", "RUF",
-    "D", "ERA", "ISC", "G", "PL", "ASYNC",
+    "D", "ERA", "ISC", "G", "PL", "ASYNC", "S", "ANN", "ARG",
+    "N",
+    "PTH",
+    "PIE",
+
 ]
 ignore = [
     "D203",
