@@ -104,7 +104,7 @@ async def process_new_subscription(
         if subscriber_added_or_exists: # True if newly added
             logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
             services.cache.add_subscriber(user_settings.telegram_id)
-        elif await crud.is_user_subscribed(session, user_settings.telegram_id): # Check if already existed
+        elif await crud.is_telegram_id_subscribed(session, user_settings.telegram_id): # Corrected function name
             logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
             # Ensure cache consistency if they were somehow not in cache but in DB
             if not services.cache.is_subscriber(user_settings.telegram_id):
