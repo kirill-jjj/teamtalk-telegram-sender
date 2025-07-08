@@ -339,11 +339,6 @@ async def handle_tt_add_admin_command(
 
     Adds specified Telegram IDs as bot administrators.
     """
-    # The following line is a placeholder for ngettext extraction by pybabel or similar tools.
-    # It ensures that the singular and plural forms are available for translation.
-    # It is not meant to be executed directly in this form.
-    if False:
-        translator.ngettext("Successfully added {count} admin.", "Successfully added {count} admins.", 1)
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,
@@ -374,9 +369,6 @@ async def handle_tt_remove_admin_command(
 
     Removes bot administrator privileges from specified Telegram IDs.
     """
-    # Placeholder for ngettext extraction
-    if False:
-        translator.ngettext("Successfully removed {count} admin.", "Successfully removed {count} admins.", 1)
     _ = translator.gettext
     await _manage_admin_ids(
         tt_message=tt_message,

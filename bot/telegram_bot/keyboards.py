@@ -405,7 +405,6 @@ async def create_subscriber_list_keyboard(
             callback_data=ViewSubscriberCallback(telegram_id=subscriber.telegram_id, page=page_num).pack(),
         )
 
-    # For SubscriberListCallback, action is a fixed parameter for pagination.
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
     return await _create_generic_paginated_list_keyboard(

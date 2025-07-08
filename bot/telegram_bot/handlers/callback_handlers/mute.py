@@ -290,7 +290,7 @@ async def _commit_mute_changes_and_notify(
         await session.commit()
         await session.refresh(user_settings)
 
-        services.user_settings_cache[user_settings.telegram_id] = user_settings  # Changed here
+        services.user_settings_cache[user_settings.telegram_id] = user_settings
 
         await callback_query.answer(toast_message, show_alert=False)
         return True
@@ -404,10 +404,8 @@ async def cq_set_mute_mode_action(
 
     original_mode = managed_user_settings.mute_list_mode
 
-    # 1. Сначала меняем состояние объекта в памяти
     managed_user_settings.mute_list_mode = new_mode
 
-    # 2. Теперь генерируем новый интерфейс на основе ОБНОВЛЕННОГО состояния
     mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
     if new_mode == MuteListMode.blacklist:
         new_current_mode_desc = _(
@@ -421,21 +419,13 @@ async def cq_set_mute_mode_action(
     )
     updated_keyboard = await create_manage_muted_users_keyboard(_, managed_user_settings)
 
-    # 3. Пытаемся сохранить изменения в БД
     try:
-        # Helper function from bot.telegram_bot.db_ops import update_user_settings_in_db
-        # was not found, so I will try to commit the session directly.
-        # Also, the original problem description uses a helper `update_user_settings_in_db`
-        # which is not present in the codebase. I will use `session.commit()`
-        # and then `session.refresh()` as is common in other parts of the codebase.
-
         await session.commit()
         await session.refresh(managed_user_settings)  # Ensure the object is up-to-date
 
         # If successfully committed, update the cache
         services.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
 
-        # Отвечаем пользователю и обновляем сообщение
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)
         await safe_edit_text(
@@ -447,7 +437,7 @@ async def cq_set_mute_mode_action(
         )
 
     except SQLAlchemyError as e:
-        # Если сохранение не удалось, откатываем изменение в памяти и сообщаем об ошибке
+        # If saving fails, revert the in-memory change and report an error
         managed_user_settings.mute_list_mode = original_mode
         # Also revert in session before rollback
         await session.merge(managed_user_settings)  # Ensure session sees the original mode
