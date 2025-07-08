@@ -82,12 +82,19 @@ async def set_telegram_commands(services: "Services"):  # Changed app to service
             admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
             try:
-                await services.bot_event.set_my_commands(commands=admin_commands, scope=admin_scope)  # Use services
+                # FIX: Add language_code parameter
+                await services.bot_event.set_my_commands(
+                    commands=admin_commands,
+                    scope=admin_scope,
+                    language_code=admin_lang_code if admin_lang_code != services.config.general.default_lang else None,
+                )
                 logger.info(
                     "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
                 )
             except TelegramAPIError as e:
-                logger.error("Failed to set commands for admin %s: %s", admin_id, e)
+                logger.error(
+                    "Failed to set commands for admin %s (lang: %s): %s", admin_id, admin_lang_code, e
+                )
 
 
 async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int):  # bot: Bot is fine, it's a direct Bot instance
