@@ -23,9 +23,10 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
-from bot.core.utils import build_help_message, get_online_teamtalk_users, get_tt_user_display_name
+from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
+from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name  # Updated imports
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
