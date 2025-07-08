@@ -99,7 +99,6 @@ async def _display_paginated_list_ui(
         message_to_edit=callback_query.message,
         text=final_message_text,
         reply_markup=keyboard_markup,
-        parse_mode="HTML",
         logger_instance=logger,
         log_context=f"_display_paginated_list_ui for {header_text_key}",
     )

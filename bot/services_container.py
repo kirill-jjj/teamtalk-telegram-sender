@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING  # Added Dict, List, Union
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 import pytalk  # Moved here for PLC0415
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload  # Standard SQLAlchemy selectinload
@@ -46,11 +48,12 @@ class Services:
         self.logger = logger
 
         # Боты
-        self.bot_event: Bot = Bot(token=config.telegram.event_token)
+        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
+        self.bot_event: Bot = Bot(token=config.telegram.event_token, default=default_props)
         if config.telegram.message_token:
-            self.bot_message: Bot = Bot(token=config.telegram.message_token)
+            self.bot_message: Bot = Bot(token=config.telegram.message_token, default=default_props)
         else:
-            self.bot_message = self.bot_event  # No redundant type hint
+            self.bot_message = self.bot_event
 
         # TeamTalk Bot instance
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)

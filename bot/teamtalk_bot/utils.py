@@ -186,7 +186,6 @@ async def forward_tt_message_to_telegram_admin(
         language=admin_language_code,
         services=services,  # Corrected: Pass services
         text=template_text_parts,
-        parse_mode="HTML",
     )
 
     if was_sent:

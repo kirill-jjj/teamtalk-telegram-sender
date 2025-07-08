@@ -238,7 +238,7 @@ async def who_command_handler(
         _format_who_message, grouped_data, total_users_to_display, translator, server_host_for_log_and_display
     )
 
-    await message.reply(formatted_message, parse_mode="HTML")
+    await message.reply(formatted_message)
 
 
 @user_commands_router.message(Command("help"))
@@ -253,7 +253,7 @@ async def help_command_handler(
 
     is_telegram_admin = message.from_user.id in admin_ids_cache
     help_text = build_help_message(_, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
-    await message.reply(help_text, parse_mode="HTML")
+    await message.reply(help_text)
 
 
 @user_commands_router.message(Command("settings"))

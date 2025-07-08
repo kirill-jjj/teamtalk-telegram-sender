@@ -183,7 +183,7 @@ class Application:
                 error_text = admin_critical_translator.gettext(
                     "<b>Critical error!</b>\n<b>Error type:</b> {error_type}\n<b>Message:</b> {error_message}"
                 ).format(error_type=type(event.exception).__name__, error_message=escaped_exception_text)
-                await self.services.bot_event.send_message(admin_chat_id_for_error, error_text, parse_mode="HTML")
+                await self.services.bot_event.send_message(admin_chat_id_for_error, error_text)
             except Exception as e:
                 self.logger.exception(
                     "Error sending critical error message to admin chat %s: %s",

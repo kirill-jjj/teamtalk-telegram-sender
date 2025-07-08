@@ -185,7 +185,6 @@ async def send_telegram_messages_to_list(
                 tt_user_is_online=individual_tt_user_is_online,
                 services=services,
                 text=text,
-                parse_mode="HTML",
             )
         )
     await asyncio.gather(*tasks_list)
