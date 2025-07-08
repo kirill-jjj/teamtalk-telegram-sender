@@ -87,17 +87,17 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Serv
     """Checks if a message to a given chat_id should be sent silently.
 
     This is based on NOON settings and the provided online status of their linked TeamTalk user.
-    Uses services.user_settings_cache.
+    Uses services.user_settings_cache and notification_service.
     """
+    from bot.services import notification_service  # Local import
+
     recipient_settings = services.user_settings_cache.get(chat_id)
 
-    if (
-        recipient_settings
-        and recipient_settings.not_on_online_enabled
-        and recipient_settings.not_on_online_confirmed
-        and tt_user_is_online
-    ):
-        logger.debug("Message to %s will be silent: linked user is online and NOON is enabled.", chat_id)
+    if notification_service.is_user_subject_to_noon_check(recipient_settings) and tt_user_is_online:
+        logger.debug(
+            "Message to %s will be silent: linked user is online and NOON is subject to check (via notification_service).",
+            chat_id
+        )
         return True
 
     return False

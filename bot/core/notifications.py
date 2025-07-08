@@ -144,6 +144,9 @@ async def send_join_leave_notification_logic(
         online_users_cache_for_instance: Cache of online users for the specific TT instance.
         services: The application's services container.
     """
+    # Import the new service
+    from bot.services import notification_service
+
     default_lang_for_markup_and_log = services.config.general.default_lang
     # Get the full translator object
     default_lang_translator_obj = services.get_translator(default_lang_for_markup_and_log)
@@ -198,47 +201,18 @@ async def send_join_leave_notification_logic(
     # Pass the translator object to get_effective_server_name
     server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
 
-    final_recipients = []
-
-    for tg_user_id in recipients:
-        user_specific_settings = services.user_settings_cache.get(tg_user_id)
-        if not user_specific_settings:
-            logger.warning(
-                "User settings not found in cache for recipient %s during final NOON check. Skipping NOON for them.",
-                tg_user_id,
-            )
-            final_recipients.append(tg_user_id)
-            continue
-
-        if user_specific_settings.not_on_online_enabled and tt_user.id != tt_instance.getMyUserID():
-            # Check if the event user is the configured admin_username
-            is_event_user_tt_admin = (
-                services.config.general.admin_username and user_username == services.config.general.admin_username
-            )
-
-            if not is_event_user_tt_admin:
-                other_users_online_in_instance = False
-                for online_user_id_in_instance in online_users_cache_for_instance:
-                    if (
-                        online_user_id_in_instance != tt_instance.getMyUserID()
-                        and online_user_id_in_instance != tt_user.id
-                    ):
-                        other_users_online_in_instance = True
-                        break
-                if not other_users_online_in_instance:
-                    logger.debug(
-                        "NOON: User %s is the only one online (besides bot) for TG user %s "
-                        "on server %s. Skipping notification for this recipient.",
-                        user_nickname,  # This nickname was generated with default_lang_translator_obj
-                        tg_user_id,
-                        tt_instance.server_info.host,
-                    )
-                    continue
-        final_recipients.append(tg_user_id)
+    # Use the new notification_service to filter recipients
+    final_recipients = await notification_service.filter_recipients_for_noon(
+        recipients=recipients,
+        event_user=tt_user,
+        tt_instance=tt_instance,
+        online_users_cache=online_users_cache_for_instance, # Renamed for clarity in service
+        services=services,
+    )
 
     if not final_recipients:
         logger.info(
-            "No recipients left after NOON filtering for %s of %s on server %s.",
+            "No recipients left after NOON filtering (via notification_service) for %s of %s on server %s.",
             event_type,
             user_username,
             tt_instance.server_info.host,
