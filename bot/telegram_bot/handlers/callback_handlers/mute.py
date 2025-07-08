@@ -132,9 +132,7 @@ async def _display_internal_user_list(
             user_settings.telegram_id,
             e,
         )
-        await callback_query.answer(
-            _("An error occurred while loading the list. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     header_text_str, empty_list_text_str = "", ""
@@ -146,9 +144,7 @@ async def _display_internal_user_list(
         empty_list_text_str = _("Your whitelist is empty.")
     else:
         logger.error("Unknown mute_list_mode '%s' in _display_internal_user_list", user_settings.mute_list_mode)
-        await callback_query.answer(
-            _("An error occurred due to an invalid mode. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     await _display_paginated_list_ui(
@@ -329,7 +325,7 @@ async def _refresh_mute_related_ui(
     except Exception as e:
         logger.exception("Failed to refresh user_settings relations for %s: %s", user_settings.telegram_id, e)
         # If update failed, it's better to interrupt to avoid a crash later
-        await callback_query.answer(_("A database error occurred while refreshing the list."), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
