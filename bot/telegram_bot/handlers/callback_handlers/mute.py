@@ -34,6 +34,7 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.services import user_service # Added missing import
 
 from ._helpers import safe_edit_text
 
