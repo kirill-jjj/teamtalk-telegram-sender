@@ -451,7 +451,10 @@ class TeamTalkConnection:
 
         async with self.services.session_factory() as session:
             if handler:
-                kwargs = {"message": message, "translator": translator, "services": self.services, "connection": self}
+                kwargs = {
+                    "tt_message": message, "translator": translator,
+                    "services": self.services, "connection": self
+                }
                 if cmd in ["/add_admin", "/remove_admin"]:
                     kwargs["args_str"] = args
                 if cmd in ["/sub", "/unsub", "/add_admin", "/remove_admin"]:
