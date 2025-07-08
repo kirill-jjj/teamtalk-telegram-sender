@@ -53,7 +53,7 @@ async def _refresh_and_display_subscriber_list(
     services: "Services",
     return_page: int,
     translator: gettext.GNUTranslations,
-):
+) -> None:
     _ = translator.gettext
     active_bot = services.bot_event  # Get bot from services
     if not query.message:
@@ -85,7 +85,7 @@ async def handle_view_subscriber(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles viewing details and actions for a specific subscriber."""
     _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied, but good practice.
@@ -133,7 +133,7 @@ async def _handle_delete_subscriber_action(
     return_page: int,
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles the deletion of a subscriber."""
     _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
@@ -163,7 +163,7 @@ async def handle_subscriber_action(
     tt_connection: TeamTalkConnection | None,
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles actions performed on a subscriber (delete, ban, manage TT account)."""
     _ = translator.gettext
     if not query.message:

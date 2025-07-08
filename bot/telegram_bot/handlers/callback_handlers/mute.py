@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import delete, select
+from sqlmodel import select
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
@@ -20,6 +20,7 @@ from bot.core.enums import (
     UserListAction,
 )
 from bot.models import MutedUser, MuteListMode, UserSettings
+from bot.services import user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     NotificationActionCallback,
@@ -34,7 +35,6 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-from bot.services import user_service
 
 from ._helpers import safe_edit_text
 
@@ -111,7 +111,7 @@ async def _display_internal_user_list(
     list_type: UserListAction,
     page: int = 0,
     session: AsyncSession | None = None,
-):
+) -> None:
     _ = translator.gettext
     if not session:
         logger.error("Session not provided to _display_internal_user_list")
@@ -159,7 +159,7 @@ async def _display_all_server_accounts_list(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection,
     page: int = 0,
-):
+) -> None:
     _ = translator.gettext
     if not callback_query.message:
         logger.warning("_display_all_server_accounts_list: message is None.")
@@ -318,8 +318,8 @@ async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    callback_data: NotificationActionCallback
-):
+    callback_data: NotificationActionCallback # Keep for consistent signature, though not used
+) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
     await callback_query.answer()
@@ -355,7 +355,7 @@ async def cq_set_mute_mode_action(
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
     services: "Services",
-):
+) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
     if not callback_query.message:
@@ -412,7 +412,7 @@ async def cq_list_internal_users_action(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: UserListCallback,
-):
+) -> None:
     """Displays the first page of the internal muted/allowed user list."""
     _ = translator.gettext
     await callback_query.answer()
@@ -430,7 +430,7 @@ async def cq_paginate_internal_user_list_action(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: PaginateUsersCallback,
-):
+) -> None:
     """Handles pagination for the internal muted/allowed user list."""
     _ = translator.gettext
     await callback_query.answer()
@@ -446,7 +446,7 @@ async def cq_show_all_accounts_list_action(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None
-):
+) -> None:
     """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
     _ = translator.gettext
     await callback_query.answer()
@@ -465,7 +465,7 @@ async def cq_paginate_all_accounts_list_action(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: PaginateUsersCallback,
-):
+) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
     _ = translator.gettext
     await callback_query.answer()
@@ -486,7 +486,7 @@ async def cq_toggle_specific_user_mute_action(
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
     services: "Services",
-):
+) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
     if not tt_connection: # Should be caught by middleware, but good check

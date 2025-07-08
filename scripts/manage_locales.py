@@ -26,7 +26,7 @@ def get_project_version() -> str:
     """Reads the version from pyproject.toml."""
     pyproject_path = BASE_DIR / "pyproject.toml"
     try:
-        with open(pyproject_path, "rb") as f:
+        with pyproject_path.open("rb") as f:  # Use Path.open()
             data = tomllib.load(f)
         # Assuming version is under [project][version]
         version = data.get("project", {}).get("version")

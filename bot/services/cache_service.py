@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class CacheService:
     """Provides an interface to manage various in-memory caches."""
-    def __init__(self, services: "Services"):
+    def __init__(self, services: "Services") -> None:
         """Initializes the CacheService with underlying cache storages."""
         self._services = services
         # Direct access for convenience within this service
@@ -21,12 +21,12 @@ class CacheService:
         self._subscribed_users_cache = services.subscribed_users_cache
 
     # --- Methods for admins ---
-    def add_admin(self, telegram_id: int):
+    def add_admin(self, telegram_id: int) -> None:
         """Adds an admin ID to the cache."""
         self._admin_ids_cache.add(telegram_id)
         logger.debug("Admin %s added to cache.", telegram_id)
 
-    def remove_admin(self, telegram_id: int):
+    def remove_admin(self, telegram_id: int) -> None:
         """Removes an admin ID from the cache."""
         self._admin_ids_cache.discard(telegram_id)
         logger.debug("Admin %s removed from cache.", telegram_id)
@@ -35,7 +35,7 @@ class CacheService:
         """Checks if a telegram_id is in the admin cache."""
         return telegram_id in self._admin_ids_cache
 
-    def load_admins_from_db(self, admin_ids: list[int]):
+    def load_admins_from_db(self, admin_ids: list[int]) -> None:
         """Loads admin IDs from the database into the cache, clearing existing ones."""
         self._admin_ids_cache.clear() # Clear before loading to ensure consistency
         self._admin_ids_cache.update(admin_ids)
@@ -50,12 +50,12 @@ class CacheService:
         return len(self._admin_ids_cache)
 
     # --- Methods for subscribers ---
-    def add_subscriber(self, telegram_id: int):
+    def add_subscriber(self, telegram_id: int) -> None:
         """Adds a subscriber ID to the cache."""
         self._subscribed_users_cache.add(telegram_id)
         logger.debug("Subscriber %s added to cache.", telegram_id)
 
-    def remove_subscriber(self, telegram_id: int):
+    def remove_subscriber(self, telegram_id: int) -> None:
         """Removes a subscriber ID from the cache."""
         self._subscribed_users_cache.discard(telegram_id)
         logger.debug("Subscriber %s removed from cache.", telegram_id)
@@ -64,7 +64,7 @@ class CacheService:
         """Checks if a telegram_id is in the subscriber cache."""
         return telegram_id in self._subscribed_users_cache
 
-    def load_subscribers_from_db(self, subscriber_ids: list[int]):
+    def load_subscribers_from_db(self, subscriber_ids: list[int]) -> None:
         """Loads subscriber IDs from the database into the cache, clearing existing ones."""
         self._subscribed_users_cache.clear() # Clear before loading
         self._subscribed_users_cache.update(subscriber_ids)
@@ -79,7 +79,7 @@ class CacheService:
         """Retrieves user settings from the cache by telegram_id."""
         return self._user_settings_cache.get(telegram_id)
 
-    def update_user_settings(self, settings: UserSettings):
+    def update_user_settings(self, settings: UserSettings) -> None:
         """Updates or adds user settings in the cache."""
         if not isinstance(settings, UserSettings):
             logger.error("Attempted to update cache with non-UserSettings object: %s", type(settings))
@@ -87,7 +87,7 @@ class CacheService:
         self._user_settings_cache[settings.telegram_id] = settings
         logger.debug("User settings for %s updated in cache.", settings.telegram_id)
 
-    def remove_user_settings(self, telegram_id: int):
+    def remove_user_settings(self, telegram_id: int) -> None:
         """Removes user settings from the cache by telegram_id."""
         if telegram_id in self._user_settings_cache:
             del self._user_settings_cache[telegram_id]
@@ -96,7 +96,7 @@ class CacheService:
             logger.debug("Attempted to remove user settings for %s, but user was not in cache.", telegram_id)
 
 
-    def load_all_user_settings(self, all_settings: list[UserSettings]):
+    def load_all_user_settings(self, all_settings: list[UserSettings]) -> None:
         """Loads all user settings from a list into the cache, clearing existing ones."""
         self._user_settings_cache.clear() # Clear before loading
         for setting in all_settings:
@@ -107,7 +107,7 @@ class CacheService:
         logger.info("Loaded %s user settings into cache.", len(self._user_settings_cache))
 
     # --- Comprehensive operations ---
-    def remove_full_user_profile(self, telegram_id: int):
+    def remove_full_user_profile(self, telegram_id: int) -> None:
         """Removes a user from all relevant caches."""
         self.remove_admin(telegram_id)
         self.remove_subscriber(telegram_id)

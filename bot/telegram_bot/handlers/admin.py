@@ -2,7 +2,6 @@
 
 import gettext
 import logging
-
 from typing import TYPE_CHECKING
 
 # Removed: from aiogram import Bot as AiogramBot
@@ -31,7 +30,7 @@ async def _show_user_buttons(
     command_type: AdminAction,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     _ = translator.gettext
     if not tt_connection or not tt_connection.instance:
         # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
@@ -78,7 +77,7 @@ async def kick_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     """Handles the /kick command for administrators."""
     await _show_user_buttons(message, AdminAction.KICK, translator, tt_connection)
 
@@ -88,7 +87,7 @@ async def ban_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     """Handles the /ban command for administrators."""
     await _show_user_buttons(message, AdminAction.BAN, translator, tt_connection)
 
@@ -99,6 +98,6 @@ async def subscribers_command_handler(
     session: AsyncSession,  # Injected by DbSessionMiddleware
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services", # Injected from workflow_data
-):
+) -> None:
     """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(message, session, services.bot_event, translator, page=0)

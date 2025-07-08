@@ -55,7 +55,7 @@ def _should_ignore_initial_event(
     return True
 
 
-def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool:
+def _is_user_globally_ignored(username: str, app_cfg: "Services.config") -> bool:
     # app_cfg is expected to be an instance of Settings
     # Accessing teamtalk.global_ignore_usernames which is a list[str]
     global_ignore_list = app_cfg.teamtalk.global_ignore_usernames
@@ -133,7 +133,7 @@ async def send_join_leave_notification_logic(
     login_complete_time: datetime | None,
     online_users_cache_for_instance: dict[int, "pytalk.user.User"],
     services: "Services",
-):
+) -> None:
     """Core logic for sending join/leave notifications.
 
     This function determines who should receive a notification based on their settings,

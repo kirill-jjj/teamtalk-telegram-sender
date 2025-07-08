@@ -67,7 +67,7 @@ async def handle_deeplink_payload(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     services: "Services",
-):
+) -> None:
     """Handles a /start command with a deeplink token.
 
     Validates the token, executes the associated action, and replies to the user.

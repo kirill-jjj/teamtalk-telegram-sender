@@ -20,13 +20,13 @@ depends_on: str | Sequence[str] | None = None
 
 
 # Helper function to check if a table exists
-def _table_exists(table_name, conn):
+def _table_exists(table_name: str, conn: sa.engine.Connection) -> bool:
     inspector = sa.inspect(conn)
     return table_name in inspector.get_table_names()
 
 
 # Helper function to check if a column exists in a table
-def _column_exists(table_name, column_name, conn):
+def _column_exists(table_name: str, column_name: str, conn: sa.engine.Connection) -> bool:
     if not _table_exists(table_name, conn):
         return False
     inspector = sa.inspect(conn)

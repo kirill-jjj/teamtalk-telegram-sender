@@ -18,8 +18,10 @@ navigation_router = Router(name="callback_handlers.navigation")
 
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
 async def cq_back_to_main_settings_menu(
-    callback_query: CallbackQuery, translator: gettext.GNUTranslations, callback_data: SettingsCallback
-):
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    callback_data: SettingsCallback,  # Keep for consistent signature, though not used
+) -> None:
     """Handles navigating back to the main settings menu."""
     _ = translator.gettext
     await callback_query.answer()

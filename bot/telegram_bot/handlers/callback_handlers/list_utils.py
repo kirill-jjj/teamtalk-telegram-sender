@@ -103,7 +103,7 @@ async def _show_subscriber_list_page(
     bot: Bot,
     translator: gettext.GNUTranslations,
     page: int = 0,
-):
+) -> None:
     """Fetches and displays a specific page of the subscriber list."""
     _ = translator.gettext
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(

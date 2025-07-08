@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def process_setting_update(
+async def process_setting_update( # Added return type hint
     callback_query: CallbackQuery,
     session: AsyncSession,
     user_settings: UserSettings,
@@ -29,7 +29,7 @@ async def process_setting_update(
     new_text: str,
     new_markup: InlineKeyboardMarkup,
     services: "Services",
-) -> None:
+) -> None: # Added return type hint
     _ = translator.gettext
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
@@ -116,7 +116,7 @@ def ensure_message_context(func: Callable):
     """
 
     @functools.wraps(func)
-    async def wrapper(query: CallbackQuery, *args, **kwargs):
+    async def wrapper(query: CallbackQuery, *args: Any, **kwargs: Any) -> Any | None: # Added types for args/kwargs and return
         # I18nMiddleware is expected to inject 'translator' into kwargs
         translator = kwargs.get("translator")
 

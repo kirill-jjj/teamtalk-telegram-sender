@@ -39,7 +39,7 @@ class AdminIdArgs(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def parse_str_to_dict(cls, data: Any) -> dict[str, list]:
+    def parse_str_to_dict(cls, data: Any) -> dict[str, list[int] | list[str]]: # More specific type
         """Parses a string of space-separated arguments into valid IDs and invalid entries."""
         if data is None or not isinstance(data, str):
             return {"valid_ids": [], "invalid_entries": []}
@@ -61,7 +61,7 @@ def is_tt_admin(func: Callable) -> Callable:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
-    async def wrapper(tt_message: TeamTalkMessage, *args, **kwargs):
+    async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:
         services: Services = kwargs.get("services")  # Changed to services
         if not services:
             raise ValueError("Services instance 'services' not found in kwargs for is_tt_admin decorator.")
@@ -125,7 +125,7 @@ async def _manage_admin_ids(
     invalid_id_msg_key: str,
     header_msg_key: str,
     services: Services,
-):
+) -> None:
     _ = translator.gettext
     args = AdminIdArgs.model_validate(args_str)
     if not args.valid_ids and not args.invalid_entries:
@@ -202,10 +202,10 @@ async def _generate_and_reply_deeplink(
     action: DeeplinkAction,
     success_log_message: str,
     reply_text_source: str,
-    error_reply_source: str,
+    error_reply_source: str,  # Not directly used, but kept for signature consistency if refactoring
     services: Services,
     payload: str | None = None,
-):
+) -> None:
     _ = translator.gettext
     sender_tt_username = ttstr(tt_message.user.username)
     try:
@@ -264,8 +264,8 @@ async def handle_tt_subscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,
-):
+    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+) -> None:
     """Handles the /sub command from a TeamTalk user.
 
     Generates a subscription deeplink and replies to the user.
@@ -292,8 +292,8 @@ async def handle_tt_unsubscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,
-):
+    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+) -> None:
     """Handles the /unsub command from a TeamTalk user.
 
     Generates an unsubscription deeplink and replies to the user.
@@ -320,10 +320,10 @@ async def handle_tt_add_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,  # will be in kwargs for decorator
-    connection: TeamTalkConnection,
+    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
     *,
     args_str: str | None,
-):
+) -> None:
     """Handles the /add_admin command from a TeamTalk admin.
 
     Adds specified Telegram IDs as bot administrators.
@@ -353,10 +353,10 @@ async def handle_tt_remove_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,
-    connection: TeamTalkConnection,
+    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
     *,
     args_str: str | None,
-):
+) -> None:
     """Handles the /remove_admin command from a TeamTalk admin.
 
     Removes bot administrator privileges from specified Telegram IDs.
@@ -380,12 +380,15 @@ async def handle_tt_remove_admin_command(
     )
 
 
-async def handle_tt_help_command(
-    tt_message: TeamTalkMessage, translator: gettext.GNUTranslations, services: Services, connection: TeamTalkConnection
-):
+async def handle_tt_help_command(  # Added return type hint
+    tt_message: TeamTalkMessage,
+    translator: gettext.GNUTranslations,
+    services: Services,
+    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+) -> None:
     """Handles the /help command from a TeamTalk user.
 
-    Sends a help message tailored to the user's admin status.
+    Sends a help message tailored to longed to the user's admin status.
     """
     _ = translator.gettext
     is_main_tt_admin = False
@@ -403,9 +406,9 @@ async def handle_tt_help_command(
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
-async def handle_tt_unknown_command(
+async def handle_tt_unknown_command(  # Added return type hint
     tt_message: TeamTalkMessage, translator: gettext.GNUTranslations, connection: TeamTalkConnection
-):
+) -> None:
     """Handles unknown commands received from a TeamTalk user."""
     _ = translator.gettext
     available_commands = ", ".join([

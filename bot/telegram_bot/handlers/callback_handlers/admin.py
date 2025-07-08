@@ -134,7 +134,7 @@ async def process_user_action_selection(
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     _ = translator.gettext
     if not callback_query.message:

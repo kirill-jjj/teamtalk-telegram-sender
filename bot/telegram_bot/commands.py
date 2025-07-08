@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from bot.services_container import Services
 
 
-async def set_telegram_commands(services: "Services"):
+async def set_telegram_commands(services: "Services") -> None:
     """Sets bot commands globally for all supported languages and individually for administrators."""
     logger.info("Setting up global and admin-specific Telegram commands...")
 
@@ -86,7 +86,7 @@ async def set_telegram_commands(services: "Services"):
                 )
 
 
-async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int):
+async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int) -> None:
     """Clears all custom commands for a specific chat."""
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))

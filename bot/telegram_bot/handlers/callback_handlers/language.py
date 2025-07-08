@@ -2,7 +2,6 @@
 
 import gettext
 import logging
-
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
@@ -29,7 +28,7 @@ async def cq_show_language_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     available_languages: list[dict[str, str]],  # Injected from workflow_data
-):
+) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext
     await callback_query.answer()
@@ -59,7 +58,7 @@ async def cq_set_language(
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware (as part of translator)
     callback_data: LanguageCallback,
     services: "Services",  # Injected from workflow_data
-):
+) -> None:
     """Sets the user's language preference."""
     _ = translator.gettext  # Original translator for initial messages if needed
     if callback_data.lang_code is None:

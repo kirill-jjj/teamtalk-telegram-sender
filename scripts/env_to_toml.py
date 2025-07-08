@@ -135,7 +135,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
     try:
         output_toml_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_toml_path, "w", encoding="utf-8") as f:
+        with output_toml_path.open("w", encoding="utf-8") as f:  # Use Path.open()
             toml.dump(toml_data, f)
         print(f"Successfully converted to '{output_toml_path}'.")
         return True

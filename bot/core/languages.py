@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-import os
+from pathlib import Path  # Added for Path operations
 from typing import TypedDict
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # Define a path to the locales directory relative to this file or project root
 # Assuming project root is parent of 'bot' directory
 # For robustness, this might need to be derived from app_config or a known structure
-_LOCALE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "locales")
+_LOCALE_DIR = Path(__file__).resolve().parent.parent.parent / "locales"
 
 DEFAULT_LANGUAGE_CODE = "en"
 
@@ -30,22 +30,24 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
 
     discovered_codes = {DEFAULT_LANGUAGE_CODE}
 
-    if not os.path.isdir(locales_path):
+    locales_path_obj = Path(locales_path)  # Convert to Path object
+    if not locales_path_obj.is_dir():
         logger.warning("Locales directory not found at %s. Only English will be available.", locales_path)
         return discovered
 
     # 2. Search for and add all other translated languages.
-    for lang_code in os.listdir(locales_path):
+    for lang_code_path in locales_path_obj.iterdir():  # Use Path.iterdir()
+        lang_code = lang_code_path.name  # Get the directory name as lang_code
         if lang_code in discovered_codes:
             continue
 
-        lang_path = os.path.join(locales_path, lang_code)
-        mo_file_path = os.path.join(lang_path, "LC_MESSAGES", "messages.mo")
+        # lang_path is already lang_code_path
+        mo_file_path = lang_code_path / "LC_MESSAGES" / "messages.mo"  # Use / operator
 
-        if os.path.isdir(lang_path) and os.path.isfile(mo_file_path):
+        if lang_code_path.is_dir() and mo_file_path.is_file():  # Use Path methods
             native_name = lang_code
             try:
-                translator = gettext.translation("messages", localedir=locales_path, languages=[lang_code])
+                translator = gettext.translation("messages", localedir=str(locales_path_obj), languages=[lang_code])
                 native_name_translated = translator.gettext("language_native_name")
                 if native_name_translated and native_name_translated != "language_native_name":
                     native_name = native_name_translated

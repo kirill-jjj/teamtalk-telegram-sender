@@ -21,14 +21,14 @@ logger = logging.getLogger(__name__)
 class TeamTalkEventHandler:
     """Routes Pytalk events to the corresponding TeamTalkConnection instance."""
 
-    def __init__(self, services: "Services"):
+    def __init__(self, services: "Services") -> None:
         """Initializes the TeamTalkEventHandler."""
         self.services = services
         self.tt_bot = services.tt_bot
         self._register_pytalk_event_handlers()
         self.services.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered.")
 
-    def _register_pytalk_event_handlers(self):
+    def _register_pytalk_event_handlers(self) -> None:
         """Registers Pytalk event handlers with the PytalkBot instance."""
         event_handlers_map = {
             "on_ready": self.on_pytalk_ready,
@@ -59,7 +59,7 @@ class TeamTalkEventHandler:
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         return self.services.connections.get(server_key)
 
-    async def on_pytalk_ready(self):
+    async def on_pytalk_ready(self) -> None:
         """Handles PytalkBot on_ready; initializes primary TeamTalk server connection."""
         self.services.logger.info("Pytalk Bot ready. Initializing TT connections...")
         tt_config = self.services.config.teamtalk
@@ -87,7 +87,7 @@ class TeamTalkEventHandler:
         else:
             logger.info("TeamTalkConnection for %s initiated.", server_key)
 
-    async def on_pytalk_my_login(self, server: PytalkServer):
+    async def on_pytalk_my_login(self, server: PytalkServer) -> None:
         """Routes the bot's own login event to the appropriate connection."""
         connection = self._get_connection_by_instance(server.teamtalk_instance)
         if connection:
@@ -95,7 +95,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("MyLogin: No connection for instance %s", server.teamtalk_instance)
 
-    async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel):
+    async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Routes a user join event to the appropriate connection."""
         tt_instance = getattr(user, "teamtalk_instance", None) or \
                       (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
@@ -108,7 +108,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("UserJoin: No connection for instance %s", tt_instance)
 
-    async def on_pytalk_my_connection_lost(self, server: PytalkServer):
+    async def on_pytalk_my_connection_lost(self, server: PytalkServer) -> None:
         """Routes a connection lost event for the bot to the appropriate connection."""
         connection = self._get_connection_by_instance(server.teamtalk_instance)
         if connection:
@@ -127,7 +127,7 @@ class TeamTalkEventHandler:
             else:
                  logger.error("ConnectionLost: server or server.info is None.")
 
-    async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel):
+    async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Routes a kicked from channel event for the bot to the appropriate connection."""
         connection = self._get_connection_by_instance(channel_obj.teamtalk)
         if connection:
@@ -135,7 +135,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("Kicked: No connection for instance %s", channel_obj.teamtalk)
 
-    async def on_pytalk_message(self, message: TeamTalkMessage):
+    async def on_pytalk_message(self, message: TeamTalkMessage) -> None:
         """Routes an incoming message event to the appropriate connection."""
         connection = self._get_connection_by_instance(message.teamtalk_instance)
         if connection:
@@ -143,7 +143,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("Message: No connection for instance %s", message.teamtalk_instance)
 
-    async def on_pytalk_user_login(self, user: PytalkUser):
+    async def on_pytalk_user_login(self, user: PytalkUser) -> None:
         """Routes a user login event to the appropriate connection."""
         tt_instance = getattr(user, "teamtalk_instance", None) or \
                       (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
@@ -156,7 +156,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("UserLogin: No connection for instance %s", tt_instance)
 
-    async def on_pytalk_user_logout(self, user: PytalkUser):
+    async def on_pytalk_user_logout(self, user: PytalkUser) -> None:
         """Routes a user logout event to the appropriate connection."""
         tt_instance = getattr(user, "teamtalk_instance", None) or \
                       (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
@@ -169,7 +169,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("UserLogout: No connection for instance %s", tt_instance)
 
-    async def on_pytalk_user_update(self, user: PytalkUser):
+    async def on_pytalk_user_update(self, user: PytalkUser) -> None:
         """Routes a user update event to the appropriate connection."""
         tt_instance = getattr(user, "teamtalk_instance", None) or \
                       (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
@@ -182,7 +182,7 @@ class TeamTalkEventHandler:
         else:
             logger.error("UserUpdate: No connection for instance %s", tt_instance)
 
-    async def on_pytalk_user_account_new(self, account: pytalk.UserAccount):
+    async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
         """Routes a new user account event, potentially to all connections."""
         tt_instance = getattr(account, "teamtalk_instance", None)
         if tt_instance:
@@ -196,7 +196,7 @@ class TeamTalkEventHandler:
             for _conn_key, conn_val in self.services.connections.items():
                 await conn_val.on_user_account_new(account)
 
-    async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount):
+    async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
         """Routes a removed user account event, potentially to all connections."""
         tt_instance = getattr(account, "teamtalk_instance", None)
         if tt_instance:

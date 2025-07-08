@@ -30,7 +30,9 @@ ttstr = sdk.ttstr
 # --- Functions moved from bot.core.utils ---
 
 def get_effective_server_name(
-    tt_instance: TeamTalkInstance | None, translator: gettext.GNUTranslations, app_cfg: Any
+    tt_instance: TeamTalkInstance | None,
+    translator: gettext.GNUTranslations,
+    app_cfg: "Services.config",  # More specific type for app_cfg
 ) -> str:
     """Determines the effective server name to display.
 
@@ -222,7 +224,9 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     return parts_to_send_list
 
 
-async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
+async def send_long_tt_reply(
+    reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES
+) -> None:
     """Splits a long text message into parts suitable for TeamTalk and sends them."""
     if not text:
         return
@@ -250,9 +254,9 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     services: Services,
-    server_host_for_display: str,
+    server_host_for_display: str, # Keep for consistent signature, though not used directly
     translator: gettext.GNUTranslations,
-):
+) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""
     _ = translator.gettext
     if not services.config.telegram.admin_chat_id or not services.bot_message:

@@ -48,7 +48,7 @@ async def menu_who_handler(
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     """Handles the 'Who is online?' menu button click."""
     # Ensure query.message exists due to @ensure_message_context
     # who_command_handler will be refactored to use services.cache.is_admin or accept is_admin
@@ -68,7 +68,7 @@ async def menu_help_handler(
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
-):
+) -> None:
     """Handles the 'Help' menu button click."""
     # Ensure query.message exists
     # help_command_handler will be refactored to use services.cache.is_admin or accept is_admin
@@ -86,7 +86,7 @@ async def menu_settings_handler(
     query: CallbackQuery,
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-):
+) -> None:
     """Handles the 'Settings' menu button click."""
     # Ensure query.message exists
     await settings_command_handler(
@@ -106,7 +106,7 @@ async def menu_kick_handler(
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected
     tt_connection: TeamTalkConnection | None,  # Injected
-):
+) -> None:
     """Handles the 'Kick User' admin menu button click."""
     # Ensure query.message exists
     await _show_user_buttons(query.message, AdminAction.KICK, translator, tt_connection)  # type: ignore
@@ -120,7 +120,7 @@ async def menu_ban_handler(
     callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected
     tt_connection: TeamTalkConnection | None,  # Injected
-):
+) -> None:
     """Handles the 'Ban User' admin menu button click."""
     # Ensure query.message exists
     await _show_user_buttons(query.message, AdminAction.BAN, translator, tt_connection)  # type: ignore
@@ -135,7 +135,7 @@ async def menu_subscribers_handler(
     session: AsyncSession,  # Injected
     translator: "gettext.GNUTranslations",  # Injected
     services: "Services", # Injected
-):
+) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     # Ensure query.message exists
     await _show_subscriber_list_page(query.message, session, services.bot_event, translator, page=0)  # type: ignore

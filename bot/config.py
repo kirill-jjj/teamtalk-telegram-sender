@@ -1,6 +1,6 @@
 """Configuration models for the bot application."""
 
-import os  # Moved here for PLC0415
+from pathlib import Path  # Added for Path operations
 import tomllib  # Requires Python 3.11+
 from typing import Literal
 
@@ -76,18 +76,19 @@ class Settings(BaseSettings):
     operational_parameters: OperationalParameters = Field(default_factory=OperationalParameters)
 
     @classmethod
-    def from_toml(cls, path: str) -> "Settings":
+    def from_toml(cls, path_str: str) -> "Settings":  # Renamed path to path_str
         """Loads configuration from a TOML file."""
+        path = Path(path_str)  # Convert to Path object
         try:
-            with open(path, "rb") as f:
+            with path.open("rb") as f:  # Use Path.open()
                 data = tomllib.load(f)
         except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns
-            abs_path = os.path.abspath(path)  # os will be available once import is moved
+            abs_path = path.resolve()  # Use Path.resolve()
             raise FileNotFoundError(
-                f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path}')"
+                f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path_str}')"
             ) from e
         except tomllib.TOMLDecodeError as e:
-            raise ValueError(f"Error decoding TOML file {path}: {e}") from e
+            raise ValueError(f"Error decoding TOML file {path_str}: {e}") from e
 
         return cls(**data)

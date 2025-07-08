@@ -2,6 +2,7 @@
 
 from logging.config import fileConfig
 import os  # For path operations
+from pathlib import Path  # Added for Path operations
 
 from alembic import context
 from sqlalchemy import pool
@@ -21,14 +22,28 @@ if config.config_file_name is not None:
 
 target_metadata = SQLModel.metadata
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.toml")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
 
 
-def process_revision_directives(context, revision, directives):
+def process_revision_directives(
+    context: context.MigrationContext, revision: str, directives: list[context.MigrationScript]
+) -> None:
     """This hook prevents Alembic from creating empty migration files.
 
     It checks if no actual structural changes are detected during autogenerate.
+    """
+    # The arguments context and revision are not used in this function,
+    # but they are part of the signature required by Alembic.
+    # We can mark them as unused if preferred, e.g., by prefixing with an underscore.
+    _ = context  # Mark as unused
+    _ = revision  # Mark as unused
+    if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
+        directives[:] = []
+        print("INFO  [alembic.autogenerate.compare] No structural changes detected.")  # noqa: T201
+
+
+def get_db_url() -> str:
     """
     if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
         directives[:] = []
@@ -45,7 +60,8 @@ def get_db_url() -> str:
         FileNotFoundError: If 'config.toml' is not found.
         ValueError: If critical configuration keys are missing or invalid.
     """
-    config_file = os.environ.get("APP_CONFIG_FILE", DEFAULT_CONFIG_PATH)
+    config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
+    config_file = Path(config_file_str)
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}") # noqa: T201
 
     try:
@@ -64,11 +80,11 @@ def get_db_url() -> str:
         print(f"ERROR [alembic.env] {error_message}")  # noqa: T201
         raise ValueError(error_message)
 
-    if not os.path.isabs(db_file_name):
-        db_path = os.path.join(PROJECT_ROOT, db_file_name)
-        db_path = os.path.abspath(db_path)
+    db_path_obj = Path(db_file_name)
+    if not db_path_obj.is_absolute():
+        db_path = (PROJECT_ROOT / db_file_name).resolve()
     else:
-        db_path = db_file_name
+        db_path = db_path_obj.resolve()
 
     db_url = f"sqlite+aiosqlite:///{db_path}"
     print(f"INFO  [alembic.env] Using database URL: {db_url} (from 'database.db_file' in '{config_file}')")  # noqa: T201
@@ -114,7 +130,7 @@ async def run_migrations_online_async() -> None:
     await connectable.dispose()
 
 
-def do_run_migrations(connection):
+def do_run_migrations(connection: pool.Connection) -> None:
     """Runs the migrations within the given database connection context.
 
     This function is called by `run_migrations_online_async` after establishing

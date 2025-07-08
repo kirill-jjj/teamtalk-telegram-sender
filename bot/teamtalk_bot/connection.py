@@ -48,7 +48,7 @@ class TeamTalkConnection:
         server_info: PytalkTeamTalkServerInfo,
         pytalk_bot: pytalk.TeamTalkBot,
         services: "Services",
-    ):
+    ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
         self.pytalk_bot = pytalk_bot
@@ -218,7 +218,7 @@ class TeamTalkConnection:
         self._is_finalized = status
         logger.info("[%s] Connection marked: %s.", self.server_info.host, "finalized" if status else "NOT finalized")
 
-    def update_caches_on_event(self, event_type: str, data: Any) -> None:
+    def update_caches_on_event(self, event_type: str, data: PytalkUser | PytalkUserAccount) -> None:
         """Updates internal caches based on TeamTalk user or account events."""
         user_id = getattr(data, "id", None)
         username_attr = getattr(data, "username", None)
@@ -258,7 +258,7 @@ class TeamTalkConnection:
                 self.server_info.host, acc_username, len(self.user_accounts_cache)
             )
 
-    async def _finalize_bot_login_sequence(self, channel: PytalkChannel):
+    async def _finalize_bot_login_sequence(self, channel: PytalkChannel) -> None:
         """Finalizes the bot's login sequence for this connection."""
         if self.is_finalized:
             logger.info("[%s] Login sequence already finalized. Skipping.", self.server_info.host)
@@ -306,7 +306,7 @@ class TeamTalkConnection:
         except Exception as e:
             logger.exception("[%s] Error finalizing login (status/time): %s", self.server_info.host, e)
 
-    async def _initiate_reconnect(self):
+    async def _initiate_reconnect(self) -> None:
         """Initiates a reconnection sequence for this connection."""
         server_key = f"{self.server_info.host}:{self.server_info.tcp_port}"
         logger.info("[%s] Initiating reconnect.", server_key)
@@ -395,8 +395,10 @@ class TeamTalkConnection:
             await self._initiate_reconnect()
 
 
-    async def on_my_login(self, server: PytalkServer):
+    async def on_my_login(self, server: PytalkServer) -> None:
         """Handles the bot's own login event for this connection."""
+        # The 'server' argument is part of Pytalk's event signature but not used here.
+        _ = server  # Mark as unused to satisfy linters like Ruff (ARG002)
         self.login_complete_time = None
         self.mark_finalized(False)
         server_name_display = "Unknown Server"
@@ -420,7 +422,7 @@ class TeamTalkConnection:
         await self._join_configured_channel()
 
 
-    async def on_user_join(self, user: PytalkUser, channel: PytalkChannel):
+    async def on_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Handles another user joining a channel on this server connection."""
         self.update_caches_on_event("user_join", user)
         if not self.instance:
@@ -439,15 +441,17 @@ class TeamTalkConnection:
                     self.server_info.host, self.ttstr(channel.name)
                 )
 
-    async def on_my_connection_lost(self, server: PytalkServer):
+    async def on_my_connection_lost(self, server: PytalkServer) -> None:
         """Handles disconnection from the server for this connection."""
+        # The 'server' argument is part of Pytalk's event signature but not used here.
+        _ = server # Mark as unused
         logger.warning("[%s] Connection lost. Reconnecting...", self.server_info.host)
         self.mark_finalized(False)
         self.login_complete_time = None
         await self.stop_background_tasks()
         await self._initiate_reconnect()
 
-    async def on_my_kicked_from_channel(self, channel_obj: PytalkChannel):
+    async def on_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Handles being kicked from a channel on this server connection."""
         ch_name = self.ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown"
         logger.warning("[%s] Kicked from chan '%s'. Reconnecting...", self.server_info.host, ch_name)
@@ -456,7 +460,7 @@ class TeamTalkConnection:
         await self.stop_background_tasks()
         await self._initiate_reconnect()
 
-    async def on_message(self, message: TeamTalkMessage):
+    async def on_message(self, message: TeamTalkMessage) -> None:
         """Handles an incoming message on this server connection."""
         if not self.instance or message.from_id == self.instance.getMyUserID() or \
            message.type != TEAMTALK_PRIVATE_MESSAGE_TYPE:
@@ -507,7 +511,7 @@ class TeamTalkConnection:
                     server_host_for_display=self.server_info.host, translator=translator
                 )
 
-    async def on_user_login(self, user: PytalkUser):
+    async def on_user_login(self, user: PytalkUser) -> None:
         """Handles another user logging into this server connection."""
         self.update_caches_on_event("user_login", user)
         if not self.instance:
@@ -519,7 +523,7 @@ class TeamTalkConnection:
             online_users_cache_for_instance=self.online_users_cache,
         )
 
-    async def on_user_logout(self, user: PytalkUser):
+    async def on_user_logout(self, user: PytalkUser) -> None:
         """Handles another user logging out from this server connection."""
         self.update_caches_on_event("user_logout", user)
         if not self.instance:
@@ -531,15 +535,15 @@ class TeamTalkConnection:
             online_users_cache_for_instance=self.online_users_cache,
         )
 
-    async def on_user_update(self, user: PytalkUser):
+    async def on_user_update(self, user: PytalkUser) -> None:
         """Handles updates to a user's information on this server connection."""
         self.update_caches_on_event("user_update", user)
 
-    async def on_user_account_new(self, account: pytalk.UserAccount):
+    async def on_user_account_new(self, account: pytalk.UserAccount) -> None:
         """Handles a new user account being created on this server."""
         self.update_caches_on_event("user_account_new", account)
 
-    async def on_user_account_remove(self, account: pytalk.UserAccount):
+    async def on_user_account_remove(self, account: pytalk.UserAccount) -> None:
         """Handles a user account being removed from this server."""
         self.update_caches_on_event("user_account_remove", account)
 
