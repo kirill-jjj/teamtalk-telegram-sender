@@ -77,7 +77,10 @@ select = [
     "N",
     "PTH",
     "PIE",
-
+    "DTZ",
+    "RET",
+    "TRY",
+    "FBT",
 ]
 ignore = [
     "D203",
