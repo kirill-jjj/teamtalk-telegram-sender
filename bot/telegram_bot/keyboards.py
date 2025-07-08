@@ -413,8 +413,8 @@ async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboa
     """Creates the main menu keyboard with commands."""
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=_("[Info] Who is online?"), callback_data=MenuCallback(command="who").pack()
-    )  # Previously contained an emoji
+        text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack()
+    )  # Previously contained an emoji, now restored
     builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:
