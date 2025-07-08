@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from aiogram import F, Router
 # Removed: from aiogram.exceptions import TelegramAPIError
 # Removed: from aiogram.types import BotCommandScopeChat
+from aiogram.types import CallbackQuery # Added back
 # Removed: from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
