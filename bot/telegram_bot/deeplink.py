@@ -1,29 +1,19 @@
 """Handles deeplink processing for Telegram bot commands like /start <token>."""
 
-from collections.abc import Callable, Coroutine
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from aiogram.types import Message
-from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import DeeplinkAction
-from bot.core.user_settings import (
-    update_user_settings_in_db,
-)
-from bot.database import crud
 from bot.database.crud import (
-    add_subscriber,
     delete_deeplink_by_token,
 )
 from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
-# Removed user_service import as it's now in deeplink_service
-# from bot.services import user_service
-from bot.services import deeplink_service # Added import for the new service
+from bot.services import deeplink_service  # Added import for the new service
 
 if TYPE_CHECKING:
     from bot.services_container import Services  # Import Services
@@ -57,7 +47,6 @@ async def _execute_deeplink_action(
     translator: gettext.GNUTranslations,
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
-    # token: str, # No longer needed here as deeplink_obj contains it
     services: "Services",
 ) -> str:
     """Wrapper to call the deeplink_service.execute_deeplink_action."""
@@ -70,9 +59,6 @@ async def _execute_deeplink_action(
         services=services,
     )
 
-# _handle_subscribe_deeplink and _handle_unsubscribe_deeplink are removed.
-# DEEPLINK_ACTION_HANDLERS dictionary is removed.
-# Type aliases DeeplinkHandlerType and UnsubscribeDeeplinkHandlerType are removed.
 
 async def handle_deeplink_payload(
     message: Message,
@@ -108,14 +94,12 @@ async def handle_deeplink_payload(
     if not deeplink_obj:
         return
 
-    # Call the simplified _execute_deeplink_action which now calls the service
     reply_text = await _execute_deeplink_action(
-        session=session, # Pass session
+        session=session,
         telegram_id=message_from_user_id,
         translator=translator,
         deeplink_obj=deeplink_obj,
         user_settings=user_settings,
-        # token argument removed from _execute_deeplink_action
         services=services,
     )
 
