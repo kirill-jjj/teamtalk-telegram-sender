@@ -1,6 +1,6 @@
 """Callback query handlers for actions related to specific subscribers."""
 
-import gettext # Added gettext
+import gettext  # Added gettext
 import logging
 
 # For type hinting app instance

@@ -112,8 +112,9 @@ def _generate_join_leave_notification_text(
     get_translator_func: Callable[[str | None], gettext.GNUTranslations],  # Changed signature
 ) -> str:
     recipient_translator = get_translator_func(lang_code)  # Use passed function
-    _ = recipient_translator_func = recipient_translator.gettext
-    localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator_func)
+    _ = recipient_translator.gettext  # Corrected to get .gettext from the object
+    # Pass the full translator object to get_tt_user_display_name
+    localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator)
     if event_type == NOTIFICATION_EVENT_JOIN:
         notification_template = _("User {user_nickname} joined server {server_name}")
     else:
@@ -143,8 +144,10 @@ async def send_join_leave_notification_logic(
         services: The application's services container.
     """
     default_lang_for_markup_and_log = services.config.general.default_lang
-    _log_markup_translator = services.get_translator(default_lang_for_markup_and_log).gettext
-    user_nickname = get_tt_user_display_name(tt_user, _log_markup_translator)
+    # Get the full translator object
+    default_lang_translator_obj = services.get_translator(default_lang_for_markup_and_log)
+    # Pass the full translator object to get_tt_user_display_name
+    user_nickname = get_tt_user_display_name(tt_user, default_lang_translator_obj)
 
     user_username = ttstr(tt_user.username)
     user_id = tt_user.id
@@ -191,7 +194,8 @@ async def send_join_leave_notification_logic(
         tt_instance.server_info.host,
         len(recipients),
     )
-    server_name = get_effective_server_name(tt_instance, _log_markup_translator, services.config)
+    # Pass the translator object to get_effective_server_name
+    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
 
     final_recipients = []
 
@@ -224,7 +228,7 @@ async def send_join_leave_notification_logic(
                     logger.debug(
                         "NOON: User %s is the only one online (besides bot) for TG user %s "
                         "on server %s. Skipping notification for this recipient.",
-                        user_nickname,
+                        user_nickname,  # This nickname was generated with default_lang_translator_obj
                         tg_user_id,
                         tt_instance.server_info.host,
                     )

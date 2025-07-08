@@ -509,10 +509,13 @@ class TeamTalkEventHandler:
                 else:
                     await handler(message, session=session, _=_, services=self.services, connection=connection)
             elif message_content.startswith("/"):
-                await handle_tt_unknown_command(message, _, connection=connection)
+                await handle_tt_unknown_command(message, translator, connection=connection)  # Pass translator
             else:
                 await forward_tt_message_to_telegram_admin(
-                    message=message, services=self.services, server_host_for_display=connection.server_info.host
+                    message=message,
+                    services=self.services,
+                    server_host_for_display=connection.server_info.host,
+                    translator=translator,  # Pass translator
                 )
 
     async def on_pytalk_user_login(self, user: PytalkUser):
