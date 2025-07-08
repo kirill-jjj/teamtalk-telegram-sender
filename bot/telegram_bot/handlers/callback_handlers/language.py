@@ -3,32 +3,22 @@
 import gettext
 import logging
 
-# For type hinting Services
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-
-# Removed: from aiogram.exceptions import TelegramAPIError
-# Removed: from aiogram.types import BotCommandScopeChat
-from aiogram.types import CallbackQuery  # Added back
-
-# Removed: from sqlalchemy.exc import SQLAlchemyError
+from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import LanguageAction, SettingsNavAction
-
-# Removed: from bot.core.user_settings import update_user_settings_in_db # Now in user_service
 from bot.models import UserSettings
-from bot.services import user_service  # Added user_service import
+from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
-
-# Removed: from bot.telegram_bot.commands import get_admin_commands, get_user_commands # Now in user_service
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 
 from ._helpers import safe_edit_text
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Import Services
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
@@ -99,7 +89,6 @@ async def cq_set_language(
         await callback_query.answer(_("Selected language is not available."), show_alert=True)
         return
 
-    # Get new translator for UI updates
     new_lang_translator = services.get_translator(new_lang_code)
 
     # --- Update language settings (DB and cache) ---
@@ -117,7 +106,6 @@ async def cq_set_language(
         return
 
     # --- Language settings updated successfully, now update commands ---
-    # Use the gettext method from the new translator for this specific message
     await callback_query.answer(
         new_lang_translator.gettext("Language updated to {lang_name}.").format(
             lang_name=selected_lang_info["native_name"]
@@ -129,7 +117,6 @@ async def cq_set_language(
 
     if not commands_updated:
         # Error logged by user_service. Inform user.
-        # Use the gettext method from the new translator for this specific message
         await callback_query.answer(
             new_lang_translator.gettext(
                 "Language updated, but commands might not refresh immediately. "
@@ -141,7 +128,6 @@ async def cq_set_language(
 
     # --- Update UI (Settings Menu) ---
     try:
-        # Pass the full translator object
         main_settings_builder = await create_main_settings_keyboard(new_lang_translator)
         main_settings_text = new_lang_translator.gettext("Settings")
         await safe_edit_text(
@@ -151,7 +137,7 @@ async def cq_set_language(
             logger_instance=logger,
             log_context="cq_set_language_ui_refresh",
         )
-    except Exception as e_ui: # Catch any error during UI update
+    except Exception as e_ui:
         logger.exception(
             "Failed to refresh settings UI for user %s after language change to %s: %s",
             telegram_id, new_lang_code, e_ui

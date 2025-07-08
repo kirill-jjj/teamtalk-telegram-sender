@@ -21,7 +21,7 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
 )
 from bot.core.notifications import send_join_leave_notification_logic
-from bot.teamtalk_bot import command_constants as tt_cmds  # Import constants
+from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
     handle_tt_add_admin_command,
     handle_tt_help_command,
@@ -499,9 +499,9 @@ class TeamTalkConnection:
                 if cmd != tt_cmds.TT_CMD_HELP:
                     kwargs["session"] = session
                 await handler(**kwargs)
-            elif content.startswith("/"): # Check if it's an attempt at a command
+            elif content.startswith("/"):
                 await handle_tt_unknown_command(message, translator, connection=self)
-            else: # Not a command, forward as message
+            else:
                 await forward_tt_message_to_telegram_admin(
                     message=message, services=self.services,
                     server_host_for_display=self.server_info.host, translator=translator

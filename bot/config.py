@@ -10,10 +10,8 @@ from pydantic_settings import BaseSettings  # Still useful for model features
 # Type for gender, can be expanded if needed
 GenderType = Literal["male", "female", "neutral"]
 
-# Nested models for TOML structure
 
-
-class GeneralSettings(BaseSettings):  # Renamed from BotGeneralSettings
+class GeneralSettings(BaseSettings):
     """General bot settings."""
 
     default_lang: str = Field("en", description="Default language for bot messages.")
@@ -71,7 +69,7 @@ class Settings(BaseSettings):
     Loads configuration from a TOML file.
     """
 
-    general: GeneralSettings  # Updated from bot_general
+    general: GeneralSettings
     database: DatabaseSettings
     telegram: TelegramSettings
     teamtalk: TeamTalkSettings

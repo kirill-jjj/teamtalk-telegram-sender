@@ -28,7 +28,6 @@ async def add_admin_full(
             services.cache.add_admin(telegram_id)
             logger.info("Admin %s added to cache.", telegram_id)
 
-            # Update bot commands for the new admin
             if user_settings: # Should always have user_settings if adding admin
                 commands_updated = await user_service.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services
@@ -61,7 +60,6 @@ async def remove_admin_full(
             services.cache.remove_admin(telegram_id)
             logger.info("Admin %s removed from cache.", telegram_id)
 
-            # Update bot commands for the user (now non-admin)
             if user_settings: # Should always have user_settings
                 commands_updated = await user_service.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services

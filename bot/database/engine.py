@@ -1,16 +1,15 @@
 """Database engine and session factory setup."""
 
-# bot/database/engine.py
 import logging
-import os  # Moved here for PLC0415
+import os
 from typing import TypeAlias  # For sessionmaker type hint
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker  # Standard SQLAlchemy sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession  # SQLModel's AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot import models  # Important for SQLModel to discover models
-from bot.config import Settings  # Needed for config type hint
+from bot.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:  # type
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models
 
-    absolute_db_path = os.path.abspath(config.database.db_file)  # os will be available
+    absolute_db_path = os.path.abspath(config.database.db_file)
     db_url = f"sqlite+aiosqlite:///{absolute_db_path}"
     logger.info("Creating database engine for: %s", db_url)
 

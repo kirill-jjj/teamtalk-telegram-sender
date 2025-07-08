@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import delete, select
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
@@ -20,7 +20,6 @@ from bot.core.enums import (
     UserListAction,
 )
 from bot.models import MutedUser, MuteListMode, UserSettings
-from bot.services import user_service  # Added missing import
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     NotificationActionCallback,
@@ -35,6 +34,7 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.services import user_service
 
 from ._helpers import safe_edit_text
 
@@ -88,7 +88,7 @@ async def _display_paginated_list_ui(
         return
 
     keyboard_markup = await keyboard_factory(
-        translator, # Pass full translator object
+        translator,
         page_items=page_slice,
         current_page=current_page_idx,
         total_pages=total_pages,
@@ -506,10 +506,7 @@ async def cq_toggle_specific_user_mute_action(
             "Could not determine username to toggle mute for user %s. Callback data: %s",
             callback_query.from_user.id, callback_data
         )
-        await callback_query.answer(
-            _("An error occurred determining the user to mute/unmute. Please try again."),
-            show_alert=True
-        )
+        await callback_query.answer(_("An error occurred determining the user to mute/unmute. Please try again."), show_alert=True)
         return
 
     # --- Call the service function to handle all logic ---
@@ -522,10 +519,7 @@ async def cq_toggle_specific_user_mute_action(
     # ----------------------------------------------------
 
     if not was_successful:
-        await callback_query.answer(
-            _("An error occurred while updating mute status. Please try again later."),
-            show_alert=True
-        )
+        await callback_query.answer(_("An error occurred while updating mute status. Please try again later."), show_alert=True)
         return
 
     # Generate toast message based on the action performed by the service

@@ -20,11 +20,11 @@ from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import admin_service
-from bot.teamtalk_bot import command_constants as tt_cmds  # Import constants
+from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import send_long_tt_reply
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # For type hinting app instance
+    from bot.services_container import Services
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def is_tt_admin(func: Callable) -> Callable:
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
-        admin_username = services.config.general.admin_username  # Use services.config
+        admin_username = services.config.general.admin_username
 
         if not admin_username or username != admin_username:
             logger.warning("Unauthorized admin command attempt by TT user %s for function %s.", username, func.__name__)
@@ -86,7 +86,7 @@ def is_tt_admin(func: Callable) -> Callable:
 # Removed _execute_admin_action_for_id as its logic is now in admin_service
 
 
-def _create_admin_action_report(  # This helper is fine as is
+def _create_admin_action_report(
     translator: gettext.GNUTranslations,
     success_count: int,
     failed_ids: list[int],
@@ -212,11 +212,10 @@ async def _generate_and_reply_deeplink(
         token = await create_deeplink(
             session,
             action,
-            services.config.operational_parameters.deeplink_ttl_seconds,  # Use services.config
+            services.config.operational_parameters.deeplink_ttl_seconds,
             payload=payload,
             expected_telegram_id=None,
         )
-        # Use services.bot_event
         bot_info = await services.bot_event.get_me()
         deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
         logger.info("%s Token: %s, User: %s", success_log_message, token, sender_tt_username)
@@ -284,7 +283,7 @@ async def handle_tt_subscribe_command(
             "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
         error_reply_source=_("An error occurred. Please try again later."),
-        services=services,  # Pass services
+        services=services,
     )
 
 
@@ -311,7 +310,7 @@ async def handle_tt_unsubscribe_command(
             "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
         error_reply_source=_("An error occurred. Please try again later."),
-        services=services,  # Pass services
+        services=services,
     )
 
 
@@ -344,7 +343,7 @@ async def handle_tt_add_admin_command(
         ),  # This message might need adjustment as service layer handles "already admin"
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        services=services,  # Pass services
+        services=services,
     )
 
 
@@ -377,7 +376,7 @@ async def handle_tt_remove_admin_command(
         ),  # This message might need adjustment
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        services=services,  # Pass services
+        services=services,
     )
 
 
@@ -393,7 +392,7 @@ async def handle_tt_help_command(
     tt_username_str = None
     if tt_message.user and hasattr(tt_message.user, "username"):
         tt_username_str = ttstr(tt_message.user.username)
-    admin_username_from_config = services.config.general.admin_username  # Use services.config
+    admin_username_from_config = services.config.general.admin_username
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True

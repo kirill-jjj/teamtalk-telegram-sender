@@ -1,5 +1,4 @@
 """Manages in-memory caches for admin IDs, subscriber IDs, and user settings."""
-# bot/services/cache_service.py
 
 import logging
 from typing import TYPE_CHECKING

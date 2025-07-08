@@ -1,23 +1,23 @@
 """Provides a container for managing application-wide services and dependencies."""
 
 import gettext
-from gettext import GNUTranslations, NullTranslations  # Added for precise typing
+from gettext import GNUTranslations, NullTranslations
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING  # Added Dict, List, Union
+from typing import TYPE_CHECKING
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-import pytalk  # Moved here for PLC0415
+import pytalk
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import selectinload  # Standard SQLAlchemy selectinload
-from sqlmodel import select  # SQLModel's select
-from sqlmodel.ext.asyncio.session import AsyncSession  # For type hinting
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
-from bot.core.languages import LanguageInfo, discover_languages  # Import LanguageInfo
-from bot.database.engine import AsyncSessionFactoryType  # Import the session factory type
+from bot.core.languages import LanguageInfo, discover_languages
+from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -48,7 +48,6 @@ class Services:
 
         self.logger = logger
 
-        # Боты
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
         self.bot_event: Bot = Bot(token=config.telegram.event_token, default=default_props)
         if config.telegram.message_token:
@@ -56,7 +55,6 @@ class Services:
         else:
             self.bot_message = self.bot_event
 
-        # TeamTalk Bot instance
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)
 
         self.connections: dict[str, TeamTalkConnection] = {}
@@ -64,11 +62,9 @@ class Services:
         self.admin_ids_cache: set[int] = set()
         self.user_settings_cache: dict[int, UserSettings] = {}  # Changed Any to UserSettings
 
-        # Инструменты
         self.translator_cache: dict[str, GNUTranslations | NullTranslations] = {}
         self.available_languages: list[LanguageInfo] = []
 
-        # Новый сервис для управления кэшами
         self.cache = CacheService(self)
 
     def get_translator(self, language_code: str | None = None) -> GNUTranslations | NullTranslations:
@@ -79,7 +75,7 @@ class Services:
         or if the default language itself fails to load (in which case NullTranslations is used).
         """
         if language_code is None:
-            language_code = self.config.general.default_lang  # Use self.config
+            language_code = self.config.general.default_lang
 
         if language_code in self.translator_cache:
             return self.translator_cache[language_code]
@@ -89,7 +85,7 @@ class Services:
             self.translator_cache[language_code] = translation
             return translation
         except FileNotFoundError:
-            default_lang_code = self.config.general.default_lang  # Use self.config
+            default_lang_code = self.config.general.default_lang
             if language_code != default_lang_code:
                 self.logger.warning(
                     "Language '%s' not found. Falling back to default '%s'.", language_code, default_lang_code
@@ -104,32 +100,28 @@ class Services:
     async def load_user_settings_to_app_cache(self) -> None:
         """Loads all user settings from DB into the service's cache."""
         async with self.session_factory() as session:
-            # Ensure muted_users are loaded
             stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
             result = await session.exec(stmt)
             all_settings = result.all()
-            # Use CacheService to load settings
             self.cache.load_all_user_settings(all_settings)
             # Logging is handled by cache_service.load_all_user_settings
 
     async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings:
         """Gets user settings from CacheService or DB, creates if not exists, updates cache."""
-        # Try to get from cache first
         cached_settings = self.cache.get_user_settings(telegram_id)
         if cached_settings:
             return cached_settings
 
-        # If not in cache, get from DB
         user_settings = await session.get(
             UserSettings,
             telegram_id,
-            options=[selectinload(UserSettings.muted_users_list)],  # type: ignore[arg-type] # Eager load related data
+            options=[selectinload(UserSettings.muted_users_list)],  # type: ignore[arg-type]
         )
         if not user_settings:
             self.logger.info("No settings found for user %s, creating new ones.", telegram_id)
             user_settings = UserSettings(
                 telegram_id=telegram_id,
-                language_code=self.config.general.default_lang,  # Use self.config
+                language_code=self.config.general.default_lang,
             )
             session.add(user_settings)
             try:
@@ -143,7 +135,6 @@ class Services:
                 # Return a default non-persistent object on error.
                 return UserSettings(telegram_id=telegram_id, language_code=self.config.general.default_lang)
 
-        # Update cache with the retrieved or newly created settings
         self.cache.update_user_settings(user_settings)
         return user_settings
 

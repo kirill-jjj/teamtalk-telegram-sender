@@ -55,7 +55,7 @@ def _should_ignore_initial_event(
     return True
 
 
-def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool:  # Pass app_cfg
+def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool:
     # app_cfg is expected to be an instance of Settings
     # Accessing teamtalk.global_ignore_usernames which is a list[str]
     global_ignore_list = app_cfg.teamtalk.global_ignore_usernames
@@ -68,12 +68,11 @@ def _is_user_globally_ignored(username: str, app_cfg: Any) -> bool:  # Pass app_
 async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
-    session_factory: "DbEngineSessionFactoryType",  # Use renamed alias
+    session_factory: "DbEngineSessionFactoryType",
     # The subscribed_users_cache parameter is no longer directly used here.
     # It's fetched via services.cache.get_all_subscriber_ids()
     services: "Services",
 ) -> list[int]:
-    # Fetch subscriber IDs using CacheService
     subscriber_ids = list(services.cache.get_all_subscriber_ids())
     if not subscriber_ids:
         return []
@@ -149,9 +148,7 @@ async def send_join_leave_notification_logic(
         services: The application's services container.
     """
     default_lang_for_markup_and_log = services.config.general.default_lang
-    # Get the full translator object
     default_lang_translator_obj = services.get_translator(default_lang_for_markup_and_log)
-    # Pass the full translator object to get_tt_user_display_name
     user_nickname = get_tt_user_display_name(tt_user, default_lang_translator_obj)
 
     user_username = ttstr(tt_user.username)
@@ -183,7 +180,7 @@ async def send_join_leave_notification_logic(
         username_to_check=user_username,
         event_type=event_type,
         session_factory=services.session_factory,
-        services=services, # Pass the whole services object
+        services=services,
     )
 
     if not recipients:
@@ -202,10 +199,8 @@ async def send_join_leave_notification_logic(
         tt_instance.server_info.host,
         len(recipients),
     )
-    # Pass the translator object to get_effective_server_name
     server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
 
-    # Use the new notification_service to filter recipients
     final_recipients = await notification_service.filter_recipients_for_noon(
         recipients=recipients,
         event_user=tt_user,

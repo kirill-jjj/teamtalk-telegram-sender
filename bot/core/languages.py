@@ -1,16 +1,18 @@
 """Language and localization utilities."""
 
 import gettext
-import logging  # Moved import to top
+import logging
 import os
 from typing import TypedDict
+
+logger = logging.getLogger(__name__)
 
 # Define a path to the locales directory relative to this file or project root
 # Assuming project root is parent of 'bot' directory
 # For robustness, this might need to be derived from app_config or a known structure
 _LOCALE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "locales")
 
-DEFAULT_LANGUAGE_CODE = "en"  # Default language
+DEFAULT_LANGUAGE_CODE = "en"
 
 
 class LanguageInfo(TypedDict):
@@ -29,17 +31,13 @@ def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
     discovered_codes = {DEFAULT_LANGUAGE_CODE}
 
     if not os.path.isdir(locales_path):
-        # Assuming a logger is available. If this script can be run standalone,
-        # it might need its own minimal logging setup or print is acceptable.
-        # For integration in the bot, using the bot's logger is preferred.
-        logger = logging.getLogger(__name__)  # Or a more specific logger name
         logger.warning("Locales directory not found at %s. Only English will be available.", locales_path)
         return discovered
 
     # 2. Search for and add all other translated languages.
     for lang_code in os.listdir(locales_path):
         if lang_code in discovered_codes:
-            continue  # Skip if it's 'en' (which shouldn't be the case anymore)
+            continue
 
         lang_path = os.path.join(locales_path, lang_code)
         mo_file_path = os.path.join(lang_path, "LC_MESSAGES", "messages.mo")

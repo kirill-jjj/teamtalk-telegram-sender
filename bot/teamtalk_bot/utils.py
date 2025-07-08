@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
-from pytalk.user import User as TeamTalkUser  # Added
-from pytalk.user_account import UserAccount as TeamTalkUserAccount  # Added
+from pytalk.user import User as TeamTalkUser
+from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
 

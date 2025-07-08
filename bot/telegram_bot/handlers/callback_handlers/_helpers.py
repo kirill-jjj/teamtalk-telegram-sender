@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession  # Added this based on usage
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.models import UserSettings
@@ -30,7 +30,7 @@ async def process_setting_update(
     new_markup: InlineKeyboardMarkup,
     services: "Services",
 ) -> None:
-    _ = translator.gettext  # Added this line
+    _ = translator.gettext
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
         try:
@@ -102,14 +102,13 @@ async def safe_edit_text(
             return False
         current_logger.debug(
             "Message not modified for %s (chat_id %s), skipping edit.", log_context, message_to_edit.chat.id
-        )  # Added from original
+        )
         return True  # Ensure True is returned for "not modified"
     except TelegramAPIError as e:
         current_logger.exception("TelegramAPIError editing message%s: %s", context_for_log, e)
         return False
 
 
-# Decorator for checking query.message context
 def ensure_message_context(func: Callable):
     """Decorator to ensure that a callback query handler has a message context.
 
@@ -143,7 +142,6 @@ def ensure_message_context(func: Callable):
                 query.from_user.id,
             )
             try:
-                # Use the translated message
                 await query.answer(error_message_for_missing_context, show_alert=True)
             except TelegramAPIError as e:
                 logger.error("Failed to answer callback query in decorator for '%s': %s", func.__name__, e)

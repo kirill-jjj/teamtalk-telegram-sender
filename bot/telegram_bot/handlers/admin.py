@@ -3,7 +3,6 @@
 import gettext
 import logging
 
-# For type hinting Services
 from typing import TYPE_CHECKING
 
 # Removed: from aiogram import Bot as AiogramBot
@@ -14,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name  # Updated import
+from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
 from .callback_handlers.list_utils import _show_subscriber_list_page

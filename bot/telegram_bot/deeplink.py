@@ -13,10 +13,10 @@ from bot.database.crud import (
 from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
-from bot.services import deeplink_service  # Added import for the new service
+from bot.services import deeplink_service
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Import Services
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
