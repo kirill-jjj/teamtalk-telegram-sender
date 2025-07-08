@@ -122,7 +122,7 @@ async def process_new_subscription(
             logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
 
         # Ensure cache consistency for subscriber status
-        if not services.cache.is_subscriber(user_settings.telegram_id):
+        if not services.cache.is_subscribed(user_settings.telegram_id): # Corrected method name
             services.cache.add_subscriber(user_settings.telegram_id)
             logger.info("Added user %s to subscriber cache.", user_settings.telegram_id)
 
