@@ -97,25 +97,34 @@ async def process_new_subscription(
 ) -> bool:
     """Handles all DB and cache operations for a new subscription via deeplink."""
     try:
-        subscriber_added_or_exists = await crud.add_subscriber(session, user_settings.telegram_id)
-        # crud.add_subscriber handles its own commit and returns True if added, False if already exists or error.
-        # We want to proceed if user is now effectively a subscriber (either newly added or was already).
+        # Attempt to add the subscriber. crud.add_subscriber returns True if newly added,
+        # False if already exists or if a DB error occurred during add.
+        was_newly_added = await crud.add_subscriber(session, user_settings.telegram_id)
 
-        if subscriber_added_or_exists: # True if newly added
-            logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
-            services.cache.add_subscriber(user_settings.telegram_id)
-        elif await crud.is_telegram_id_subscribed(session, user_settings.telegram_id): # Corrected function name
-            logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
-            # Ensure cache consistency if they were somehow not in cache but in DB
-            if not services.cache.is_subscriber(user_settings.telegram_id):
-                services.cache.add_subscriber(user_settings.telegram_id)
-        else:
-            # This case should ideally not be hit if crud.add_subscriber failed for other reasons than "already exists"
+        # After the attempt, verify if the user is actually subscribed in the DB.
+        # This covers both cases: newly added, or already existed.
+        # session.get() is the most direct way to check existence after an operation.
+        subscribed_user_record = await session.get(crud.SubscribedUser, user_settings.telegram_id)
+
+        if not subscribed_user_record:
+            # This means crud.add_subscriber failed for a reason other than "already exists" (e.g., DB error during add)
+            # and the user is not in the SubscribedUser table.
             logger.error(
-                "Failed to add user %s as subscriber in DB and they are not currently subscribed.",
+                "Failed to ensure user %s is a subscriber in DB after add attempt.",
                 user_settings.telegram_id
             )
             return False # Failed to make user a subscriber
+
+        # At this point, user is confirmed to be in SubscribedUser table.
+        if was_newly_added:
+            logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
+        else:
+            logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
+
+        # Ensure cache consistency for subscriber status
+        if not services.cache.is_subscriber(user_settings.telegram_id):
+            services.cache.add_subscriber(user_settings.telegram_id)
+            logger.info("Added user %s to subscriber cache.", user_settings.telegram_id)
 
         # Update user settings with TeamTalk username
         original_tt_username = user_settings.teamtalk_username
