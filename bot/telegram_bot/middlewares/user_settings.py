@@ -45,7 +45,7 @@ class UserSettingsMiddleware(BaseMiddleware):
         services: Services = data["services"]  # Get services from workflow_data
         config: Settings = data["config"]  # Get config from workflow_data
 
-        user_settings = services.user_settings_cache.get(user_obj.id)
+        user_settings = services.cache.get_user_settings(user_obj.id)
 
         if not user_settings:
             # Use services.get_or_create_user_settings

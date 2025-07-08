@@ -17,7 +17,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-from bot.services import user_service
+from bot.services import notification_service, user_service
 
 if TYPE_CHECKING:
     from bot.models import UserSettings
@@ -89,13 +89,12 @@ def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Serv
     This is based on NOON settings and the provided online status of their linked TeamTalk user.
     Uses services.user_settings_cache and notification_service.
     """
-    from bot.services import notification_service  # Local import
-
-    recipient_settings = services.user_settings_cache.get(chat_id)
+    recipient_settings = services.cache.get_user_settings(chat_id)
 
     if notification_service.is_user_subject_to_noon_check(recipient_settings) and tt_user_is_online:
         logger.debug(
-            "Message to %s will be silent: linked user is online and NOON is subject to check (via notification_service).",
+            "Message to %s will be silent: linked user is online and NOON is subject to check "
+            "(via notification_service).",
             chat_id
         )
         return True
@@ -164,7 +163,7 @@ async def send_telegram_messages_to_list(
 
     tasks_list = []
     for chat_id in chat_ids:
-        user_settings: UserSettings | None = services.user_settings_cache.get(chat_id)
+        user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
         language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
         text = text_generator(language_code)
         current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None

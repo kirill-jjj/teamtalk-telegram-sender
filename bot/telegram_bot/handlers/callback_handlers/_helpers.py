@@ -43,7 +43,7 @@ async def process_setting_update(
 
     try:
         await update_user_settings_in_db(session, user_settings)
-        services.user_settings_cache[user_settings.telegram_id] = user_settings
+        services.cache.update_user_settings(user_settings)
         await callback_query.answer(success_toast_text, show_alert=False)
 
         await safe_edit_text(

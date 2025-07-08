@@ -2,12 +2,11 @@
 import logging
 from typing import TYPE_CHECKING
 
+import pytalk  # Required for ttstr
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
-import pytalk # Required for ttstr
 
 from bot.models import UserSettings
-
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -34,10 +33,7 @@ async def is_linked_user_online(
         return False
 
     linked_tt_username = user_settings.teamtalk_username
-    for tt_user_obj in online_users_cache.values():
-        if ttstr(tt_user_obj.username) == linked_tt_username:
-            return True
-    return False
+    return any(ttstr(tt_user_obj.username) == linked_tt_username for tt_user_obj in online_users_cache.values())
 
 
 async def filter_recipients_for_noon(

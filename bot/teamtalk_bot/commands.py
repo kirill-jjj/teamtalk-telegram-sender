@@ -173,7 +173,11 @@ async def _manage_admin_ids(
                 services.cache.add_admin(telegram_id)
             elif crud_function is remove_admin_db:
                 services.cache.remove_admin(telegram_id)
-            logger.info("Successfully processed %s for TG ID %s and set commands (cache updated via CacheService).", crud_function.__name__, telegram_id)
+            logger.info(
+                "Successfully processed %s for TG ID %s and set commands (cache updated via CacheService).",
+                crud_function.__name__,
+                telegram_id
+            )
         else:
             failed_action_ids.append(telegram_id)
             logger.warning(

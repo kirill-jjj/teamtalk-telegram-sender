@@ -16,6 +16,7 @@ from sqlmodel import select
 from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
+from bot.services import notification_service
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 
 # TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps
@@ -147,9 +148,6 @@ async def send_join_leave_notification_logic(
         online_users_cache_for_instance: Cache of online users for the specific TT instance.
         services: The application's services container.
     """
-    # Import the new service
-    from bot.services import notification_service
-
     default_lang_for_markup_and_log = services.config.general.default_lang
     # Get the full translator object
     default_lang_translator_obj = services.get_translator(default_lang_for_markup_and_log)

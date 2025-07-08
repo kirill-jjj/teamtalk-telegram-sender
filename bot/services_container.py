@@ -19,8 +19,8 @@ from bot.config import Settings
 from bot.core.languages import LanguageInfo, discover_languages  # Import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType  # Import the session factory type
 from bot.models import UserSettings
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
 if TYPE_CHECKING:
     pass  # Forward reference for selectinload, though might not be needed with plugin

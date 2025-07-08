@@ -71,11 +71,11 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
             async with services.session_factory() as session:
                 await crud.add_admin(session, tg_admin_chat_id)
                 services.cache.add_admin(tg_admin_chat_id) # Use CacheService for adding
-            logger.debug("Main admin ID %s from config has been added to DB and cache via CacheService.", tg_admin_chat_id)
+            logger.debug("Admin ID %s from config added to DB and cache via CacheService.", tg_admin_chat_id)
         else:
-            logger.debug("Main admin ID %s from config was already in admin cache (checked via CacheService).", tg_admin_chat_id)
+            logger.debug("Admin ID %s from config already in admin cache (via CacheService).", tg_admin_chat_id)
     else:
-        logger.info("telegram.admin_chat_id is 0 or not configured in a way to be added as main admin.")
+        logger.info("telegram.admin_chat_id is 0 or not configured to be added as main admin.")
 
     logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count()) # Use CacheService
     logger.debug("Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()) # Use CacheService
@@ -133,7 +133,7 @@ async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, servic
     admin_lang_code = app_config.general.default_lang
 
     if admin_chat_id_for_error:
-        admin_user_settings = services.user_settings_cache.get(admin_chat_id_for_error)
+        admin_user_settings = services.cache.get_user_settings(admin_chat_id_for_error)
         if admin_user_settings and admin_user_settings.language_code:
             admin_lang_code = admin_user_settings.language_code
 
@@ -159,7 +159,7 @@ async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, servic
 
     lang_code = DEFAULT_LANGUAGE_CODE
     if user_id:
-        user_settings = services.user_settings_cache.get(user_id)
+        user_settings = services.cache.get_user_settings(user_id)
         if user_settings and user_settings.language_code:
             lang_code = user_settings.language_code
 
@@ -195,7 +195,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services"):
     dp["config"] = services.config
     dp["session_factory"] = services.session_factory
     dp["admin_ids_cache"] = services.admin_ids_cache
-    dp["user_settings_cache"] = services.user_settings_cache
     dp["subscribed_users_cache"] = services.subscribed_users_cache
     dp["connections"] = services.connections
     dp["bot_event"] = services.bot_event
