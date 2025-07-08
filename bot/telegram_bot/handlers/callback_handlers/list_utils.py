@@ -10,14 +10,14 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
-from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, Message
 
 from bot.database.crud import get_all_subscribers_ids
-from bot.models import UserSettings  # For UserSettings model
-from bot.telegram_bot.keyboards import create_subscriber_list_keyboard  # Un-commented and comments removed
+from bot.models import UserSettings
+from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.models import SubscriberInfo
 from bot.telegram_bot.utils import format_telegram_user_display_name, send_or_edit_paginated_list
 
@@ -43,14 +43,12 @@ async def _get_paginated_subscribers_info(
     current_page_num = requested_page
     current_page_num = max(current_page_num, 0)
 
-    # Adjust if requested_page is too high
     if current_page_num >= total_pages > 0:
         current_page_num = total_pages - 1
-    elif total_pages == 0:  # No pages, so page 0
+    elif total_pages == 0:
         current_page_num = 0
-        return [], 0, 0  # No subscribers, no pages
+        return [], 0, 0
 
-    # Initial slice for page_ids
     start_idx = current_page_num * SUBSCRIBERS_PER_PAGE
     end_idx = start_idx + SUBSCRIBERS_PER_PAGE
     page_ids_to_fetch = all_subscriber_ids[start_idx:end_idx]
@@ -62,13 +60,10 @@ async def _get_paginated_subscribers_info(
         end_idx = start_idx + SUBSCRIBERS_PER_PAGE
         page_ids_to_fetch = all_subscriber_ids[start_idx:end_idx]
 
-    if not page_ids_to_fetch:  # If still no IDs for any valid page
+    if not page_ids_to_fetch:
         return [], current_page_num, total_pages
 
-    # Fetch chat info concurrently for the current page's IDs
     chat_info_tasks = [bot.get_chat(tg_id) for tg_id in page_ids_to_fetch]
-
-    # Fetch UserSettings concurrently for the current page's IDs
     user_settings_tasks = [session.get(UserSettings, tg_id) for tg_id in page_ids_to_fetch]
 
     chat_results = await asyncio.gather(*chat_info_tasks, return_exceptions=True)
@@ -76,7 +71,7 @@ async def _get_paginated_subscribers_info(
 
     page_subscribers_info = []
     for i, telegram_id in enumerate(page_ids_to_fetch):
-        display_name = str(telegram_id)  # Default display name
+        display_name = str(telegram_id)
         chat_info = None
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
@@ -84,7 +79,6 @@ async def _get_paginated_subscribers_info(
             # display_name remains str(telegram_id)
         else:
             chat_info = chat_result
-            # Use the new helper function if chat_info was successfully fetched
             display_name = format_telegram_user_display_name(chat_info)
             # If format_telegram_user_display_name defaults to ID on insufficient info,
             # it will still be str(telegram_id) if chat_info had no names/username.

@@ -18,13 +18,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
 
 target_metadata = SQLModel.metadata
 
-# Determine the root directory of the project to correctly locate config.toml
-# Assuming env.py is in alembic/ and config.toml is in the root.
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.toml")
 
@@ -36,10 +32,6 @@ def process_revision_directives(context, revision, directives):
     """
     if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
         directives[:] = []
-        # Use logging if a logger is configured for Alembic, otherwise print is common in env.py
-        # For this refactor, we'll assume print is acceptable here or to be replaced by Alembic's logger if integrated.
-        # If a specific logger was intended, it should be configured and used.
-        # For now, retaining print as it's often part of Alembic's direct feedback mechanism.
         print("INFO  [alembic.autogenerate.compare] No structural changes detected.")  # noqa: T201
 
 
@@ -72,13 +64,9 @@ def get_db_url() -> str:
         print(f"ERROR [alembic.env] {error_message}")  # noqa: T201
         raise ValueError(error_message)
 
-    # Ensure db_file_name is an absolute path if it's relative
-    # It's generally better if config.toml specifies paths relative to the project root or absolute paths.
-    # If db_file in config.toml is like "bot_data.db", it will be relative to where alembic is run.
-    # To make it relative to project root, we can do:
     if not os.path.isabs(db_file_name):
         db_path = os.path.join(PROJECT_ROOT, db_file_name)
-        db_path = os.path.abspath(db_path) # Normalize
+        db_path = os.path.abspath(db_path)
     else:
         db_path = db_file_name
 

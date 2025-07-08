@@ -6,8 +6,8 @@ import secrets
 from typing import TypeVar
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import SQLModel, select  # SQLModel's select
-from sqlmodel.ext.asyncio.session import AsyncSession  # SQLModel's AsyncSession
+from sqlmodel import SQLModel, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 from bot.core.enums import DeeplinkAction

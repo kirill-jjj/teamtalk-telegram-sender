@@ -68,7 +68,7 @@ async def process_subscribe_deeplink(
 
     # If user is also an admin, ensure admin cache is updated.
     # This check is done after successful subscription processing.
-    admin_record = await session.get(crud.Admin, telegram_id) # Use SQLModel's get
+    admin_record = await session.get(crud.Admin, telegram_id)
     if admin_record:
         if not services.cache.is_admin(telegram_id): # Check before adding to avoid redundant logs if already cached
             services.cache.add_admin(telegram_id)
@@ -121,7 +121,6 @@ async def execute_deeplink_action(
     action_enum_member = deeplink_obj.action
     return_message = ""
 
-    # Ensure action_enum_member is a valid DeeplinkAction enum member
     if not isinstance(action_enum_member, DeeplinkAction):
         logger.warning("Action '%s' from token is not a valid DeeplinkAction member.", action_enum_member)
         return_message = _("Invalid deeplink action.")

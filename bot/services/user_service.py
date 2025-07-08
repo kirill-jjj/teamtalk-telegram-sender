@@ -3,18 +3,18 @@
 import logging
 from typing import TYPE_CHECKING
 
-from aiogram.exceptions import TelegramAPIError  # For error handling
-from aiogram.types import BotCommandScopeChat  # For command scope
+from aiogram.exceptions import TelegramAPIError
+from aiogram.types import BotCommandScopeChat
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
 
-from bot.core.user_settings import update_user_settings_in_db  # For DB update
+from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, UserSettings  # For type hinting
-from bot.telegram_bot.commands import get_admin_commands, get_user_commands  # For commands
+from bot.models import MutedUser, UserSettings
+from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Import Services
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,6 @@ async def delete_full_user_profile(
             await session.commit()
             logger.debug("Committed DB deletions for %s.", telegram_id)
 
-        # Clear data from caches using CacheService
         services.cache.remove_full_user_profile(telegram_id)
         # Logging for this is now handled within CacheService.remove_full_user_profile
 
@@ -112,7 +111,7 @@ async def process_new_subscription(
                 "Failed to ensure user %s is a subscriber in DB after add attempt.",
                 user_settings.telegram_id
             )
-            return False # Failed to make user a subscriber
+            return False
 
         # At this point, user is confirmed to be in SubscribedUser table.
         if was_newly_added:
@@ -193,16 +192,14 @@ async def toggle_mute_status_for_tt_user(
 
     try:
         if existing_entry:
-            # User is currently muted, so unmute
-            user_settings.muted_users_list.remove(existing_entry) # Remove from Python list
-            await session.delete(existing_entry) # Delete from DB session
+            user_settings.muted_users_list.remove(existing_entry)
+            await session.delete(existing_entry)
             resulting_action = "unmuted"
             logger.info(
                 "User %s unmuted TeamTalk user '%s'. Pending commit.",
                 user_settings.telegram_id, tt_username_to_toggle
             )
         else:
-            # User is not muted, so mute
             new_entry = MutedUser(
                 user_settings_telegram_id=user_settings.telegram_id,
                 muted_teamtalk_username=tt_username_to_toggle,
@@ -210,7 +207,7 @@ async def toggle_mute_status_for_tt_user(
             # For SQLModel, adding to session might be enough if back_populates is correct.
             # Or explicitly add to the list:
             user_settings.muted_users_list.append(new_entry)
-            session.add(new_entry) # Add to DB session
+            session.add(new_entry)
             resulting_action = "muted"
             logger.info(
                 "User %s muted TeamTalk user '%s'. Pending commit.",

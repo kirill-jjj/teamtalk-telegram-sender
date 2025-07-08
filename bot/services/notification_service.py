@@ -28,7 +28,7 @@ async def is_linked_user_online(
     online_users_cache: dict[int, TeamTalkUser],
 ) -> bool:
     """Checks if the TeamTalk user linked to the given telegram_id is online."""
-    user_settings = services.cache.get_user_settings(telegram_id) # Use CacheService
+    user_settings = services.cache.get_user_settings(telegram_id)
     if not user_settings or not user_settings.teamtalk_username:
         return False
 
@@ -48,7 +48,7 @@ async def filter_recipients_for_noon(
     event_user_username = ttstr(event_user.username)
 
     for tg_user_id in recipients:
-        user_settings = services.cache.get_user_settings(tg_user_id) # Use CacheService
+        user_settings = services.cache.get_user_settings(tg_user_id)
 
         if not is_user_subject_to_noon_check(user_settings):
             final_recipients.append(tg_user_id)

@@ -9,7 +9,7 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
-from bot.constants import INVALID_CHANNEL_ID  # Added import
+from bot.constants import INVALID_CHANNEL_ID
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 if TYPE_CHECKING:
