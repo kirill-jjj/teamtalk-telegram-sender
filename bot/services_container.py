@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class Services:
-    """Контейнер для всех зависимостей и сервисов приложения."""
+    """Container for all application dependencies and services."""
 
     def __init__(self, config: Settings, session_factory: AsyncSessionFactoryType):  # type: ignore[type-var]
         """Initializes the Services container.

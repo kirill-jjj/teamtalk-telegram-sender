@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable  # Added Awaitable
 import gettext  # For translator type hint
 import logging
 
-# Для типизации
+# For type hinting
 from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdminCheckMiddleware(BaseMiddleware):
-    """Этот middleware проверяет, является ли пользователь, вызвавший команду или нажавший кнопку, администратором.
+    """This middleware checks if the user who triggered a command or pressed a button is an administrator.
 
     Relies on 'event_from_user', 'admin_ids_cache', and optionally 'translator' or 'services' being in workflow_data.
     """
@@ -51,25 +51,8 @@ class AdminCheckMiddleware(BaseMiddleware):
         admin_ids_cache: set[int] = data.get("admin_ids_cache", set())
 
         if user.id not in admin_ids_cache:
-            # Initialize translator: try from data, then services, else NullTranslations
-            current_translator: gettext.GNUTranslations | gettext.NullTranslations
-            translator_from_data = data.get("translator")
-
-            is_valid_translator = isinstance(translator_from_data, gettext.GNUTranslations | gettext.NullTranslations)
-            if translator_from_data and is_valid_translator:
-                current_translator = translator_from_data
-            else:
-                services: Services | None = data.get("services")
-                if services:
-                    user_settings = data.get("user_settings")
-                    lang_code = getattr(user_settings, "language_code", None) if user_settings else None
-                    current_translator = services.get_translator(lang_code)
-                else:
-                    logger.warning(
-                        "AdminCheckMiddleware: Translator and Services not found in data. Using NullTranslations."
-                    )
-                    current_translator = gettext.NullTranslations()
-
+            # I18nMiddleware runs before this, so 'translator' is guaranteed to be in data.
+            current_translator: gettext.GNUTranslations | gettext.NullTranslations = data["translator"]
             _ = current_translator.gettext
             unauthorized_message = _("You are not authorized to perform this action.")
 
@@ -84,15 +67,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                 return  # Stop processing
 
             if isinstance(event, Message):
-                # Check if UserSettingsMiddleware provided a gettext function directly
-                # This was the old pattern, new pattern is to use `translator` from above.
-                # For backward compatibility during refactor, check for `_` too.
-                legacy_tr_func = data.get("_")
-                if legacy_tr_func and callable(legacy_tr_func):
-                    await event.reply(legacy_tr_func("You are not authorized to perform this action."))
-                else:
-                    await event.reply(unauthorized_message)
-
+                await event.reply(unauthorized_message)
                 logger.warning(
                     "Unauthorized access denied for user %s (Username: %s) in Message handler for command: %s.",
                     user.id,
