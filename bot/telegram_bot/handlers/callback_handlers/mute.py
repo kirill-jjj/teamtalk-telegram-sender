@@ -423,7 +423,8 @@ async def cq_set_mute_mode_action(
     menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
         current_mode_description=new_current_mode_desc
     )
-    updated_keyboard = await create_manage_muted_users_keyboard(_, managed_user_settings)
+    # Changed _ to translator
+    updated_keyboard = await create_manage_muted_users_keyboard(translator, managed_user_settings)
 
     try:
         await session.commit()
