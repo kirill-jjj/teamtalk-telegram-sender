@@ -12,7 +12,7 @@ from aiogram.types import CallbackQuery, Message, TelegramObject
 from aiogram.types import User as AiogramUser
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Import Services
+    pass  # Import Services
 
 logger = logging.getLogger(__name__)
 

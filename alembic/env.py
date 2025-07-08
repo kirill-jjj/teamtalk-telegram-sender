@@ -1,7 +1,6 @@
 """Alembic environment configuration script."""
 
 from logging.config import fileConfig
-import tomllib  # Python 3.11+ - Moved here for PLC0415
 
 from alembic import context
 from sqlalchemy import pool
@@ -14,12 +13,14 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
+import os  # For path operations
+
 from sqlmodel import SQLModel  # noqa: E402
+
+from bot.config import Settings  # Import the Settings model
 
 # Import models here for Alembic 'autogenerate' support
 from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401, E402
-from bot.config import Settings # Import the Settings model
-import os # For path operations
 
 target_metadata = SQLModel.metadata
 

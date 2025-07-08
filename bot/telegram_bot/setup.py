@@ -1,19 +1,22 @@
 """Sets up the Aiogram Dispatcher with middlewares, routers, and lifecycle handlers."""
 
+import asyncio
+from functools import partial
 from typing import TYPE_CHECKING
 
-from aiogram import Dispatcher
-
-if TYPE_CHECKING:
-    from sender import Application  # For app_callbacks type hint
-
-    from bot.services_container import Services
-
-# Aiogram компоненты
+from aiogram import Dispatcher, html
+from aiogram.types import ErrorEvent
+from aiogram.types import Message as AiogramMessage
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
+from bot.config import Settings  # Added
+from bot.core.languages import DEFAULT_LANGUAGE_CODE  # Added
+from bot.database import crud  # Added
+from bot.telegram_bot.commands import set_telegram_commands  # Added
 from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import subscriber_actions_router
+from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
+    subscriber_actions_router,
+)
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 
@@ -30,69 +33,200 @@ from bot.telegram_bot.middlewares import (
     UserSettingsMiddleware,
 )
 
+if TYPE_CHECKING:
+    from bot.services_container import Services
+
+
+# --- Application Lifecycle and Error Handling Functions ---
+async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_config: "Settings"):
+    """Internal logic for startup."""
+    logger = services.logger
+    logger.info("Application startup: Initializing TeamTalk components...")
+
+    teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
+    if teamtalk_task is None or teamtalk_task.done():
+        await services.tt_bot._async_setup_hook()  # Pytalk's internal setup
+        teamtalk_task = asyncio.create_task(services.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
+        dispatcher.workflow_data["teamtalk_task"] = teamtalk_task
+        logger.info("Pytalk main event loop task started.")
+    else:
+        logger.info("Pytalk main event loop task already running.")
+
+    async with services.session_factory() as session:
+        db_admin_ids = await crud.get_all_admins_ids(session)
+        services.admin_ids_cache.update(db_admin_ids)
+
+        db_subscriber_ids = await crud.get_all_subscribers_ids(session)
+        services.subscribed_users_cache.update(db_subscriber_ids)
+    logger.info("Admin IDs cache populated from DB with %s IDs.", len(services.admin_ids_cache))
+    logger.debug("Admin IDs cache populated from DB: %s", services.admin_ids_cache)
+    logger.info("Subscribed users cache populated with %s IDs.", len(services.subscribed_users_cache))
+
+    await services.load_user_settings_to_app_cache()
+
+    tg_admin_chat_id = app_config.telegram.admin_chat_id
+    if tg_admin_chat_id:
+        if tg_admin_chat_id not in services.admin_ids_cache:
+            async with services.session_factory() as session:
+                await crud.add_admin(session, tg_admin_chat_id)
+                services.admin_ids_cache.add(tg_admin_chat_id)
+            logger.debug("Main admin ID %s from config has been added to DB and cache.", tg_admin_chat_id)
+        else:
+            logger.debug("Main admin ID %s from config was already in admin cache.", tg_admin_chat_id)
+    else:
+        logger.info("telegram.admin_chat_id is 0 or not configured in a way to be added as main admin.")
+
+    logger.info("Final admin_ids_cache count after startup: %s.", len(services.admin_ids_cache))
+    logger.debug("Final admin_ids_cache state after startup: %s", services.admin_ids_cache)
+
+    await set_telegram_commands(services=services)
+    logger.info("Telegram bot commands set.")
+
+
+async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services"):
+    """Handles application shutdown logic."""
+    logger = services.logger
+    logger.warning("Application shutting down...")
+
+    teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
+    if teamtalk_task and not teamtalk_task.done():
+        logger.info("Cancelling Pytalk main event loop task...")
+        teamtalk_task.cancel()
+        try:
+            await teamtalk_task
+        except asyncio.CancelledError:
+            logger.info("Pytalk main event loop task cancelled successfully.")
+        except Exception as e:
+            logger.exception("Error awaiting cancelled Pytalk task: %s", e)
+    elif teamtalk_task:
+        logger.info("Pytalk main event loop task was already done.")
+    else:
+        logger.info("No Pytalk main event loop task found to cancel.")
+
+    logger.info("Disconnecting TeamTalk instances...")
+    for conn_key, connection in services.connections.items():
+        logger.info("Shutting down connection for %s...", conn_key)
+        await connection.disconnect_instance()
+    logger.info("All TeamTalk connections processed for shutdown.")
+
+    if hasattr(services.bot_event, "session") and services.bot_event.session:
+        await services.bot_event.session.close()
+    if (
+        services.bot_message
+        and hasattr(services.bot_message, "session")
+        and services.bot_message.session
+        and services.bot_message is not services.bot_event
+    ):
+        await services.bot_message.session.close()
+    logger.info("Telegram bot sessions closed.")
+    logger.info("Application shutdown sequence complete.")
+
+
+async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, services: "Services", app_config: "Settings"):
+    """Global error handler for uncaught exceptions in Aiogram handlers."""
+    logger = services.logger
+    escaped_exception_text = html.quote(str(event.exception))
+    logger.critical("Unhandled exception in Aiogram handler: %s", event.exception, exc_info=True)
+
+    admin_chat_id_for_error = app_config.telegram.admin_chat_id
+    admin_lang_code = app_config.general.default_lang
+
+    if admin_chat_id_for_error:
+        admin_user_settings = services.user_settings_cache.get(admin_chat_id_for_error)
+        if admin_user_settings and admin_user_settings.language_code:
+            admin_lang_code = admin_user_settings.language_code
+
+        try:
+            admin_critical_translator = services.get_translator(admin_lang_code)
+            error_text = admin_critical_translator.gettext(
+                "<b>Critical error!</b>\n<b>Error type:</b> {error_type}\n<b>Message:</b> {error_message}"
+            ).format(error_type=type(event.exception).__name__, error_message=escaped_exception_text)
+            await services.bot_event.send_message(admin_chat_id_for_error, error_text)
+        except Exception as e:
+            logger.exception(
+                "Error sending critical error message to admin chat %s: %s",
+                admin_chat_id_for_error,
+                e,
+            )
+
+    update = event.update
+    user_id = None
+    if update.message and update.message.from_user:
+        user_id = update.message.from_user.id
+    elif update.callback_query and update.callback_query.from_user:
+        user_id = update.callback_query.from_user.id
+
+    lang_code = DEFAULT_LANGUAGE_CODE
+    if user_id:
+        user_settings = services.user_settings_cache.get(user_id)
+        if user_settings and user_settings.language_code:
+            lang_code = user_settings.language_code
+
+    translator = services.get_translator(lang_code)
+    _ = translator.gettext
+    user_message_text = _("An unexpected error occurred. The administrator has been notified. Please try again later.")
+
+    if not (user_id and admin_chat_id_for_error and user_id == admin_chat_id_for_error):
+        try:
+            if update.message:
+                await update.message.answer(user_message_text)
+            elif update.callback_query and isinstance(update.callback_query.message, AiogramMessage):
+                await update.callback_query.message.answer(user_message_text)
+            elif user_id:
+                await services.bot_event.send_message(chat_id=user_id, text=user_message_text)
+        except Exception as e:
+            logger.exception("Error sending error message to user %s: %s", user_id if user_id else "Unknown", e)
+
 
 def create_telegram_dispatcher() -> Dispatcher:
     """Creates an Aiogram Dispatcher instance."""
     return Dispatcher()
 
 
-def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callbacks: "Application"):
+def setup_telegram_dispatcher(dp: Dispatcher, services: "Services"):
     """Configures the Aiogram Dispatcher with middlewares, routers, and lifecycle handlers.
 
     Dependencies are injected via dp.workflow_data.
     """
-    services.logger.info("Setting up Telegram dispatcher...")  # Use logger from services
+    services.logger.info("Setting up Telegram dispatcher...")
 
-    # Populate workflow_data for DI
     dp["services"] = services
     dp["config"] = services.config
-    dp["session_factory"] = services.session_factory  # For DbSessionMiddleware
-    # Individual caches/components for direct injection if preferred by handlers later
+    dp["session_factory"] = services.session_factory
     dp["admin_ids_cache"] = services.admin_ids_cache
     dp["user_settings_cache"] = services.user_settings_cache
     dp["subscribed_users_cache"] = services.subscribed_users_cache
     dp["connections"] = services.connections
     dp["bot_event"] = services.bot_event
     dp["bot_message"] = services.bot_message
-    dp["translator_cache"] = services.translator_cache  # Though get_translator is preferred
+    dp["translator_cache"] = services.translator_cache
     dp["available_languages"] = services.available_languages
 
-    # Register Middlewares
     dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
-
-    # These middlewares will be refactored later to pull dependencies from data dict
     dp.message.middleware(SubscriptionCheckMiddleware())
     dp.callback_query.middleware(SubscriptionCheckMiddleware())
-
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
-
-    # NEW: Register the I18n middleware AFTER UserSettingsMiddleware
     dp.message.middleware(I18nMiddleware())
     dp.callback_query.middleware(I18nMiddleware())
-
-    # ActiveTeamTalkConnectionMiddleware is registered globally here.
-    # Handlers that need it will have it injected.
-    # It will be refactored to use data['services'].
     dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
     dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    # Admin check middleware for specific routers
     admin_router.message.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 
-    # Include routers
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
     dp.include_router(subscriber_actions_router)
     dp.include_router(catch_all_router)
 
-    # Register lifecycle hooks and error handler from Application instance
-    dp.startup.register(app_callbacks._on_startup_logic)
-    dp.shutdown.register(app_callbacks._on_shutdown_logic)
-    dp.errors.register(app_callbacks._global_error_handler)
+    # Register lifecycle hooks and error handler using new local functions
+    # services.config is passed as app_config
+    app_config = services.config
+    dp.startup.register(partial(on_startup_logic, services=services, app_config=app_config))
+    dp.shutdown.register(partial(on_shutdown_logic, services=services))
+    dp.errors.register(partial(global_error_handler, services=services, app_config=app_config))
 
     services.logger.info("Telegram dispatcher configured.")
