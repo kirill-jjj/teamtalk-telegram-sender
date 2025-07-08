@@ -3,7 +3,6 @@
 from collections.abc import Callable
 import gettext
 import logging
-import math
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router, html
@@ -50,7 +49,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 def _paginate_list_util(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
     total_items = len(full_list)
-    total_pages = int(math.ceil(total_items / page_size)) if total_items > 0 else 1
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
     page = max(0, min(page, total_pages - 1))
     start_index = page * page_size
     end_index = start_index + page_size
