@@ -1,5 +1,6 @@
 """General utility functions for the bot's core logic."""
 
+import gettext
 import logging
 from typing import Any  # Added Any
 
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable, app_cfg: Any) -> str:  # Added app_cfg
+def get_effective_server_name(
+    tt_instance: TeamTalkInstance | None, translator: gettext.GNUTranslations, app_cfg: Any
+) -> str:  # Added app_cfg
     """Determines the effective server name to display.
 
     It prioritizes the server name from `app_cfg.SERVER_NAME`.
@@ -21,12 +24,13 @@ def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable,
 
     Args:
         tt_instance: The TeamTalk instance, or None.
-        _: A gettext-like callable for localization (though not used for server name itself).
+        translator: The gettext translator object.
         app_cfg: The application configuration object.
 
     Returns:
         The server name string.
     """
+    _ = translator.gettext
     server_name = app_cfg.teamtalk.server_name  # Use passed app_cfg
     if not server_name:
         if tt_instance and tt_instance.connected:
@@ -53,26 +57,24 @@ def get_effective_server_name(tt_instance: TeamTalkInstance | None, _: callable,
     return server_name if server_name else _("Unknown Server")  # Ensure non-empty return
 
 
-def get_tt_user_display_name(
-    user: TeamTalkUser, translator_gettext_func: callable
-) -> str:  # Changed translator to translator_gettext_func
+def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations) -> str:
     """Gets a display-friendly name for a TeamTalk user.
 
     Prioritizes nickname, then username. Falls back to a localized "unknown user".
 
     Args:
         user: The TeamTalkUser object.
-        translator_gettext_func: A gettext-like callable for localization.
+        translator: The gettext translator object.
 
     Returns:
         The display name string.
     """
-    # This function seems fine, uses passed translator.
+    _ = translator.gettext
     display_name = ttstr(user.nickname)
     if not display_name:
         display_name = ttstr(user.username)
     if not display_name:  # Ensure display_name is not empty after trying nickname and username
-        display_name = translator_gettext_func("unknown user")  # Use the passed gettext func
+        display_name = _("unknown user")
     return display_name
 
 
@@ -98,11 +100,13 @@ def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> 
     return str(username) if username is not None else ""
 
 
-def build_help_message(_: callable, platform: str, is_telegram_admin: bool, is_teamtalk_admin: bool) -> str:
+def build_help_message(
+    translator: gettext.GNUTranslations, platform: str, is_telegram_admin: bool, is_teamtalk_admin: bool
+) -> str:
     """Builds a help message tailored to the platform and user's admin status.
 
     Args:
-        _: A gettext-like callable for localization.
+        translator: The gettext translator object.
         platform: The platform for which to generate help ("telegram" or "teamtalk").
         is_telegram_admin: Whether the user is a Telegram admin.
         is_teamtalk_admin: Whether the user is a TeamTalk admin.
@@ -110,7 +114,7 @@ def build_help_message(_: callable, platform: str, is_telegram_admin: bool, is_t
     Returns:
         The formatted help message string.
     """
-    # This function is fine as is, relies on passed parameters.
+    _ = translator.gettext
     parts = []
     if platform == "telegram":
         parts.append(_("<b>Available Commands:</b>"))

@@ -1,6 +1,7 @@
 """Handles deeplink processing for Telegram bot commands like /start <token>."""
 
 from collections.abc import Callable, Coroutine
+import gettext
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -29,12 +30,13 @@ logger = logging.getLogger(__name__)
 
 
 async def _validate_deeplink_token(
-    session: AsyncSession, token: str, message_from_user_id: int, message: Message, _: callable
+    session: AsyncSession, token: str, message_from_user_id: int, message: Message, translator: gettext.GNUTranslations
 ) -> DeeplinkModel | None:
     """Validates the deeplink token and checks if it's intended for the current user.
 
     Sends a reply and returns None if validation fails.
     """
+    _ = translator.gettext
     deeplink_obj = await db_get_deeplink(session, token)
     if not deeplink_obj:
         await message.reply(_("Invalid or expired deeplink."))
@@ -50,13 +52,14 @@ async def _validate_deeplink_token(
 async def _execute_deeplink_action(
     session: AsyncSession,
     telegram_id: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
     token: str,
     services: "Services",  # Changed from app: "Application"
 ) -> str:
     """Executes the action specified by the deeplink object and returns a reply text."""
+    _ = translator.gettext
     action_enum_member = deeplink_obj.action
 
     if not isinstance(action_enum_member, DeeplinkAction):
@@ -70,9 +73,11 @@ async def _execute_deeplink_action(
 
     try:
         if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
-            return await handler_func(session, telegram_id, _, services=services)
+            return await handler_func(session, telegram_id, translator, services=services)
         else:
-            return await handler_func(session, telegram_id, _, deeplink_obj.payload, user_settings, services=services)
+            return await handler_func(
+                session, telegram_id, translator, deeplink_obj.payload, user_settings, services=services
+            )
 
     except (SQLAlchemyError, ValueError) as e_handler:
         logger.exception(
@@ -87,9 +92,10 @@ async def _execute_deeplink_action(
 async def _handle_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",  # Changed from app: "Application"
 ) -> str:
+    _ = translator.gettext
     # Pass services to delete_full_user_profile
     if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, services=services):
         logger.info("User %s unsubscribed and all data was deleted via deeplink (using user_service).", telegram_id)
@@ -105,11 +111,12 @@ async def _handle_unsubscribe_deeplink(
 async def _handle_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
     payload: str | None,
     user_settings: UserSettings,
     services: "Services",  # Changed from app: "Application"
 ) -> str:
+    _ = translator.gettext
     # Ban check remains the same as it uses session (crud)
     if await crud.is_telegram_id_banned(session, telegram_id):
         logger.warning("Subscription attempt by banned Telegram ID: %s", telegram_id)
@@ -166,7 +173,7 @@ DeeplinkHandlerType = Callable[
 ]
 
 UnsubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, callable, "Services"],  # Added Services
+    [AsyncSession, int, gettext.GNUTranslations, "Services"],  # Added Services
     Coroutine[Any, Any, str],
 ]
 
@@ -180,7 +187,7 @@ async def handle_deeplink_payload(
     message: Message,
     token: str,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     services: "Services",  # Changed from app: "Application"
 ):
@@ -192,10 +199,11 @@ async def handle_deeplink_payload(
         message: The Aiogram Message object.
         token: The deeplink token from the command arguments.
         session: The active AsyncSession.
-        _: A gettext-like callable for localization.
+        translator: The gettext translator object.
         user_settings: The UserSettings object for the user.
         services: The application's services container.
     """
+    _ = translator.gettext
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
         await message.reply(_("An error occurred. Please try again later."))
@@ -204,7 +212,7 @@ async def handle_deeplink_payload(
     message_from_user_id = message.from_user.id
 
     deeplink_obj: DeeplinkModel | None = await _validate_deeplink_token(
-        session, token, message_from_user_id, message, _
+        session, token, message_from_user_id, message, translator
     )
     if not deeplink_obj:
         return
@@ -212,7 +220,7 @@ async def handle_deeplink_payload(
     reply_text = await _execute_deeplink_action(
         session,
         message_from_user_id,
-        _,
+        translator,
         deeplink_obj,
         user_settings,
         token,

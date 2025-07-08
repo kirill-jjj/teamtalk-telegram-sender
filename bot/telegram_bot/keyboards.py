@@ -4,11 +4,13 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
-from collections.abc import Callable
+import gettext
 import html
-from typing import Any
+from typing import TYPE_CHECKING, Any  # Added TYPE_CHECKING
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+# Removed unused import: from collections.abc import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk  # For UserAccount type hint
 
@@ -45,6 +47,9 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.telegram_bot.models import SubscriberInfo
 
+if TYPE_CHECKING:
+    from collections.abc import Callable  # Moved here
+
 ttstr = pytalk.instance.sdk.ttstr
 
 
@@ -80,8 +85,9 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
 # --- Settings Keyboards ---
 
 
-async def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
+async def create_main_settings_keyboard(translator: gettext.GNUTranslations) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     builder.button(text=_("Language"), callback_data=SettingsCallback(action=SettingsNavAction.LANGUAGE).pack())
     builder.button(
@@ -94,8 +100,11 @@ async def create_main_settings_keyboard(_: callable) -> InlineKeyboardBuilder:
     return builder
 
 
-async def create_language_selection_keyboard(_: callable, available_languages: list) -> InlineKeyboardBuilder:
+async def create_language_selection_keyboard(
+    translator: gettext.GNUTranslations, available_languages: list
+) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     if not available_languages:
         builder.button(text="No languages available", callback_data="noop")
@@ -114,9 +123,10 @@ async def create_language_selection_keyboard(_: callable, available_languages: l
 
 
 async def create_subscription_settings_keyboard(
-    _: callable, current_setting: NotificationSetting
+    translator: gettext.GNUTranslations, current_setting: NotificationSetting
 ) -> InlineKeyboardBuilder:
     """Creates the subscription settings keyboard."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     settings_map_source = {
@@ -141,8 +151,11 @@ async def create_subscription_settings_keyboard(
     return builder
 
 
-async def create_notification_settings_keyboard(_: callable, user_settings: UserSettings) -> InlineKeyboardBuilder:
+async def create_notification_settings_keyboard(
+    translator: gettext.GNUTranslations, user_settings: UserSettings
+) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     is_noon_enabled = user_settings.not_on_online_enabled
@@ -163,8 +176,11 @@ async def create_notification_settings_keyboard(_: callable, user_settings: User
     return builder
 
 
-async def create_manage_muted_users_keyboard(_: callable, user_settings: UserSettings) -> InlineKeyboardBuilder:
+async def create_manage_muted_users_keyboard(
+    translator: gettext.GNUTranslations, user_settings: UserSettings
+) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     active_marker = "✅"
     inactive_marker = "⚪️"
@@ -202,13 +218,14 @@ async def create_manage_muted_users_keyboard(_: callable, user_settings: UserSet
 
 async def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
-    _: callable,
+    translator: gettext.GNUTranslations,
     current_page: int,
     total_pages: int,
     list_type: UserListAction,
-    callback_factory: Callable,
+    callback_factory: "Callable",
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
+    _ = translator.gettext
     pagination_buttons = []
     if current_page > 0:
         pagination_buttons.append(
@@ -227,7 +244,7 @@ async def _add_pagination_controls(
 
 
 async def create_paginated_user_list_keyboard(
-    _: callable,
+    translator: gettext.GNUTranslations,
     page_items: list[str],
     current_page: int,
     total_pages: int,
@@ -235,6 +252,7 @@ async def create_paginated_user_list_keyboard(
     user_settings: UserSettings,
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of internal (muted/allowed) users."""
+    _ = translator.gettext
 
     def username_extractor(item: str) -> str:
         return item
@@ -243,7 +261,7 @@ async def create_paginated_user_list_keyboard(
         return item
 
     return await _create_generic_user_toggle_list_keyboard(
-        _=_,
+        translator=translator,
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
@@ -257,9 +275,14 @@ async def create_paginated_user_list_keyboard(
 
 
 async def create_account_list_keyboard(
-    _: callable, page_items: list[pytalk.UserAccount], current_page: int, total_pages: int, user_settings: UserSettings
+    translator: gettext.GNUTranslations,
+    page_items: list[pytalk.UserAccount],
+    current_page: int,
+    total_pages: int,
+    user_settings: UserSettings,
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for a paginated list of all server user accounts."""
+    _ = translator.gettext
 
     def username_extractor(item: pytalk.UserAccount) -> str:
         return ttstr(item.username)
@@ -268,7 +291,7 @@ async def create_account_list_keyboard(
         return ttstr(item.username)
 
     return await _create_generic_user_toggle_list_keyboard(
-        _=_,
+        translator=translator,
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
@@ -286,14 +309,15 @@ async def create_account_list_keyboard(
 
 def _add_pagination_controls_generic(
     builder: InlineKeyboardBuilder,
-    _: Callable[[str], str],
+    translator: gettext.GNUTranslations,
     current_page: int,
     total_pages: int,
-    pagination_callback_factory: Callable[..., Any],
+    pagination_callback_factory: "Callable[..., Any]",
     # To pass additional fixed args to the pagination_callback_factory
     **factory_kwargs,
 ) -> None:
     """Adds generic pagination controls (Previous/Next) to the keyboard builder."""
+    _ = translator.gettext
     pagination_buttons = []
     if current_page > 0:
         pagination_buttons.append(
@@ -314,12 +338,12 @@ def _add_pagination_controls_generic(
 
 
 async def _create_generic_paginated_list_keyboard(
-    _: Callable[[str], str],
+    translator: gettext.GNUTranslations,
     page_items: list[Any],
     current_page: int,
     total_pages: int,
-    item_button_former: Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | list[InlineKeyboardButton]],
-    pagination_callback_factory: Callable[..., Any],
+    item_button_former: "Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | list[InlineKeyboardButton]]",
+    pagination_callback_factory: "Callable[..., Any]",
     pagination_factory_kwargs: dict | None = None,  # For additional fixed args to pagination_callback_factory
     additional_buttons_top: list[list[InlineKeyboardButton]] | None = None,
     additional_buttons_bottom: list[list[InlineKeyboardButton]] | None = None,
@@ -328,6 +352,7 @@ async def _create_generic_paginated_list_keyboard(
 
     item_button_former should be a synchronous function.
     """
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     if additional_buttons_top:
@@ -335,7 +360,7 @@ async def _create_generic_paginated_list_keyboard(
             builder.row(*row_buttons)
 
     for item in page_items:
-        button_or_buttons = item_button_former(item, current_page, _)
+        button_or_buttons = item_button_former(item, current_page, _)  # Pass _ directly
 
         if isinstance(button_or_buttons, list):
             builder.row(*button_or_buttons)
@@ -345,7 +370,7 @@ async def _create_generic_paginated_list_keyboard(
     if total_pages > 1:
         factory_kwargs_to_pass = pagination_factory_kwargs if pagination_factory_kwargs is not None else {}
         _add_pagination_controls_generic(
-            builder, _, current_page, total_pages, pagination_callback_factory, **factory_kwargs_to_pass
+            builder, translator, current_page, total_pages, pagination_callback_factory, **factory_kwargs_to_pass
         )
 
     if additional_buttons_bottom:
@@ -359,12 +384,16 @@ async def _create_generic_paginated_list_keyboard(
 
 
 async def create_subscriber_list_keyboard(
-    _: Callable[[str], str], page_subscribers_info: list[SubscriberInfo], current_page: int, total_pages: int
+    translator: gettext.GNUTranslations,
+    page_subscribers_info: list[SubscriberInfo],
+    current_page: int,
+    total_pages: int,
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for managing the subscriber list using the generic helper."""
+    _ = translator.gettext
 
     def subscriber_button_former(
-        subscriber: SubscriberInfo, page_num: int, translate: Callable[[str], str]
+        subscriber: SubscriberInfo, page_num: int, translate: "Callable[[str], str]"
     ) -> InlineKeyboardButton:
         user_info_parts = [subscriber.display_name]
         if subscriber.teamtalk_username:
@@ -380,7 +409,7 @@ async def create_subscriber_list_keyboard(
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
     return await _create_generic_paginated_list_keyboard(
-        _=_,
+        translator=translator,
         page_items=page_subscribers_info,
         current_page=current_page,
         total_pages=total_pages,
@@ -391,15 +420,16 @@ async def create_subscriber_list_keyboard(
 
 
 async def create_user_selection_keyboard(
-    _: callable, users_to_display: list[pytalk.user.User], command_type: AdminAction
+    translator: gettext.GNUTranslations, users_to_display: list[pytalk.user.User], command_type: AdminAction
 ) -> InlineKeyboardBuilder:
     """Creates a keyboard with buttons for each user in the provided list."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     for user_obj in users_to_display:
         if not user_obj:
             continue
-        user_nickname = get_tt_user_display_name(user_obj, _)
+        user_nickname = get_tt_user_display_name(user_obj, translator)
         if not hasattr(user_obj, "id"):
             continue
         user_id = user_obj.id
@@ -409,8 +439,9 @@ async def create_user_selection_keyboard(
     return builder
 
 
-async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboardBuilder:
+async def create_main_menu_keyboard(translator: gettext.GNUTranslations, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack()
@@ -426,9 +457,10 @@ async def create_main_menu_keyboard(_: callable, is_admin: bool) -> InlineKeyboa
 
 
 async def create_subscriber_action_menu_keyboard(
-    _: callable, target_telegram_id: int, page: int
+    translator: gettext.GNUTranslations, target_telegram_id: int, page: int
 ) -> InlineKeyboardMarkup:
     """Creates the action menu for a specific subscriber."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("🗑️ Delete Subscriber"),
@@ -458,14 +490,14 @@ async def create_subscriber_action_menu_keyboard(
 
 # --- Generic Helper for Paginated User Lists with Toggle ---
 async def _create_generic_user_toggle_list_keyboard(
-    _: Callable[[str], str],
+    translator: gettext.GNUTranslations,
     page_items: list[Any],
     current_page: int,
     total_pages: int,
     user_settings: UserSettings,
     list_type_for_callback: UserListAction,
-    item_username_extractor: Callable[[Any], str],
-    item_display_name_extractor: Callable[[Any], str],
+    item_username_extractor: "Callable[[Any], str]",
+    item_display_name_extractor: "Callable[[Any], str]",
     back_button_callback_data: str,
     back_button_text_key: str,
 ) -> InlineKeyboardMarkup:
@@ -473,6 +505,7 @@ async def _create_generic_user_toggle_list_keyboard(
 
     Includes mute/unmute toggle buttons.
     """
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
     muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
 
@@ -501,16 +534,23 @@ async def _create_generic_user_toggle_list_keyboard(
     if page_items:
         builder.adjust(1)
 
-    await _add_pagination_controls(builder, _, current_page, total_pages, list_type_for_callback, PaginateUsersCallback)
+    await _add_pagination_controls(
+        builder, translator, current_page, total_pages, list_type_for_callback, PaginateUsersCallback
+    )
 
     builder.row(InlineKeyboardButton(text=_(back_button_text_key), callback_data=back_button_callback_data))
     return builder.as_markup()
 
 
 async def create_manage_tt_account_keyboard(
-    _: callable, target_telegram_id: int, current_tt_username: str | None, page: int, list_action_page: int = 0
+    translator: gettext.GNUTranslations,
+    target_telegram_id: int,
+    current_tt_username: str | None,
+    page: int,
+    list_action_page: int = 0,
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for managing a subscriber's TeamTalk account link."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     if current_tt_username:
@@ -536,7 +576,7 @@ async def create_manage_tt_account_keyboard(
 
 
 async def create_linkable_tt_account_list_keyboard(
-    _: Callable[[str], str],  # Ensure _ type hint matches generic helper
+    translator: gettext.GNUTranslations,  # Ensure _ type hint matches generic helper
     page_items: list[pytalk.UserAccount],
     current_page_idx: int,
     total_pages: int,
@@ -544,12 +584,13 @@ async def create_linkable_tt_account_list_keyboard(
     subscriber_list_page: int,
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for selecting a TeamTalk account to link to a subscriber, using generic helper."""
+    _ = translator.gettext
 
     # Define the item_button_former for linkable TeamTalk accounts
     def tt_account_button_former(
         account_obj: pytalk.UserAccount,
         page_num: int,  # current_page_idx from the generic helper call
-        translate: Callable[[str], str],  # _ function
+        translate: "Callable[[str], str]",  # _ function
     ) -> InlineKeyboardButton:
         username_str = ttstr(account_obj.username)
         button_text = username_str
@@ -616,7 +657,7 @@ async def create_linkable_tt_account_list_keyboard(
     }
 
     return await _create_generic_paginated_list_keyboard(
-        _=_,
+        translator=translator,
         page_items=page_items,
         current_page=current_page_idx,  # This is the current page of TT accounts
         total_pages=total_pages,  # Total pages of TT accounts

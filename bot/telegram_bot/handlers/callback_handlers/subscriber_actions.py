@@ -1,5 +1,6 @@
 """Callback query handlers for actions related to specific subscribers."""
 
+import gettext # Added gettext
 import logging
 
 # For type hinting app instance
@@ -46,8 +47,9 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddl
 
 
 async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery, session: AsyncSession, bot: AiogramBot, return_page: int, _: callable
+    query: CallbackQuery, session: AsyncSession, bot: AiogramBot, return_page: int, translator: gettext.GNUTranslations
 ):
+    _ = translator.gettext
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -58,7 +60,7 @@ async def _refresh_and_display_subscriber_list(
         await query.message.edit_text(_("No subscribers found."))
     else:
         new_keyboard = await create_subscriber_list_keyboard(
-            _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
+            translator, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
         )
         await query.message.edit_text(
             _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
@@ -73,17 +75,18 @@ async def handle_view_subscriber(
     query: CallbackQuery,
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles viewing details and actions for a specific subscriber."""
+    _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied, but good practice.
         logger.warning("handle_view_subscriber called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     keyboard = await create_subscriber_action_menu_keyboard(
-        _, target_telegram_id=callback_data.telegram_id, page=callback_data.page
+        translator, target_telegram_id=callback_data.telegram_id, page=callback_data.page
     )
     user_to_view = await session.get(UserSettings, callback_data.telegram_id)
     display_name = str(callback_data.telegram_id)
@@ -120,10 +123,11 @@ async def _handle_delete_subscriber_action(
     bot: AiogramBot,
     target_telegram_id: int,
     return_page: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles the deletion of a subscriber."""
+    _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
         logger.warning("_handle_delete_subscriber_action called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -135,7 +139,7 @@ async def _handle_delete_subscriber_action(
             _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
             show_alert=True,
         )
-        await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
+        await _refresh_and_display_subscriber_list(query, session, bot, return_page, translator)
     else:
         await query.answer(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
@@ -150,10 +154,11 @@ async def handle_subscriber_action(
     session: AsyncSession,
     bot: AiogramBot,
     tt_connection: TeamTalkConnection | None,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles actions performed on a subscriber (delete, ban, manage TT account)."""
+    _ = translator.gettext
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -163,13 +168,15 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        await _handle_delete_subscriber_action(query, session, bot, target_telegram_id, return_page, _, services)
+        await _handle_delete_subscriber_action(
+            query, session, bot, target_telegram_id, return_page, translator, services
+        )
     elif action == SubscriberAction.BAN:
         await _handle_ban_subscriber_action(
-            query, session, bot, tt_connection, target_telegram_id, return_page, _, services
+            query, session, bot, tt_connection, target_telegram_id, return_page, translator, services
         )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
-        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, _)
+        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator)
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
@@ -182,10 +189,11 @@ async def _handle_ban_subscriber_action(
     tt_connection: TeamTalkConnection | None,
     target_telegram_id: int,
     return_page: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles banning a subscriber (TG and linked TT account)."""
+    _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
         logger.warning("_handle_ban_subscriber_action called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -247,7 +255,7 @@ async def _handle_ban_subscriber_action(
         alert_message = _("User already banned or error occurred.")
 
     await query.answer(alert_message, show_alert=True)
-    await _refresh_and_display_subscriber_list(query, session, bot, return_page, _)
+    await _refresh_and_display_subscriber_list(query, session, bot, return_page, translator)
 
 
 async def _handle_manage_tt_account_action(
@@ -255,9 +263,10 @@ async def _handle_manage_tt_account_action(
     session: AsyncSession,
     target_telegram_id: int,
     return_page: int,
-    _: callable,
+    translator: gettext.GNUTranslations,
 ):
     """Handles showing the menu to manage a subscriber's linked TT account."""
+    _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
         logger.warning("_handle_manage_tt_account_action called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -266,7 +275,7 @@ async def _handle_manage_tt_account_action(
     user_settings = await session.get(UserSettings, target_telegram_id)
     current_tt_username = user_settings.teamtalk_username if user_settings else None
     keyboard = await create_manage_tt_account_keyboard(
-        _, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
+        translator, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
     )
     await query.message.edit_text(
         _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
@@ -281,10 +290,11 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
     callback_data: ManageTTAccountCallback,
     session: AsyncSession,
     tt_connection: TeamTalkConnection | None,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles managing a subscriber's linked TeamTalk account (unlink, link new)."""
+    _ = translator.gettext
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -313,7 +323,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
             await query.answer(_("No TeamTalk account was linked."), show_alert=True)
 
         keyboard = await create_manage_tt_account_keyboard(
-            _, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page
+            translator, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page
         )
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
@@ -341,7 +351,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
             return
 
         link_keyboard = await create_linkable_tt_account_list_keyboard(
-            _,
+            translator,
             page_items=server_accounts,
             current_page_idx=0,
             total_pages=1,
@@ -367,10 +377,11 @@ async def handle_link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles linking a chosen TeamTalk account to a subscriber."""
+    _ = translator.gettext
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
@@ -388,7 +399,7 @@ async def handle_link_tt_account_chosen(
         )
         user_s = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_s.teamtalk_username if user_s else None
-        kb = await create_manage_tt_account_keyboard(_, target_telegram_id, current_tt_username, return_page)
+        kb = await create_manage_tt_account_keyboard(translator, target_telegram_id, current_tt_username, return_page)
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
             reply_markup=kb,
@@ -415,7 +426,7 @@ async def handle_link_tt_account_chosen(
     await query.answer(alert_text, show_alert=True)
 
     keyboard = await create_manage_tt_account_keyboard(
-        _, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page
+        translator, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page
     )
     await query.message.edit_text(
         _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import gettext  # Added gettext
 import html
 import logging
 from typing import TYPE_CHECKING
@@ -144,7 +145,8 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     services: Services,  # Changed from app: "Application"
-    server_host_for_display: str,
+    server_host_for_display: str,  # Keep this for now, might be used if server name from instance fails
+    translator: gettext.GNUTranslations,  # Added translator
 ):
     """Forwards a private TeamTalk message to the configured Telegram admin.
 
@@ -152,39 +154,39 @@ async def forward_tt_message_to_telegram_admin(
         message: The TeamTalkMessage object.
         services: The application's services container.
         server_host_for_display: The display name of the TeamTalk server.
+        translator: The gettext translator object.
     """
+    _ = translator.gettext  # Added
     # Use services.config for settings and services.bot_message for the bot instance
     if not services.config.telegram.admin_chat_id or not services.bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
     admin_chat_id = services.config.telegram.admin_chat_id
-    admin_settings = services.user_settings_cache.get(admin_chat_id)
-    if admin_settings and admin_settings.language_code:
-        admin_language_code = admin_settings.language_code
-    else:
-        admin_language_code = services.config.general.default_lang  # Also update DEFAULT_LANG access here
+    # The translator passed to this function should already be for the admin's language.
+    # If not, the calling context (likely TeamTalkEventHandler) needs to be updated
+    # to pass the correct admin-specific translator.
+    # For now, we assume the passed `translator` is the one to use.
 
-    translator = services.get_translator(admin_language_code)
-    _ = translator.gettext
-
-    server_name_to_display = get_effective_server_name(message.teamtalk_instance, _, services.config)
-    sender_display = get_tt_user_display_name(message.user, _)
+    server_name_to_display = get_effective_server_name(message.teamtalk_instance, translator, services.config)
+    sender_display = get_tt_user_display_name(message.user, translator)
     message_content = message.content
 
     template_text_parts = _(
         "Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}"
     ).format(
-        server_name=html.escape(server_name_to_display),
+        server_name=html.escape(
+            server_name_to_display
+        ),  # server_host_for_display might be better if different from instance name
         sender_name=html.escape(sender_display),
         message_content=html.escape(message_content),
     )
 
     was_sent: bool = await send_telegram_message_individual(
-        bot_instance=services.bot_message,  # Corrected: Use services.bot_message
+        bot_instance=services.bot_message,
         chat_id=admin_chat_id,
-        language=admin_language_code,
-        services=services,  # Corrected: Pass services
+        language=translator.info().get("language", services.config.general.default_lang),  # Get lang from translator
+        services=services,
         text=template_text_parts,
     )
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gettext
 import logging
 from typing import TYPE_CHECKING
 
@@ -34,13 +35,19 @@ subscription_router = Router(name="callback_handlers.subscription")
 
 @subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
 async def cq_show_subscriptions_menu(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: SettingsCallback
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    user_settings: UserSettings,
+    callback_data: SettingsCallback,
 ):
     """Shows the subscription settings menu to the user."""
+    _ = translator.gettext
     await callback_query.answer()
 
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_builder = await create_subscription_settings_keyboard(_, current_notification_setting)
+    subscription_settings_builder = await create_subscription_settings_keyboard(
+        translator, current_notification_setting
+    )
 
     await safe_edit_text(
         message_to_edit=callback_query.message,
@@ -55,12 +62,13 @@ async def cq_show_subscriptions_menu(
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
     services: Services,
 ):
     """Sets the user's subscription notification preference."""
+    _ = translator.gettext
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
@@ -99,14 +107,14 @@ async def cq_set_subscription_setting(
     # Prepare text and markup for UI refresh.
     # new_setting_enum (which is user_settings.notification_settings after update_logic)
     # reflects the new state for UI generation. This happens before process_setting_update commits.
-    updated_builder = await create_subscription_settings_keyboard(_, new_setting_enum)
+    updated_builder = await create_subscription_settings_keyboard(translator, new_setting_enum)
     menu_text = _("Subscription Settings")
 
     await process_setting_update(
         callback_query=callback_query,
         session=session,
         user_settings=user_settings,
-        _=_,
+        translator=translator,  # Pass translator object
         update_action=update_logic,
         revert_action=revert_logic,
         success_toast_text=success_toast_text,

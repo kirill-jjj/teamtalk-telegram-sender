@@ -1,5 +1,6 @@
 """Telegram bot command handlers for administrator actions."""
 
+import gettext
 import logging
 
 from aiogram import Bot as AiogramBot
@@ -23,9 +24,10 @@ admin_router = Router(name="admin_router")
 async def _show_user_buttons(
     message: Message,
     command_type: AdminAction,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
+    _ = translator.gettext
     if not tt_connection or not tt_connection.instance:
         # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
         logger.error(
@@ -50,8 +52,8 @@ async def _show_user_buttons(
         )
         return
 
-    sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, _).lower())
-    builder = await create_user_selection_keyboard(_, sorted_users, command_type)
+    sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, translator).lower())
+    builder = await create_user_selection_keyboard(translator, sorted_users, command_type)
 
     command_text_map = {
         AdminAction.KICK: _("Select a user to kick from {server_host}:").format(
@@ -69,21 +71,21 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"))
 async def kick_command_handler(
     message: Message,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Handles the /kick command for administrators."""
-    await _show_user_buttons(message, AdminAction.KICK, _, tt_connection)
+    await _show_user_buttons(message, AdminAction.KICK, translator, tt_connection)
 
 
 @admin_router.message(Command("ban"))
 async def ban_command_handler(
     message: Message,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Handles the /ban command for administrators."""
-    await _show_user_buttons(message, AdminAction.BAN, _, tt_connection)
+    await _show_user_buttons(message, AdminAction.BAN, translator, tt_connection)
 
 
 @admin_router.message(Command("subscribers"))
@@ -91,7 +93,7 @@ async def subscribers_command_handler(
     message: Message,
     session: AsyncSession,  # Injected by DbSessionMiddleware
     bot: AiogramBot,  # Injected by Aiogram (Dispatcher has it)
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
 ):
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(message, session, bot, _, page=0)
+    await _show_subscriber_list_page(message, session, bot, translator, page=0)

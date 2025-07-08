@@ -1,6 +1,6 @@
 """Callback query handlers for language settings."""
 
-from collections.abc import Callable  # Added List, Dict
+import gettext
 import logging
 
 # For type hinting Services
@@ -31,13 +31,16 @@ language_router = Router(name="callback_handlers.language")
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     available_languages: list[dict[str, str]],  # Injected from workflow_data
 ):
     """Shows the language selection menu."""
+    _ = translator.gettext
     await callback_query.answer()
 
-    language_menu_builder = await create_language_selection_keyboard(_, available_languages=available_languages)
+    language_menu_builder = await create_language_selection_keyboard(
+        translator, available_languages=available_languages
+    )
 
     if not callback_query.message:
         logger.warning("cq_show_language_menu: callback_query.message is None, cannot edit.")
@@ -57,11 +60,12 @@ async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,  # Injected by DbSessionMiddleware
     user_settings: UserSettings,  # Injected by UserSettingsMiddleware
-    _: Callable[[str], str],  # Injected by UserSettingsMiddleware (as part of translator)
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware (as part of translator)
     callback_data: LanguageCallback,
     services: "Services",  # Injected from workflow_data
 ):
     """Sets the user's language preference."""
+    _ = translator.gettext
     if callback_data.lang_code is None:
         logger.warning("LanguageCallback received with lang_code=None")
         await callback_query.answer(_("Invalid language selection."), show_alert=True)

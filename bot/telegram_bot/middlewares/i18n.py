@@ -29,6 +29,5 @@ class I18nMiddleware(BaseMiddleware):
 
         translator = services.get_translator(lang_code)
         data["translator"] = translator
-        data["_"] = translator.gettext
 
         return await handler(event, data)

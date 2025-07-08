@@ -51,18 +51,19 @@ async def start_command_handler(
     message: Message,
     command: CommandObject,
     session: AsyncSession,
-    _: callable,  # gettext function
+    translator: gettext.GNUTranslations,  # gettext function
     user_settings: UserSettings,
     services: "Services",  # Changed from app: "Application"
 ):
     """Handles the /start command, processing deeplinks or showing a welcome message."""
+    _ = translator.gettext
     if not message.from_user:
         return
 
     token = command.args
     if token:
         # TODO: Call to handle_deeplink_payload might need review if its own dependencies change.
-        await handle_deeplink_payload(message, token, session, _, user_settings, services)
+        await handle_deeplink_payload(message, token, session, translator, user_settings, services)
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
 
@@ -244,24 +245,26 @@ async def who_command_handler(
 @user_commands_router.message(Command("help"))
 async def help_command_handler(
     message: Message,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     admin_ids_cache: set[int],  # Injected from workflow_data
 ):
     """Handles the /help command, showing available commands."""
+    _ = translator.gettext
     if not message.from_user:
         return
 
     is_telegram_admin = message.from_user.id in admin_ids_cache
-    help_text = build_help_message(_, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
+    help_text = build_help_message(translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text)
 
 
 @user_commands_router.message(Command("settings"))
 async def settings_command_handler(
     message: Message,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
 ):
     """Handles the /settings command, showing the main settings menu."""
+    _ = translator.gettext
     if not message.from_user:
         return
 
@@ -276,16 +279,17 @@ async def settings_command_handler(
 @user_commands_router.message(Command("menu"))
 async def menu_command_handler(
     message: Message,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     admin_ids_cache: set[int],  # Injected from workflow_data
 ):
     """Handles the /menu command, showing the main command menu."""
+    _ = translator.gettext
     if not message.from_user:
         return
 
     await safe_delete_message(message, log_context_message="user menu command")
     is_admin = message.from_user.id in admin_ids_cache
-    menu_builder = await create_main_menu_keyboard(_, is_admin)
+    menu_builder = await create_main_menu_keyboard(translator, is_admin)
     try:
         await message.answer(text=_("Main Menu:"), reply_markup=menu_builder.as_markup())
     except TelegramAPIError as e:

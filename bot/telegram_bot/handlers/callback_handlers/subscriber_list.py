@@ -1,5 +1,6 @@
 """Callback query handlers for displaying and paginating the list of subscribers."""
 
+import gettext  # Added gettext
 import logging
 
 # For type hinting app instance
@@ -30,10 +31,11 @@ async def handle_subscriber_list_actions(
     callback_data: SubscriberListCallback,
     session: AsyncSession,
     bot: AiogramBot,
-    _: callable,
+    translator: gettext.GNUTranslations,
     services: "Services",
 ):
     """Handles actions from the subscriber list, like deletion or pagination."""
+    _ = translator.gettext
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0
 
@@ -56,7 +58,7 @@ async def handle_subscriber_list_actions(
                 _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True
             )
 
-        await _show_subscriber_list_page(query, session, bot, _, page=page_from_callback)
+        await _show_subscriber_list_page(query, session, bot, translator, page=page_from_callback)
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -64,7 +66,7 @@ async def handle_subscriber_list_actions(
             await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
-        await _show_subscriber_list_page(query, session, bot, _, page=requested_page)
+        await _show_subscriber_list_page(query, session, bot, translator, page=requested_page)
     else:
         logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

@@ -208,7 +208,7 @@ async def _manage_admin_ids(
 async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations,
     action: DeeplinkAction,
     success_log_message: str,
     reply_text_source: str,
@@ -216,6 +216,7 @@ async def _generate_and_reply_deeplink(
     services: Services,
     payload: str | None = None,
 ):
+    _ = translator.gettext
     sender_tt_username = ttstr(tt_message.user.username)
     try:
         token = await create_deeplink(
@@ -270,17 +271,22 @@ async def _generate_and_reply_deeplink(
 
 
 async def handle_tt_subscribe_command(
-    tt_message: TeamTalkMessage, session: AsyncSession, _: callable, services: Services, connection: TeamTalkConnection
+    tt_message: TeamTalkMessage,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: Services,
+    connection: TeamTalkConnection,
 ):
     """Handles the /sub command from a TeamTalk user.
 
     Generates a subscription deeplink and replies to the user.
     """
+    _ = translator.gettext
     sender_tt_username = ttstr(tt_message.user.username)
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
-        _=_,
+        translator=translator,
         action=DeeplinkAction.SUBSCRIBE,
         payload=sender_tt_username,
         success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
@@ -293,16 +299,21 @@ async def handle_tt_subscribe_command(
 
 
 async def handle_tt_unsubscribe_command(
-    tt_message: TeamTalkMessage, session: AsyncSession, _: callable, services: Services, connection: TeamTalkConnection
+    tt_message: TeamTalkMessage,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: Services,
+    connection: TeamTalkConnection,
 ):
     """Handles the /unsub command from a TeamTalk user.
 
     Generates an unsubscription deeplink and replies to the user.
     """
+    _ = translator.gettext
     await _generate_and_reply_deeplink(
         tt_message=tt_message,
         session=session,
-        _=_,
+        translator=translator,
         action=DeeplinkAction.UNSUBSCRIBE,
         payload=None,
         success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
@@ -383,12 +394,13 @@ async def handle_tt_remove_admin_command(
 
 
 async def handle_tt_help_command(
-    tt_message: TeamTalkMessage, _: callable, services: Services, connection: TeamTalkConnection
+    tt_message: TeamTalkMessage, translator: gettext.GNUTranslations, services: Services, connection: TeamTalkConnection
 ):
     """Handles the /help command from a TeamTalk user.
 
     Sends a help message tailored to the user's admin status.
     """
+    _ = translator.gettext
     is_main_tt_admin = False
     tt_username_str = None
     if tt_message.user and hasattr(tt_message.user, "username"):
@@ -398,14 +410,17 @@ async def handle_tt_help_command(
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True
 
-    help_text = build_help_message(_, "teamtalk", is_telegram_admin=False, is_teamtalk_admin=is_main_tt_admin)
+    help_text = build_help_message(translator, "teamtalk", is_telegram_admin=False, is_teamtalk_admin=is_main_tt_admin)
     # send_long_tt_reply might need connection.instance if it interacts with TT features beyond simple reply
     # For now, assuming tt_message.reply is sufficient.
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
-async def handle_tt_unknown_command(tt_message: TeamTalkMessage, _: callable, connection: TeamTalkConnection):
+async def handle_tt_unknown_command(
+    tt_message: TeamTalkMessage, translator: gettext.GNUTranslations, connection: TeamTalkConnection
+):
     """Handles unknown commands received from a TeamTalk user."""
+    _ = translator.gettext
     reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")
     tt_message.reply(reply_text)
     logger.warning(

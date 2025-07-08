@@ -1,5 +1,6 @@
 """Callback query handlers for administrator actions originating from inline keyboards."""
 
+import gettext
 from html import escape
 import logging
 
@@ -27,13 +28,18 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 async def _execute_tt_user_action(  # noqa: PLR0911
-    action: AdminAction, user_to_act_on: pytalk.user.User, _: callable, admin_tg_id: int, server_host: str
+    action: AdminAction,
+    user_to_act_on: pytalk.user.User,
+    translator: gettext.GNUTranslations,
+    admin_tg_id: int,
+    server_host: str,
 ) -> tuple[bool, str]:
     """Executes a moderation action on a TeamTalk user.
 
     Returns a tuple of (success_boolean, message_string).
     """
-    user_nickname = get_tt_user_display_name(user_to_act_on, _)
+    _ = translator.gettext
+    user_nickname = get_tt_user_display_name(user_to_act_on, translator)
     quoted_nickname = escape(user_nickname)
 
     try:
@@ -121,11 +127,12 @@ async def _execute_tt_user_action(  # noqa: PLR0911
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
-    _: callable,  # Injected by UserSettingsMiddleware
+    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     admin_ids_cache: set[int],  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ):
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
+    _ = translator.gettext
     if not callback_query.message:
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
@@ -163,7 +170,7 @@ async def process_user_action_selection(
     success, message_text = await _execute_tt_user_action(
         action=callback_data.action,
         user_to_act_on=user_to_act_on,
-        _=_,
+        translator=translator,
         admin_tg_id=callback_query.from_user.id,
         server_host=server_host_for_display,
     )

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import gettext
 import logging
 from typing import TYPE_CHECKING
 
@@ -106,10 +107,11 @@ async def _show_subscriber_list_page(
     target: Message | CallbackQuery,
     session: AsyncSession,
     bot: Bot,
-    _: callable,
+    translator: gettext.GNUTranslations,
     page: int = 0,
 ):
     """Fetches and displays a specific page of the subscriber list."""
+    _ = translator.gettext
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
         session, bot, requested_page=page
     )
@@ -119,7 +121,7 @@ async def _show_subscriber_list_page(
         return
 
     keyboard = await create_subscriber_list_keyboard(
-        _, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
+        translator, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
     )
 
     await send_or_edit_paginated_list(

@@ -70,7 +70,7 @@ async def menu_help_handler(
     # Ensure query.message exists
     await help_command_handler(
         message=query.message,  # type: ignore
-        _=translator.gettext,
+        translator=translator,
         admin_ids_cache=admin_ids_cache,  # Pass admin_ids_cache
     )
     await query.answer()
@@ -87,7 +87,7 @@ async def menu_settings_handler(
     # Ensure query.message exists
     await settings_command_handler(
         message=query.message,  # type: ignore
-        _=translator.gettext,
+        translator=translator,
     )
     await query.answer()
 
@@ -105,7 +105,7 @@ async def menu_kick_handler(
 ):
     """Handles the 'Kick User' admin menu button click."""
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.KICK, translator.gettext, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminAction.KICK, translator, tt_connection)  # type: ignore
     await query.answer()
 
 
@@ -119,7 +119,7 @@ async def menu_ban_handler(
 ):
     """Handles the 'Ban User' admin menu button click."""
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.BAN, translator.gettext, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminAction.BAN, translator, tt_connection)  # type: ignore
     await query.answer()
 
 
@@ -134,5 +134,5 @@ async def menu_subscribers_handler(
 ):
     """Handles the 'Subscribers' admin menu button click."""
     # Ensure query.message exists
-    await _show_subscriber_list_page(query.message, session, bot, translator.gettext, page=0)  # type: ignore
+    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)  # type: ignore
     await query.answer()
