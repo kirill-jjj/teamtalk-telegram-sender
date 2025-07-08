@@ -97,7 +97,7 @@ async def cq_set_language(
 
     # Get new translator for UI updates
     new_lang_translator = services.get_translator(new_lang_code)
-    new_ = new_lang_translator.gettext
+    # new_ = new_lang_translator.gettext # This was the issue, new_ should be the translator itself for some functions
 
     # --- Update language settings (DB and cache) ---
     settings_updated = await user_service.update_user_language_settings(
@@ -111,8 +111,9 @@ async def cq_set_language(
         return
 
     # --- Language settings updated successfully, now update commands ---
+    # Use the gettext method from the new translator for this specific message
     await callback_query.answer(
-        new_("Language updated to {lang_name}.").format(lang_name=selected_lang_info["native_name"]),
+        new_lang_translator.gettext("Language updated to {lang_name}.").format(lang_name=selected_lang_info["native_name"]),
         show_alert=False,
     )
 
@@ -121,16 +122,18 @@ async def cq_set_language(
     if not commands_updated:
         # Error logged by user_service. Inform user.
         # The .format() method here is for constructing the user-facing message.
+        # Use the gettext method from the new translator for this specific message
         await callback_query.answer(
-            new_("Language updated, but commands might not refresh immediately. You may need to restart the chat with the bot."),
+            new_lang_translator.gettext("Language updated, but commands might not refresh immediately. You may need to restart the chat with the bot."),
             show_alert=True,
         )
         # Proceed to update UI anyway
 
     # --- Update UI (Settings Menu) ---
     try:
-        main_settings_builder = await create_main_settings_keyboard(new_)
-        main_settings_text = new_("Settings")
+        # Pass the full translator object
+        main_settings_builder = await create_main_settings_keyboard(new_lang_translator)
+        main_settings_text = new_lang_translator.gettext("Settings")
         await safe_edit_text(
             message_to_edit=callback_query.message,
             text=main_settings_text,
@@ -146,4 +149,5 @@ async def cq_set_language(
         # Don't send another alert if commands failed, as user already got one.
         # If commands succeeded but UI failed, this is the first major error user sees.
         if commands_updated: # Only show this if commands didn't already show an error.
-            await callback_query.answer(new_("Language and commands updated, but UI failed to refresh."), show_alert=True)
+            # Use the gettext method from the new translator for this specific message
+            await callback_query.answer(new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."), show_alert=True)
