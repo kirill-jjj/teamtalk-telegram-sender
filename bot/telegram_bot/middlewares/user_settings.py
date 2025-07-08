@@ -24,8 +24,8 @@ class UserSettingsMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
-        event: TelegramObject, # Changed to TelegramObject
-        data: dict[str, Any], # Changed to Dict
+        event: TelegramObject,  # Changed to TelegramObject
+        data: dict[str, Any],  # Changed to Dict
     ) -> Any:
         """Executes the middleware.
 
@@ -93,9 +93,5 @@ class UserSettingsMiddleware(BaseMiddleware):
             return
 
         data["user_settings"] = user_settings
-        # Use services.get_translator
-        translator = services.get_translator(user_settings.language_code)
-        data["_"] = translator.gettext
-        data["translator"] = translator
 
         return await handler(event, data)

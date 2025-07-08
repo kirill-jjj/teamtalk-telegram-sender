@@ -21,14 +21,15 @@ from bot.logging_setup import setup_logging
 from bot.services_container import Services
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import set_telegram_commands
-from bot.telegram_bot.setup import setup_telegram_dispatcher, create_telegram_dispatcher
+from bot.telegram_bot.setup import create_telegram_dispatcher, setup_telegram_dispatcher
 
 uvloop: ModuleType | None = None
 try:
     import uvloop as uvloop_module  # type: ignore
+
     uvloop = uvloop_module
 except ImportError:
-    pass # uvloop remains None
+    pass  # uvloop remains None
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class Application:
 
         # 3. Create components that depend on services or app config
         # Dispatcher initialization moved to bot/telegram_bot/setup.py
-        self.dp: Dispatcher | None = None # Will be initialized in run()
+        self.dp: Dispatcher | None = None  # Will be initialized in run()
 
         # Moved import to top: from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
         # TeamTalkEventHandler now takes only services

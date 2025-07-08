@@ -159,9 +159,9 @@ class TeamTalkConnection:
         logger.info("[%s] Populating user accounts cache...", self.server_info.host)
         ttstr = pytalk.instance.sdk.ttstr
         try:
-            if self.instance: # Ensure instance is not None
+            if self.instance:  # Ensure instance is not None
                 all_accounts = await self.instance.list_user_accounts()
-                if all_accounts: # Ensure all_accounts is not None before iterating
+                if all_accounts:  # Ensure all_accounts is not None before iterating
                     self.user_accounts_cache.clear()
                     for acc in all_accounts:
                         username_str = ttstr(acc.username) if isinstance(acc.username, bytes) else str(acc.username)
@@ -170,8 +170,8 @@ class TeamTalkConnection:
                 logger.info(
                     "[%s] User accounts cache populated with %s accounts.",
                     self.server_info.host,
-                len(self.user_accounts_cache),
-            )
+                    len(self.user_accounts_cache),
+                )
         except TimeoutError as e_timeout:
             logger.exception("[%s] TimeoutError populating user accounts cache: %s.", self.server_info.host, e_timeout)
         except pytalk.exceptions.PermissionError as e_perm:

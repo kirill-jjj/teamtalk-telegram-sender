@@ -20,7 +20,7 @@ def parse_comma_separated_string_to_list(v: Any) -> list[str]:
     return []
 
 
-ConversionRule = Callable[[Any], Any] | type # UP007
+ConversionRule = Callable[[Any], Any] | type  # UP007
 EnvMappingType = dict[str, tuple[str, str, ConversionRule]]
 
 # Define the mapping from .env keys to TOML structure
@@ -57,6 +57,7 @@ ENV_TO_TOML_MAPPING: EnvMappingType = {
 
 # Added alembic and scripts
 DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"]
+
 
 def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:
     """Applies the specified conversion rule to the raw value from .env."""

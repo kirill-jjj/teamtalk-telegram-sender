@@ -139,9 +139,8 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
 
         # current_translator is now GNUTranslations or NullTranslations
         _ = current_translator.gettext
-        data["translator"] = current_translator # Ensure data reflects the potentially defaulted translator
+        data["translator"] = current_translator  # Ensure data reflects the potentially defaulted translator
         data["_"] = _
-
 
         if not tt_connection:
             error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")

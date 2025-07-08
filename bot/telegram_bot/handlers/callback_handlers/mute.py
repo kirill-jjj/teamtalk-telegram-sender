@@ -37,7 +37,7 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 
-from ._helpers import process_setting_update, safe_edit_text
+from ._helpers import safe_edit_text
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -434,7 +434,7 @@ async def cq_set_mute_mode_action(
         # and then `session.refresh()` as is common in other parts of the codebase.
 
         await session.commit()
-        await session.refresh(managed_user_settings) # Ensure the object is up-to-date
+        await session.refresh(managed_user_settings)  # Ensure the object is up-to-date
 
         # If successfully committed, update the cache
         services.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
@@ -454,8 +454,8 @@ async def cq_set_mute_mode_action(
         # Если сохранение не удалось, откатываем изменение в памяти и сообщаем об ошибке
         managed_user_settings.mute_list_mode = original_mode
         # Also revert in session before rollback
-        await session.merge(managed_user_settings) # Ensure session sees the original mode
-        await session.rollback() # Rollback the transaction
+        await session.merge(managed_user_settings)  # Ensure session sees the original mode
+        await session.rollback()  # Rollback the transaction
         logger.exception(
             "Failed to update mute list mode for user %s. Error: %s",
             callback_query.from_user.id,

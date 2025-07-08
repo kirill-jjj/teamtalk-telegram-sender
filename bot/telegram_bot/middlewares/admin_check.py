@@ -55,16 +55,14 @@ class AdminCheckMiddleware(BaseMiddleware):
             current_translator: gettext.GNUTranslations | gettext.NullTranslations
             translator_from_data = data.get("translator")
 
-            is_valid_translator = isinstance(
-                translator_from_data, gettext.GNUTranslations | gettext.NullTranslations
-            )
+            is_valid_translator = isinstance(translator_from_data, gettext.GNUTranslations | gettext.NullTranslations)
             if translator_from_data and is_valid_translator:
                 current_translator = translator_from_data
             else:
                 services: Services | None = data.get("services")
                 if services:
                     user_settings = data.get("user_settings")
-                    lang_code = getattr(user_settings, 'language_code', None) if user_settings else None
+                    lang_code = getattr(user_settings, "language_code", None) if user_settings else None
                     current_translator = services.get_translator(lang_code)
                 else:
                     logger.warning(

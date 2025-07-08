@@ -50,7 +50,7 @@ class Services:
         if config.telegram.message_token:
             self.bot_message: Bot = Bot(token=config.telegram.message_token)
         else:
-            self.bot_message = self.bot_event # No redundant type hint
+            self.bot_message = self.bot_event  # No redundant type hint
 
         # TeamTalk Bot instance
         self.tt_bot: pytalk.TeamTalkBot = pytalk.TeamTalkBot(client_name=config.teamtalk.client_name)

@@ -25,6 +25,7 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     AdminCheckMiddleware,
     DbSessionMiddleware,
+    I18nMiddleware,  # Added I18nMiddleware
     SubscriptionCheckMiddleware,
     UserSettingsMiddleware,
 )
@@ -65,6 +66,10 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services", app_callback
 
     dp.message.middleware(UserSettingsMiddleware())
     dp.callback_query.middleware(UserSettingsMiddleware())
+
+    # NEW: Register the I18n middleware AFTER UserSettingsMiddleware
+    dp.message.middleware(I18nMiddleware())
+    dp.callback_query.middleware(I18nMiddleware())
 
     # ActiveTeamTalkConnectionMiddleware is registered globally here.
     # Handlers that need it will have it injected.
