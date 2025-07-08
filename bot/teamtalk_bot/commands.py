@@ -19,10 +19,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's A
 
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
-from bot.database.crud import create_deeplink # add_admin, remove_admin_db removed
+from bot.database.crud import create_deeplink
 from bot.services import admin_service
+from bot.teamtalk_bot import command_constants as tt_cmds # Import constants
 from bot.teamtalk_bot.utils import send_long_tt_reply
-# get_admin_commands, get_user_commands removed
 
 if TYPE_CHECKING:
     from bot.services_container import Services  # For type hinting app instance
@@ -337,7 +337,7 @@ async def handle_tt_add_admin_command(
         session=session,
         translator=translator,
         action_type="add",
-        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
+        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: {add_admin_cmd} 12345678 98765432").format(add_admin_cmd=tt_cmds.TT_CMD_ADD_ADMIN),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),  # This message might need adjustment as service layer handles "already admin"
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
@@ -366,7 +366,7 @@ async def handle_tt_remove_admin_command(
         session=session,
         translator=translator,
         action_type="remove",
-        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
+        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: {remove_admin_cmd} 12345678 98765432").format(remove_admin_cmd=tt_cmds.TT_CMD_REMOVE_ADMIN),
         error_msg_key=_("Admin with ID {telegram_id} not found or failed to remove."), # This message might need adjustment
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
@@ -402,7 +402,14 @@ async def handle_tt_unknown_command(
 ):
     """Handles unknown commands received from a TeamTalk user."""
     _ = translator.gettext
-    reply_text = _("Unknown command. Available commands: /sub, /unsub, /add_admin, /remove_admin, /help.")
+    available_commands = ", ".join([
+        tt_cmds.TT_CMD_SUBSCRIBE,
+        tt_cmds.TT_CMD_UNSUBSCRIBE,
+        tt_cmds.TT_CMD_ADD_ADMIN,
+        tt_cmds.TT_CMD_REMOVE_ADMIN,
+        tt_cmds.TT_CMD_HELP,
+    ])
+    reply_text = _("Unknown command. Available commands: {commands}.").format(commands=available_commands)
     tt_message.reply(reply_text)
     logger.warning(
         "Received unknown TT command from %s on server %s: %s",

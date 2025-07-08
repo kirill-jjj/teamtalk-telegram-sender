@@ -21,6 +21,7 @@ from bot.constants import (
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
 )
 from bot.core.notifications import send_join_leave_notification_logic
+from bot.teamtalk_bot import command_constants as tt_cmds # Import constants
 from bot.teamtalk_bot.commands import (
     handle_tt_add_admin_command,
     handle_tt_help_command,
@@ -442,10 +443,13 @@ class TeamTalkConnection:
         parts = content.split(maxsplit=1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else None
+
         handlers = {
-            "/sub": handle_tt_subscribe_command, "/unsub": handle_tt_unsubscribe_command,
-            "/add_admin": handle_tt_add_admin_command, "/remove_admin": handle_tt_remove_admin_command,
-            "/help": handle_tt_help_command,
+            tt_cmds.TT_CMD_SUBSCRIBE: handle_tt_subscribe_command,
+            tt_cmds.TT_CMD_UNSUBSCRIBE: handle_tt_unsubscribe_command,
+            tt_cmds.TT_CMD_ADD_ADMIN: handle_tt_add_admin_command,
+            tt_cmds.TT_CMD_REMOVE_ADMIN: handle_tt_remove_admin_command,
+            tt_cmds.TT_CMD_HELP: handle_tt_help_command,
         }
         handler = handlers.get(cmd)
 
@@ -455,14 +459,15 @@ class TeamTalkConnection:
                     "tt_message": message, "translator": translator,
                     "services": self.services, "connection": self
                 }
-                if cmd in ["/add_admin", "/remove_admin"]:
+                if cmd in [tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN]:
                     kwargs["args_str"] = args
-                if cmd in ["/sub", "/unsub", "/add_admin", "/remove_admin"]:
+                # All current commands in handlers dict require session except /help
+                if cmd != tt_cmds.TT_CMD_HELP:
                     kwargs["session"] = session
                 await handler(**kwargs)
-            elif content.startswith("/"):
+            elif content.startswith("/"): # Check if it's an attempt at a command
                 await handle_tt_unknown_command(message, translator, connection=self)
-            else:
+            else: # Not a command, forward as message
                 await forward_tt_message_to_telegram_admin(
                     message=message, services=self.services,
                     server_host_for_display=self.server_info.host, translator=translator
