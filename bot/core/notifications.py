@@ -109,12 +109,13 @@ def _generate_join_leave_notification_text(
     server_name: str,
     event_type: str,
     lang_code: str,
-    get_translator_func: Callable[[str | None], gettext.GNUTranslations],  # Changed signature
+    get_translator_func: Callable[[str | None], gettext.GNUTranslations | gettext.NullTranslations],
 ) -> str:
     recipient_translator = get_translator_func(lang_code)  # Use passed function
-    _ = recipient_translator.gettext  # Corrected to get .gettext from the object
     # Pass the full translator object to get_tt_user_display_name
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator)
+
+    _ = recipient_translator.gettext  # Keep this for the template strings below
     if event_type == NOTIFICATION_EVENT_JOIN:
         notification_template = _("User {user_nickname} joined server {server_name}")
     else:

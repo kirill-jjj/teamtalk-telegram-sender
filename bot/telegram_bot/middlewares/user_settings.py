@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserSettingsMiddleware(BaseMiddleware):
-    """Middleware to load user settings and provide them to handlers, along with a translator."""
+    """Middleware to load user settings and provide them to handlers."""
 
     async def __call__(
         self,

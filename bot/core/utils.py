@@ -57,14 +57,14 @@ def get_effective_server_name(
     return server_name if server_name else _("Unknown Server")  # Ensure non-empty return
 
 
-def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations) -> str:
+def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations | gettext.NullTranslations) -> str:
     """Gets a display-friendly name for a TeamTalk user.
 
     Prioritizes nickname, then username. Falls back to a localized "unknown user".
 
     Args:
         user: The TeamTalkUser object.
-        translator: The gettext translator object.
+        translator: The gettext translator object (can be NullTranslations).
 
     Returns:
         The display name string.

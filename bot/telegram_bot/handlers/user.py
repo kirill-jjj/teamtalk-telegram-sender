@@ -269,7 +269,7 @@ async def settings_command_handler(
         return
 
     await safe_delete_message(message, log_context_message="user settings command")
-    settings_builder = await create_main_settings_keyboard(_)
+    settings_builder = await create_main_settings_keyboard(translator)
     try:
         await message.answer(text=_("Settings"), reply_markup=settings_builder.as_markup())
     except TelegramAPIError as e:
@@ -289,6 +289,7 @@ async def menu_command_handler(
 
     await safe_delete_message(message, log_context_message="user menu command")
     is_admin = message.from_user.id in admin_ids_cache
+    # Pass the full translator object to create_main_menu_keyboard
     menu_builder = await create_main_menu_keyboard(translator, is_admin)
     try:
         await message.answer(text=_("Main Menu:"), reply_markup=menu_builder.as_markup())

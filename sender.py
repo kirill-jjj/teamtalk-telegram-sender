@@ -206,8 +206,10 @@ class Application:
                 lang_code = user_settings.language_code
 
         translator = self.services.get_translator(lang_code)
-        user_message_key = "An unexpected error occurred. The administrator has been notified. Please try again later."
-        user_message_text = translator.gettext(user_message_key)
+        _ = translator.gettext
+        user_message_text = _(
+            "An unexpected error occurred. The administrator has been notified. Please try again later."
+        )
 
         # Compare user_id with the (potentially zero) admin_chat_id from config
         # admin_chat_id_for_error is already defined above

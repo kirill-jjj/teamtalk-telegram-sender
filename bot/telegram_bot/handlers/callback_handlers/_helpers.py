@@ -118,52 +118,36 @@ def ensure_message_context(func: Callable):
 
     @functools.wraps(func)
     async def wrapper(query: CallbackQuery, *args, **kwargs):
-        translator_func = None
-        # Try to get the full translator object first
-        translator_obj = kwargs.get("translator")
-        if translator_obj and isinstance(translator_obj, gettext.GNUTranslations):
-            translator_func = translator_obj.gettext
-        elif "translator" in query.model_extra and isinstance(
-            query.model_extra["translator"], gettext.GNUTranslations
-        ):  # Check workflow_data
-            translator_func = query.model_extra["translator"].gettext
-        else:  # Fallback to looking for '_' if no full translator object is found
-            underscore_func = kwargs.get("_")
-            if callable(underscore_func):
-                translator_func = underscore_func
-            elif "_" in query.model_extra and callable(query.model_extra["_"]):  # Check workflow_data for _
-                translator_func = query.model_extra["_"]
+        # I18nMiddleware is expected to inject 'translator' into kwargs
+        translator = kwargs.get("translator")
 
-        error_message = "Error: This action requires a message context."  # Default message
-        if translator_func:
-            try:
-                error_message = translator_func("Error processing command.")
-            except TypeError as te:
-                logger.exception(
-                    "Translator function not callable or wrong arguments in decorator for %s: %s",
-                    func.__name__,
-                    te,
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                logger.exception("Failed to translate error message in decorator for %s: %s", func.__name__, e)
-        else:
-            logger.warning(
-                "Translator function not found for handler %s in ensure_message_context, using default error message.",
+        if not isinstance(translator, gettext.GNUTranslations):
+            # This is an unexpected situation if middlewares are correctly configured.
+            logger.critical(
+                "Translator object not found or not a GNUTranslations instance in handler '%s' context! "
+                "Check middleware order/injection. Falling back to NullTranslations.",
                 func.__name__,
             )
+            translator = gettext.NullTranslations()
+
+        _ = translator.gettext
+
+        # This message is specifically for the case where query.message is None
+        error_message_for_missing_context = _("Error processing command.")
 
         if not query.message:
             logger.error(
-                "Handler %s: query.message is None. Callback data: %s. User: %s",
+                "Handler '%s': query.message is None. Callback data: %s. User ID: %s",
                 func.__name__,
                 query.data,
                 query.from_user.id,
             )
             try:
-                await query.answer(error_message, show_alert=True)
+                # Use the translated message
+                await query.answer(error_message_for_missing_context, show_alert=True)
             except TelegramAPIError as e:
-                logger.error("Failed to answer callback query in decorator for %s: %s", func.__name__, e)
-            return None
+                logger.error("Failed to answer callback query in decorator for '%s': %s", func.__name__, e)
+            return None  # Stop further execution of the handler
 
         return await func(query, *args, **kwargs)
 
