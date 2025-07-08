@@ -394,6 +394,11 @@ async def cq_set_mute_mode_action(
     services: "Services",
 ):
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
+    if not callback_query.message:
+        logger.warning("cq_set_mute_mode_action: Callback query is missing message.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     managed_user_settings = await session.merge(user_settings)
     new_mode = callback_data.mode
 
@@ -403,15 +408,11 @@ async def cq_set_mute_mode_action(
 
     original_mode = managed_user_settings.mute_list_mode
 
-    def update_logic():
-        managed_user_settings.mute_list_mode = new_mode
+    # 1. Сначала меняем состояние объекта в памяти
+    managed_user_settings.mute_list_mode = new_mode
 
-    def revert_logic():
-        managed_user_settings.mute_list_mode = original_mode
-
+    # 2. Теперь генерируем новый интерфейс на основе ОБНОВЛЕННОГО состояния
     mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
-    success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
-
     if new_mode == MuteListMode.blacklist:
         new_current_mode_desc = _(
             "Current mode is Blacklist. You receive notifications from everyone except those on the list."
@@ -422,20 +423,45 @@ async def cq_set_mute_mode_action(
     menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
         current_mode_description=new_current_mode_desc
     )
-    updated_builder = await create_manage_muted_users_keyboard(_, managed_user_settings)
+    updated_keyboard = await create_manage_muted_users_keyboard(_, managed_user_settings)
 
-    await process_setting_update(
-        callback_query=callback_query,
-        session=session,
-        user_settings=managed_user_settings,
-        _=_,
-        update_action=update_logic,
-        revert_action=revert_logic,
-        success_toast_text=success_toast_text,
-        new_text=menu_text,
-        new_markup=updated_builder.as_markup(),
-        services=services,  # Pass services
-    )
+    # 3. Пытаемся сохранить изменения в БД
+    try:
+        # Helper function from bot.telegram_bot.db_ops import update_user_settings_in_db
+        # was not found, so I will try to commit the session directly.
+        # Also, the original problem description uses a helper `update_user_settings_in_db`
+        # which is not present in the codebase. I will use `session.commit()`
+        # and then `session.refresh()` as is common in other parts of the codebase.
+
+        await session.commit()
+        await session.refresh(managed_user_settings) # Ensure the object is up-to-date
+
+        # If successfully committed, update the cache
+        services.user_settings_cache[managed_user_settings.telegram_id] = managed_user_settings
+
+        # Отвечаем пользователю и обновляем сообщение
+        success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
+        await callback_query.answer(success_toast_text)
+        await safe_edit_text(
+            message_to_edit=callback_query.message,
+            text=menu_text,
+            reply_markup=updated_keyboard.as_markup(),
+            logger_instance=logger,
+            log_context="cq_set_mute_mode_action",
+        )
+
+    except SQLAlchemyError as e:
+        # Если сохранение не удалось, откатываем изменение в памяти и сообщаем об ошибке
+        managed_user_settings.mute_list_mode = original_mode
+        # Also revert in session before rollback
+        await session.merge(managed_user_settings) # Ensure session sees the original mode
+        await session.rollback() # Rollback the transaction
+        logger.exception(
+            "Failed to update mute list mode for user %s. Error: %s",
+            callback_query.from_user.id,
+            e,
+        )
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
 
 
 @mute_router.callback_query(
