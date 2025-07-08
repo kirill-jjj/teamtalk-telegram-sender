@@ -14,6 +14,7 @@ from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
 from bot.constants import (
+    INVALID_CHANNEL_ID,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
     TEAMTALK_PRIVATE_MESSAGE_TYPE,
@@ -191,7 +192,7 @@ class TeamTalkEventHandler:
             password=tt_config.password,
             encrypted=tt_config.encrypted,
             nickname=tt_config.nick_name,
-            join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else -1,
+            join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else INVALID_CHANNEL_ID,
             join_channel_password=tt_config.channel_password or "",
         )
         server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"  # f-string for key is fine
@@ -255,7 +256,7 @@ class TeamTalkEventHandler:
             channel_password = self.services.config.teamtalk.channel_password or ""
             target_channel_name_log = channel_id_or_path
 
-            final_channel_id = -1
+            final_channel_id = INVALID_CHANNEL_ID
             if channel_id_or_path.isdigit():
                 final_channel_id = int(channel_id_or_path)
                 chan_obj_log = tt_instance.get_channel(final_channel_id)
@@ -273,7 +274,7 @@ class TeamTalkEventHandler:
                         channel_id_or_path,
                     )
 
-            if final_channel_id != -1:
+            if final_channel_id != INVALID_CHANNEL_ID:
                 self.services.logger.info(
                     "[%s] Attempting to join channel: '%s' (Resolved ID: %s).",
                     connection.server_info.host,
@@ -289,7 +290,7 @@ class TeamTalkEventHandler:
                 )
                 current_bot_channel_id = tt_instance.getMyCurrentChannelID()
                 if current_bot_channel_id == final_channel_id or (
-                    final_channel_id == -1 and current_bot_channel_id is not None
+                    final_channel_id == INVALID_CHANNEL_ID and current_bot_channel_id is not None
                 ):
                     self.services.logger.info(
                         "[%s] Bot already in a channel or no specific channel join needed. Attempting to finalize.",
