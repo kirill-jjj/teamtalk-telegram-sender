@@ -9,6 +9,7 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
+from bot.constants import INVALID_CHANNEL_ID  # Added import
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class TeamTalkEventHandler:
             host=tt_config.host_name, tcp_port=tt_config.port, udp_port=tt_config.port,
             username=tt_config.user_name, password=tt_config.password,
             encrypted=tt_config.encrypted, nickname=tt_config.nick_name,
-            join_channel_id_or_path=tt_config.channel,
+            join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else INVALID_CHANNEL_ID,
             join_channel_password=tt_config.channel_password or "",
         )
         server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
