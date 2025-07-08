@@ -1,6 +1,7 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
 from collections.abc import Callable
+import gettext  # Added
 import logging
 import math
 
@@ -352,11 +353,15 @@ async def _refresh_mute_related_ui(
 
 @mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
 async def cq_show_manage_muted_menu(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, callback_data: NotificationActionCallback
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    user_settings: UserSettings,
+    callback_data: NotificationActionCallback
 ):
     """Shows the main menu for managing muted users and mute list mode."""
+    _ = translator.gettext # Define _ for existing code
     await callback_query.answer()
-    manage_muted_builder = await create_manage_muted_users_keyboard(_, user_settings)
+    manage_muted_builder = await create_manage_muted_users_keyboard(translator, user_settings) # Pass translator
 
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
@@ -384,12 +389,13 @@ async def cq_show_manage_muted_menu(
 async def cq_set_mute_mode_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations, # Changed
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
     services: "Services",
 ):
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
+    _ = translator.gettext # Added
     if not callback_query.message:
         logger.warning("cq_set_mute_mode_action: Callback query is missing message.")
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -456,13 +462,16 @@ async def cq_set_mute_mode_action(
 async def cq_list_internal_users_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations, # Changed
     user_settings: UserSettings,
     callback_data: UserListCallback,
 ):
     """Displays the first page of the internal muted/allowed user list."""
+    _ = translator.gettext # Added
     await callback_query.answer()
-    await _display_internal_user_list(callback_query, _, user_settings, callback_data.action, 0, session)
+    await _display_internal_user_list(
+        callback_query, translator, user_settings, callback_data.action, 0, session
+    ) # Pass translator
 
 
 @mute_router.callback_query(
@@ -471,58 +480,70 @@ async def cq_list_internal_users_action(
 async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations, # Changed
     user_settings: UserSettings,
     callback_data: PaginateUsersCallback,
 ):
     """Handles pagination for the internal muted/allowed user list."""
+    _ = translator.gettext # Added
     await callback_query.answer()
     await _display_internal_user_list(
-        callback_query, _, user_settings, callback_data.list_type, callback_data.page, session
-    )
+        callback_query, translator, user_settings,
+        callback_data.list_type, callback_data.page, session
+    ) # Pass translator
 
 
 @mute_router.callback_query(UserListCallback.filter(F.action == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_show_all_accounts_list_action(
-    callback_query: CallbackQuery, _: callable, user_settings: UserSettings, tt_connection: TeamTalkConnection | None
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    user_settings: UserSettings,
+    tt_connection: TeamTalkConnection | None
 ):
     """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
+    _ = translator.gettext # Added
     await callback_query.answer()
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
-    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_connection, 0)
+    await _display_all_server_accounts_list(
+        callback_query, translator, user_settings, tt_connection, 0
+    ) # Pass translator
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
 async def cq_paginate_all_accounts_list_action(
     callback_query: CallbackQuery,
-    _: callable,
+    translator: gettext.GNUTranslations, # Changed
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: PaginateUsersCallback,
 ):
     """Handles pagination for the list of all TeamTalk server accounts."""
+    _ = translator.gettext # Added
     await callback_query.answer()
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
-    await _display_all_server_accounts_list(callback_query, _, user_settings, tt_connection, callback_data.page)
+    await _display_all_server_accounts_list(
+        callback_query, translator, user_settings, tt_connection, callback_data.page
+    ) # Pass translator
 
 
 @mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
 async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
     session: AsyncSession,
-    _: callable,
+    translator: gettext.GNUTranslations, # Changed
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
     services: "Services",
 ):
     """Handles the action of toggling the mute status for a specific user."""
+    _ = translator.gettext # Added
     if not tt_connection:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
