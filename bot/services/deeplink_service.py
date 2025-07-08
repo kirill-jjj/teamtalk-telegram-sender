@@ -36,7 +36,15 @@ async def process_subscribe_deeplink(
         return _("Your Telegram account is banned from using this service.")
 
     tt_username_from_payload = payload
-    if tt_username_from_payload and await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
+    if not tt_username_from_payload: # Payload (TT username) is essential for subscription
+        logger.error(
+            "Deeplink for '%s' missing TeamTalk username in payload for user %s.",
+            DeeplinkAction.SUBSCRIBE,
+            telegram_id,
+        )
+        return _("Error: Missing required information for subscription. Please try the link again or contact support.")
+
+    if await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
         logger.warning(
             "Subscription attempt with banned TeamTalk username: %s by Telegram ID: %s",
             tt_username_from_payload,
@@ -46,32 +54,33 @@ async def process_subscribe_deeplink(
             tt_username=tt_username_from_payload
         )
 
-    await add_subscriber(session, telegram_id)
-    services.cache.add_subscriber(telegram_id) # Use CacheService
-    logger.info("User %s added to subscribers list and cache via CacheService.", telegram_id)
+    # Call the new user_service function to handle subscription and core settings update
+    subscription_processed = await user_service.process_new_subscription(
+        session, user_settings, tt_username_from_payload, services
+    )
 
-    admin_record = await session.get(crud.Admin, telegram_id)
-    if admin_record:
-        services.cache.add_admin(telegram_id) # Use CacheService
-        logger.info("User %s is an admin, added to admin_ids_cache via CacheService.", telegram_id)
-
-    current_settings = user_settings
-    if not tt_username_from_payload:  # Should be caught by DeeplinkModel validation if payload is non-optional
+    if not subscription_processed:
         logger.error(
-            "Deeplink for '%s' missing TeamTalk username in payload for user %s.",
-            DeeplinkAction.SUBSCRIBE,
-            telegram_id,
+            "Failed to process subscription for user %s with TT username '%s' via user_service.",
+            telegram_id, tt_username_from_payload
         )
-        return _("Error: Missing required information for subscription. Please try the link again or contact support.")
+        # The user_service.process_new_subscription should log specifics.
+        # Provide a generic error to the user.
+        return _("An error occurred during the subscription process. Please try again later or contact support.")
 
-    current_settings.teamtalk_username = tt_username_from_payload
-    current_settings.not_on_online_confirmed = True  # Assuming subscription implies confirmation
-    await update_user_settings_in_db(session, current_settings)
-    services.cache.update_user_settings(current_settings) # Use CacheService
+    # If user is also an admin, ensure admin cache is updated.
+    # This check is done after successful subscription processing.
+    admin_record = await session.get(crud.Admin, telegram_id) # Use SQLModel's get
+    if admin_record:
+        if not services.cache.is_admin(telegram_id): # Check before adding to avoid redundant logs if already cached
+            services.cache.add_admin(telegram_id)
+            logger.info("User %s (subscriber) is also an admin, added to admin_ids_cache.", telegram_id)
+        else:
+            logger.info("User %s (subscriber) is also an admin, already in admin_ids_cache.", telegram_id)
+
     logger.info(
-        "User %s linked to TT user '%s' and settings updated during subscription and in cache via CacheService.",
-        telegram_id,
-        tt_username_from_payload,
+        "User %s successfully subscribed/settings updated with TT username '%s' via deeplink.",
+        telegram_id, tt_username_from_payload
     )
     return _("You have successfully subscribed to notifications.")
 

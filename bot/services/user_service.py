@@ -87,6 +87,154 @@ async def update_user_language_settings(
             e_db,
         )
         return False
+
+
+async def process_new_subscription(
+    session: AsyncSession,
+    user_settings: UserSettings,
+    tt_username: str,
+    services: "Services",
+) -> bool:
+    """Handles all DB and cache operations for a new subscription via deeplink."""
+    try:
+        subscriber_added_or_exists = await crud.add_subscriber(session, user_settings.telegram_id)
+        # crud.add_subscriber handles its own commit and returns True if added, False if already exists or error.
+        # We want to proceed if user is now effectively a subscriber (either newly added or was already).
+
+        if subscriber_added_or_exists: # True if newly added
+            logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
+            services.cache.add_subscriber(user_settings.telegram_id)
+        elif await crud.is_user_subscribed(session, user_settings.telegram_id): # Check if already existed
+            logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
+            # Ensure cache consistency if they were somehow not in cache but in DB
+            if not services.cache.is_subscriber(user_settings.telegram_id):
+                services.cache.add_subscriber(user_settings.telegram_id)
+        else:
+            # This case should ideally not be hit if crud.add_subscriber failed for other reasons than "already exists"
+            logger.error(
+                "Failed to add user %s as subscriber in DB and they are not currently subscribed.",
+                user_settings.telegram_id
+            )
+            return False # Failed to make user a subscriber
+
+        # Update user settings with TeamTalk username
+        original_tt_username = user_settings.teamtalk_username
+        user_settings.teamtalk_username = tt_username
+        user_settings.not_on_online_confirmed = True  # Deeplink implies confirmation
+
+        # update_user_settings_in_db handles its own commit
+        settings_updated = await update_user_settings_in_db(session, user_settings)
+
+        if settings_updated:
+            logger.info(
+                "User settings updated for %s with TT username '%s' (was '%s').",
+                user_settings.telegram_id, tt_username, original_tt_username
+            )
+            services.cache.update_user_settings(user_settings) # Update cache with new settings
+            return True
+        else:
+            # Rollback tt_username change in memory if DB update failed?
+            # update_user_settings_in_db should have rolled back the session.
+            # The user_settings object in memory would be stale if not refreshed.
+            logger.error(
+                "Failed to update user settings in DB for user %s with TT username '%s'.",
+                user_settings.telegram_id, tt_username
+            )
+            # Potentially refresh user_settings from DB to revert optimistic changes if critical
+            # await session.refresh(user_settings)
+            return False
+
+    except Exception as e:
+        logger.exception(
+            "Error in process_new_subscription for user %s, tt_username %s: %s",
+            user_settings.telegram_id, tt_username, e
+        )
+        # Ensure session is rolled back if any unhandled exception occurred before commits in crud/update_user_settings
+        # However, called functions are expected to manage their own session states.
+        return False
+
+
+async def toggle_mute_status_for_tt_user(
+    session: AsyncSession,
+    user_settings: UserSettings,
+    tt_username_to_toggle: str,
+    services: "Services",
+) -> tuple[bool, str | None]:
+    """
+    Toggles the mute status of a TeamTalk user in user_settings.muted_users_list.
+    Manages DB session, commit, rollback, and cache update.
+    Returns a tuple: (success_status: bool, resulting_action: "muted" | "unmuted" | None).
+    """
+    from bot.models import MutedUser  # Local import for model
+
+    resulting_action: str | None = None
+    # Ensure user_settings.muted_users_list is loaded.
+    # If user_settings comes from cache, it should be loaded. If from DB without eager load, it might not be.
+    # However, UserSettingsMiddleware is expected to provide a fully loaded UserSettings object.
+    # For safety, one might consider a check or ensuring it's loaded if it could be partial.
+    # For now, assume it's loaded as per typical usage with SQLModel relationships.
+
+    existing_entry: MutedUser | None = None
+    if user_settings.muted_users_list is None: # Should not happen if relationships are set up
+        user_settings.muted_users_list = []
+
+    for muted_user_entry in user_settings.muted_users_list:
+        if muted_user_entry.muted_teamtalk_username == tt_username_to_toggle:
+            existing_entry = muted_user_entry
+            break
+
+    try:
+        if existing_entry:
+            # User is currently muted, so unmute
+            user_settings.muted_users_list.remove(existing_entry) # Remove from Python list
+            await session.delete(existing_entry) # Delete from DB session
+            resulting_action = "unmuted"
+            logger.info(
+                "User %s unmuted TeamTalk user '%s'. Pending commit.",
+                user_settings.telegram_id, tt_username_to_toggle
+            )
+        else:
+            # User is not muted, so mute
+            new_entry = MutedUser(
+                user_settings_telegram_id=user_settings.telegram_id,
+                muted_teamtalk_username=tt_username_to_toggle,
+            )
+            # For SQLModel, adding to session might be enough if back_populates is correct.
+            # Or explicitly add to the list:
+            user_settings.muted_users_list.append(new_entry)
+            session.add(new_entry) # Add to DB session
+            resulting_action = "muted"
+            logger.info(
+                "User %s muted TeamTalk user '%s'. Pending commit.",
+                user_settings.telegram_id, tt_username_to_toggle
+            )
+
+        await session.commit()
+        # Refresh the user_settings object to get the most up-to-date muted_users_list from the DB,
+        # especially if the list was manipulated directly by SQLModel relationship mechanics.
+        await session.refresh(user_settings, attribute_names=["muted_users_list"])
+
+        services.cache.update_user_settings(user_settings)
+        logger.info(
+            "Successfully toggled mute for '%s' for user %s to '%s'. DB and cache updated.",
+            tt_username_to_toggle, user_settings.telegram_id, resulting_action
+        )
+        return True, resulting_action
+
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.exception(
+            "SQLAlchemyError while toggling mute status for TT user '%s' for TG user %s. Rolled back. Error: %s",
+            tt_username_to_toggle, user_settings.telegram_id, e
+        )
+        return False, None
+    except Exception as e:
+        await session.rollback() # Rollback on any other unexpected error during DB operations
+        logger.exception(
+            "Unexpected error while toggling mute status for TT user '%s' for TG user %s. Rolled back. Error: %s",
+            tt_username_to_toggle, user_settings.telegram_id, e
+        )
+        return False, None
     except Exception as e:
         logger.exception(
             "Unexpected error updating language to '%s' for user %s: %s",

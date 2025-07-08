@@ -19,9 +19,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's A
 
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
-from bot.database.crud import add_admin, create_deeplink, remove_admin_db
+from bot.database.crud import create_deeplink # add_admin, remove_admin_db removed
+from bot.services import admin_service
 from bot.teamtalk_bot.utils import send_long_tt_reply
-from bot.telegram_bot.commands import get_admin_commands, get_user_commands
+# get_admin_commands, get_user_commands removed
 
 if TYPE_CHECKING:
     from bot.services_container import Services  # For type hinting app instance
@@ -83,24 +84,7 @@ def is_tt_admin(func: Callable) -> Callable:
     return wrapper
 
 
-async def _execute_admin_action_for_id(
-    session: AsyncSession,
-    telegram_id: int,
-    crud_function: Callable[[AsyncSession, int], bool],
-    commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]],
-    translator: gettext.GNUTranslations,
-    services: Services,
-) -> bool:
-    _ = translator.gettext
-    if await crud_function(session, telegram_id):
-        try:
-            commands = commands_to_set_getter(_)
-            # Use services.bot_event
-            await services.bot_event.set_my_commands(commands=commands, scope=BotCommandScopeChat(chat_id=telegram_id))
-        except TelegramAPIError as e:
-            logger.error("Failed to set commands for TG ID %s after %s: %s", telegram_id, crud_function.__name__, e)
-        return True
-    return False
+# Removed _execute_admin_action_for_id as its logic is now in admin_service
 
 
 def _create_admin_action_report(  # This helper is fine as is
@@ -136,8 +120,7 @@ async def _manage_admin_ids(
     args_str: str | None,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    crud_function: Callable[[AsyncSession, int], bool],
-    commands_to_set_getter: Callable[[Callable[[str], str]], list[BotCommand]],
+    action_type: str,  # "add" or "remove"
     prompt_msg_key: str,
     error_msg_key: str,
     invalid_id_msg_key: str,
@@ -153,45 +136,49 @@ async def _manage_admin_ids(
     success_count = 0
     failed_action_ids = []
     for telegram_id in args.valid_ids:
-        logger.info(
-            "Attempting to %s for TG ID %s by TT admin %s.",
-            crud_function.__name__,
-            telegram_id,
-            ttstr(tt_message.user.username),
-        )
-        if await _execute_admin_action_for_id(
-            session=session,
-            telegram_id=telegram_id,
-            crud_function=crud_function,
-            commands_to_set_getter=commands_to_set_getter,
-            translator=translator,
-            services=services,  # Pass services
-        ):
-            success_count += 1
-            # Update admin_ids_cache via CacheService if successful
-            if crud_function is add_admin:
-                services.cache.add_admin(telegram_id)
-            elif crud_function is remove_admin_db:
-                services.cache.remove_admin(telegram_id)
+        user_settings = await services.get_or_create_user_settings(telegram_id, session)
+        # Ensure user_settings has a default language if new
+        if not user_settings.language_code:
+            user_settings.language_code = services.config.general.default_lang
+            # No need to save here just for this, admin_service will use it
+
+        action_successful = False
+        if action_type == "add":
             logger.info(
-                "Successfully processed %s for TG ID %s and set commands (cache updated via CacheService).",
-                crud_function.__name__,
-                telegram_id
+                "Attempting to add admin for TG ID %s by TT admin %s.",
+                telegram_id, ttstr(tt_message.user.username)
+            )
+            action_successful = await admin_service.add_admin_full(
+                session, telegram_id, user_settings, services
+            )
+        elif action_type == "remove":
+            logger.info(
+                "Attempting to remove admin for TG ID %s by TT admin %s.",
+                telegram_id, ttstr(tt_message.user.username)
+            )
+            action_successful = await admin_service.remove_admin_full(
+                session, telegram_id, user_settings, services
+            )
+
+        if action_successful:
+            success_count += 1
+            logger.info(
+                "Successfully processed %s admin for TG ID %s (DB, cache, commands updated via admin_service).",
+                action_type, telegram_id
             )
         else:
             failed_action_ids.append(telegram_id)
             logger.warning(
-                "Failed to process %s for TG ID %s (e.g., already in state or DB error).",
-                crud_function.__name__,
-                telegram_id,
+                "Failed to process %s admin for TG ID %s (e.g., already in state or service error).",
+                action_type, telegram_id,
             )
 
     success_message_formatted = ""
-    if crud_function is add_admin:
+    if action_type == "add":
         success_message_formatted = translator.ngettext(
             "Successfully added {count} admin.", "Successfully added {count} admins.", success_count
         ).format(count=success_count)
-    elif crud_function is remove_admin_db:
+    elif action_type == "remove":
         success_message_formatted = translator.ngettext(
             "Successfully removed {count} admin.", "Successfully removed {count} admins.", success_count
         ).format(count=success_count)
@@ -349,10 +336,9 @@ async def handle_tt_add_admin_command(
         args_str=args_str,
         session=session,
         translator=translator,
-        crud_function=add_admin,
-        commands_to_set_getter=get_admin_commands,
+        action_type="add",
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /add_admin 12345678 98765432"),
-        error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
+        error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),  # This message might need adjustment as service layer handles "already admin"
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
         services=services,  # Pass services
@@ -379,10 +365,9 @@ async def handle_tt_remove_admin_command(
         args_str=args_str,
         session=session,
         translator=translator,
-        crud_function=remove_admin_db,
-        commands_to_set_getter=get_user_commands,
+        action_type="remove",
         prompt_msg_key=_("Please provide Telegram IDs after the command. Example: /remove_admin 12345678 98765432"),
-        error_msg_key=_("Admin with ID {telegram_id} not found."),
+        error_msg_key=_("Admin with ID {telegram_id} not found or failed to remove."), # This message might need adjustment
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
         services=services,  # Pass services

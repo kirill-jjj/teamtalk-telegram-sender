@@ -233,12 +233,7 @@ async def _get_username_to_toggle_from_callback(
     return None
 
 
-def _plan_mute_toggle_action(username_to_toggle: str, user_settings: UserSettings) -> tuple[str, bool]:
-    current_muted_usernames = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
-    is_currently_in_db_list = username_to_toggle in current_muted_usernames
-    action_to_take = "remove" if is_currently_in_db_list else "add"
-    was_added_to_list = action_to_take == "add"
-    return action_to_take, was_added_to_list
+# _plan_mute_toggle_action is removed, logic moved to user_service.toggle_mute_status_for_tt_user
 
 
 def _generate_mute_toggle_toast_message(
@@ -257,30 +252,8 @@ def _generate_mute_toggle_toast_message(
     return _("{username} has been {action}.").format(username=quoted_username, action=action_text)
 
 
-async def _commit_mute_changes_and_notify(
-    session: AsyncSession,
-    callback_query: CallbackQuery,
-    user_settings: UserSettings,
-    toast_message: str,
-    services: "Services",
-    translator: gettext.GNUTranslations,
-) -> bool:
-    _ = translator.gettext
-    if not callback_query.from_user:
-        logger.error("Cannot save settings: callback_query.from_user is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return False
-    try:
-        await session.commit()
-        await session.refresh(user_settings)
-        services.cache.update_user_settings(user_settings)
-        await callback_query.answer(toast_message, show_alert=False)
-        return True
-    except SQLAlchemyError as e:
-        logger.exception("DB commit/Answer error during mute toggle: %s", e)
-        await session.rollback()
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return False
+# _commit_mute_changes_and_notify is removed, logic moved to user_service.toggle_mute_status_for_tt_user
+# and handler cq_toggle_specific_user_mute_action
 
 
 async def _refresh_mute_related_ui(
@@ -516,38 +489,55 @@ async def cq_toggle_specific_user_mute_action(
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
     if not tt_connection: # Should be caught by middleware, but good check
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        # tt_connection might not be strictly needed if _get_username_to_toggle_from_callback can work without it
+        # for list_type != LIST_ALL_ACCOUNTS. However, _refresh_mute_related_ui might need it.
+        # For now, keeping the check.
+        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
 
-    managed_user_settings = await session.merge(user_settings)
+    # user_settings is already managed by middleware, no need to merge unless making changes before service call
+    # which we are not.
     username_to_toggle = await _get_username_to_toggle_from_callback(
-        callback_data, managed_user_settings, session, tt_connection
+        callback_data, user_settings, session, tt_connection
     )
     if not username_to_toggle:
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.warning(
+            "Could not determine username to toggle mute for user %s. Callback data: %s",
+            callback_query.from_user.id, callback_data
+        )
+        await callback_query.answer(_("An error occurred determining the user to mute/unmute. Please try again."), show_alert=True)
         return
 
-    action_to_take, was_added_to_list = _plan_mute_toggle_action(username_to_toggle, managed_user_settings)
-    if action_to_take == "add":
-        new_entry = MutedUser(
-            user_settings_telegram_id=managed_user_settings.telegram_id, muted_teamtalk_username=username_to_toggle
-        )
-        session.add(new_entry)
-    elif action_to_take == "remove":
-        stmt_delete = delete(MutedUser).where(
-            MutedUser.user_settings_telegram_id == managed_user_settings.telegram_id,
-            MutedUser.muted_teamtalk_username == username_to_toggle,
-        )
-        await session.execute(stmt_delete)
+    # --- Call the service function to handle all logic ---
+    # N.B. user_settings object will be modified by the service if successful (due to session.refresh)
+    # or if it directly manipulates the list and it's part of the same session.
+    # The UserSettingsMiddleware should provide a session-attached object.
+    was_successful, resulting_action = await user_service.toggle_mute_status_for_tt_user(
+        session, user_settings, username_to_toggle, services
+    )
+    # ----------------------------------------------------
 
-    toast_message = _generate_mute_toggle_toast_message(
-        username_to_toggle, was_added_to_list, managed_user_settings.mute_list_mode, translator
-    )
-    save_successful = await _commit_mute_changes_and_notify(
-        session, callback_query, managed_user_settings, toast_message, services, translator
-    )
-    if not save_successful:
+    if not was_successful:
+        await callback_query.answer(_("An error occurred while updating mute status. Please try again later."), show_alert=True)
         return
+
+    # Generate toast message based on the action performed by the service
+    if resulting_action == "muted":
+        toast_message = _generate_mute_toggle_toast_message(
+            username_to_toggle, True, user_settings.mute_list_mode, translator
+        )
+    elif resulting_action == "unmuted":
+        toast_message = _generate_mute_toggle_toast_message(
+            username_to_toggle, False, user_settings.mute_list_mode, translator
+        )
+    else: # Should not happen if was_successful is True
+        logger.error("toggle_mute_status_for_tt_user reported success but no valid resulting_action.")
+        toast_message = _("Mute status updated.")
+
+
+    await callback_query.answer(toast_message, show_alert=False)
+
+    # UI refresh still needs the potentially updated user_settings from the service call
     await _refresh_mute_related_ui(
-        callback_query, translator, managed_user_settings, tt_connection, callback_data, session
+        callback_query, translator, user_settings, tt_connection, callback_data, session
     )
