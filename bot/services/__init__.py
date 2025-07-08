@@ -16,12 +16,12 @@ from .deeplink_service import (
 )
 
 from .user_service import (
-    get_user_settings_from_db_or_default,
-    update_user_settings_in_db,
     delete_full_user_profile,
-    create_or_update_user_from_telegram_data,
-    get_user_language_code,
-    get_user_settings_from_cache_or_db,
+    # get_user_settings_from_db_or_default, # Defined in bot.core.user_settings
+    # update_user_settings_in_db, # Defined in bot.core.user_settings
+    # create_or_update_user_from_telegram_data, # Defined in bot.core.user_settings
+    # get_user_language_code, # Defined in bot.core.user_settings
+    # get_user_settings_from_cache_or_db, # Defined in bot.core.user_settings
 )
 
 from .notification_service import (
@@ -41,12 +41,12 @@ __all__ = [
     "process_unsubscribe_deeplink",
     "execute_deeplink_action",
     # User service functions
-    "get_user_settings_from_db_or_default",
-    "update_user_settings_in_db",
     "delete_full_user_profile",
-    "create_or_update_user_from_telegram_data",
-    "get_user_language_code",
-    "get_user_settings_from_cache_or_db",
+    # "get_user_settings_from_db_or_default",
+    # "update_user_settings_in_db",
+    # "create_or_update_user_from_telegram_data",
+    # "get_user_language_code",
+    # "get_user_settings_from_cache_or_db",
     # Notification service functions
     "is_user_subject_to_noon_check",
     "is_linked_user_online",
