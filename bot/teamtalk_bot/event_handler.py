@@ -505,9 +505,11 @@ class TeamTalkEventHandler:
                         connection=connection,
                     )
                 elif command_name == "/help":
-                    await handler(message, _=_, services=self.services, connection=connection)
+                    await handler(message, translator=translator, services=self.services, connection=connection)
                 else:
-                    await handler(message, session=session, _=_, services=self.services, connection=connection)
+                    await handler(
+                        message, session=session, translator=translator, services=self.services, connection=connection
+                    )
             elif message_content.startswith("/"):
                 await handle_tt_unknown_command(message, translator, connection=connection)  # Pass translator
             else:
