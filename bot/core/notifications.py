@@ -14,9 +14,9 @@ from sqlalchemy import and_, or_
 from sqlmodel import select
 
 from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
-from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services import notification_service
+from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name  # Updated import
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 
 # TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps

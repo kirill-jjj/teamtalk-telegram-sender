@@ -2,6 +2,7 @@
 
 import gettext
 import logging
+from typing import TYPE_CHECKING
 
 from aiogram import Bot as AiogramBot
 from aiogram import F, Router
@@ -22,7 +23,8 @@ from ..user import help_command_handler, settings_command_handler, who_command_h
 from ._helpers import ensure_message_context
 from .list_utils import _show_subscriber_list_page
 
-# TYPE_CHECKING block removed as it was empty
+if TYPE_CHECKING:
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")

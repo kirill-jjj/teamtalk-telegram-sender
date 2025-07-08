@@ -2,103 +2,11 @@
 
 import gettext
 import logging
-from typing import Any  # Added Any
-
-import pytalk
-from pytalk.instance import TeamTalkInstance  # Keep for type hint
-from pytalk.user import User as TeamTalkUser
-from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
-
-def get_effective_server_name(
-    tt_instance: TeamTalkInstance | None, translator: gettext.GNUTranslations, app_cfg: Any
-) -> str:  # Added app_cfg
-    """Determines the effective server name to display.
-
-    It prioritizes the server name from `app_cfg.SERVER_NAME`.
-    If not set, it attempts to fetch it from the TeamTalk instance.
-    Falls back to "Unknown Server" if unavailable.
-
-    Args:
-        tt_instance: The TeamTalk instance, or None.
-        translator: The gettext translator object.
-        app_cfg: The application configuration object.
-
-    Returns:
-        The server name string.
-    """
-    _ = translator.gettext
-    server_name = app_cfg.teamtalk.server_name  # Use passed app_cfg
-    if not server_name:
-        if tt_instance and tt_instance.connected:
-            try:
-                server_name = ttstr(tt_instance.server.get_properties().server_name)
-                if not server_name:  # Check if empty string after ttstr
-                    server_name = _("Unknown Server")
-            except (TimeoutError, pytalk.exceptions.TeamTalkException) as e:
-                logger.error(
-                    "Error getting server name from TT instance %s: %s",
-                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                    e,
-                )
-                server_name = _("Unknown Server")
-            except Exception as e_unexp:  # Catch any other unexpected error
-                logger.exception(
-                    "Unexpected error getting server name from TT instance %s: %s",
-                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                    e_unexp,
-                )
-                server_name = _("Unknown Server")
-        else:
-            server_name = _("Unknown Server")
-    return server_name if server_name else _("Unknown Server")  # Ensure non-empty return
-
-
-def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations | gettext.NullTranslations) -> str:
-    """Gets a display-friendly name for a TeamTalk user.
-
-    Prioritizes nickname, then username. Falls back to a localized "unknown user".
-
-    Args:
-        user: The TeamTalkUser object.
-        translator: The gettext translator object (can be NullTranslations).
-
-    Returns:
-        The display name string.
-    """
-    _ = translator.gettext
-    display_name = ttstr(user.nickname)
-    if not display_name:
-        display_name = ttstr(user.username)
-    if not display_name:  # Ensure display_name is not empty after trying nickname and username
-        display_name = _("unknown user")
-    return display_name
-
-
-def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> str:
-    """Extracts the username as a string from a TeamTalkUser or TeamTalkUserAccount object.
-
-    Args:
-        user_or_account: The TeamTalk user or account object.
-
-    Returns:
-        The username as a string, or an empty string if not found.
-    """
-    # This function is fine as is.
-    username = None
-    if hasattr(user_or_account, "username"):
-        username = user_or_account.username
-    elif hasattr(user_or_account, "_account") and hasattr(user_or_account._account, "szUsername"):
-        username = user_or_account._account.szUsername
-    elif hasattr(user_or_account, "szUsername"):
-        username = user_or_account.szUsername
-    if isinstance(username, bytes):
-        return ttstr(username)
-    return str(username) if username is not None else ""
-
+# Note: TeamTalk specific utils (get_tt_user_display_name, get_effective_server_name, etc.)
+# were moved to bot.teamtalk_bot.utils.py.
 
 def build_help_message(
     translator: gettext.GNUTranslations, platform: str, is_telegram_admin: bool, is_teamtalk_admin: bool
@@ -154,35 +62,3 @@ def build_help_message(
                 )
             )
     return "\n".join(parts)
-
-
-async def get_online_teamtalk_users(
-    tt_instance: TeamTalkInstance,
-) -> list[TeamTalkUser]:  # Changed TeamTalk5 to TeamTalkInstance
-    """Retrieves a list of online users directly from the provided TeamTalk instance.
-
-    Args:
-        tt_instance: The active TeamTalkInstance.
-
-    Returns:
-        A list of TeamTalkUser objects representing online users.
-        Returns an empty list if the instance is invalid or an error occurs.
-    """
-    if not tt_instance or not hasattr(tt_instance, "server") or not hasattr(tt_instance.server, "get_users"):
-        logger.error("get_online_teamtalk_users: Invalid tt_instance or server object.")
-        return []
-    try:
-        # Assuming tt_instance.server.get_users() is the correct way to get users
-        # from a pytalk.instance.TeamTalkInstance object.
-        # This might be tt_instance.getChannelUsers(0) for all users on server,
-        # or tt_instance.server.get_users() if server object has this method.
-        # Based on TeamTalkConnection._periodic_cache_sync, it's tt_instance.server.get_users()
-        online_users = tt_instance.server.get_users()
-        return list(online_users) if online_users else []
-    except Exception as e:
-        logger.exception(
-            "Error fetching online users from tt_instance (%s): %s",
-            tt_instance.server_info.host if tt_instance.server_info else "N/A",
-            e,
-        )
-        return []

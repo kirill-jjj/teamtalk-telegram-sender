@@ -4,17 +4,20 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import gettext  # Added gettext
+import gettext
 import html
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
+from pytalk.user import User as TeamTalkUser  # Added
+from pytalk.user_account import UserAccount as TeamTalkUserAccount  # Added
 
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
-from bot.core.utils import get_effective_server_name, get_tt_user_display_name
+
+# Removed: from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.utils import send_telegram_message_individual
 
 if TYPE_CHECKING:
@@ -22,6 +25,123 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 ttstr = sdk.ttstr
+
+
+# --- Functions moved from bot.core.utils ---
+
+def get_effective_server_name(
+    tt_instance: TeamTalkInstance | None, translator: gettext.GNUTranslations, app_cfg: Any
+) -> str:
+    """Determines the effective server name to display.
+
+    It prioritizes the server name from `app_cfg.SERVER_NAME`.
+    If not set, it attempts to fetch it from the TeamTalk instance.
+    Falls back to "Unknown Server" if unavailable.
+
+    Args:
+        tt_instance: The TeamTalk instance, or None.
+        translator: The gettext translator object.
+        app_cfg: The application configuration object.
+
+    Returns:
+        The server name string.
+    """
+    _ = translator.gettext
+    server_name = app_cfg.teamtalk.server_name
+    if not server_name:
+        if tt_instance and tt_instance.connected:
+            try:
+                server_name = ttstr(tt_instance.server.get_properties().server_name)
+                if not server_name:  # Check if empty string after ttstr
+                    server_name = _("Unknown Server")
+            except (TimeoutError, pytalk.exceptions.TeamTalkException) as e:
+                logger.error(
+                    "Error getting server name from TT instance %s: %s",
+                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
+                    e,
+                )
+                server_name = _("Unknown Server")
+            except Exception as e_unexp:  # Catch any other unexpected error
+                logger.exception(
+                    "Unexpected error getting server name from TT instance %s: %s",
+                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
+                    e_unexp,
+                )
+                server_name = _("Unknown Server")
+        else:
+            server_name = _("Unknown Server")
+    return server_name if server_name else _("Unknown Server")
+
+
+def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations | gettext.NullTranslations) -> str:
+    """Gets a display-friendly name for a TeamTalk user.
+
+    Prioritizes nickname, then username. Falls back to a localized "unknown user".
+
+    Args:
+        user: The TeamTalkUser object.
+        translator: The gettext translator object (can be NullTranslations).
+
+    Returns:
+        The display name string.
+    """
+    _ = translator.gettext
+    display_name = ttstr(user.nickname)
+    if not display_name:
+        display_name = ttstr(user.username)
+    if not display_name:
+        display_name = _("unknown user")
+    return display_name
+
+
+def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> str:
+    """Extracts the username as a string from a TeamTalkUser or TeamTalkUserAccount object.
+
+    Args:
+        user_or_account: The TeamTalk user or account object.
+
+    Returns:
+        The username as a string, or an empty string if not found.
+    """
+    username = None
+    if hasattr(user_or_account, "username"):
+        username = user_or_account.username
+    elif hasattr(user_or_account, "_account") and hasattr(user_or_account._account, "szUsername"):
+        username = user_or_account._account.szUsername
+    elif hasattr(user_or_account, "szUsername"):
+        username = user_or_account.szUsername
+    if isinstance(username, bytes):
+        return ttstr(username)
+    return str(username) if username is not None else ""
+
+
+async def get_online_teamtalk_users(
+    tt_instance: TeamTalkInstance,
+) -> list[TeamTalkUser]:
+    """Retrieves a list of online users directly from the provided TeamTalk instance.
+
+    Args:
+        tt_instance: The active TeamTalkInstance.
+
+    Returns:
+        A list of TeamTalkUser objects representing online users.
+        Returns an empty list if the instance is invalid or an error occurs.
+    """
+    if not tt_instance or not hasattr(tt_instance, "server") or not hasattr(tt_instance.server, "get_users"):
+        logger.error("get_online_teamtalk_users: Invalid tt_instance or server object.")
+        return []
+    try:
+        online_users = tt_instance.server.get_users()
+        return list(online_users) if online_users else []
+    except Exception as e:
+        logger.exception(
+            "Error fetching online users from tt_instance (%s): %s",
+            tt_instance.server_info.host if tt_instance.server_info else "N/A",
+            e,
+        )
+        return []
+
+# --- End of moved functions ---
 
 
 async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
@@ -37,14 +157,11 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
         if instance.connected:
             logger.debug("Disconnecting from TT instance: %s", host_info)
             instance.disconnect()
-        # Check for closeTeamTalk attribute as it might not always be present
-        # (though in typical TeamTalkInstance it should be)
         if hasattr(instance, "closeTeamTalk"):
             logger.debug("Closing TT instance: %s", host_info)
             instance.closeTeamTalk()
         logger.info("Successfully shut down TT instance for host: %s", host_info)
     except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e:
-        # Attempt to get host_info again in case it was not available before error
         host_info_err = "Unknown Host (during error)"
         if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
             host_info_err = ttstr(instance.server_info.host)
@@ -99,26 +216,14 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
                 remaining_text = ""
                 break
         else:
-            # This else block for the for loop is reached if the loop completes
-            # without a 'break', meaning the remaining_text was processed fully
-            # within the loop's last iteration or was already empty.
-            # The logic inside the loop should handle appending the last chunk.
-            # If current_chunk_str has content and remaining_text is now empty,
-            # it implies it was the last piece.
-            if current_chunk_str and not remaining_text:  # Should have been appended already
-                # This condition might indicate a slight redundancy in the loop's final append,
-                # but it's safer to ensure the last piece isn't missed.
-                # However, the primary logic for appending the final chunk is within the loop.
+            if current_chunk_str and not remaining_text:
                 pass
-            remaining_text = ""  # Ensure it's cleared
+            remaining_text = ""
     return parts_to_send_list
 
 
 async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES):
-    """Splits a long text message into parts suitable for TeamTalk and sends them.
-
-    Uses asyncio.to_thread for the potentially CPU-bound splitting logic.
-    """
+    """Splits a long text message into parts suitable for TeamTalk and sends them."""
     if not text:
         return
 
@@ -144,40 +249,27 @@ async def send_long_tt_reply(reply_method: Callable[[str], None], text: str, max
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    services: Services,  # Changed from app: "Application"
-    server_host_for_display: str,  # Keep this for now, might be used if server name from instance fails
-    translator: gettext.GNUTranslations,  # Added translator
+    services: Services,
+    server_host_for_display: str,
+    translator: gettext.GNUTranslations,
 ):
-    """Forwards a private TeamTalk message to the configured Telegram admin.
-
-    Args:
-        message: The TeamTalkMessage object.
-        services: The application's services container.
-        server_host_for_display: The display name of the TeamTalk server.
-        translator: The gettext translator object.
-    """
-    _ = translator.gettext  # Added
-    # Use services.config for settings and services.bot_message for the bot instance
+    """Forwards a private TeamTalk message to the configured Telegram admin."""
+    _ = translator.gettext
     if not services.config.telegram.admin_chat_id or not services.bot_message:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
     admin_chat_id = services.config.telegram.admin_chat_id
-    # The translator passed to this function should already be for the admin's language.
-    # If not, the calling context (likely TeamTalkEventHandler) needs to be updated
-    # to pass the correct admin-specific translator.
-    # For now, we assume the passed `translator` is the one to use.
-
-    server_name_to_display = get_effective_server_name(message.teamtalk_instance, translator, services.config)
-    sender_display = get_tt_user_display_name(message.user, translator)
+    server_name_to_display = get_effective_server_name(
+        message.teamtalk_instance, translator, services.config
+    ) # Now local
+    sender_display = get_tt_user_display_name(message.user, translator) # Now local
     message_content = message.content
 
     template_text_parts = _(
         "Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}"
     ).format(
-        server_name=html.escape(
-            server_name_to_display
-        ),  # server_host_for_display might be better if different from instance name
+        server_name=html.escape(server_name_to_display),
         sender_name=html.escape(sender_display),
         message_content=html.escape(message_content),
     )
@@ -185,7 +277,7 @@ async def forward_tt_message_to_telegram_admin(
     was_sent: bool = await send_telegram_message_individual(
         bot_instance=services.bot_message,
         chat_id=admin_chat_id,
-        language=translator.info().get("language", services.config.general.default_lang),  # Get lang from translator
+        language=translator.info().get("language", services.config.general.default_lang),
         services=services,
         text=template_text_parts,
     )

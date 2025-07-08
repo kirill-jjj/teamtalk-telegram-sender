@@ -3,6 +3,7 @@
 import gettext
 from html import escape
 import logging
+from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
@@ -12,12 +13,15 @@ from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
 from bot.core.enums import AdminAction
-from bot.core.utils import get_tt_user_display_name
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
 from bot.telegram_bot.callback_data import AdminActionCallback
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+
+if TYPE_CHECKING:
+    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")

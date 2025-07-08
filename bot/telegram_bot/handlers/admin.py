@@ -10,8 +10,8 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import AdminAction
-from bot.core.utils import get_online_teamtalk_users, get_tt_user_display_name
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name  # Updated import
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 
 from .callback_handlers.list_utils import _show_subscriber_list_page

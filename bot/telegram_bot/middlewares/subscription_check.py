@@ -39,9 +39,11 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         """
         user: AiogramUser | None = data.get("event_from_user")
         services = data.get("services")
-
         if not services:
-            logger.critical("SubscriptionCheckMiddleware: 'services' not found in data. Cannot perform subscription check.")
+            logger.critical(
+                "SubscriptionCheckMiddleware: 'services' not found in data. "
+                "Cannot perform subscription check."
+            )
             # This situation should ideally not happen.
             # Depending on policy, might want to inform user or just block.
             return
