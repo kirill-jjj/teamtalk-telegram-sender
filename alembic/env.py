@@ -1,10 +1,17 @@
 """Alembic environment configuration script."""
 
 from logging.config import fileConfig
+import os  # For path operations
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine  # Moved here for PLC0415
+from sqlmodel import SQLModel
+
+from bot.config import Settings  # Import the Settings model
+
+# Import models here for Alembic 'autogenerate' support
+from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401
 
 config = context.config
 
@@ -13,14 +20,6 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-import os  # For path operations
-
-from sqlmodel import SQLModel  # noqa: E402
-
-from bot.config import Settings  # Import the Settings model
-
-# Import models here for Alembic 'autogenerate' support
-from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401, E402
 
 target_metadata = SQLModel.metadata
 

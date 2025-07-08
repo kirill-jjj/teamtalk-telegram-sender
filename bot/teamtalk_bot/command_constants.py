@@ -1,6 +1,4 @@
-"""
-Constants for TeamTalk bot command strings.
-"""
+"""Constants for TeamTalk bot command strings."""
 
 TT_CMD_SUBSCRIBE = "/sub"
 TT_CMD_UNSUBSCRIBE = "/unsub"

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database import crud
 from bot.models import UserSettings
-from bot.services import user_service # For updating bot commands
+from bot.services import user_service  # For updating bot commands
 
 if TYPE_CHECKING:
     from bot.services_container import Services

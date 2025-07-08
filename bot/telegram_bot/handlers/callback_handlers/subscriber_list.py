@@ -6,7 +6,6 @@ import logging
 # For type hinting app instance
 from typing import TYPE_CHECKING
 
-# from aiogram import Bot as AiogramBot # Removed
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,10 +54,13 @@ async def handle_subscriber_list_actions(
             )
         else:
             await query.answer(
-                _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete), show_alert=True
+                _("Error deleting subscriber {telegram_id}.").format(telegram_id=telegram_id_to_delete),
+                show_alert=True,
             )
 
-        await _show_subscriber_list_page(query, session, services.bot_event, translator, page=page_from_callback) # Use services.bot_event
+        await _show_subscriber_list_page(
+            query, session, services.bot_event, translator, page=page_from_callback
+        )  # Use services.bot_event
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -66,7 +68,11 @@ async def handle_subscriber_list_actions(
             await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
-        await _show_subscriber_list_page(query, session, services.bot_event, translator, page=requested_page) # Use services.bot_event
+        await _show_subscriber_list_page(
+            query, session, services.bot_event, translator, page=requested_page
+        )  # Use services.bot_event
     else:
-        logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
+        logger.warning(
+            "Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id
+        )
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

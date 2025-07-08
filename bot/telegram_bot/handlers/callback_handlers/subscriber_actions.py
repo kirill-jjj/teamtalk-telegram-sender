@@ -6,10 +6,10 @@ import logging
 # For type hinting app instance
 from typing import TYPE_CHECKING
 
-# from aiogram import Bot as AiogramBot # Removed
-from aiogram import Router # Bot can be imported from here if needed by other parts, or directly
+from aiogram import Router  # Bot can be imported from here if needed by other parts, or directly
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
+
 # If Bot is needed for type hinting services.bot_event explicitly, import it as `from aiogram import Bot`
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
@@ -48,16 +48,22 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddl
 
 
 async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery, session: AsyncSession, services: "Services", return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery,
+    session: AsyncSession,
+    services: "Services",
+    return_page: int,
+    translator: gettext.GNUTranslations,
 ):
     _ = translator.gettext
-    active_bot = services.bot_event # Get bot from services
+    active_bot = services.bot_event  # Get bot from services
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(session, active_bot, return_page)
+    page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
+        session, active_bot, return_page
+    )
     if total_pages == 0 or not page_subscribers_info:
         await query.message.edit_text(_("No subscribers found."))
     else:
@@ -170,14 +176,27 @@ async def handle_subscriber_action(
 
     if action == SubscriberAction.DELETE:
         await _handle_delete_subscriber_action(
-            query, session, target_telegram_id, return_page, translator, services # Removed services.bot_event, services is passed directly
+            query,
+            session,
+            target_telegram_id,
+            return_page,
+            translator,
+            services,  # Pass services directly
         )
     elif action == SubscriberAction.BAN:
         await _handle_ban_subscriber_action(
-            query, session, services, tt_connection, target_telegram_id, return_page, translator # Pass services, not services.bot_event
+            query,
+            session,
+            services,  # Pass services directly
+            tt_connection,
+            target_telegram_id,
+            return_page,
+            translator,
         )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
-        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator)
+        await _handle_manage_tt_account_action(
+            query, session, target_telegram_id, return_page, translator
+        )
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)

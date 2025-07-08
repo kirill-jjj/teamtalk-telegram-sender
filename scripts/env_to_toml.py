@@ -146,99 +146,96 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
     return False
 
 
+def _process_all_env_files(project_root: Path, exclude_dirs_str: str) -> None:
+    """Scans and converts all found .env files in the project directory."""
+    print(f"Searching for .env files in '{project_root}' and subdirectories (excluding: {exclude_dirs_str})...")
+    excluded_dir_parts = {Path(d.strip()).name for d in exclude_dirs_str.split(",") if d.strip()}
+
+    env_files_to_process = []
+    for p in project_root.rglob("*"):
+        if p.is_file() and (p.name.endswith(".env") or ".env." in p.name):
+            if not any(part in excluded_dir_parts for part in p.relative_to(project_root).parts):
+                env_files_to_process.append(p)
+            else:
+                print(f"Skipping excluded file by directory: {p}", file=sys.stderr)
+
+    if not env_files_to_process:
+        print("No .env files found to convert (after exclusions).")
+        sys.exit(0)
+
+    print(f"Found {len(env_files_to_process)} '.env' files to process:")
+    for f_path in env_files_to_process:
+        print(f"  - {f_path}")
+
+    converted_count = 0
+    found_files_count = len(env_files_to_process)
+
+    for env_file_path_item in env_files_to_process:
+        output_toml_path_item = (
+            (project_root / "config.toml")
+            if env_file_path_item.name == ".env" and env_file_path_item.parent == project_root
+            else env_file_path_item.with_suffix(".toml")
+        )
+        if process_single_env_file(env_file_path_item, output_toml_path_item):
+            converted_count += 1
+
+    print(f"\nProcessed {found_files_count} '.env' files found.")
+    print(f"Successfully converted {converted_count} files.")
+    if converted_count < found_files_count:
+        sys.exit(1)
+
+
+def _process_specific_env_file(config_path: Path, output_path_arg: Path | None) -> None:
+    """Processes a single specified .env file."""
+    input_file_path = config_path.resolve()
+    if output_path_arg:
+        output_file_path = output_path_arg.resolve()
+    elif input_file_path.name == ".env":
+        output_file_path = input_file_path.parent / "config.toml"
+    else:
+        output_file_path = input_file_path.with_suffix(".toml")
+
+    if not process_single_env_file(input_file_path, output_file_path):
+        sys.exit(1)
+
+
 def main() -> None:
     """Main function to handle CLI arguments and orchestrate .env to .toml conversion."""
     parser = argparse.ArgumentParser(
-        description="Convert .env file(s) to structured TOML format.", formatter_class=argparse.RawTextHelpFormatter
+        description="Convert .env file(s) to structured TOML format.",
+        formatter_class=argparse.RawTextHelpFormatter,
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--config", type=Path, metavar="<path_to_env_file>", help="Path to a specific input .env file to convert."
+        "--config", type=Path, metavar="<path_to_env_file>",
+        help="Path to a specific input .env file to convert."
     )
     group.add_argument(
-        "--all",
-        action="store_true",
-        help="Convert all *.env files found in the current directory and subdirectories (respects --exclude-dirs).",
+        "--all", action="store_true",
+        help="Convert all *.env files found in the project root and subdirectories (respects --exclude-dirs)."
     )
     parser.add_argument(
-        "--output",
-        type=Path,
-        metavar="<path_to_toml_file>",
+        "--output", type=Path, metavar="<path_to_toml_file>",
         help="Path for the output .toml file (only applicable if --config is specified).\n"
-        "Defaults to the input filename with .toml extension in the same directory.",
+             "Defaults to the input filename with .toml extension in the same directory, "
+             "or 'config.toml' if input is '.env'."
     )
     parser.add_argument(
-        "--exclude-dirs",
-        type=str,
-        default=",".join(DEFAULT_EXCLUDE_DIRS),
-        help=(
-            f"Comma-separated list of directory names to exclude when using --all.\n"
-            f"Default: {','.join(DEFAULT_EXCLUDE_DIRS)}"
-        ),
+        "--exclude-dirs", type=str, default=",".join(DEFAULT_EXCLUDE_DIRS),
+        help=(f"Comma-separated list of directory names to exclude when using --all.\n"
+              f"Default: {','.join(DEFAULT_EXCLUDE_DIRS)}")
     )
     parser.add_argument(
-        "--project-root",
-        type=Path,
-        default=Path.cwd(),
-        help="Project root directory for --all scan (if not current directory). Default: current working directory.",
+        "--project-root", type=Path, default=Path.cwd(),
+        help="Project root directory for --all scan. Default: current working directory."
     )
 
     args = parser.parse_args()
 
     if args.config:
-        input_file_path = args.config.resolve()
-        if args.output:
-            output_file_path = args.output.resolve()
-        elif input_file_path.name == ".env":
-            output_file_path = input_file_path.parent / "config.toml"
-        else:
-            output_file_path = input_file_path.with_suffix(".toml")
-
-        if not process_single_env_file(input_file_path, output_file_path):
-            sys.exit(1)
+        _process_specific_env_file(args.config, args.output)
     elif args.all:
-        project_root = args.project_root.resolve()
-        print(f"Searching for .env files in '{project_root}' and subdirectories (excluding: {args.exclude_dirs})...")
-
-        excluded_dir_parts = {Path(d.strip()).name for d in args.exclude_dirs.split(",") if d.strip()}
-
-        converted_count = 0
-        found_files_count = 0
-
-        env_files_to_process = []
-        for p in project_root.rglob("*"):  # First find all potential .env files
-            if p.is_file() and (p.name.endswith(".env") or ".env." in p.name):  # More flexible .env file finding
-                # Check if any part of the path is in excluded_dir_parts
-                if not any(part in excluded_dir_parts for part in p.relative_to(project_root).parts):
-                    env_files_to_process.append(p)
-                else:
-                    print(f"Skipping excluded file by directory: {p}")
-
-        if not env_files_to_process:
-            print("No .env files found to convert (after exclusions).")
-            sys.exit(0)
-
-        print(f"Found {len(env_files_to_process)} '.env' files to process:")
-        for f_path in env_files_to_process:
-            print(f"  - {f_path}")
-
-        for env_file_path_item in env_files_to_process:
-            found_files_count += 1
-            # Determine output path for --all mode
-            if env_file_path_item.name == ".env" and env_file_path_item.parent == project_root:
-                output_toml_path_item = project_root / "config.toml"
-            else:
-                output_toml_path_item = env_file_path_item.with_suffix(".toml")
-
-            if process_single_env_file(env_file_path_item, output_toml_path_item):
-                converted_count += 1
-
-        print(f"\nProcessed {found_files_count} '.env' files found.")
-        print(f"Successfully converted {converted_count} files.")
-        if converted_count < found_files_count:
-            sys.exit(1)  # Indicate some conversions failed
-        elif found_files_count == 0:
-            print("No .env files found to convert (after exclusions).")
+        _process_all_env_files(args.project_root.resolve(), args.exclude_dirs)
 
 
 if __name__ == "__main__":

@@ -8,9 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.database.crud import add_subscriber
 from bot.models import Deeplink as DeeplinkModel  # Renamed to avoid conflict
 from bot.models import UserSettings
 from bot.services import user_service

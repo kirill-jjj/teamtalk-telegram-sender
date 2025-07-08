@@ -443,8 +443,8 @@ async def create_main_menu_keyboard(translator: gettext.GNUTranslations, is_admi
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack()
-    )  # Previously contained an emoji, now restored
+        text=_("i Who is online?"), callback_data=MenuCallback(command="who").pack()
+    )  # RUF001: Replaced ambiguous char
     builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:

@@ -7,17 +7,21 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
+
 # Removed: from aiogram.exceptions import TelegramAPIError
 # Removed: from aiogram.types import BotCommandScopeChat
-from aiogram.types import CallbackQuery # Added back
+from aiogram.types import CallbackQuery  # Added back
+
 # Removed: from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import LanguageAction, SettingsNavAction
+
 # Removed: from bot.core.user_settings import update_user_settings_in_db # Now in user_service
 from bot.models import UserSettings
-from bot.services import user_service # Added user_service import
+from bot.services import user_service  # Added user_service import
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
+
 # Removed: from bot.telegram_bot.commands import get_admin_commands, get_user_commands # Now in user_service
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 
@@ -97,7 +101,6 @@ async def cq_set_language(
 
     # Get new translator for UI updates
     new_lang_translator = services.get_translator(new_lang_code)
-    # new_ = new_lang_translator.gettext # This was the issue, new_ should be the translator itself for some functions
 
     # --- Update language settings (DB and cache) ---
     settings_updated = await user_service.update_user_language_settings(
@@ -107,13 +110,18 @@ async def cq_set_language(
     if not settings_updated:
         # Error already logged by user_service. Revert in-memory object just in case.
         managed_user_settings.language_code = original_lang_code
-        await callback_query.answer(_("An error occurred while updating language settings. Please try again later."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred while updating language settings. Please try again later."),
+            show_alert=True
+        )
         return
 
     # --- Language settings updated successfully, now update commands ---
     # Use the gettext method from the new translator for this specific message
     await callback_query.answer(
-        new_lang_translator.gettext("Language updated to {lang_name}.").format(lang_name=selected_lang_info["native_name"]),
+        new_lang_translator.gettext("Language updated to {lang_name}.").format(
+            lang_name=selected_lang_info["native_name"]
+        ),
         show_alert=False,
     )
 
@@ -121,10 +129,12 @@ async def cq_set_language(
 
     if not commands_updated:
         # Error logged by user_service. Inform user.
-        # The .format() method here is for constructing the user-facing message.
         # Use the gettext method from the new translator for this specific message
         await callback_query.answer(
-            new_lang_translator.gettext("Language updated, but commands might not refresh immediately. You may need to restart the chat with the bot."),
+            new_lang_translator.gettext(
+                "Language updated, but commands might not refresh immediately. "
+                "You may need to restart the chat with the bot."
+            ),
             show_alert=True,
         )
         # Proceed to update UI anyway
@@ -148,6 +158,9 @@ async def cq_set_language(
         )
         # Don't send another alert if commands failed, as user already got one.
         # If commands succeeded but UI failed, this is the first major error user sees.
-        if commands_updated: # Only show this if commands didn't already show an error.
+        if commands_updated:  # Only show this if commands didn't already show an error.
             # Use the gettext method from the new translator for this specific message
-            await callback_query.answer(new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."), show_alert=True)
+            await callback_query.answer(
+                new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."),
+                show_alert=True
+            )

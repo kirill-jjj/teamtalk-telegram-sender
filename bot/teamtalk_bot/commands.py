@@ -9,7 +9,6 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import BotCommand, BotCommandScopeChat
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.exceptions import TeamTalkException
@@ -21,7 +20,7 @@ from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import admin_service
-from bot.teamtalk_bot import command_constants as tt_cmds # Import constants
+from bot.teamtalk_bot import command_constants as tt_cmds  # Import constants
 from bot.teamtalk_bot.utils import send_long_tt_reply
 
 if TYPE_CHECKING:
@@ -337,8 +336,12 @@ async def handle_tt_add_admin_command(
         session=session,
         translator=translator,
         action_type="add",
-        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: {add_admin_cmd} 12345678 98765432").format(add_admin_cmd=tt_cmds.TT_CMD_ADD_ADMIN),
-        error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),  # This message might need adjustment as service layer handles "already admin"
+        prompt_msg_key=_(
+            "Please provide Telegram IDs after the command. Example: {add_admin_cmd} 12345678 98765432"
+        ).format(add_admin_cmd=tt_cmds.TT_CMD_ADD_ADMIN),
+        error_msg_key=_(
+            "ID {telegram_id} is already an admin or failed to add."
+        ),  # This message might need adjustment as service layer handles "already admin"
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
         services=services,  # Pass services
@@ -366,8 +369,12 @@ async def handle_tt_remove_admin_command(
         session=session,
         translator=translator,
         action_type="remove",
-        prompt_msg_key=_("Please provide Telegram IDs after the command. Example: {remove_admin_cmd} 12345678 98765432").format(remove_admin_cmd=tt_cmds.TT_CMD_REMOVE_ADMIN),
-        error_msg_key=_("Admin with ID {telegram_id} not found or failed to remove."), # This message might need adjustment
+        prompt_msg_key=_(
+            "Please provide Telegram IDs after the command. Example: {remove_admin_cmd} 12345678 98765432"
+        ).format(remove_admin_cmd=tt_cmds.TT_CMD_REMOVE_ADMIN),
+        error_msg_key=_(
+            "Admin with ID {telegram_id} not found or failed to remove."
+        ),  # This message might need adjustment
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
         services=services,  # Pass services

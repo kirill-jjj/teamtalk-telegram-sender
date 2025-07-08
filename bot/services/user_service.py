@@ -3,16 +3,15 @@
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy.exc import SQLAlchemyError
+from aiogram.exceptions import TelegramAPIError  # For error handling
+from aiogram.types import BotCommandScopeChat  # For command scope
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
-from aiogram.types import BotCommandScopeChat # For command scope
-from aiogram.exceptions import TelegramAPIError # For error handling
 
+from bot.core.user_settings import update_user_settings_in_db  # For DB update
 from bot.database import crud
-from bot.models import UserSettings # For type hinting
-from bot.core.user_settings import update_user_settings_in_db # For DB update
-from bot.telegram_bot.commands import get_admin_commands, get_user_commands # For commands
+from bot.models import MutedUser, UserSettings  # For type hinting
+from bot.telegram_bot.commands import get_admin_commands, get_user_commands  # For commands
 
 if TYPE_CHECKING:
     from bot.services_container import Services  # Import Services
@@ -119,7 +118,10 @@ async def process_new_subscription(
         if was_newly_added:
             logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
         else:
-            logger.info("User %s re-confirmed subscription via deeplink (was already subscribed).", user_settings.telegram_id)
+            logger.info(
+                "User %s re-confirmed subscription via deeplink (was already subscribed).",
+                user_settings.telegram_id,
+            )
 
         # Ensure cache consistency for subscriber status
         if not services.cache.is_subscribed(user_settings.telegram_id): # Corrected method name
@@ -149,8 +151,6 @@ async def process_new_subscription(
                 "Failed to update user settings in DB for user %s with TT username '%s'.",
                 user_settings.telegram_id, tt_username
             )
-            # Potentially refresh user_settings from DB to revert optimistic changes if critical
-            # await session.refresh(user_settings)
             return False
 
     except Exception as e:
@@ -169,13 +169,12 @@ async def toggle_mute_status_for_tt_user(
     tt_username_to_toggle: str,
     services: "Services",
 ) -> tuple[bool, str | None]:
-    """
-    Toggles the mute status of a TeamTalk user in user_settings.muted_users_list.
-    Manages DB session, commit, rollback, and cache update.
+    """Toggles the mute status of a TeamTalk user.
+
+    Manages DB session, commit, rollback, and cache update for
+    `user_settings.muted_users_list`.
     Returns a tuple: (success_status: bool, resulting_action: "muted" | "unmuted" | None).
     """
-    from bot.models import MutedUser  # Local import for model
-
     resulting_action: str | None = None
     # Ensure user_settings.muted_users_list is loaded.
     # If user_settings comes from cache, it should be loaded. If from DB without eager load, it might not be.
@@ -244,15 +243,10 @@ async def toggle_mute_status_for_tt_user(
             tt_username_to_toggle, user_settings.telegram_id, e
         )
         return False, None
-    except Exception as e:
-        logger.exception(
-            "Unexpected error updating language to '%s' for user %s: %s",
-            new_lang_code,
-            user_settings.telegram_id,
-            e,
-        )
-        # Consider rollback if session changes were made before this generic error.
-        return False
+    # This duplicate except block for Exception was removed as it's already caught above.
+    # If a more specific error handling is needed here for other types of exceptions,
+    # it should be added. For now, the generic `Exception as e` at the end of the
+    # `toggle_mute_status_for_tt_user` function handles unexpected errors.
 
 
 async def update_user_bot_commands(

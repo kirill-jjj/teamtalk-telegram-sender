@@ -3,14 +3,14 @@
 import gettext
 import logging
 
+# For type hinting Services
+from typing import TYPE_CHECKING
+
 # Removed: from aiogram import Bot as AiogramBot
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
-
-# For type hinting Services
-from typing import TYPE_CHECKING
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
