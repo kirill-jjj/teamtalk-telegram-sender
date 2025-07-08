@@ -109,7 +109,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
                 # This condition might indicate a slight redundancy in the loop's final append,
                 # but it's safer to ensure the last piece isn't missed.
                 # However, the primary logic for appending the final chunk is within the loop.
-                pass  # logger.debug("_split_text_for_tt: Final chunk logic handled within loop.")
+                pass
             remaining_text = ""  # Ensure it's cleared
     return parts_to_send_list
 

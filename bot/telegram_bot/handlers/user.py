@@ -218,7 +218,7 @@ async def who_command_handler(
     except Exception as e:
         # Keep f-string for log_msg as it's constructing a message before logging
         log_msg = f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}"
-        logger.exception(log_msg)  # logger.exception will add exc_info
+        logger.exception(log_msg)
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
