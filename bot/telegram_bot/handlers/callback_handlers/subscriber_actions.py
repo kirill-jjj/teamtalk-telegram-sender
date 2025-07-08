@@ -6,10 +6,11 @@ import logging
 # For type hinting app instance
 from typing import TYPE_CHECKING
 
-from aiogram import Bot as AiogramBot # Keep for type hints within functions for now
-from aiogram import Router
+# from aiogram import Bot as AiogramBot # Removed
+from aiogram import Router # Bot can be imported from here if needed by other parts, or directly
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
+# If Bot is needed for type hinting services.bot_event explicitly, import it as `from aiogram import Bot`
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
 
@@ -47,9 +48,10 @@ subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddl
 
 
 async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery, session: AsyncSession, active_bot: AiogramBot, return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery, session: AsyncSession, services: "Services", return_page: int, translator: gettext.GNUTranslations
 ):
     _ = translator.gettext
+    active_bot = services.bot_event # Get bot from services
     if not query.message:
         logger.warning("_refresh_and_display_subscriber_list called with no message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -120,7 +122,7 @@ async def handle_view_subscriber(
 async def _handle_delete_subscriber_action(
     query: CallbackQuery,
     session: AsyncSession,
-    active_bot: AiogramBot, # Changed from bot
+    # active_bot: AiogramBot, # Removed
     target_telegram_id: int,
     return_page: int,
     translator: gettext.GNUTranslations,
@@ -139,7 +141,7 @@ async def _handle_delete_subscriber_action(
             _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
             show_alert=True,
         )
-        await _refresh_and_display_subscriber_list(query, session, active_bot, return_page, translator) # Changed from bot
+        await _refresh_and_display_subscriber_list(query, session, services, return_page, translator) # Pass services
     else:
         await query.answer(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
@@ -152,7 +154,6 @@ async def handle_subscriber_action(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
-    # bot: AiogramBot, # Removed
     tt_connection: TeamTalkConnection | None,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -169,11 +170,11 @@ async def handle_subscriber_action(
 
     if action == SubscriberAction.DELETE:
         await _handle_delete_subscriber_action(
-            query, session, services.bot_event, target_telegram_id, return_page, translator, services # Pass services.bot_event
+            query, session, target_telegram_id, return_page, translator, services # Removed services.bot_event, services is passed directly
         )
     elif action == SubscriberAction.BAN:
         await _handle_ban_subscriber_action(
-            query, session, services.bot_event, tt_connection, target_telegram_id, return_page, translator, services # Pass services.bot_event
+            query, session, services, tt_connection, target_telegram_id, return_page, translator # Pass services, not services.bot_event
         )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
         await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator)
@@ -185,12 +186,13 @@ async def handle_subscriber_action(
 async def _handle_ban_subscriber_action(
     query: CallbackQuery,
     session: AsyncSession,
-    active_bot: AiogramBot, # Changed from bot
+    # active_bot: AiogramBot, # Removed
+    services: "Services", # Added services directly
     tt_connection: TeamTalkConnection | None,
     target_telegram_id: int,
     return_page: int,
     translator: gettext.GNUTranslations,
-    services: "Services",
+    # services: "Services", # Already present, ensure it's used correctly
 ):
     """Handles banning a subscriber (TG and linked TT account)."""
     _ = translator.gettext
@@ -255,7 +257,7 @@ async def _handle_ban_subscriber_action(
         alert_message = _("User already banned or error occurred.")
 
     await query.answer(alert_message, show_alert=True)
-    await _refresh_and_display_subscriber_list(query, session, active_bot, return_page, translator) # Changed from bot
+    await _refresh_and_display_subscriber_list(query, session, services, return_page, translator) # Pass services
 
 
 async def _handle_manage_tt_account_action(
