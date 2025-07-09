@@ -40,7 +40,7 @@ from bot.telegram_bot.callback_data import (
     MenuCallback,
     NotificationActionCallback,
     PaginateLinkableAccountsCallback,
-    PaginateMuteListCallback, # New
+    PaginateMuteListCallback,  # New
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,

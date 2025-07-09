@@ -8,8 +8,11 @@ from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 import pytalk
+from sqlalchemy.orm import selectinload
+from sqlmodel import select  # Moved here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import SubscriberAction
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, UserSettings
@@ -21,7 +24,7 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberNotificationPrefCallback,
     LinkTTAccountChosenCallback,
     PaginateLinkableAccountsCallback,
-    PaginateMuteListCallback, # New
+    PaginateMuteListCallback,  # New
     SubscriberActionCallback,
     ViewSubscriberCallback,
 )
@@ -31,9 +34,9 @@ from bot.telegram_bot.keyboards import (
     create_admin_subscriber_notification_pref_keyboard,
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,
-    # create_subscriber_action_menu_keyboard, # Will be replaced by create_view_mute_list_keyboard in this handler
+    create_subscriber_action_menu_keyboard,  # Added back
     create_subscriber_list_keyboard,
-    create_view_mute_list_keyboard, # New
+    create_view_mute_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 from bot.telegram_bot.utils import format_telegram_user_display_name
@@ -432,20 +435,18 @@ async def _handle_admin_view_mute_list_action(
 ) -> None:
     """Handles an admin viewing a specific subscriber's mute list with pagination."""
     _ = translator.gettext
-    from bot.constants import MUTE_LIST_ITEMS_PER_PAGE # Use the global constant
+    # MUTE_LIST_ITEMS_PER_PAGE is now imported at the top
+    # select is now imported at the top
 
     if not query.message or not isinstance(query.message, Message):
         logger.warning("ADMIN_VIEW_MUTE_LIST action called without message context.")
         await query.answer(_("An error occurred."), show_alert=True)
         return
 
-    from sqlmodel import select
-    from sqlalchemy.orm import selectinload
-
     statement = (
         select(UserSettings)
         .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(UserSettings.muted_users_list))
+        .options(selectinload(UserSettings.muted_users_list)) # Using getattr
     )
     result = await session.exec(statement)
     target_user_settings = result.one_or_none()
@@ -518,8 +519,8 @@ async def _handle_admin_view_mute_list_action(
     try:
         await query.message.edit_text(final_text, reply_markup=keyboard)
         await query.answer()
-    except TelegramAPIError as e:
-        logger.exception("Failed to edit message for viewing mute list (page %s): %s", current_page_idx, e)
+    except TelegramAPIError:
+        logger.exception("Failed to edit message for viewing mute list (page %s)", current_page_idx)
         await query.answer(_("Error displaying mute list page."), show_alert=True)
 
 

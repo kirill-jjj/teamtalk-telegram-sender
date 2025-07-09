@@ -15,6 +15,7 @@ from bot.constants import (
     CB_PREFIX_NOTIF_ACTION,
     CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS,
     CB_PREFIX_PAGINATE_LIST,
+    CB_PREFIX_PAGINATE_MUTE_LIST,  # New prefix
     CB_PREFIX_SETTINGS_NAV,
     CB_PREFIX_SUB_ACTION,
     CB_PREFIX_SUB_LIST,
@@ -22,7 +23,6 @@ from bot.constants import (
     CB_PREFIX_TOGGLE_USER_MUTE,
     CB_PREFIX_USER_LIST_NAV,
     CB_PREFIX_VIEW_SUB,
-    CB_PREFIX_PAGINATE_MUTE_LIST # New prefix
 )
 from bot.core.enums import (
     AdminAction,
