@@ -7,11 +7,11 @@ from __future__ import annotations
 import asyncio
 import gettext
 import logging
-from typing import TYPE_CHECKING  # Added cast
+from typing import TYPE_CHECKING
 
 from aiogram import Bot
-from aiogram.types import Chat  # Added Chat
-from sqlmodel import select  # Moved import here
+from aiogram.types import CallbackQuery, Chat  # Added CallbackQuery
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
