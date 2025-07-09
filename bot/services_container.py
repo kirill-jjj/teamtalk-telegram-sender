@@ -42,6 +42,12 @@ DOMAIN = "messages"
 
 logger = logging.getLogger(__name__)
 
+# Добавляем логгер для самого gettext, чтобы видеть его внутренние сообщения (если они есть)
+gettext_logger = logging.getLogger("gettext")
+# Установите уровень DEBUG для gettext_logger, чтобы видеть максимально подробную информацию.
+# В production можно вернуть на WARNING или INFO.
+gettext_logger.setLevel(logging.DEBUG)
+
 
 class Services:
     """Container for all application dependencies and services."""
@@ -88,22 +94,56 @@ class Services:
             language_code = self.config.general.default_lang
 
         if language_code in self.translator_cache:
+            self.logger.debug("Переводчик для '%s' найден в кэше.", language_code)
             return self.translator_cache[language_code]
 
+        # Логируем попытку загрузки, включая разрешенный путь к директории locales
+        self.logger.info(
+            "Попытка загрузить переводчик для языка '%s' из директории '%s'.",
+            language_code,
+            LOCALE_DIR.resolve(),
+        )
         try:
-            translation = gettext.translation(DOMAIN, localedir=LOCALE_DIR, languages=[language_code])
+            # gettext.translation ищет messages.mo в localedir/language_code/LC_MESSAGES/
+            translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[language_code])
             self.translator_cache[language_code] = translation
+            self.logger.info("Успешно загружен переводчик для языка '%s'. Объект: %s", language_code, type(translation).__name__)
+            return translation
         except FileNotFoundError:
+            # Логируем, если файл перевода не найден для данного языка
+            self.logger.warning(
+                "Файлы локализации (.mo) не найдены для языка '%s' в директории '%s'. "
+                "Проверяем язык по умолчанию '%s'.",
+                language_code,
+                LOCALE_DIR.resolve(),
+                self.config.general.default_lang,
+            )
             default_lang_code = self.config.general.default_lang
             if language_code != default_lang_code:
-                self.logger.warning(
-                    "Language '%s' not found. Falling back to default '%s'.", language_code, default_lang_code
-                )
-                return self.get_translator(default_lang_code)  # Recursive call
-            # This error is within an exception handler (FileNotFoundError), so use .exception
-            self.logger.exception("Default language '%s' not found. Using NullTranslations.", default_lang_code)
+                # Рекурсивный вызов для попытки загрузки языка по умолчанию
+                return self.get_translator(default_lang_code)
+
+            # Если мы уже пытаемся загрузить язык по умолчанию и происходит FileNotFoundError
+            self.logger.exception(
+                "КРИТИЧЕСКАЯ ОШИБКА: Файлы локализации для языка по умолчанию '%s' не найдены в '%s'. "
+                "Используется NullTranslations. Убедитесь, что Babel 'compile' выполнен.",
+                default_lang_code,
+                LOCALE_DIR.resolve(),
+            )
             null_trans = gettext.NullTranslations()
-            self.translator_cache[language_code] = null_trans  # Cache even null translation
+            self.translator_cache[language_code] = null_trans  # Кэшируем даже NullTranslations
+            return null_trans
+        except Exception as e:
+            # Перехватываем любые другие неожиданные ошибки во время загрузки переводчика
+            self.logger.exception(
+                "НЕОЖИДАННАЯ ОШИБКА при загрузке переводчика для языка '%s' из '%s': %s. "
+                "Используется NullTranslations.",
+                language_code,
+                LOCALE_DIR.resolve(),
+                e,
+            )
+            null_trans = gettext.NullTranslations()
+            self.translator_cache[language_code] = null_trans
             return null_trans
 
     async def load_user_settings_to_app_cache(self) -> None:
