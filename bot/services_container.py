@@ -28,24 +28,24 @@ if TYPE_CHECKING:
 
 # bot/services_container.py
 
-# ... (другие импорты, убедитесь, что 'from pathlib import Path' присутствует в начале файла)
+# ... (other imports, ensure 'from pathlib import Path' is present at the start of the file)
 
-# Определяем корневую директорию проекта (родительская директория для 'bot', которая является родительской для 'services_container.py')
+# Define the project root directory (parent directory of 'bot', which is parent of 'services_container.py')
 # Path(__file__).resolve() -> .../teamtalk-telegram-sender/bot/services_container.py
 # .parent -> .../teamtalk-telegram-sender/bot/
 # .parent -> .../teamtalk-telegram-sender/
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Теперь LOCALE_DIR будет всегда указывать на корректную директорию 'locales' относительно корня проекта
+# Now LOCALE_DIR will always point to the correct 'locales' directory relative to the project root
 LOCALE_DIR = _PROJECT_ROOT / "locales"
 DOMAIN = "messages"
 
 logger = logging.getLogger(__name__)
 
-# Добавляем логгер для самого gettext, чтобы видеть его внутренние сообщения (если они есть)
+# Add a logger for gettext itself to see its internal messages (if any)
 gettext_logger = logging.getLogger("gettext")
-# Установите уровень DEBUG для gettext_logger, чтобы видеть максимально подробную информацию.
-# В production можно вернуть на WARNING или INFO.
+# Set the DEBUG level for gettext_logger to see maximum detailed information.
+# In production, this can be reverted to WARNING or INFO.
 gettext_logger.setLevel(logging.DEBUG)
 
 
@@ -104,47 +104,49 @@ class Services:
             LOCALE_DIR.resolve(),
         )
         try:
-            # gettext.translation ищет messages.mo в localedir/language_code/LC_MESSAGES/
+            # gettext.translation searches for messages.mo in localedir/language_code/LC_MESSAGES/
             translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[language_code])
             self.translator_cache[language_code] = translation
-            self.logger.info("Успешно загружен переводчик для языка '%s'. Объект: %s", language_code, type(translation).__name__)
-            return translation
+            self.logger.info(
+                "Translator for lang '%s' loaded successfully. Type: %s",
+                language_code,
+                type(translation).__name__,
+            )
         except FileNotFoundError:
-            # Логируем, если файл перевода не найден для данного языка
+            # Log if translation file is not found for the given language
             self.logger.warning(
-                "Файлы локализации (.mo) не найдены для языка '%s' в директории '%s'. "
-                "Проверяем язык по умолчанию '%s'.",
+                "Localization files (.mo) not found for language '%s' in directory '%s'. "
+                "Checking default language '%s'.",
                 language_code,
                 LOCALE_DIR.resolve(),
                 self.config.general.default_lang,
             )
             default_lang_code = self.config.general.default_lang
             if language_code != default_lang_code:
-                # Рекурсивный вызов для попытки загрузки языка по умолчанию
+                # Recursive call to try loading the default language
                 return self.get_translator(default_lang_code)
-
-            # Если мы уже пытаемся загрузить язык по умолчанию и происходит FileNotFoundError
+            # If we are already trying to load the default language and FileNotFoundError occurs
             self.logger.exception(
-                "КРИТИЧЕСКАЯ ОШИБКА: Файлы локализации для языка по умолчанию '%s' не найдены в '%s'. "
-                "Используется NullTranslations. Убедитесь, что Babel 'compile' выполнен.",
+                "CRITICAL ERROR: Localization files for default language '%s' not found in '%s'. "
+                "Using NullTranslations. Ensure Babel 'compile' was executed.",
                 default_lang_code,
                 LOCALE_DIR.resolve(),
             )
             null_trans = gettext.NullTranslations()
-            self.translator_cache[language_code] = null_trans  # Кэшируем даже NullTranslations
+            self.translator_cache[language_code] = null_trans  # Cache NullTranslations as well
             return null_trans
-        except Exception as e:
-            # Перехватываем любые другие неожиданные ошибки во время загрузки переводчика
+        except Exception:
+            # Catch any other unexpected errors during translator loading
             self.logger.exception(
-                "НЕОЖИДАННАЯ ОШИБКА при загрузке переводчика для языка '%s' из '%s': %s. "
-                "Используется NullTranslations.",
+                "UNEXPECTED ERROR loading translator for lang '%s' from '%s'. Using NullTranslations.",
                 language_code,
                 LOCALE_DIR.resolve(),
-                e,
             )
             null_trans = gettext.NullTranslations()
             self.translator_cache[language_code] = null_trans
             return null_trans
+        else:
+            return translation
 
     async def load_user_settings_to_app_cache(self) -> None:
         """Loads all user settings from DB into the service's cache."""

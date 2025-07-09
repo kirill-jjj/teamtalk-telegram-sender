@@ -82,7 +82,7 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
         logger.error("Unhandled Telegram API error for chat_id %s: %s", chat_id, error)
 
 
-def _should_send_silently(chat_id: int, tt_user_is_online: bool, services: "Services") -> bool:
+def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "Services") -> bool:
     """Checks if a message to a given chat_id should be sent silently.
 
     This is based on NOON settings and the provided online status of their linked TeamTalk user.
