@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession  # This will be SQLAlchemyAsyncS
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
 from bot.core.enums import LanguageAction, SettingsNavAction
+from bot.core.languages import LanguageInfo  # Moved here
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
@@ -23,8 +24,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
 
-
-from bot.core.languages import LanguageInfo # Ensure this is imported
 
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
 async def cq_show_language_menu(

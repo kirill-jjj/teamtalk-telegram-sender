@@ -26,7 +26,7 @@ from bot.core.enums import (
     ToggleMuteSpecificAction,
     UserListAction,
 )
-from bot.core.languages import LanguageInfo # Added
+from bot.core.languages import LanguageInfo  # Added
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
 from bot.telegram_bot.callback_data import (

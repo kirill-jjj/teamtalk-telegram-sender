@@ -2,16 +2,15 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, Optional # Added Optional
+from typing import TYPE_CHECKING, Optional  # Added Optional
 
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import ManageTTAccountAction, SubscriberAction
+from bot.core.enums import SubscriberAction
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services import user_service
@@ -21,7 +20,6 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     LinkTTAccountChosenCallback,
-    ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
     SubscriberActionCallback,
     ViewSubscriberCallback,
@@ -112,7 +110,7 @@ async def handle_view_subscriber(
             display_name = format_telegram_user_display_name(chat_info)
         except TelegramAPIError:
             logger.exception("Could not fetch chat info for %s via Telegram API.", user_to_view.telegram_id)
-        except Exception: # noqa: BLE001
+        except Exception:
             logger.exception("Unexpected error fetching chat info for %s.", user_to_view.telegram_id)
 
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
@@ -151,7 +149,7 @@ async def handle_view_subscriber(
 async def _handle_delete_subscriber_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: Optional[TeamTalkConnection] = None
+    _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to handle subscriber deletion."""
     _ = translator.gettext
@@ -174,7 +172,7 @@ async def _handle_delete_subscriber_action(
 
 async def _handle_ban_subscriber_action(
     query: CallbackQuery, session: AsyncSession, services: "Services",
-    tt_connection: Optional[TeamTalkConnection], target_telegram_id: int,
+    tt_connection: TeamTalkConnection | None, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations
 ) -> None:
     """Helper to handle subscriber banning."""
@@ -204,7 +202,7 @@ async def _handle_ban_subscriber_action(
             except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
                 logger.exception("Error during conceptual TeamTalk ban for %s on %s.",
                                  tt_username_to_ban, tt_connection.server_info.host)
-            except Exception: # noqa: BLE001
+            except Exception:
                 logger.exception("Unexpected error during conceptual TeamTalk ban for %s on %s.",
                                  tt_username_to_ban, tt_connection.server_info.host)
         else:
@@ -228,7 +226,7 @@ async def _handle_ban_subscriber_action(
 async def _handle_manage_tt_account_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: Optional[TeamTalkConnection] = None
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show manage TT account menu for a subscriber."""
     _ = translator.gettext
@@ -252,7 +250,7 @@ async def _handle_manage_tt_account_action(
 async def _handle_admin_set_language_action(
     query: CallbackQuery, _unused_session: AsyncSession, # session marked as unused
     target_telegram_id: int, return_page: int, translator: gettext.GNUTranslations,
-    services: Optional["Services"] = None, _tt_connection: Optional[TeamTalkConnection] = None
+    services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show language selection for a subscriber to an admin."""
     _ = translator.gettext
@@ -283,7 +281,7 @@ async def _handle_admin_set_language_action(
 async def _handle_admin_toggle_noon_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: Optional[TeamTalkConnection] = None
+    _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to toggle NOON for a subscriber."""
     _ = translator.gettext
@@ -324,7 +322,7 @@ async def _handle_admin_toggle_noon_action(
 async def _handle_admin_set_notif_pref_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: Optional[TeamTalkConnection] = None
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show notification preference selection for a subscriber."""
     _ = translator.gettext
@@ -348,7 +346,7 @@ async def _handle_admin_set_notif_pref_action(
 async def _handle_admin_set_mute_mode_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: Optional[TeamTalkConnection] = None
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show mute mode selection for a subscriber."""
     _ = translator.gettext
@@ -372,7 +370,7 @@ async def _handle_admin_set_mute_mode_action(
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter())
 async def handle_subscriber_action(
     query: CallbackQuery, callback_data: SubscriberActionCallback, session: AsyncSession,
-    tt_connection: Optional[TeamTalkConnection], translator: gettext.GNUTranslations, services: "Services"
+    tt_connection: TeamTalkConnection | None, translator: gettext.GNUTranslations, services: "Services"
 ) -> None:
     """Dispatches subscriber-related actions by admin from the subscriber action menu."""
     _ = translator.gettext
@@ -385,19 +383,33 @@ async def handle_subscriber_action(
     return_page = callback_data.page
 
     if action == SubscriberAction.DELETE:
-        await _handle_delete_subscriber_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_delete_subscriber_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     elif action == SubscriberAction.BAN:
-        await _handle_ban_subscriber_action(query, session, services, tt_connection, target_telegram_id, return_page, translator)
+        await _handle_ban_subscriber_action(
+            query, session, services, tt_connection, target_telegram_id, return_page, translator
+        )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
-        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_manage_tt_account_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     elif action == SubscriberAction.ADMIN_SET_LANGUAGE:
-        await _handle_admin_set_language_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_admin_set_language_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     elif action == SubscriberAction.ADMIN_TOGGLE_NOON:
-        await _handle_admin_toggle_noon_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_admin_toggle_noon_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     elif action == SubscriberAction.ADMIN_SET_NOTIF_PREF:
-        await _handle_admin_set_notif_pref_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_admin_set_notif_pref_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     elif action == SubscriberAction.ADMIN_SET_MUTE_MODE:
-        await _handle_admin_set_mute_mode_action(query, session, target_telegram_id, return_page, translator, services, tt_connection)
+        await _handle_admin_set_mute_mode_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection
+        )
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
@@ -405,7 +417,7 @@ async def handle_subscriber_action(
 
 async def _display_linkable_tt_accounts_page(
     query: CallbackQuery, target_telegram_id: int, subscriber_context_page: int,
-    linkable_accounts_page_to_show: int, tt_connection: Optional[TeamTalkConnection],
+    linkable_accounts_page_to_show: int, tt_connection: TeamTalkConnection | None,
     translator: gettext.GNUTranslations
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
@@ -481,7 +493,7 @@ async def _display_linkable_tt_accounts_page(
 @subscriber_actions_router.callback_query(PaginateLinkableAccountsCallback.filter())
 async def handle_paginate_linkable_accounts(
     query: CallbackQuery, callback_data: PaginateLinkableAccountsCallback,
-    tt_connection: Optional[TeamTalkConnection], translator: gettext.GNUTranslations,
+    tt_connection: TeamTalkConnection | None, translator: gettext.GNUTranslations,
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
     await _display_linkable_tt_accounts_page(

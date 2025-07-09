@@ -203,10 +203,13 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
         The Deeplink object if found and not expired, None otherwise.
     """
     deeplink_obj = await session.get(Deeplink, token)
-    if deeplink_obj and deeplink_obj.expiry_time < datetime.now(dt.UTC):
-        logger.warning("Deeplink %s expired. Deleting.", token)
-        await db_remove_generic(session, deeplink_obj)
-        return None
+    if deeplink_obj:
+        # Assume expiry_time from DB is naive but represents UTC. Make it aware.
+        loaded_expiry_time_utc = deeplink_obj.expiry_time.replace(tzinfo=dt.UTC)
+        if loaded_expiry_time_utc < datetime.now(dt.UTC):
+            logger.warning("Deeplink %s expired. Deleting.", token)
+            await db_remove_generic(session, deeplink_obj)
+            return None
     return deeplink_obj
 
 
