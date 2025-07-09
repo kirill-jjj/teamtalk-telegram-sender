@@ -91,9 +91,7 @@ async def admin_toggle_noon_setting(
     except SQLAlchemyError:
         await session.rollback()
         target_user_settings.not_on_online_enabled = original_status
-        if (
-            original_status is False and target_user_settings.not_on_online_enabled is True
-        ):
+        if original_status is False and target_user_settings.not_on_online_enabled is True:
             target_user_settings.not_on_online_confirmed = False
         logger.exception(
             "SQLAlchemyError while toggling NOON setting for user %s. Rolled back.",
@@ -104,7 +102,7 @@ async def admin_toggle_noon_setting(
         await session.rollback()
         target_user_settings.not_on_online_enabled = original_status
         if original_status is False and target_user_settings.not_on_online_enabled is True:
-             target_user_settings.not_on_online_confirmed = False
+            target_user_settings.not_on_online_confirmed = False
         logger.exception(
             "Unexpected error while toggling NOON setting for user %s. Rolled back.",
             target_telegram_id,
@@ -437,7 +435,7 @@ async def process_new_subscription(
             "Error in process_new_subscription for user %s, tt_username %s.", user_settings.telegram_id, tt_username
         )
         return False
-    else: # Corresponds to the main try block
+    else:  # Corresponds to the main try block
         # This path is reached if settings_updated is False, and no exception occurred
         return False
 

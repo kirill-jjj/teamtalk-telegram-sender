@@ -1,18 +1,16 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
-from collections.abc import Awaitable, Callable  # Added Awaitable
 import gettext
 import logging
 from typing import (  # Added Any, TypeVar
     TYPE_CHECKING,
-    Any,
     TypeVar,
     cast,  # Separate import for cast
 )
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message  # Added Message
+from aiogram.types import CallbackQuery, Message  # Added Message
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession as SQLAlchemyAsyncSession  # Keep if other functions use it
@@ -43,6 +41,7 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list  # Ensured both are imported
 
 from ._helpers import safe_edit_text
 
@@ -58,67 +57,10 @@ ttstr = pytalk.instance.sdk.ttstr
 T = TypeVar("T")
 
 
-def _paginate_list_util(full_list: list[T], page: int, page_size: int) -> tuple[list[T], int, int]:
-    total_items = len(full_list)
-    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
-    page = max(0, min(page, total_pages - 1))
-    start_index = page * page_size
-    end_index = start_index + page_size
-    page_slice: list[T] = full_list[start_index:end_index]
-    return page_slice, total_pages, page
+# _paginate_list_util MOVED to ui_utils.py and renamed to paginate_list
 
 
-async def _display_paginated_list_ui(
-    callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
-    items: list[Any],
-    page: int,
-    header_text_key: str,
-    empty_list_text_key: str,
-    keyboard_factory: Callable[..., Awaitable[InlineKeyboardMarkup]],
-    keyboard_factory_kwargs: dict[str, Any],
-    server_host_for_display: str | None = None,
-) -> None:
-    _ = translator.gettext
-    page_slice, total_pages, current_page_idx = _paginate_list_util(items, page, USERS_PER_PAGE)
-    message_parts = [header_text_key]
-    if not items:
-        message_parts.append(empty_list_text_key)
-    page_indicator_text = _("Page {current_page}/{total_pages}").format(
-        current_page=current_page_idx + 1, total_pages=total_pages
-    )
-    if server_host_for_display:
-        message_parts[0] += _(" on {server_host}").format(server_host=server_host_for_display)
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
-
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "Cannot display paginated list for '%s', callback_query.message is None or inaccessible. User: %s",
-            header_text_key,
-            callback_query.from_user.id if callback_query.from_user else "Unknown",
-        )
-        # Still try to answer the callback to acknowledge, even if we can't edit.
-        await callback_query.answer(
-            _("Could not update the message view. Please try navigating again."), show_alert=True
-        )
-        return
-
-    keyboard_markup = await keyboard_factory(
-        translator,
-        page_items=page_slice,
-        current_page=current_page_idx,
-        total_pages=total_pages,
-        **keyboard_factory_kwargs,
-    )
-    await safe_edit_text(
-        message_to_edit=callback_query.message,
-        text=final_message_text,
-        reply_markup=keyboard_markup,
-        parse_mode="HTML",
-        logger_instance=logger,
-        log_context=f"_display_paginated_list_ui for {header_text_key}",
-    )
+# _display_paginated_list_ui MOVED to ui_utils.py and renamed to display_paginated_list
 
 
 async def _display_internal_user_list(
@@ -158,13 +100,13 @@ async def _display_internal_user_list(
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    await _display_paginated_list_ui(
+    await display_paginated_list(
         callback_query=callback_query,
-        translator=translator,  # Pass full translator
+        translator=translator,
         items=sorted_items,
         page=page,
-        header_text_key=header_text_str,
-        empty_list_text_key=empty_list_text_str,
+        title_text=header_text_str,
+        empty_list_text=empty_list_text_str,
         keyboard_factory=create_paginated_user_list_keyboard,
         keyboard_factory_kwargs={"list_type": list_type, "user_settings": user_settings},
     )
@@ -206,13 +148,13 @@ async def _display_all_server_accounts_list(
         all_accounts_tt,
         key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
     )
-    await _display_paginated_list_ui(
+    await display_paginated_list(  # Updated to display_paginated_list
         callback_query=callback_query,
-        translator=translator,  # Pass full translator
+        translator=translator,
         items=sorted_items,
         page=page,
-        header_text_key=_("All Server Accounts"),
-        empty_list_text_key=_("No user accounts found on the server."),
+        title_text=_("All Server Accounts"),  # Renamed parameter
+        empty_list_text=_("No user accounts found on the server."),  # Renamed parameter
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_settings": user_settings},
         server_host_for_display=server_host,
@@ -238,7 +180,7 @@ async def _get_username_to_toggle_from_callback(
                 ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()
             ),
         )
-        page_items, _, _ = _paginate_list_util(all_accounts, current_page, USERS_PER_PAGE)
+        page_items, _, _ = paginate_list(all_accounts, current_page, USERS_PER_PAGE)  # Use renamed paginate_list
         if 0 <= user_idx < len(page_items):
             username_attr = page_items[user_idx].username
             # Assuming ttstr handles bytes and returns str. If username_attr can be None, handle it.
@@ -249,7 +191,7 @@ async def _get_username_to_toggle_from_callback(
         )
         results = await session.execute(statement)
         relevant_usernames = sorted([str(uname) for uname in results.scalars().all()])  # Use .scalars()
-        page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
+        page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)  # Use renamed paginate_list
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]  # type: ignore[no-any-return]
     logger.warning(

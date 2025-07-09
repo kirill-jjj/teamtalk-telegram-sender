@@ -132,7 +132,7 @@ async def ban_and_delete_subscriber(
                 try:
                     # Placeholder for actual ban logic if/when implemented in pytalk SDK
                     logger.info(
-                        "Conceptual TT ban for %s on %s (not in SDK by username).", # Shortened
+                        "Conceptual TT ban for %s on %s (not in SDK by username).",  # Shortened
                         tt_username_to_ban,
                         tt_connection.server_info.host,
                     )
@@ -142,7 +142,7 @@ async def ban_and_delete_subscriber(
                         tt_username_to_ban,
                         tt_connection.server_info.host,
                     )
-                except Exception: # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     logger.exception(
                         "Unexpected error during conceptual TeamTalk ban for %s on %s.",
                         tt_username_to_ban,

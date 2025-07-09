@@ -1,0 +1,111 @@
+"""Utility functions for creating and managing UI elements like paginated lists."""
+
+from collections.abc import Awaitable, Callable
+import gettext
+import logging
+from typing import Any, TypeVar
+
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+
+from bot.constants import USERS_PER_PAGE
+from bot.telegram_bot.handlers.callback_handlers._helpers import safe_edit_text
+
+T = TypeVar("T")
+logger = logging.getLogger(__name__)
+
+
+def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE) -> tuple[list[T], int, int]:
+    """Paginates a given list.
+
+    Args:
+        full_list: The full list of items to paginate.
+        page: The requested page number (0-indexed).
+        page_size: The number of items per page.
+
+    Returns:
+        A tuple containing:
+            - page_slice: The slice of the list for the current page.
+            - total_pages: The total number of pages.
+            - current_page_idx: The validated current page index.
+    """
+    total_items = len(full_list)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    current_page_idx = max(0, min(page, total_pages - 1))
+
+    start_index = current_page_idx * page_size
+    end_index = start_index + page_size
+    page_slice: list[T] = full_list[start_index:end_index]
+
+    return page_slice, total_pages, current_page_idx
+
+
+async def display_paginated_list(
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    items: list[Any],
+    page: int,
+    title_text: str,
+    empty_list_text: str,
+    keyboard_factory: Callable[..., Awaitable[InlineKeyboardMarkup]],
+    keyboard_factory_kwargs: dict[str, Any],
+    page_size: int = USERS_PER_PAGE,
+    server_host_for_display: str | None = None,
+) -> None:
+    """Displays a paginated list in a Telegram message and updates it.
+
+    Args:
+        callback_query: The Aiogram CallbackQuery that triggered this action.
+        translator: The gettext GNUTranslations object for localization.
+        items: The full list of items to display.
+        page: The current page number (0-indexed).
+        title_text: The main title text for the message.
+        empty_list_text: Text to display if the items list is empty.
+        keyboard_factory: An async callable that returns an InlineKeyboardMarkup.
+        keyboard_factory_kwargs: Additional keyword arguments for the keyboard_factory.
+        page_size: Number of items per page.
+        server_host_for_display: Optional server host string to append to the title.
+    """
+    _ = translator.gettext
+    page_slice, total_pages, current_page_idx = paginate_list(items, page, page_size)
+
+    message_parts = [title_text]
+    if not items:
+        message_parts.append(empty_list_text)
+
+    page_indicator_text = _("Page {current_page}/{total_pages}").format(
+        current_page=current_page_idx + 1, total_pages=total_pages
+    )
+
+    if server_host_for_display and " on {server_host}" not in message_parts[0]:  # SIM102 fix applied here
+        message_parts[0] += _(" on {server_host}").format(server_host=server_host_for_display)
+
+    message_parts.append(f"\n{page_indicator_text}")
+    final_message_text = "\n".join(message_parts)
+
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "Cannot display paginated list for '%s', callback_query.message is None or inaccessible. User: %s",
+            title_text,
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+        )
+        await callback_query.answer(
+            _("Could not update the message view. Please try navigating again."), show_alert=True
+        )
+        return
+
+    keyboard_markup = await keyboard_factory(
+        translator,
+        page_items=page_slice,
+        current_page=current_page_idx,
+        total_pages=total_pages,
+        **keyboard_factory_kwargs,
+    )
+
+    await safe_edit_text(
+        message_to_edit=callback_query.message,
+        text=final_message_text,
+        reply_markup=keyboard_markup,
+        parse_mode="HTML",
+        logger_instance=logger,
+        log_context=f"display_paginated_list for {title_text}",
+    )
