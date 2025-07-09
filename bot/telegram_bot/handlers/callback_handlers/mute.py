@@ -318,7 +318,7 @@ async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    _callback_data: NotificationActionCallback # Keep for consistent signature, though not used
+    _callback_data: NotificationActionCallback | None = None # Keep for consistent signature, though not used
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext

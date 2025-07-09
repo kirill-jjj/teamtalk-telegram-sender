@@ -51,7 +51,8 @@ async def cq_toggle_noon_setting_action(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    _callback_data: NotificationActionCallback, # Keep for consistent signature, though not used
+    _callback_data: NotificationActionCallback | None = None, # Keep for consistent signature, though not used
+    *,
     services: Services,
 ) -> None:
     """Handles toggling the NOON (Not On Online) setting."""
