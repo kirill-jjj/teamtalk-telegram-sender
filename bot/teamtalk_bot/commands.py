@@ -22,9 +22,9 @@ from bot.database.crud import create_deeplink
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import send_long_tt_reply
-from bot.services_container import Services
 
 if TYPE_CHECKING:
+    from bot.services_container import Services
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
@@ -63,12 +63,13 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         services_from_kwargs = kwargs.get("services")
-        if not isinstance(services_from_kwargs, Services):
+        # Check type by name to avoid circular import issues with Services
+        if not hasattr(services_from_kwargs, '__class__') or services_from_kwargs.__class__.__name__ != 'Services':
             # This check ensures services_from_kwargs is indeed a Services instance or raises error
             # Define the error message as a constant or a local variable
             error_msg = "Services not found or of incorrect type in kwargs for is_tt_admin."
             raise TypeError(error_msg)
-        services: Services = services_from_kwargs
+        services: Services = services_from_kwargs  # type: ignore[assignment] # Trusting the dynamic check
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, gettext.GNUTranslations):
