@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional  # Added Optional
 
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
@@ -149,7 +149,7 @@ async def handle_view_subscriber(
 async def _handle_delete_subscriber_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: TeamTalkConnection | None = None # Marked as unused
+    _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to handle subscriber deletion."""
     _ = translator.gettext
@@ -226,7 +226,7 @@ async def _handle_ban_subscriber_action(
 async def _handle_manage_tt_account_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int, # Renamed current_session
     return_page: int, translator: gettext.GNUTranslations,
-    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show manage TT account menu for a subscriber."""
     _ = translator.gettext
@@ -248,12 +248,13 @@ async def _handle_manage_tt_account_action(
     await query.answer()
 
 async def _handle_admin_set_language_action(
-    query: CallbackQuery, _unused_session: AsyncSession,
+    query: CallbackQuery, session: AsyncSession, # Changed _unused_session to session
     target_telegram_id: int, return_page: int, translator: gettext.GNUTranslations,
-    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show language selection for a subscriber to an admin."""
     _ = translator.gettext
+    _unused_session = session # Mark as unused if not directly needed by this helper's logic
     if not query.message or not isinstance(query.message, Message):
         logger.warning("ADMIN_SET_LANGUAGE action called without message context.")
         await query.answer(_("An error occurred."), show_alert=True)
@@ -278,7 +279,7 @@ async def _handle_admin_set_language_action(
 async def _handle_admin_toggle_noon_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: TeamTalkConnection | None = None # Marked unused
+    _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to toggle NOON for a subscriber."""
     _ = translator.gettext
@@ -319,7 +320,7 @@ async def _handle_admin_toggle_noon_action(
 async def _handle_admin_set_notif_pref_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations,
-    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show notification preference selection for a subscriber."""
     _ = translator.gettext
@@ -343,7 +344,7 @@ async def _handle_admin_set_notif_pref_action(
 async def _handle_admin_set_mute_mode_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
     return_page: int, translator: gettext.GNUTranslations,
-    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
+    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
 ) -> None:
     """Helper to show mute mode selection for a subscriber."""
     _ = translator.gettext
@@ -371,7 +372,7 @@ async def handle_subscriber_action(
 ) -> None:
     """Dispatches subscriber-related actions by admin from the subscriber action menu."""
     _ = translator.gettext
-    if not query.message:
+    if not query.message: # Safeguard
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
@@ -379,6 +380,7 @@ async def handle_subscriber_action(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
+    # Call helpers directly with explicit arguments
     if action == SubscriberAction.DELETE:
         await _handle_delete_subscriber_action(
             query, session, target_telegram_id, return_page, translator, services, tt_connection)
