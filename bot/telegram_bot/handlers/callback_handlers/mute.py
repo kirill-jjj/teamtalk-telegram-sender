@@ -55,7 +55,8 @@ mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default
 mute_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 ttstr = pytalk.instance.sdk.ttstr
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def _paginate_list_util(full_list: list[T], page: int, page_size: int) -> tuple[list[T], int, int]:
     total_items = len(full_list)
@@ -126,7 +127,7 @@ async def _display_internal_user_list(
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
-    session: SQLModelAsyncSession | None = None, # Expect SQLModel session
+    session: SQLModelAsyncSession | None = None,  # Expect SQLModel session
 ) -> None:
     _ = translator.gettext
     if not session:
@@ -137,7 +138,7 @@ async def _display_internal_user_list(
         statement = select(MutedUser.muted_teamtalk_username).where(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
-        results = await session.exec(statement) # Now compatible
+        results = await session.exec(statement)  # Now compatible
         users_to_process = [str(username) for username in results.all()]
         sorted_items = sorted(users_to_process)
     except SQLAlchemyError:
@@ -187,7 +188,7 @@ async def _display_all_server_accounts_list(
 
     user_accounts_cache = tt_connection.user_accounts_cache
     server_host = tt_connection.server_info.host
-    message_obj: Message = callback_query.message # Assign to new variable after check
+    message_obj: Message = callback_query.message  # Assign to new variable after check
 
     if not user_accounts_cache:
         try:
@@ -247,7 +248,7 @@ async def _get_username_to_toggle_from_callback(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
         results = await session.execute(statement)
-        relevant_usernames = sorted([str(uname) for uname in results.scalars().all()]) # Use .scalars()
+        relevant_usernames = sorted([str(uname) for uname in results.scalars().all()])  # Use .scalars()
         page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]  # type: ignore[no-any-return]
@@ -289,7 +290,7 @@ async def _refresh_mute_related_ui(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
-    session: SQLAlchemyAsyncSession, # Parameter is SQLAlchemy's session
+    session: SQLAlchemyAsyncSession,  # Parameter is SQLAlchemy's session
 ) -> None:
     """Refreshes the mute list UI after an action."""
     _ = translator.gettext
@@ -365,7 +366,7 @@ async def cq_show_manage_muted_menu(
         return
 
     await safe_edit_text(
-        message_to_edit=callback_query.message, # Now known to be Message
+        message_to_edit=callback_query.message,  # Now known to be Message
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
         logger_instance=logger,
@@ -426,7 +427,7 @@ async def cq_set_mute_mode_action(
             logger.warning(
                 "cq_set_mute_mode_action: Message None/inaccessible for user %s. UI not updated. CB: %s",
                 callback_query.from_user.id if callback_query.from_user else "Unknown",
-                callback_data.pack() if callback_data else callback_query.data
+                callback_data.pack() if callback_data else callback_query.data,
             )
     except SQLAlchemyError:  # Removed 'as e'
         managed_user_settings.mute_list_mode = original_mode
@@ -441,7 +442,7 @@ async def cq_set_mute_mode_action(
 )
 async def cq_list_internal_users_action(
     callback_query: CallbackQuery,
-    session: SQLAlchemyAsyncSession, # Explicitly SQLAlchemy's session
+    session: SQLAlchemyAsyncSession,  # Explicitly SQLAlchemy's session
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: UserListCallback,

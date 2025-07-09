@@ -100,14 +100,8 @@ async def _get_recipients_for_notification(
             .exists()
         )
         mute_logic = or_(
-            and_(
-                UserSettings.mute_list_mode == MuteListMode.blacklist.value,
-                ~user_is_in_list_subquery
-            ),
-            and_(
-                UserSettings.mute_list_mode == MuteListMode.whitelist.value,
-                user_is_in_list_subquery
-            ),
+            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, ~user_is_in_list_subquery),
+            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, user_is_in_list_subquery),
         )
         filters.append(mute_logic)  # type: ignore[arg-type]
         stmt = select(UserSettings.telegram_id).where(and_(*filters))

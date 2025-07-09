@@ -111,17 +111,13 @@ SubscribeDeeplinkHandlerType = Callable[
     [AsyncSession, int, gettext.GNUTranslations, str | None, UserSettings, "Services"],
     Awaitable[str],
 ]
-UnsubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, gettext.GNUTranslations, "Services"], Awaitable[str]
-]
+UnsubscribeDeeplinkHandlerType = Callable[[AsyncSession, int, gettext.GNUTranslations, "Services"], Awaitable[str]]
 
 # Using a Union for the handler type to accommodate different signatures
 DeeplinkHandler = SubscribeDeeplinkHandlerType | UnsubscribeDeeplinkHandlerType
 
 
-def is_subscribe_handler(
-    _handler: DeeplinkHandler, action: DeeplinkAction
-) -> TypeGuard[SubscribeDeeplinkHandlerType]:
+def is_subscribe_handler(_handler: DeeplinkHandler, action: DeeplinkAction) -> TypeGuard[SubscribeDeeplinkHandlerType]:
     """Checks if the handler is for a subscribe action."""
     return action == DeeplinkAction.SUBSCRIBE
 

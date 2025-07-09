@@ -177,8 +177,8 @@ async def process_user_action_selection(
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        message_obj = callback_query.message # Assign to variable
-        if isinstance(message_obj, Message): # Check type of the new variable
+        message_obj = callback_query.message  # Assign to variable
+        if isinstance(message_obj, Message):  # Check type of the new variable
             try:
                 await message_obj.edit_text(message_text, reply_markup=None)
             except TelegramAPIError as e:
@@ -188,7 +188,7 @@ async def process_user_action_selection(
                     e,
                 )
                 try:
-                    await message_obj.edit_reply_markup(reply_markup=None) # Use the typed variable
+                    await message_obj.edit_reply_markup(reply_markup=None)  # Use the typed variable
                 except TelegramAPIError:
                     logger.exception(
                         "Failed to even remove reply markup after user action on %s.",

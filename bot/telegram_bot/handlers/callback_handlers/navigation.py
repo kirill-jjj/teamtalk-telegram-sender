@@ -31,7 +31,7 @@ async def cq_back_to_main_settings_menu(
 
     if isinstance(callback_query.message, Message):
         await safe_edit_text(
-            message_to_edit=callback_query.message, # Now known to be Message
+            message_to_edit=callback_query.message,  # Now known to be Message
             text=main_settings_text,
             reply_markup=main_settings_builder.as_markup(),
             logger_instance=logger,

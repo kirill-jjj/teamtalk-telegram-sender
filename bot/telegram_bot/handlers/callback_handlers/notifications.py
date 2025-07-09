@@ -46,7 +46,7 @@ async def cq_show_notifications_menu(
 
     notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)
     await safe_edit_text(
-        message_to_edit=callback_query.message, # Now known to be Message
+        message_to_edit=callback_query.message,  # Now known to be Message
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),
         logger_instance=logger,
@@ -94,7 +94,7 @@ async def cq_toggle_noon_setting_action(
 
     await callback_query.answer(success_toast_text)
 
-    if not isinstance(callback_query.message, Message): # Check if message is valid
+    if not isinstance(callback_query.message, Message):  # Check if message is valid
         logger.warning(
             "cq_toggle_noon_setting_action: Message is None or inaccessible for user %s after NOON toggle. "
             "Settings updated, but UI may not refresh. Callback data: %s",
@@ -104,7 +104,7 @@ async def cq_toggle_noon_setting_action(
         return
 
     await safe_edit_text(
-        message_to_edit=callback_query.message, # Now known to be Message
+        message_to_edit=callback_query.message,  # Now known to be Message
         text=menu_text,
         reply_markup=updated_builder.as_markup(),
         logger_instance=logger,

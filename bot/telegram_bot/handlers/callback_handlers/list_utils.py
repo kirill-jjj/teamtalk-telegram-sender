@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, cast  # Added cast
 
 from aiogram import Bot
 from aiogram.types import Chat  # Added Chat
+from sqlmodel import select  # Moved import here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
@@ -68,7 +69,7 @@ async def _get_paginated_subscribers_info(
     chat_results = await asyncio.gather(*chat_info_tasks, return_exceptions=True)
 
     # Fetch UserSettings in a single batch
-    from sqlmodel import select # Import select
+
     user_settings_list = (
         await session.exec(select(UserSettings).where(UserSettings.telegram_id.in_(page_ids_to_fetch)))  # type: ignore[attr-defined]
     ).all()
@@ -96,7 +97,6 @@ async def _get_paginated_subscribers_info(
                 "This might happen if a user unsubscribed while the list was being fetched.",
                 telegram_id,
             )
-
 
         page_subscribers_info.append(
             SubscriberInfo(telegram_id=telegram_id, display_name=display_name, teamtalk_username=tt_username)

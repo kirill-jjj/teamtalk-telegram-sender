@@ -61,7 +61,7 @@ async def _refresh_and_display_subscriber_list(
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    message_obj = query.message # Assign before use
+    message_obj = query.message  # Assign before use
     if not isinstance(message_obj, Message):
         logger.warning("_refresh_and_display_subscriber_list: Message is None or inaccessible.")
         # Already answered callback if message was None initially.

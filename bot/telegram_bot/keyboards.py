@@ -6,9 +6,8 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import gettext
 import html
-from typing import TYPE_CHECKING, Any, Type, cast # Added TYPE_CHECKING, Type and cast
+from typing import TYPE_CHECKING, Any, cast  # Added TYPE_CHECKING, Type and cast, removed Type
 
-from aiogram.filters.callback_data import CallbackData  # Import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Removed unused import: from collections.abc import Callable
@@ -224,8 +223,8 @@ async def _add_pagination_controls(
     translator: gettext.GNUTranslations,
     current_page: int,
     total_pages: int,
-    list_type: UserListAction, # This argument might become part of a more generic callback_factory signature
-    callback_factory: Type[PaginateUsersCallback], # Changed to Type[PaginateUsersCallback]
+    list_type: UserListAction,  # This argument might become part of a more generic callback_factory signature
+    callback_factory: type[PaginateUsersCallback],  # Changed to type[PaginateUsersCallback]
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext
@@ -445,9 +444,7 @@ async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_a
     """Creates the main menu keyboard with commands."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack()
-    )
+    builder.button(text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack())  # noqa: RUF001
     builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:
@@ -557,14 +554,14 @@ async def create_manage_tt_account_keyboard(
 
     if current_tt_username:
         builder.button(
-            text=_("🔓 Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),
+            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),  # noqa: RUF001
             callback_data=ManageTTAccountCallback(
                 action=ManageTTAccountAction.UNLINK, target_telegram_id=target_telegram_id, page=page
             ).pack(),
         )
 
     builder.button(
-        text=_("(+) Link/Change TeamTalk Account"),  # RUF001 fix applied
+        text=_("➕ Link/Change TeamTalk Account"),  # noqa: RUF001
         callback_data=ManageTTAccountCallback(
             action=ManageTTAccountAction.LINK_NEW, target_telegram_id=target_telegram_id, page=page
         ).pack(),

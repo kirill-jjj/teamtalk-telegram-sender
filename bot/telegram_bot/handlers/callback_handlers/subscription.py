@@ -48,7 +48,7 @@ async def cq_show_subscriptions_menu(
         logger.warning(
             "cq_show_subscriptions_menu: Message is None or inaccessible for user %s. Callback data: %s",
             callback_query.from_user.id if callback_query.from_user else "Unknown",
-            _callback_data.pack() if _callback_data else callback_query.data, # Use _callback_data if available
+            _callback_data.pack() if _callback_data else callback_query.data,  # Use _callback_data if available
         )
         return
 
@@ -58,7 +58,7 @@ async def cq_show_subscriptions_menu(
     )
 
     await safe_edit_text(
-        message_to_edit=callback_query.message, # Now known to be Message
+        message_to_edit=callback_query.message,  # Now known to be Message
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_builder.as_markup(),
         logger_instance=logger,

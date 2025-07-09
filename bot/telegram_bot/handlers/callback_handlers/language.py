@@ -42,12 +42,12 @@ async def cq_show_language_menu(
         logger.warning(
             "cq_show_language_menu: Message is None or inaccessible for user %s. Callback data: %s",
             callback_query.from_user.id if callback_query.from_user else "Unknown",
-            callback_query.data, # Using callback_query.data as _callback_data is not available here
+            callback_query.data,  # Using callback_query.data as _callback_data is not available here
         )
         return
 
     await safe_edit_text(
-        message_to_edit=callback_query.message, # Now known to be Message
+        message_to_edit=callback_query.message,  # Now known to be Message
         text=_("Please choose your language:"),
         reply_markup=language_menu_builder.as_markup(),
         logger_instance=logger,
@@ -143,7 +143,7 @@ async def cq_set_language(
             logger.warning(
                 "cq_set_language: Message None/inaccessible for user %s. UI not updated. CB: %s",
                 callback_query.from_user.id if callback_query.from_user else "Unknown",
-                callback_data.pack() if callback_data else callback_query.data
+                callback_data.pack() if callback_data else callback_query.data,
             )
     except Exception:
         logger.exception(

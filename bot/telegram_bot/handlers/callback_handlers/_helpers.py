@@ -52,22 +52,22 @@ async def process_setting_update(  # Added return type hint
         try:
             await update_user_settings_in_db(session, user_settings)
             services.cache.update_user_settings(user_settings)
-            await callback_query.answer(success_toast_text, show_alert=False) # Inform success of setting change
+            await callback_query.answer(success_toast_text, show_alert=False)  # Inform success of setting change
         except SQLAlchemyError:
             logger.exception(
                 "Failed to update settings in DB for user %s (message inaccessible path).",
                 callback_query.from_user.id,
             )
-            revert_action() # Revert in-memory change
+            revert_action()  # Revert in-memory change
             try:
                 await callback_query.answer(
                     _("An error occurred updating settings. Please try again."), show_alert=True
                 )
             except TelegramAPIError:
                 logger.exception("Failed to answer callback for DB error (message inaccessible path).")
-        except TelegramAPIError: # For the answer itself
+        except TelegramAPIError:  # For the answer itself
             logger.exception("Failed to answer callback after settings update (message inaccessible path).")
-        return # Stop before trying to edit the message
+        return  # Stop before trying to edit the message
 
     # If we reach here, callback_query.message is a valid Message object
     update_action()
@@ -145,8 +145,8 @@ async def safe_edit_text(
 
 
 def ensure_message_context(
-    func: Callable[..., Awaitable[Any | None]], # Changed signature
-) -> Callable[..., Awaitable[Any | None]]: # Changed signature
+    func: Callable[..., Awaitable[Any | None]],  # Changed signature
+) -> Callable[..., Awaitable[Any | None]]:  # Changed signature
     """Decorator to ensure that a callback query handler has a message context.
 
     If query.message is None, it logs an error and attempts to answer the callback query.
@@ -154,7 +154,7 @@ def ensure_message_context(
 
     @functools.wraps(func)
     async def wrapper(
-        query: CallbackQuery, # Keep query as first arg for clarity in wrapper
+        query: CallbackQuery,  # Keep query as first arg for clarity in wrapper
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> Any | None:  # noqa: ANN401
