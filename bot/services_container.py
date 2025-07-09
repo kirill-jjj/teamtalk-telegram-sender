@@ -26,8 +26,18 @@ if TYPE_CHECKING:
     pass  # Forward reference for selectinload, though might not be needed with plugin
 
 
-# These might be passed to __init__ or defined globally if they are static
-LOCALE_DIR = Path("locales")
+# bot/services_container.py
+
+# ... (другие импорты, убедитесь, что 'from pathlib import Path' присутствует в начале файла)
+
+# Определяем корневую директорию проекта (родительская директория для 'bot', которая является родительской для 'services_container.py')
+# Path(__file__).resolve() -> .../teamtalk-telegram-sender/bot/services_container.py
+# .parent -> .../teamtalk-telegram-sender/bot/
+# .parent -> .../teamtalk-telegram-sender/
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Теперь LOCALE_DIR будет всегда указывать на корректную директорию 'locales' относительно корня проекта
+LOCALE_DIR = _PROJECT_ROOT / "locales"
 DOMAIN = "messages"
 
 logger = logging.getLogger(__name__)
