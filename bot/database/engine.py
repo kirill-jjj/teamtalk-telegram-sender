@@ -13,9 +13,12 @@ from bot.config import Settings
 
 logger = logging.getLogger(__name__)
 
+from collections.abc import Callable # Import Callable
+
 # Define a type alias for the specific sessionmaker we're creating
 # It's a sessionmaker that produces AsyncSession instances
-AsyncSessionFactoryType: TypeAlias = sessionmaker[AsyncSession]
+# Loosen the type for the factory itself, as the internals are complex for mypy here.
+AsyncSessionFactoryType: TypeAlias = Callable[[], AsyncSession]
 
 
 def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
@@ -33,4 +36,4 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature when class_ is specified.
-    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[no-any-return, call-overload]

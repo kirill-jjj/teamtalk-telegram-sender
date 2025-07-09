@@ -17,7 +17,7 @@ from bot.telegram_bot.setup import create_telegram_dispatcher, setup_telegram_di
 
 uvloop: ModuleType | None = None
 try:
-    import uvloop as uvloop_module  # type: ignore
+    import uvloop as uvloop_module
 
     uvloop = uvloop_module
 except ImportError:

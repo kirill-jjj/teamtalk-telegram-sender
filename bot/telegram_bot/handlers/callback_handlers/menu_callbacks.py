@@ -53,7 +53,7 @@ async def menu_who_handler(
     # Ensure query.message exists due to @ensure_message_context
     # who_command_handler will be refactored to use services.cache.is_admin or accept is_admin
     await who_command_handler(
-        message=query.message,  # type: ignore
+        message=query.message,
         translator=translator,
         services=services,  # Pass services
         tt_connection=tt_connection,
@@ -73,7 +73,7 @@ async def menu_help_handler(
     # Ensure query.message exists
     # help_command_handler will be refactored to use services.cache.is_admin or accept is_admin
     await help_command_handler(
-        message=query.message,  # type: ignore
+        message=query.message,
         translator=translator,
         services=services,  # Pass services
     )
@@ -90,7 +90,7 @@ async def menu_settings_handler(
     """Handles the 'Settings' menu button click."""
     # Ensure query.message exists
     await settings_command_handler(
-        message=query.message,  # type: ignore
+        message=query.message,
         translator=translator,
     )
     await query.answer()

@@ -113,7 +113,9 @@ async def safe_edit_text(
         return True
 
 
-def ensure_message_context(func: Callable) -> Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]:
+def ensure_message_context(
+    func: Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]
+) -> Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]:
     """Decorator to ensure that a callback query handler has a message context.
 
     If query.message is None, it logs an error and attempts to answer the callback query.

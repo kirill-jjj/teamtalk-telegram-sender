@@ -9,6 +9,7 @@ import html
 from typing import TYPE_CHECKING, Any  # Added TYPE_CHECKING
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.filters.callback_data import CallbackData # Import CallbackData
 
 # Removed unused import: from collections.abc import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -101,7 +102,7 @@ async def create_main_settings_keyboard(translator: gettext.GNUTranslations) -> 
 
 
 async def create_language_selection_keyboard(
-    translator: gettext.GNUTranslations, available_languages: list
+    translator: gettext.GNUTranslations, available_languages: list[dict[str, str]]
 ) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
     _ = translator.gettext
@@ -222,7 +223,7 @@ async def _add_pagination_controls(
     current_page: int,
     total_pages: int,
     list_type: UserListAction,
-    callback_factory: "Callable",
+    callback_factory: "Callable[[UserListAction, int], CallbackData]",
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext

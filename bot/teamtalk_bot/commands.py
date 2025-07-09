@@ -63,7 +63,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         services_from_kwargs = kwargs.get("services")
-        if not isinstance(services_from_kwargs, Services): # type: ignore
+        if not isinstance(services_from_kwargs, Services):
             # This check ensures services_from_kwargs is indeed a Services instance or raises error
             raise ValueError("Services not found or of incorrect type in kwargs for is_tt_admin.") # noqa: TRY003
         services: Services = services_from_kwargs

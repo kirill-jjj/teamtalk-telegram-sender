@@ -213,7 +213,7 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
                     logger.debug("Message not modified for chat_id %s, skipping edit. Error: %s", target.message.chat.id, e)
                     # Try to answer the callback query to remove the "loading" state
                     try:
-                        await target.answer() # type: ignore[call-arg]
+                        await target.answer()
                     except Exception as answer_e:  # Could be already answered
                         logger.warning("Failed to answer CbQ after 'message not modified': %s", answer_e)
                 else:  # Other TelegramBadRequest
@@ -252,7 +252,7 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
     if isinstance(target, CallbackQuery) and not answered_with_alert:
         try:
             # This might fail if already answered by the "message not modified" block, which is fine.
-            await target.answer() # type: ignore[call-arg]
+            await target.answer()
         except TelegramAPIError as e:
             cbq_id = target.id if hasattr(target, "id") else "N/A"
             if "query is too old" in str(e).lower() or "query id is invalid" in str(e).lower():

@@ -1,11 +1,15 @@
 """Alembic environment configuration script."""
 
+from collections.abc import Iterable # Import Iterable
 from logging.config import fileConfig
 import os  # For path operations
 from pathlib import Path  # Added for Path operations
 
 from alembic import context
+from alembic.runtime.migration import MigrationContext
+from alembic.operations.ops import MigrationScript  # Corrected import for MigrationScript
 from sqlalchemy import pool
+from sqlalchemy.engine import Connection # Import Connection
 from sqlalchemy.ext.asyncio import create_async_engine  # Moved here for PLC0415
 from sqlmodel import SQLModel
 
@@ -27,7 +31,7 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
 
 
 def process_revision_directives(
-    context: context.MigrationContext, revision: str, directives: list[context.MigrationScript]
+    context: MigrationContext, revision: str | Iterable[str | None], directives: list[MigrationScript]
 ) -> None:
     """This hook prevents Alembic from creating empty migration files.
 
@@ -38,7 +42,13 @@ def process_revision_directives(
     # We can mark them as unused if preferred, e.g., by prefixing with an underscore.
     _ = context  # Mark as unused
     _ = revision  # Mark as unused
-    if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
+    # Guard against cmd_opts being None and upgrade_ops being None
+    if (
+        config.cmd_opts is not None
+        and config.cmd_opts.autogenerate
+        and directives[0].upgrade_ops is not None
+        and directives[0].upgrade_ops.is_empty()
+    ):
         directives[:] = []
         print("INFO  [alembic.autogenerate.compare] No structural changes detected.")  # noqa: T201
 
@@ -58,7 +68,7 @@ def get_db_url() -> str:
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}")  # noqa: T201
 
     try:
-        settings = Settings.from_toml(config_file)
+        settings = Settings.from_toml(str(config_file)) # Ensure it's a string for mypy
     except FileNotFoundError:
         print(f"ERROR [alembic.env] Configuration file '{config_file}' not found.")  # noqa: T201
         raise
@@ -122,7 +132,7 @@ async def run_migrations_online_async() -> None:
     await connectable.dispose()
 
 
-def do_run_migrations(connection: pool.Connection) -> None:
+def do_run_migrations(connection: Connection) -> None:
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine

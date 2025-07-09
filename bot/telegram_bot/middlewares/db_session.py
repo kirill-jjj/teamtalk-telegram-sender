@@ -12,7 +12,7 @@ from bot.database.engine import AsyncSessionFactoryType  # Import the specific s
 class DbSessionMiddleware(BaseMiddleware):
     """Middleware to provide a database session to handlers."""
 
-    def __init__(self, session_factory: AsyncSessionFactoryType) -> None:  # type: ignore[type-var]
+    def __init__(self, session_factory: AsyncSessionFactoryType) -> None:
         """Initializes DbSessionMiddleware.
 
         Args:
