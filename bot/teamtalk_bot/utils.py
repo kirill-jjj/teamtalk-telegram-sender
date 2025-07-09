@@ -7,7 +7,7 @@ from collections.abc import Callable
 import gettext
 import html
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
@@ -32,7 +32,7 @@ ttstr = sdk.ttstr
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
     translator: gettext.GNUTranslations,
-    app_cfg: "Services.config",  # More specific type for app_cfg
+    app_cfg: Services.config,  # More specific type for app_cfg
 ) -> str:
     """Determines the effective server name to display.
 
@@ -56,18 +56,16 @@ def get_effective_server_name(
                 server_name = ttstr(tt_instance.server.get_properties().server_name)
                 if not server_name:  # Check if empty string after ttstr
                     server_name = _("Unknown Server")
-            except (TimeoutError, pytalk.exceptions.TeamTalkException) as e:
-                logger.error(
-                    "Error getting server name from TT instance %s: %s",
+            except (TimeoutError, pytalk.exceptions.TeamTalkException):
+                logger.exception(
+                    "Error getting server name from TT instance %s.",
                     tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                    e,
                 )
                 server_name = _("Unknown Server")
-            except Exception as e_unexp:  # Catch any other unexpected error
+            except Exception:  # Catch any other unexpected error
                 logger.exception(
-                    "Unexpected error getting server name from TT instance %s: %s",
+                    "Unexpected error getting server name from TT instance %s.",
                     tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                    e_unexp,
                 )
                 server_name = _("Unknown Server")
         else:
@@ -135,11 +133,10 @@ async def get_online_teamtalk_users(
     try:
         online_users = tt_instance.server.get_users()
         return list(online_users) if online_users else []
-    except Exception as e:
+    except Exception:
         logger.exception(
-            "Error fetching online users from tt_instance (%s): %s",
+            "Error fetching online users from tt_instance (%s).",
             tt_instance.server_info.host if tt_instance.server_info else "N/A",
-            e,
         )
         return []
 
@@ -163,11 +160,11 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
             logger.debug("Closing TT instance: %s", host_info)
             instance.closeTeamTalk()
         logger.info("Successfully shut down TT instance for host: %s", host_info)
-    except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError) as e:
+    except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError):
         host_info_err = "Unknown Host (during error)"
         if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
             host_info_err = ttstr(instance.server_info.host)
-        logger.exception("Error during TT instance shutdown for %s: %s", host_info_err, e)
+        logger.exception("Error during TT instance shutdown for %s.", host_info_err)
 
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
@@ -246,15 +243,15 @@ async def send_long_tt_reply(
                 )
                 if part_idx < len(parts_to_send_list) - 1:
                     await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
-            except pytalk.exceptions.TeamTalkException as e:
-                logger.error("Error sending part %s of TT message: %s", part_idx + 1, e)
+            except pytalk.exceptions.TeamTalkException:
+                logger.exception("Error sending part %s of TT message.", part_idx + 1)
                 break
 
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     services: Services,
-    server_host_for_display: str, # Keep for consistent signature, though not used directly
+    _server_host_for_display: str, # Keep for consistent signature, though not used directly
     translator: gettext.GNUTranslations,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""

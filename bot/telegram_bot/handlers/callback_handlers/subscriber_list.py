@@ -32,7 +32,7 @@ async def handle_subscriber_list_actions(
     # bot: AiogramBot, # Removed
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
     _ = translator.gettext
     action = callback_data.action

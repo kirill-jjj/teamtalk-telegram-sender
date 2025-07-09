@@ -38,8 +38,8 @@ async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    callback_data: SettingsCallback,
-):
+    _callback_data: SettingsCallback, # Prefixed
+) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
     await callback_query.answer()
@@ -66,17 +66,16 @@ async def cq_set_subscription_setting(
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
     services: Services,
-):
+) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
 
-    except ValidationError as e:
-        logger.error(
-            "Invalid subscription setting value received in callback: %s for user %s. Raw value: %s",
-            e,
+    except ValidationError:
+        logger.exception(
+            "Invalid subscription setting value received in callback for user %s. Raw value: %s",
             callback_query.from_user.id,
             callback_data.setting_value,
         )
@@ -89,10 +88,10 @@ async def cq_set_subscription_setting(
         await callback_query.answer()
         return
 
-    def update_logic():
+    def update_logic() -> None:
         user_settings.notification_settings = new_setting_enum
 
-    def revert_logic():
+    def revert_logic() -> None:
         user_settings.notification_settings = original_setting
 
     setting_to_text_map = {

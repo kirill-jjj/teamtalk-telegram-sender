@@ -12,7 +12,7 @@ from bot.database.engine import AsyncSessionFactoryType  # Import the specific s
 class DbSessionMiddleware(BaseMiddleware):
     """Middleware to provide a database session to handlers."""
 
-    def __init__(self, session_factory: AsyncSessionFactoryType):  # type: ignore[type-var]
+    def __init__(self, session_factory: AsyncSessionFactoryType) -> None:  # type: ignore[type-var]
         """Initializes DbSessionMiddleware.
 
         Args:
@@ -26,7 +26,7 @@ class DbSessionMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Creates a new database session and injects it into the data dictionary

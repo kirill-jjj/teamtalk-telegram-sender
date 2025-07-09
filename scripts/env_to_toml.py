@@ -4,13 +4,13 @@ import argparse
 from collections.abc import Callable  # Moved E402
 from pathlib import Path
 import sys
-from typing import Any  # Moved E402, added Union
+from typing import Any  # Ensure Any is imported
 
 from dotenv import dotenv_values  # For reading .env files
 import toml  # For writing TOML
 
 
-def parse_comma_separated_string_to_list(v: Any) -> list[str]:
+def parse_comma_separated_string_to_list(v: Any) -> list[str]:  # noqa: ANN401
     """Parses a comma-separated string into a list of stripped strings.
 
     Returns an empty list if the input is not a string or is an empty/whitespace string.
@@ -59,7 +59,7 @@ ENV_TO_TOML_MAPPING: EnvMappingType = {
 DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"]
 
 
-def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:
+def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:  # noqa: ANN401
     """Applies the specified conversion rule to the raw value from .env."""
     # dotenv_values typically returns None if the key exists but has no value (e.g. KEY=)
     # or if the key is not in the file at all when iterating its result.
@@ -87,8 +87,8 @@ def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str)
     try:
         if callable(conversion_rule):
             return conversion_rule(raw_value)
-        else:  # Should not happen
-            return str(raw_value)
+        # Should not happen
+        return str(raw_value)
     except ValueError as e:
         conversion_name = conversion_rule.__name__ if callable(conversion_rule) else conversion_rule
         print(
@@ -138,12 +138,14 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
         with output_toml_path.open("w", encoding="utf-8") as f:  # Use Path.open()
             toml.dump(toml_data, f)
         print(f"Successfully converted to '{output_toml_path}'.")
-        return True
     except OSError as e:
         print(f"Error writing TOML file '{output_toml_path}': {e}", file=sys.stderr)
+        return False
     except Exception as e:
         print(f"Error during TOML generation for '{output_toml_path}': {e}", file=sys.stderr)
-    return False
+        return False
+    else:
+        return True
 
 
 def _process_all_env_files(project_root: Path, exclude_dirs_str: str) -> None:

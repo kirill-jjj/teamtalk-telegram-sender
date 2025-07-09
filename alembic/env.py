@@ -44,17 +44,10 @@ def process_revision_directives(
 
 
 def get_db_url() -> str:
-    """
-    if config.cmd_opts.autogenerate and directives[0].upgrade_ops.is_empty():
-        directives[:] = []
-        print("INFO  [alembic.autogenerate.compare] No structural changes detected.")  # noqa: T201
-
-
-def get_db_url() -> str:
     """Constructs the database URL from 'config.toml' using the Settings model.
 
     Returns:
-        The fully constructed SQLite database URL.
+        str: The fully constructed SQLite database URL.
 
     Raises:
         FileNotFoundError: If 'config.toml' is not found.
@@ -81,10 +74,7 @@ def get_db_url() -> str:
         raise ValueError(error_message)
 
     db_path_obj = Path(db_file_name)
-    if not db_path_obj.is_absolute():
-        db_path = (PROJECT_ROOT / db_file_name).resolve()
-    else:
-        db_path = db_path_obj.resolve()
+    db_path = (PROJECT_ROOT / db_file_name).resolve() if not db_path_obj.is_absolute() else db_path_obj.resolve()
 
     db_url = f"sqlite+aiosqlite:///{db_path}"
     print(f"INFO  [alembic.env] Using database URL: {db_url} (from 'database.db_file' in '{config_file}')")  # noqa: T201
@@ -94,11 +84,9 @@ def get_db_url() -> str:
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
+    This configures the context with just a URL and not an Engine,
+    though an Engine is acceptable here as well. By skipping the Engine
+    creation, we don't even need a DBAPI to be available.
     """
     url = get_db_url()
     context.configure(
@@ -115,7 +103,11 @@ def run_migrations_offline() -> None:
 
 
 async def run_migrations_online_async() -> None:
-    """Run migrations in 'online' mode using an asyncio event loop."""
+    """Run migrations in 'online' mode using an asyncio event loop.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+    """
     db_url = get_db_url()
 
     connectable = create_async_engine(
@@ -131,10 +123,10 @@ async def run_migrations_online_async() -> None:
 
 
 def do_run_migrations(connection: pool.Connection) -> None:
-    """Runs the migrations within the given database connection context.
+    """Run migrations in 'online' mode.
 
-    This function is called by `run_migrations_online_async` after establishing
-    an asynchronous database connection.
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
 
     Args:
         connection: An active SQLAlchemy connection object.

@@ -33,7 +33,6 @@ def get_project_version() -> str:
         if version:
             return str(version)
         print("⚠️ Warning: Version not found in pyproject.toml under project.version.", file=sys.stderr)
-        return "0.0.0"  # Fallback version
     except FileNotFoundError:
         print(
             f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. Cannot determine project version.",
@@ -43,6 +42,10 @@ def get_project_version() -> str:
     # Broader catch for TOML issues or structure changes
     except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e:
         print(f"⚠️ Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
+        return "0.0.0"  # Fallback version
+    else:
+        # This path is reached if 'version' is None after data.get("project", {}).get("version")
+        # and no exception occurred.
         return "0.0.0"  # Fallback version
 
 
@@ -64,7 +67,7 @@ def extract() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
+        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
         print(f"✅ Messages extracted to '{POT_FILE.relative_to(BASE_DIR)}'")
     except FileNotFoundError:
         print("❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.", file=sys.stderr)
@@ -89,7 +92,7 @@ def update() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
+        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
         print("✅ Translation catalogs (.po) successfully updated by pybabel.")
     except FileNotFoundError:
         print("❌ Error: Command 'pybabel' not found.", file=sys.stderr)
@@ -104,7 +107,7 @@ def compile_cmd() -> None:
     command = ["pybabel", "compile", "-d", str(LOCALE_DIR), "-D", LOCALE_DOMAIN, "--statistics"]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        result = subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)
+        result = subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
         if result.stdout:
             print(result.stdout.strip())
         print("✅ Translation catalogs (.mo) successfully compiled.")

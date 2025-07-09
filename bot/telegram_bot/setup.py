@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 # --- Application Lifecycle and Error Handling Functions ---
-async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_config: "Settings"):
+async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_config: "Settings") -> None:
     """Internal logic for startup."""
     logger = services.logger
     logger.info("Application startup: Initializing TeamTalk components...")
@@ -84,7 +84,7 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
     logger.info("Telegram bot commands set.")
 
 
-async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services"):
+async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> None:
     """Handles application shutdown logic."""
     logger = services.logger
     logger.warning("Application shutting down...")
@@ -97,8 +97,8 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services"):
             await teamtalk_task
         except asyncio.CancelledError:
             logger.info("Pytalk main event loop task cancelled successfully.")
-        except Exception as e:
-            logger.exception("Error awaiting cancelled Pytalk task: %s", e)
+        except Exception: # Corrected indentation
+            logger.exception("Error awaiting cancelled Pytalk task.")
     elif teamtalk_task:
         logger.info("Pytalk main event loop task was already done.")
     else:
@@ -123,7 +123,9 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services"):
     logger.info("Application shutdown sequence complete.")
 
 
-async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, services: "Services", app_config: "Settings"):
+async def global_error_handler(
+    event: ErrorEvent, _dispatcher: Dispatcher, services: "Services", app_config: "Settings"
+) -> None:
     """Global error handler for uncaught exceptions in Aiogram handlers."""
     logger = services.logger
     escaped_exception_text = html.quote(str(event.exception))
@@ -143,11 +145,10 @@ async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, servic
                 "<b>Critical error!</b>\n<b>Error type:</b> {error_type}\n<b>Message:</b> {error_message}"
             ).format(error_type=type(event.exception).__name__, error_message=escaped_exception_text)
             await services.bot_event.send_message(admin_chat_id_for_error, error_text)
-        except Exception as e:
+        except Exception:
             logger.exception(
-                "Error sending critical error message to admin chat %s: %s",
+                "Error sending critical error message to admin chat %s.",
                 admin_chat_id_for_error,
-                e,
             )
 
     update = event.update
@@ -175,8 +176,8 @@ async def global_error_handler(event: ErrorEvent, dispatcher: Dispatcher, servic
                 await update.callback_query.message.answer(user_message_text)
             elif user_id:
                 await services.bot_event.send_message(chat_id=user_id, text=user_message_text)
-        except Exception as e:
-            logger.exception("Error sending error message to user %s: %s", user_id if user_id else "Unknown", e)
+        except Exception:
+            logger.exception("Error sending error message to user %s.", user_id if user_id else "Unknown")
 
 
 def create_telegram_dispatcher() -> Dispatcher:
@@ -184,7 +185,7 @@ def create_telegram_dispatcher() -> Dispatcher:
     return Dispatcher()
 
 
-def setup_telegram_dispatcher(dp: Dispatcher, services: "Services"):
+def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     """Configures the Aiogram Dispatcher with middlewares, routers, and lifecycle handlers.
 
     Dependencies are injected via dp.workflow_data.

@@ -6,7 +6,7 @@ from collections.abc import Callable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any  # Ensure Any is imported
 
 from aiogram.exceptions import TelegramAPIError
 from pydantic import BaseModel, Field, model_validator
@@ -39,7 +39,7 @@ class AdminIdArgs(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def parse_str_to_dict(cls, data: Any) -> dict[str, list[int] | list[str]]: # More specific type
+    def parse_str_to_dict(cls, data: str | None) -> dict[str, list[int] | list[str]]: # More specific type
         """Parses a string of space-separated arguments into valid IDs and invalid entries."""
         if data is None or not isinstance(data, str):
             return {"valid_ids": [], "invalid_entries": []}
@@ -61,14 +61,14 @@ def is_tt_admin(func: Callable) -> Callable:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
-    async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:
+    async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         services: Services = kwargs.get("services")  # Changed to services
         if not services:
-            raise ValueError("Services instance 'services' not found in kwargs for is_tt_admin decorator.")
+            raise ValueError("Services not in kwargs for is_tt_admin.")  # noqa: TRY003
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, gettext.GNUTranslations):
-            raise TypeError("Translator object 'translator' was not provided as a keyword argument.")
+            raise TypeError("Translator not in kwargs.")  # noqa: TRY003
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
@@ -202,7 +202,7 @@ async def _generate_and_reply_deeplink(
     action: DeeplinkAction,
     success_log_message: str,
     reply_text_source: str,
-    error_reply_source: str,  # Not directly used, but kept for signature consistency if refactoring
+    _error_reply_source: str,  # Not directly used, but kept for signature consistency if refactoring
     services: Services,
     payload: str | None = None,
 ) -> None:
@@ -224,39 +224,36 @@ async def _generate_and_reply_deeplink(
         else:
             reply_text = _(reply_text_source)
         tt_message.reply(reply_text)
-    except TelegramAPIError as e_tg:
+    except TelegramAPIError:
         logger.exception(
-            "Telegram API error processing deeplink action %s for TT user %s: %s",
+            "Telegram API error processing deeplink action %s for TT user %s.",
             action,
             sender_tt_username,
-            e_tg,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception as e_reply:
-            logger.error("Failed to send Telegram API error reply to TT user %s: %s", sender_tt_username, e_reply)
-    except SQLAlchemyError as e_db:
+        except Exception:
+            logger.exception("Failed to send Telegram API error reply to TT user %s.", sender_tt_username)
+    except SQLAlchemyError:
         logger.exception(
-            "Database error creating deeplink for action %s for TT user %s: %s",
+            "Database error creating deeplink for action %s for TT user %s.",
             action,
             sender_tt_username,
-            e_db,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception as e_reply:
-            logger.error("Failed to send DB error reply to TT user %s: %s", sender_tt_username, e_reply)
-    except TeamTalkException as e_tt:
+        except Exception:
+            logger.exception("Failed to send DB error reply to TT user %s.", sender_tt_username)
+    except TeamTalkException:
         logger.exception(
-            "TeamTalk error processing deeplink action %s for TT user %s: %s",
+            "TeamTalk error processing deeplink action %s for TT user %s.",
             action,
             sender_tt_username,
-            e_tt,
         )
         try:
             tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception as e_reply:
-            logger.error("Failed to send TT error reply to TT user %s: %s", sender_tt_username, e_reply)
+        except Exception:
+            logger.exception("Failed to send TT error reply to TT user %s.", sender_tt_username)
 
 
 async def handle_tt_subscribe_command(
@@ -264,7 +261,7 @@ async def handle_tt_subscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
 ) -> None:
     """Handles the /sub command from a TeamTalk user.
 
@@ -292,7 +289,7 @@ async def handle_tt_unsubscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
 ) -> None:
     """Handles the /unsub command from a TeamTalk user.
 
@@ -320,7 +317,7 @@ async def handle_tt_add_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,  # will be in kwargs for decorator
-    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
     *,
     args_str: str | None,
 ) -> None:
@@ -353,7 +350,7 @@ async def handle_tt_remove_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,
-    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
     *,
     args_str: str | None,
 ) -> None:
@@ -384,7 +381,7 @@ async def handle_tt_help_command(  # Added return type hint
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
 ) -> None:
     """Handles the /help command from a TeamTalk user.
 

@@ -44,7 +44,7 @@ admin_menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMidd
 @ensure_message_context
 async def menu_who_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
@@ -65,7 +65,7 @@ async def menu_who_handler(
 @ensure_message_context
 async def menu_help_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
 ) -> None:
@@ -84,7 +84,7 @@ async def menu_help_handler(
 @ensure_message_context
 async def menu_settings_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
 ) -> None:
     """Handles the 'Settings' menu button click."""
@@ -103,7 +103,7 @@ async def menu_settings_handler(
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected
     tt_connection: TeamTalkConnection | None,  # Injected
 ) -> None:
@@ -117,7 +117,7 @@ async def menu_kick_handler(
 @ensure_message_context
 async def menu_ban_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     translator: "gettext.GNUTranslations",  # Injected
     tt_connection: TeamTalkConnection | None,  # Injected
 ) -> None:
@@ -131,7 +131,7 @@ async def menu_ban_handler(
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
+    _callback_data: MenuCallback,
     session: AsyncSession,  # Injected
     translator: "gettext.GNUTranslations",  # Injected
     services: "Services", # Injected

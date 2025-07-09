@@ -22,7 +22,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Checks if the user is subscribed. If not, and the command is not a /start command
@@ -46,7 +46,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
             )
             # This situation should ideally not happen.
             # Depending on policy, might want to inform user or just block.
-            return
+            return None
 
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
@@ -70,7 +70,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
                 telegram_id,
                 type(event).__name__,
             )
-            return  # Stop processing for non-subscribed users
+            return None  # Stop processing for non-subscribed users
 
         logger.debug(
             "SubscriptionCheckMiddleware: User %s is subscribed. Proceeding (Event type: %s).",

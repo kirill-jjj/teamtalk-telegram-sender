@@ -21,7 +21,7 @@ class I18nMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         services: Services = data["services"]
         user_settings: UserSettings | None = data.get("user_settings")
 

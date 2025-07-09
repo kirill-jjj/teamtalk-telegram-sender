@@ -94,12 +94,11 @@ async def process_unsubscribe_deeplink(
     if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, services=services):
         logger.info("User %s unsubscribed and all data was deleted via deeplink (using user_service).", telegram_id)
         return _("You have successfully unsubscribed from notifications.")
-    else:
-        logger.warning(
-            "Attempted to unsubscribe user %s via deeplink, but user was not found or data deletion otherwise failed.",
-            telegram_id,
-        )
-        return _("You were not subscribed to notifications.")
+    logger.warning(
+        "Attempted to unsubscribe user %s via deeplink, but user was not found or data deletion otherwise failed.",
+        telegram_id,
+    )
+    return _("You were not subscribed to notifications.")
 
 
 DEEPLINK_ACTION_HANDLERS = {
@@ -142,20 +141,18 @@ async def execute_deeplink_action(
                         "Deeplink action %s not explicitly handled in execute_deeplink_action.", action_enum_member
                     )
                     return_message = _("Invalid deeplink action.")
-            except (SQLAlchemyError, ValueError) as e_handler:
+            except (SQLAlchemyError, ValueError): # Removed 'as e_handler'
                 logger.exception(
-                    "Handler error for deeplink action '%s', token %s: %s",
+                    "Handler error for deeplink action '%s', token %s.",
                     action_enum_member,
                     deeplink_obj.token,  # Assuming DeeplinkModel has a token attribute
-                    e_handler,
                 )
                 return_message = _("An error occurred. Please try again later.")
-            except Exception as e_generic:
+            except Exception:
                 logger.exception(
-                    "Unexpected generic error for deeplink action '%s', token %s: %s",
+                    "Unexpected generic error for deeplink action '%s', token %s.",
                     action_enum_member,
                     deeplink_obj.token,
-                    e_generic,
                 )
                 return_message = _("An error occurred. Please try again later.")
     return return_message

@@ -105,14 +105,13 @@ async def handle_view_subscriber(
         try:
             chat_info = await active_bot.get_chat(user_to_view.telegram_id)
             display_name = format_telegram_user_display_name(chat_info)
-        except TelegramAPIError as e_tg:
+        except TelegramAPIError: # Removed 'as e_tg'
             logger.exception(
-                "Could not fetch chat info for %s via Telegram API: %s",
+                "Could not fetch chat info for %s via Telegram API.",
                 user_to_view.telegram_id,
-                e_tg,
             )
-        except Exception as e:
-            logger.exception("Unexpected error fetching chat info for %s: %s", user_to_view.telegram_id, e)
+        except Exception:
+            logger.exception("Unexpected error fetching chat info for %s.", user_to_view.telegram_id)
 
     if user_to_view and user_to_view.teamtalk_username:
         text = _("Actions for subscriber: {display_name}\nLinked TeamTalk account: {tt_username}").format(
@@ -212,7 +211,7 @@ async def _handle_ban_subscriber_action(
     return_page: int,
     translator: gettext.GNUTranslations,
     # services: "Services", # Already present, ensure it's used correctly
-):
+) -> None:
     """Handles banning a subscriber (TG and linked TT account)."""
     _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
@@ -241,19 +240,17 @@ async def _handle_ban_subscriber_action(
                     tt_username_to_ban,
                     tt_connection.server_info.host,
                 )
-            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e_tt:
+            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError): # Removed 'as e_tt'
                 logger.exception(
-                    "Error during conceptual TeamTalk ban for %s on %s: %s",
+                    "Error during conceptual TeamTalk ban for %s on %s.", # Removed trailing : %s
                     tt_username_to_ban,
                     tt_connection.server_info.host,
-                    e_tt,
                 )
-            except Exception as e:
+            except Exception:
                 logger.exception(
-                    "Unexpected error during conceptual TeamTalk ban for %s on %s: %s",
+                    "Unexpected error during conceptual TeamTalk ban for %s on %s.",
                     tt_username_to_ban,
                     tt_connection.server_info.host,
-                    e,
                 )
         else:
             logger.warning(
@@ -285,7 +282,7 @@ async def _handle_manage_tt_account_action(
     target_telegram_id: int,
     return_page: int,
     translator: gettext.GNUTranslations,
-):
+) -> None:
     """Handles showing the menu to manage a subscriber's linked TT account."""
     _ = translator.gettext
     if not query.message:  # Should be caught by @ensure_message_context if applied
@@ -313,7 +310,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
     tt_connection: TeamTalkConnection | None,
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles managing a subscriber's linked TeamTalk account (unlink, link new)."""
     _ = translator.gettext
     if not query.message:
@@ -352,7 +349,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
         )
         return
 
-    elif action == ManageTTAccountAction.LINK_NEW:
+    if action == ManageTTAccountAction.LINK_NEW:
         if not tt_connection or not tt_connection.user_accounts_cache:
             logger.warning("USER_ACCOUNTS_CACHE is empty or tt_connection not available for LINK_NEW.")
             await query.answer(
@@ -388,9 +385,8 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
         await query.answer()
         return
 
-    else:
-        await query.answer(_("Unknown action."), show_alert=True)
-        logger.warning("Unknown subscriber action: %s", action)
+    await query.answer(_("Unknown action."), show_alert=True)
+    logger.warning("Unknown subscriber action: %s", action)
 
 
 @subscriber_actions_router.callback_query(LinkTTAccountChosenCallback.filter())
@@ -400,7 +396,7 @@ async def handle_link_tt_account_chosen(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-):
+) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
     _ = translator.gettext
     if not query.message:

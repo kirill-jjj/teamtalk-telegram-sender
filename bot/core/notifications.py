@@ -1,11 +1,12 @@
 """Handles the logic for sending notifications based on TeamTalk events."""
 
 from collections.abc import Callable
+import datetime as dt
 from datetime import datetime, timedelta
 import gettext
 from html import escape
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -40,7 +41,7 @@ def _should_ignore_initial_event(
     reason_for_ignore = ""
     if login_complete_time is None:
         reason_for_ignore = "bot still initializing/reconnecting"
-    elif datetime.utcnow() < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
+    elif datetime.now(dt.UTC) < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
         reason_for_ignore = "bot login too recent"
     else:
         return False

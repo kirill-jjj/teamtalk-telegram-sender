@@ -1,9 +1,12 @@
 """Middlewares for managing and checking TeamTalk connections for Telegram handlers."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import (
+    Awaitable,  # Added Awaitable
+    Callable,  # Added Coroutine
+)
 from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any  # Added Dict, Union
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
@@ -25,7 +28,7 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
     Relies on 'connections' (Dict[str, TeamTalkConnection]) being in workflow_data.
     """
 
-    def __init__(self, default_server_key: str | None = None):
+    def __init__(self, default_server_key: str | None = None) -> None:
         """Initializes ActiveTeamTalkConnectionMiddleware.
 
         Args:
@@ -40,7 +43,7 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Injects an active TeamTalkConnection instance into the data dictionary.
@@ -104,7 +107,7 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Checks if the TeamTalk connection (injected by ActiveTeamTalkConnectionMiddleware)

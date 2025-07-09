@@ -33,6 +33,4 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:  # type
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature when class_ is specified.
-    session_factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
-
-    return session_factory  # type: ignore[no-any-return]
+    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]

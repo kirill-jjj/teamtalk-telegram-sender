@@ -1,6 +1,7 @@
 """Manages a single connection to a TeamTalk server, including state and caches."""
 
 import asyncio
+import datetime as dt
 from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any
@@ -74,12 +75,14 @@ class TeamTalkConnection:
                 logger.info("Added server %s. Instance: %s", self.server_info.host, self.instance)
                 self._is_finalized = False
                 self.login_complete_time = None
-                return True
-            logger.error("Failed to add server %s: PytalkBot.teamtalks unchanged.", self.server_info.host)
+            else:
+                logger.error("Failed to add server %s: PytalkBot.teamtalks unchanged.", self.server_info.host)
+                return False
+        except Exception:
+            logger.exception("Exception during add_server for %s.", self.server_info.host)
             return False
-        except Exception as e:
-            logger.exception("Exception during add_server for %s: %s", self.server_info.host, e)
-            return False
+        else:
+            return True
 
     async def _periodic_cache_sync(self) -> None:
         """Periodically synchronizes the online users cache with the server."""
@@ -107,19 +110,19 @@ class TeamTalkConnection:
                     logger.warning("[%s] Sync: TT instance not ready.", self.server_info.host)
                     await asyncio.sleep(reconnect_check_interval)
                     continue
-            except TimeoutError as e_timeout:
+            except TimeoutError:
                 logger.exception(
-                    "[%s] Timeout in periodic sync: %s", self.server_info.host, e_timeout
+                    "[%s] Timeout in periodic sync.", self.server_info.host
                 )
                 await asyncio.sleep(sync_interval // 2)
-            except pytalk.exceptions.TeamTalkException as e_pytalk:
+            except pytalk.exceptions.TeamTalkException:
                 logger.exception(
-                    "[%s] Pytalk error in periodic sync: %s", self.server_info.host, e_pytalk
+                    "[%s] Pytalk error in periodic sync.", self.server_info.host
                 )
                 await asyncio.sleep(reconnect_retry_interval if self.is_ready else reconnect_check_interval)
-            except Exception as e:
+            except Exception:
                 logger.exception(
-                    "[%s] Unexpected error in periodic sync: %s", self.server_info.host, e
+                    "[%s] Unexpected error in periodic sync.", self.server_info.host
                 )
                 await asyncio.sleep(sync_interval)
             await asyncio.sleep(sync_interval)
@@ -147,14 +150,14 @@ class TeamTalkConnection:
                     "[%s] Accounts cache populated: %s accounts.",
                     self.server_info.host, len(self.user_accounts_cache)
                 )
-        except TimeoutError as e_timeout:
-            logger.exception("[%s] Timeout populating accounts: %s", self.server_info.host, e_timeout)
-        except pytalk.exceptions.PermissionError as e_perm:
-            logger.exception("[%s] PermissionError populating accounts: %s", self.server_info.host, e_perm)
-        except pytalk.exceptions.TeamTalkException as e_pytalk:
-            logger.exception("[%s] Pytalk error populating accounts: %s", self.server_info.host, e_pytalk)
-        except Exception as e:
-            logger.exception("[%s] Unexpected error populating accounts: %s", self.server_info.host, e)
+        except TimeoutError:
+            logger.exception("[%s] Timeout populating accounts.", self.server_info.host)
+        except pytalk.exceptions.PermissionError:
+            logger.exception("[%s] PermissionError populating accounts.", self.server_info.host)
+        except pytalk.exceptions.TeamTalkException:
+            logger.exception("[%s] Pytalk error populating accounts.", self.server_info.host)
+        except Exception:
+            logger.exception("[%s] Unexpected error populating accounts.", self.server_info.host)
 
     def start_background_tasks(self) -> None:
         """Starts background tasks for this connection (cache syncs)."""
@@ -182,8 +185,8 @@ class TeamTalkConnection:
                     await task
                 except asyncio.CancelledError:
                     logger.info("[%s] Task %s cancelled.", self.server_info.host, name)
-                except Exception as e:
-                    logger.exception("[%s] Error stopping task %s: %s", self.server_info.host, name, e)
+                except Exception:
+                    logger.exception("[%s] Error stopping task %s.", self.server_info.host, name)
             setattr(self, name, None)
         logger.info("[%s] Background tasks stopped.", self.server_info.host)
 
@@ -198,8 +201,8 @@ class TeamTalkConnection:
                 if self.instance.connected:
                     self.instance.disconnect()
                 logger.info("[%s] Instance disconnected.", self.server_info.host)
-            except Exception as e:
-                logger.exception("[%s] Error during instance disconnect: %s", self.server_info.host, e)
+            except Exception:
+                logger.exception("[%s] Error during instance disconnect.", self.server_info.host)
         self._is_finalized = False
         self.login_complete_time = None
 
@@ -213,7 +216,7 @@ class TeamTalkConnection:
         """Checks if login sequence has been finalized."""
         return self._is_finalized
 
-    def mark_finalized(self, status: bool = True) -> None:
+    def mark_finalized(self, *, status: bool = True) -> None:
         """Marks the login sequence as finalized or not."""
         self._is_finalized = status
         logger.info("[%s] Connection marked: %s.", self.server_info.host, "finalized" if status else "NOT finalized")
@@ -283,8 +286,8 @@ class TeamTalkConnection:
                 "[%s] Online users cache init: %s users.",
                 self.server_info.host, len(self.online_users_cache)
             )
-        except Exception as e:
-            logger.exception("[%s] Error initial online users cache: %s", self.server_info.host, e)
+        except Exception:
+            logger.exception("[%s] Error initial online users cache.", self.server_info.host)
 
         self.start_background_tasks()
         try:
@@ -297,14 +300,14 @@ class TeamTalkConnection:
 
             status_text = self.services.config.teamtalk.status_text
             self.instance.change_status(status_val, status_text)
-            self.login_complete_time = datetime.utcnow()
-            self.mark_finalized(True)
+            self.login_complete_time = datetime.now(dt.UTC)
+            self.mark_finalized(status=True)
             logger.info(
                 "[%s] Login finalized at %s. Status: '%s'",
                 self.server_info.host, self.login_complete_time, status_text
             )
-        except Exception as e:
-            logger.exception("[%s] Error finalizing login (status/time): %s", self.server_info.host, e)
+        except Exception:
+            logger.exception("[%s] Error finalizing login (status/time).", self.server_info.host)
 
     async def _initiate_reconnect(self) -> None:
         """Initiates a reconnection sequence for this connection."""
@@ -373,10 +376,10 @@ class TeamTalkConnection:
                 else:
                     logger.warning("[%s] Could not get current/root channel to finalize.", self.server_info.host)
 
-        except pytalk.exceptions.PermissionError as e_perm:
-            logger.error(
-                "[%s] PermissionError joining '%s': %s. Will try to finalize in current/default channel.",
-                self.server_info.host, target_chan_name, e_perm
+        except pytalk.exceptions.PermissionError:
+            logger.exception(
+                "[%s] PermissionError joining '%s'. Will try to finalize in current/default channel.",
+                self.server_info.host, target_chan_name
             )
             # Attempt to finalize in the current channel if join failed due to permissions
             curr_chan_id_after_fail = self.instance.getMyCurrentChannelID()
@@ -385,13 +388,13 @@ class TeamTalkConnection:
             if ch_to_finalize_after_fail:
                 await self._finalize_bot_login_sequence(ch_to_finalize_after_fail)
             else:
-                logger.error(
+                logger.exception( # Changed from error to exception as it's in an except block context
                     "[%s] Could not get current channel (ID: %s) to finalize after permission error.",
                     self.server_info.host, ch_id_to_get
                 )
 
-        except Exception as e:
-            logger.exception("[%s] Error during channel join/finalization: %s", self.server_info.host, e)
+        except Exception:
+            logger.exception("[%s] Error during channel join/finalization.", self.server_info.host)
             await self._initiate_reconnect()
 
 
@@ -400,7 +403,7 @@ class TeamTalkConnection:
         # The 'server' argument is part of Pytalk's event signature but not used here.
         _ = server  # Mark as unused to satisfy linters like Ruff (ARG002)
         self.login_complete_time = None
-        self.mark_finalized(False)
+        self.mark_finalized(status=False)
         server_name_display = "Unknown Server"
 
         if self.instance:
@@ -446,7 +449,7 @@ class TeamTalkConnection:
         # The 'server' argument is part of Pytalk's event signature but not used here.
         _ = server # Mark as unused
         logger.warning("[%s] Connection lost. Reconnecting...", self.server_info.host)
-        self.mark_finalized(False)
+        self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.stop_background_tasks()
         await self._initiate_reconnect()
@@ -455,7 +458,7 @@ class TeamTalkConnection:
         """Handles being kicked from a channel on this server connection."""
         ch_name = self.ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown"
         logger.warning("[%s] Kicked from chan '%s'. Reconnecting...", self.server_info.host, ch_name)
-        self.mark_finalized(False)
+        self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.stop_background_tasks()
         await self._initiate_reconnect()

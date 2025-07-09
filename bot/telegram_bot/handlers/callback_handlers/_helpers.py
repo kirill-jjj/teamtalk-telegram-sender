@@ -1,8 +1,8 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable  # Added Awaitable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any  # Added Any
 
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -35,8 +35,8 @@ async def process_setting_update( # Added return type hint
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
         try:
             await callback_query.answer(_("Error: Callback query is missing essential data."), show_alert=True)
-        except TelegramAPIError as ans_err_crit:
-            logger.error("Critical error: Failed to answer callback for missing data: %s", ans_err_crit)
+        except TelegramAPIError:
+            logger.exception("Critical error: Failed to answer callback for missing data.")
         return
 
     update_action()
@@ -54,11 +54,10 @@ async def process_setting_update( # Added return type hint
             log_context="process_setting_update_ui_refresh",
         )
 
-    except SQLAlchemyError as e_db:
+    except SQLAlchemyError:
         logger.exception(
-            "Failed to update settings in DB for user %s. Error: %s",
+            "Failed to update settings in DB for user %s.",
             callback_query.from_user.id,
-            e_db,
         )
         revert_action()
         try:
@@ -80,6 +79,7 @@ async def safe_edit_text(
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     parse_mode: str | None = None,
+    *, # Make disable_web_page_preview keyword-only
     disable_web_page_preview: bool | None = None,
     logger_instance: logging.Logger | None = None,
     log_context: str = "",
@@ -95,28 +95,32 @@ async def safe_edit_text(
             parse_mode=parse_mode,
             disable_web_page_preview=disable_web_page_preview,
         )
-        return True
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            current_logger.exception("TelegramBadRequest editing message%s: %s", context_for_log, e)
+            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log) # Removed 'e'
             return False
         current_logger.debug(
-            "Message not modified for %s (chat_id %s), skipping edit.", log_context, message_to_edit.chat.id
+            "Message not modified for %s (chat_id %s), skipping edit. Error: %s",
+            log_context, message_to_edit.chat.id, e # Kept 'e' for debug
         )
         return True  # Ensure True is returned for "not modified"
-    except TelegramAPIError as e:
-        current_logger.exception("TelegramAPIError editing message%s: %s", context_for_log, e)
+    except TelegramAPIError: # Removed 'as e'
+        current_logger.exception("TelegramAPIError editing message%s.", context_for_log) # Removed 'e'
         return False
+    else:
+        return True
 
 
-def ensure_message_context(func: Callable):
+def ensure_message_context(func: Callable) -> Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]:
     """Decorator to ensure that a callback query handler has a message context.
 
     If query.message is None, it logs an error and attempts to answer the callback query.
     """
 
     @functools.wraps(func)
-    async def wrapper(query: CallbackQuery, *args: Any, **kwargs: Any) -> Any | None: # Added types for args/kwargs and return
+    async def wrapper(
+        query: CallbackQuery, *args: Any, **kwargs: Any  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
         # I18nMiddleware is expected to inject 'translator' into kwargs
         translator = kwargs.get("translator")
 
@@ -143,8 +147,8 @@ def ensure_message_context(func: Callable):
             )
             try:
                 await query.answer(error_message_for_missing_context, show_alert=True)
-            except TelegramAPIError as e:
-                logger.error("Failed to answer callback query in decorator for '%s': %s", func.__name__, e)
+            except TelegramAPIError:
+                logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
             return None  # Stop further execution of the handler
 
         return await func(query, *args, **kwargs)

@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any  # Ensure Any is imported
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject  # Added TelegramObject
@@ -26,7 +26,7 @@ class UserSettingsMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,  # Changed to TelegramObject
         data: dict[str, Any],  # Changed to Dict
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Loads or creates user settings, merges them into the current session,
@@ -57,7 +57,7 @@ class UserSettingsMiddleware(BaseMiddleware):
             await _send_error_response(
                 event, _default_tr("An error occurred. Please try again later."), show_alert_for_callback=True
             )
-            return
+            return None
 
         try:
             # Ensure the object is associated with the current session if it came from cache
@@ -75,11 +75,10 @@ class UserSettingsMiddleware(BaseMiddleware):
             # Refresh to ensure relationship data is up-to-date for this session
             await session_obj.refresh(user_settings, attribute_names=["muted_users_list"])
             logger.debug("Refreshed muted_users_list for user %s in current session.", user_obj.id)
-        except Exception as refresh_e:  # Catch more specific SQLAlchemy errors if possible
+        except Exception:  # Catch more specific SQLAlchemy errors if possible, removed 'as refresh_e'
             logger.exception(
-                "Error merging or refreshing muted_users_list for user %s in session: %s",
+                "Error merging or refreshing muted_users_list for user %s in session.",
                 user_obj.id,
-                refresh_e,
             )
             error_lang_code = (
                 user_settings.language_code
@@ -90,7 +89,7 @@ class UserSettingsMiddleware(BaseMiddleware):
             await _send_error_response(
                 event, _tr("An error occurred. Please try again later."), show_alert_for_callback=True
             )
-            return
+            return None
 
         data["user_settings"] = user_settings
 

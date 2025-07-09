@@ -25,7 +25,8 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
         # explicit refresh in middleware should typically cover this.
         await session.refresh(settings, attribute_names=["muted_users_list"])
         logger.debug("Updated settings for user %s in DB.", settings.telegram_id)
-        return True
-    except SQLAlchemyError as e:
-        logger.exception("Error updating settings for user %s in DB: %s", settings.telegram_id, e)
+    except SQLAlchemyError:
+        logger.exception("Error updating settings for user %s in DB.", settings.telegram_id)
         return False
+    else:
+        return True

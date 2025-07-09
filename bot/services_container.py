@@ -83,7 +83,6 @@ class Services:
         try:
             translation = gettext.translation(DOMAIN, localedir=LOCALE_DIR, languages=[language_code])
             self.translator_cache[language_code] = translation
-            return translation
         except FileNotFoundError:
             default_lang_code = self.config.general.default_lang
             if language_code != default_lang_code:
@@ -91,11 +90,11 @@ class Services:
                     "Language '%s' not found. Falling back to default '%s'.", language_code, default_lang_code
                 )
                 return self.get_translator(default_lang_code)  # Recursive call
-            else:
-                self.logger.error("Default language '%s' not found. Using NullTranslations.", default_lang_code)
-                null_trans = gettext.NullTranslations()
-                self.translator_cache[language_code] = null_trans  # Cache even null translation
-                return null_trans
+            # This error is within an exception handler (FileNotFoundError), so use .exception
+            self.logger.exception("Default language '%s' not found. Using NullTranslations.", default_lang_code)
+            null_trans = gettext.NullTranslations()
+            self.translator_cache[language_code] = null_trans  # Cache even null translation
+            return null_trans
 
     async def load_user_settings_to_app_cache(self) -> None:
         """Loads all user settings from DB into the service's cache."""
@@ -129,9 +128,9 @@ class Services:
                 # Refresh all, including relationships
                 await session.refresh(user_settings, attribute_names=["muted_users_list"])
                 self.logger.info("Successfully created and saved new settings for user %s.", telegram_id)
-            except SQLAlchemyError as e:
+            except SQLAlchemyError:
                 await session.rollback()
-                self.logger.exception("Database error creating settings for user %s: %s", telegram_id, e)
+                self.logger.exception("Database error creating settings for user %s.", telegram_id)
                 # Return a default non-persistent object on error.
                 return UserSettings(telegram_id=telegram_id, language_code=self.config.general.default_lang)
 

@@ -40,11 +40,12 @@ async def add_admin_full(
                 logger.warning("User settings not available for new admin %s, commands not updated.", telegram_id)
             return True
         logger.warning("Failed to add admin %s to DB (possibly already admin or DB error).", telegram_id)
-        return False
-    except Exception as e:
-        logger.exception("Error in add_admin_full for telegram_id %s: %s", telegram_id, e)
+    except Exception:
+        logger.exception("Error in add_admin_full for telegram_id %s.", telegram_id)
         # crud.add_admin should manage its own session rollback on error.
         return False
+    else:
+        return False # This path is reached if crud.add_admin returns False
 
 
 async def remove_admin_full(
@@ -72,8 +73,9 @@ async def remove_admin_full(
                 logger.warning("User settings not available for former admin %s, commands not updated.", telegram_id)
             return True
         logger.warning("Failed to remove admin %s from DB (possibly not an admin or DB error).", telegram_id)
-        return False
-    except Exception as e:
-        logger.exception("Error in remove_admin_full for telegram_id %s: %s", telegram_id, e)
+    except Exception:
+        logger.exception("Error in remove_admin_full for telegram_id %s.", telegram_id)
         # crud.remove_admin_db should manage its own session rollback on error.
         return False
+    else:
+        return False # This path is reached if crud.remove_admin_db returns False

@@ -38,7 +38,7 @@ class TeamTalkSettings(BaseSettings):
 
     host_name: str = Field("teamtalk.example.com", description="TeamTalk server address.")
     port: int = Field(10333, description="TeamTalk server port.")
-    encrypted: bool = Field(False, description="Whether the TeamTalk connection is encrypted.")
+    encrypted: bool = Field(default=False, description="Whether the TeamTalk connection is encrypted.")
     user_name: str = Field("BotUser", description="Bot's username on TeamTalk.")
     password: str = Field(..., description="Bot's password on TeamTalk.")
     channel: str = Field("/Root/Public Channel", description="Full path to TeamTalk channel.")
@@ -84,11 +84,10 @@ class Settings(BaseSettings):
                 data = tomllib.load(f)
         except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns
-            abs_path = path.resolve()  # Use Path.resolve()
-            raise FileNotFoundError(
-                f"Configuration file not found. Attempted path: {abs_path} (resolved from '{path_str}')"
-            ) from e
+            # Consider defining a custom exception for more structured error reporting
+            raise FileNotFoundError("Config not found") from e  # noqa: TRY003
         except tomllib.TOMLDecodeError as e:
-            raise ValueError(f"Error decoding TOML file {path_str}: {e}") from e
+            # Consider defining a custom exception
+            raise ValueError("TOML decode error") from e  # noqa: TRY003
 
         return cls(**data)

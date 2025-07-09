@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class Application:
     """Main application class orchestrating the bot's lifecycle and components."""
 
-    def __init__(self, app_config_instance: Settings):
+    def __init__(self, app_config_instance: Settings) -> None:
         """Initializes the Application.
 
         Args:
@@ -44,7 +44,7 @@ class Application:
         self.tt_event_handler = TeamTalkEventHandler(self.services)
         # self.teamtalk_task is removed as it's now managed in setup.py via dispatcher.workflow_data
 
-    async def run(self):
+    async def run(self) -> None:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
@@ -67,7 +67,7 @@ class Application:
 
 
 # === CONFIGURATION AND CLI BLOCK START ===
-def main_cli():
+def main_cli() -> None:
     """Main command-line interface function to start the bot.
 
     Parses arguments, loads configuration, sets up uvloop if available,

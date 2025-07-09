@@ -55,7 +55,7 @@ async def start_command_handler(
     translator: gettext.GNUTranslations,  # gettext function
     user_settings: UserSettings,
     services: "Services",  # Changed from app: "Application"
-):
+) -> None:
     """Handles the /start command, processing deeplinks or showing a welcome message."""
     _ = translator.gettext
     if not message.from_user:
@@ -70,7 +70,7 @@ async def start_command_handler(
 
 
 def _get_user_display_channel_name(
-    user_obj: TeamTalkUser, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+    user_obj: TeamTalkUser, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
 ) -> str:
     channel_obj = user_obj.channel
     user_display_channel_name = ""
@@ -121,7 +121,7 @@ def _get_user_display_channel_name(
 
 
 def _group_users_for_who_command(
-    users: list[TeamTalkUser], bot_user_id: int | None, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+    users: list[TeamTalkUser], bot_user_id: int | None, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
 ) -> tuple[list[WhoChannelGroup], int]:
     channels_display_data: dict[str, list[str]] = {}
     users_added_to_groups_count = 0
@@ -202,7 +202,7 @@ async def who_command_handler(
     translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-):
+) -> None:
     """Handles the /who command, showing online users in TeamTalk."""
     if not message.from_user:
         return
@@ -248,7 +248,7 @@ async def help_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
-):
+) -> None:
     """Handles the /help command, showing available commands."""
     _ = translator.gettext
     if not message.from_user:
@@ -263,7 +263,7 @@ async def help_command_handler(
 async def settings_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-):
+) -> None:
     """Handles the /settings command, showing the main settings menu."""
     _ = translator.gettext
     if not message.from_user:
@@ -273,8 +273,8 @@ async def settings_command_handler(
     settings_builder = await create_main_settings_keyboard(translator)
     try:
         await message.answer(text=_("Settings"), reply_markup=settings_builder.as_markup())
-    except TelegramAPIError as e:
-        logger.error("Could not send settings menu: %s", e)
+    except TelegramAPIError:
+        logger.exception("Could not send settings menu.")
 
 
 @user_commands_router.message(Command("menu"))
@@ -282,7 +282,7 @@ async def menu_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
-):
+) -> None:
     """Handles the /menu command, showing the main command menu."""
     _ = translator.gettext
     if not message.from_user:
@@ -291,8 +291,8 @@ async def menu_command_handler(
     await safe_delete_message(message, log_context_message="user menu command")
     is_admin = services.cache.is_admin(message.from_user.id)
     # Pass the full translator object to create_main_menu_keyboard
-    menu_builder = await create_main_menu_keyboard(translator, is_admin)
+    menu_builder = await create_main_menu_keyboard(translator, is_admin=is_admin)
     try:
         await message.answer(text=_("Main Menu:"), reply_markup=menu_builder.as_markup())
-    except TelegramAPIError as e:
-        logger.error("Could not send main menu: %s", e)
+    except TelegramAPIError:
+        logger.exception("Could not send main menu.")

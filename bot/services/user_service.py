@@ -46,16 +46,17 @@ async def delete_full_user_profile(
             "DB changes (if any) committed. Caches cleared via CacheService.",
             telegram_id,
         )
-        return True
 
-    except SQLAlchemyError as e_sql:
+    except SQLAlchemyError:
         await session.rollback()
-        logger.exception("SQLAlchemyError during full data deletion for %s: %s. Rolling back.", telegram_id, e_sql)
+        logger.exception("SQLAlchemyError during full data deletion for %s. Rolling back.", telegram_id)
         return False
-    except Exception as e:
+    except Exception:
         await session.rollback()
-        logger.exception("Unexpected error during full data deletion for %s: %s. Rolling back.", telegram_id, e)
+        logger.exception("Unexpected error during full data deletion for %s. Rolling back.", telegram_id)
         return False
+    else:
+        return True
 
 
 async def update_user_language_settings(
@@ -74,17 +75,17 @@ async def update_user_language_settings(
             new_lang_code,
             user_settings.telegram_id,
         )
-        return True
-    except SQLAlchemyError as e_db:
+    except SQLAlchemyError: # Removed 'as e_db'
         # update_user_settings_in_db should handle rollback on its own error.
         # If commit is outside, then consider rollback here.
         logger.exception(
-            "SQLAlchemyError updating language to '%s' for user %s: %s",
+            "SQLAlchemyError updating language to '%s' for user %s.",
             new_lang_code,
             user_settings.telegram_id,
-            e_db,
         )
         return False
+    else:
+        return True
 
 
 async def process_new_subscription(
@@ -142,23 +143,24 @@ async def process_new_subscription(
             )
             services.cache.update_user_settings(user_settings) # Update cache with new settings
             return True
-        else:
-            # Rollback tt_username change in memory if DB update failed?
-            # update_user_settings_in_db should have rolled back the session.
-            # The user_settings object in memory would be stale if not refreshed.
-            logger.error(
-                "Failed to update user settings in DB for user %s with TT username '%s'.",
-                user_settings.telegram_id, tt_username
-            )
-            return False
+        # Rollback tt_username change in memory if DB update failed?
+        # update_user_settings_in_db should have rolled back the session.
+        # The user_settings object in memory would be stale if not refreshed.
+        logger.error(
+            "Failed to update user settings in DB for user %s with TT username '%s'.",
+            user_settings.telegram_id, tt_username
+        )
 
-    except Exception as e:
+    except Exception:
         logger.exception(
-            "Error in process_new_subscription for user %s, tt_username %s: %s",
-            user_settings.telegram_id, tt_username, e
+            "Error in process_new_subscription for user %s, tt_username %s.",
+            user_settings.telegram_id, tt_username
         )
         # Ensure session is rolled back if any unhandled exception occurred before commits in crud/update_user_settings
         # However, called functions are expected to manage their own session states.
+        return False
+    else:
+        # This path is reached if settings_updated is False
         return False
 
 
@@ -224,22 +226,23 @@ async def toggle_mute_status_for_tt_user(
             "Successfully toggled mute for '%s' for user %s to '%s'. DB and cache updated.",
             tt_username_to_toggle, user_settings.telegram_id, resulting_action
         )
-        return True, resulting_action
 
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await session.rollback()
         logger.exception(
-            "SQLAlchemyError while toggling mute status for TT user '%s' for TG user %s. Rolled back. Error: %s",
-            tt_username_to_toggle, user_settings.telegram_id, e
+            "SQLAlchemyError while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
+            tt_username_to_toggle, user_settings.telegram_id
         )
         return False, None
-    except Exception as e:
+    except Exception:
         await session.rollback() # Rollback on any other unexpected error during DB operations
         logger.exception(
-            "Unexpected error while toggling mute status for TT user '%s' for TG user %s. Rolled back. Error: %s",
-            tt_username_to_toggle, user_settings.telegram_id, e
+            "Unexpected error while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
+            tt_username_to_toggle, user_settings.telegram_id
         )
         return False, None
+    else:
+        return True, resulting_action
     # This duplicate except block for Exception was removed as it's already caught above.
     # If a more specific error handling is needed here for other types of exceptions,
     # it should be added. For now, the generic `Exception as e` at the end of the
@@ -270,20 +273,19 @@ async def update_user_bot_commands(
             new_lang_code,
             is_admin,
         )
+    except TelegramAPIError:
+        logger.exception(
+            "TelegramAPIError updating commands for user %s to language '%s'.",
+            telegram_id,
+            new_lang_code,
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "Unexpected error updating commands for user %s to language '%s'.",
+            telegram_id,
+            new_lang_code,
+        )
+        return False
+    else:
         return True
-    except TelegramAPIError as e_tg:
-        logger.exception(
-            "TelegramAPIError updating commands for user %s to language '%s': %s",
-            telegram_id,
-            new_lang_code,
-            e_tg,
-        )
-        return False
-    except Exception as e:
-        logger.exception(
-            "Unexpected error updating commands for user %s to language '%s': %s",
-            telegram_id,
-            new_lang_code,
-            e,
-        )
-        return False

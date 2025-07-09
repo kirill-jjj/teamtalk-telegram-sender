@@ -59,7 +59,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
             return True, _("User {user_nickname} kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
-        elif action == AdminAction.BAN:
+        if action == AdminAction.BAN:
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
             logger.info(
@@ -72,40 +72,36 @@ async def _execute_tt_user_action(  # noqa: PLR0911
             return True, _("User {user_nickname} banned and kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
-        else:
-            logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
-            return False, _("Unknown action.")
+        logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
+        return False, _("Unknown action.")
 
-    except PytalkPermissionError as e:
-        logger.error(
-            "PermissionError during '%s' on TT user ID %s on server %s: %s",
+    except PytalkPermissionError:
+        logger.exception(
+            "PermissionError during '%s' on TT user ID %s on server %s.",
             action,
             user_to_act_on.id,
             server_host,
-            e,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
-    except PytalkException as e:
-        logger.error(
-            "TeamTalkException during '%s' on TT user ID %s on server %s: %s",
+    except PytalkException:
+        logger.exception(
+            "TeamTalkException during '%s' on TT user ID %s on server %s.",
             action,
             user_to_act_on.id,
             server_host,
-            e,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
-    except (ValueError, TypeError, AttributeError) as e_data:
+    except (ValueError, TypeError, AttributeError): # Removed 'as e_data'
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
         logger.exception(
-            "Data error during '%s' on TT user (ID: %s) on server %s: %s",
+            "Data error during '%s' on TT user (ID: %s) on server %s.",
             action,
             user_id_log,
             server_host,
-            e_data,
         )
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
@@ -192,11 +188,10 @@ async def process_user_action_selection(
                 )
                 try:
                     await callback_query.message.edit_reply_markup(reply_markup=None)
-                except TelegramAPIError as e_markup:
-                    logger.error(
-                        "Failed to even remove reply markup after user action on %s: %s",
+                except TelegramAPIError:
+                    logger.exception(
+                        "Failed to even remove reply markup after user action on %s.",
                         server_host_for_display,
-                        e_markup,
                     )
     else:
         await callback_query.answer(message_text, show_alert=True)

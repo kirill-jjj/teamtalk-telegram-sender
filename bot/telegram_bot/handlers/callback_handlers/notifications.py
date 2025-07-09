@@ -30,7 +30,7 @@ async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    callback_data: SettingsCallback,  # Keep for consistent signature, though not used
+    _callback_data: SettingsCallback,  # Keep for consistent signature, though not used
 ) -> None:
     """Shows the notification settings menu."""
     _ = translator.gettext
@@ -51,7 +51,7 @@ async def cq_toggle_noon_setting_action(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    callback_data: NotificationActionCallback, # Keep for consistent signature, though not used
+    _callback_data: NotificationActionCallback, # Keep for consistent signature, though not used
     services: Services,
 ) -> None:
     """Handles toggling the NOON (Not On Online) setting."""

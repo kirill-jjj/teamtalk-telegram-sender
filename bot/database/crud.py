@@ -1,5 +1,6 @@
 """Database CRUD (Create, Read, Update, Delete) operations."""
 
+import datetime as dt
 from datetime import datetime, timedelta
 import logging
 import secrets
@@ -35,11 +36,12 @@ async def db_add_generic(session: AsyncSession, model_instance: T) -> bool:
         # or to ensure the instance is up-to-date with the session.
         await session.refresh(model_instance)
         logger.debug("Added record to %s: %s", model_instance.__tablename__, model_instance)
-        return True
-    except SQLAlchemyError as e:
-        logger.exception("Error adding to DB (%s): %s", model_instance.__tablename__, e)
+    except SQLAlchemyError:
+        logger.exception("Error adding to DB (%s).", model_instance.__tablename__)
         await session.rollback()
         return False
+    else:
+        return True
 
 
 async def db_remove_generic(session: AsyncSession, record_to_remove: T | None) -> bool:
@@ -65,11 +67,12 @@ async def db_remove_generic(session: AsyncSession, record_to_remove: T | None) -
             await session.delete(record_to_remove)
             await session.commit()
             logger.debug("Removed record from %s with PK (%s=%s)", table_name, pk_col_name, record_pk)
-            return True
-        except SQLAlchemyError as e:
-            logger.exception("Error removing from DB (%s): %s", record_to_remove.__tablename__, e)
+        except SQLAlchemyError:
+            logger.exception("Error removing from DB (%s).", record_to_remove.__tablename__)
             await session.rollback()
             return False
+        else:
+            return True
     return False
 
 
@@ -98,8 +101,8 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[T]) -> li
         statement = select(model_class.telegram_id)
         result = await session.exec(statement)
         return list(result.all())
-    except SQLAlchemyError as e:
-        logger.exception("Error getting all IDs from %s: %s", table_name, e)
+    except SQLAlchemyError:
+        logger.exception("Error getting all IDs from %s.", table_name)
         return []
 
 
@@ -148,7 +151,7 @@ async def create_deeplink(
         The generated token string if successful, None otherwise.
     """
     token_str = secrets.token_urlsafe(DEEPLINK_TOKEN_LENGTH_BYTES)
-    expiry_time = datetime.utcnow() + timedelta(seconds=deeplink_ttl_seconds)
+    expiry_time = datetime.now(dt.UTC) + timedelta(seconds=deeplink_ttl_seconds)
     deeplink_obj = Deeplink(
         token=token_str,
         action=action,
@@ -165,9 +168,8 @@ async def create_deeplink(
             expected_telegram_id,
         )
         return token_str
-    else:
-        logger.error("Failed to save deeplink to DB for action %s.", action)
-        return None
+    logger.error("Failed to save deeplink to DB for action %s.", action)
+    return None
 
 
 async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
@@ -181,7 +183,7 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
         The Deeplink object if found and not expired, None otherwise.
     """
     deeplink_obj = await session.get(Deeplink, token)
-    if deeplink_obj and deeplink_obj.expiry_time < datetime.utcnow():
+    if deeplink_obj and deeplink_obj.expiry_time < datetime.now(dt.UTC):
         logger.warning("Deeplink %s expired. Deleting.", token)
         await db_remove_generic(session, deeplink_obj)
         return None

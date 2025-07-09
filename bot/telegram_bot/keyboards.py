@@ -78,8 +78,8 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
     is_in_set = username in muted_usernames_set
     if user_settings.mute_list_mode == MuteListMode.whitelist:
         return not is_in_set  # Muted if not in the allow list
-    else:  # blacklist mode
-        return is_in_set  # Muted if in the block list
+    # blacklist mode
+    return is_in_set  # Muted if in the block list
 
 
 # --- Settings Keyboards ---
@@ -314,7 +314,7 @@ def _add_pagination_controls_generic(
     total_pages: int,
     pagination_callback_factory: "Callable[..., Any]",
     # To pass additional fixed args to the pagination_callback_factory
-    **factory_kwargs,
+    **factory_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Adds generic pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext
@@ -393,7 +393,7 @@ async def create_subscriber_list_keyboard(
     _ = translator.gettext
 
     def subscriber_button_former(
-        subscriber: SubscriberInfo, page_num: int, translate: "Callable[[str], str]"
+        subscriber: SubscriberInfo, page_num: int, _translate: "Callable[[str], str]"
     ) -> InlineKeyboardButton:
         user_info_parts = [subscriber.display_name]
         if subscriber.teamtalk_username:
@@ -438,7 +438,7 @@ async def create_user_selection_keyboard(
     return builder
 
 
-async def create_main_menu_keyboard(translator: gettext.GNUTranslations, is_admin: bool) -> InlineKeyboardBuilder:
+async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
@@ -546,7 +546,7 @@ async def create_manage_tt_account_keyboard(
     target_telegram_id: int,
     current_tt_username: str | None,
     page: int,
-    list_action_page: int = 0,
+    _list_action_page: int = 0,
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for managing a subscriber's TeamTalk account link."""
     _ = translator.gettext
@@ -588,8 +588,8 @@ async def create_linkable_tt_account_list_keyboard(
     # Define the item_button_former for linkable TeamTalk accounts
     def tt_account_button_former(
         account_obj: pytalk.UserAccount,
-        page_num: int,  # current_page_idx from the generic helper call
-        translate: "Callable[[str], str]",  # _ function
+        _page_num: int,  # current_page_idx from the generic helper call
+        _translate: "Callable[[str], str]",  # _ function
     ) -> InlineKeyboardButton:
         username_str = ttstr(account_obj.username)
         button_text = username_str

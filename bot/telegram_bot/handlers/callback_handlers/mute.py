@@ -124,8 +124,8 @@ async def _display_internal_user_list(
         results = await session.exec(statement)
         users_to_process = [str(username) for username in results.all()]
         sorted_items = sorted(users_to_process)
-    except SQLAlchemyError as e:
-        logger.exception("DB error fetching internal user list for user %s: %s", user_settings.telegram_id, e)
+    except SQLAlchemyError:
+        logger.exception("DB error fetching internal user list for user %s.", user_settings.telegram_id)
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
@@ -175,8 +175,8 @@ async def _display_all_server_accounts_list(
                     server_host=server_host
                 )
             )
-        except TelegramAPIError as e:
-            logger.error("Error informing user about empty accounts_cache for %s: %s", server_host, e)
+        except TelegramAPIError:
+            logger.exception("Error informing user about empty accounts_cache for %s.", server_host)
         return
 
     all_accounts_tt = list(user_accounts_cache.values())
@@ -238,7 +238,7 @@ async def _get_username_to_toggle_from_callback(
 
 
 def _generate_mute_toggle_toast_message(
-    username_to_toggle: str, was_added_to_list: bool, current_mode: MuteListMode, translator: gettext.GNUTranslations
+    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: gettext.GNUTranslations
 ) -> str:
     _ = translator.gettext
     clean_username = username_to_toggle.strip("<>")
@@ -277,8 +277,8 @@ async def _refresh_mute_related_ui(
     try:
         await session.refresh(user_settings, attribute_names=["muted_users_list"])
         logger.debug("Refreshed muted_users_list for user %s before UI refresh.", user_settings.telegram_id)
-    except Exception as e:
-        logger.exception("Failed to refresh user_settings relations for %s: %s", user_settings.telegram_id, e)
+    except Exception:
+        logger.exception("Failed to refresh user_settings relations for %s.", user_settings.telegram_id)
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
@@ -318,7 +318,7 @@ async def cq_show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    callback_data: NotificationActionCallback # Keep for consistent signature, though not used
+    _callback_data: NotificationActionCallback # Keep for consistent signature, though not used
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
@@ -395,11 +395,11 @@ async def cq_set_mute_mode_action(
             logger_instance=logger,
             log_context="cq_set_mute_mode_action",
         )
-    except SQLAlchemyError as e:
+    except SQLAlchemyError: # Removed 'as e'
         managed_user_settings.mute_list_mode = original_mode
         await session.merge(managed_user_settings)
         await session.rollback()
-        logger.exception("Failed to update mute list mode for user %s. Error: %s", callback_query.from_user.id, e)
+        logger.exception("Failed to update mute list mode for user %s.", callback_query.from_user.id)
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
 
 
@@ -506,7 +506,7 @@ async def cq_toggle_specific_user_mute_action(
             "Could not determine username to toggle mute for user %s. Callback data: %s",
             callback_query.from_user.id, callback_data
         )
-        await callback_query.answer(_("An error occurred determining the user to mute/unmute. Please try again."), show_alert=True)
+        await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
         return
 
     # --- Call the service function to handle all logic ---
@@ -519,17 +519,18 @@ async def cq_toggle_specific_user_mute_action(
     # ----------------------------------------------------
 
     if not was_successful:
-        await callback_query.answer(_("An error occurred while updating mute status. Please try again later."), show_alert=True)
+        await callback_query.answer(_("Error updating mute status. Try again later."), show_alert=True)
         return
 
     # Generate toast message based on the action performed by the service
     if resulting_action == "muted":
         toast_message = _generate_mute_toggle_toast_message(
-            username_to_toggle, True, user_settings.mute_list_mode, translator
+            username_to_toggle, was_added_to_list=True, current_mode=user_settings.mute_list_mode, translator=translator
         )
     elif resulting_action == "unmuted":
         toast_message = _generate_mute_toggle_toast_message(
-            username_to_toggle, False, user_settings.mute_list_mode, translator
+            username_to_toggle, was_added_to_list=False,
+            current_mode=user_settings.mute_list_mode, translator=translator
         )
     else: # Should not happen if was_successful is True
         logger.error("toggle_mute_status_for_tt_user reported success but no valid resulting_action.")

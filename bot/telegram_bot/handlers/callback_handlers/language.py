@@ -136,10 +136,10 @@ async def cq_set_language(
             logger_instance=logger,
             log_context="cq_set_language_ui_refresh",
         )
-    except Exception as e_ui:
+    except Exception:
         logger.exception(
-            "Failed to refresh settings UI for user %s after language change to %s: %s",
-            telegram_id, new_lang_code, e_ui
+            "Failed to refresh settings UI for user %s after language change to %s.",
+            telegram_id, new_lang_code
         )
         # Don't send another alert if commands failed, as user already got one.
         # If commands succeeded but UI failed, this is the first major error user sees.

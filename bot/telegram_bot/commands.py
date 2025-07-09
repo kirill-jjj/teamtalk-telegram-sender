@@ -52,8 +52,8 @@ async def set_telegram_commands(services: "Services") -> None:
                 language_code=lang_code if lang_code != services.config.general.default_lang else None,
             )
             logger.info("Successfully set global user commands for language: '%s'.", lang_code)
-        except TelegramAPIError as e:
-            logger.error("Failed to set global commands for language '%s': %s", lang_code, e)
+        except TelegramAPIError:
+            logger.exception("Failed to set global commands for language '%s'.", lang_code)
 
     # --- 2. Set individual commands for each administrator ---
     async with services.session_factory() as session:
@@ -80,9 +80,9 @@ async def set_telegram_commands(services: "Services") -> None:
                 logger.info(
                     "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
                 )
-            except TelegramAPIError as e:
-                logger.error(
-                    "Failed to set commands for admin %s (lang: %s): %s", admin_id, admin_lang_code, e
+            except TelegramAPIError:
+                logger.exception(
+                    "Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code
                 )
 
 
@@ -91,7 +91,7 @@ async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int) -> None:
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
         logger.info("Successfully cleared commands for chat_id %s.", chat_id)
-    except TelegramAPIError as e:
-        logger.error("Failed to clear commands for chat_id %s: %s", chat_id, e)
-    except Exception as e:
-        logger.error("An unexpected error occurred while clearing commands for chat_id %s: %s", chat_id, e)
+    except TelegramAPIError:
+        logger.exception("Failed to clear commands for chat_id %s.", chat_id)
+    except Exception:
+        logger.exception("An unexpected error occurred while clearing commands for chat_id %s.", chat_id)

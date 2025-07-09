@@ -5,7 +5,7 @@ import gettext  # For translator type hint
 import logging
 
 # For type hinting
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any  # Ensure Any is imported
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
@@ -28,7 +28,7 @@ class AdminCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
         Checks if the user is an admin. If not, and the event is a CallbackQuery or Message,
@@ -53,7 +53,7 @@ class AdminCheckMiddleware(BaseMiddleware):
             logger.critical("AdminCheckMiddleware: 'services' not found in data. Cannot perform admin check.")
             # Optionally, send a generic error message to the user before returning
             # This situation should ideally not happen if middlewares are set up correctly.
-            return # Or raise an exception
+            return None # Or raise an exception
 
         if not services.cache.is_admin(user.id):
             # I18nMiddleware runs before this, so 'translator' is guaranteed to be in data.
@@ -69,7 +69,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                     user.username,
                     type(event).__name__,
                 )
-                return  # Stop processing
+                return None  # Stop processing
 
             if isinstance(event, Message):
                 await event.reply(unauthorized_message)
@@ -79,7 +79,7 @@ class AdminCheckMiddleware(BaseMiddleware):
                     user.username,
                     event.text,
                 )
-                return  # Stop processing
+                return None  # Stop processing
 
             logger.warning(
                 "AdminCheckMiddleware: Unauthorized user %s (Username: %s) "
@@ -90,7 +90,7 @@ class AdminCheckMiddleware(BaseMiddleware):
             )
             # Depending on policy, you might want to stop processing here too, or let it pass.
             # For safety, let's stop it.
-            return
+            return None
 
         logger.debug(
             "AdminCheckMiddleware: User %s (Username: %s) authorized. Proceeding to handler for %s.",

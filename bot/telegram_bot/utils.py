@@ -5,7 +5,7 @@ from collections.abc import Callable
 import logging
 
 # For type hinting Services
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any  # Added Any
 
 from aiogram import Bot as AiogramBot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 async def _handle_telegram_api_error(  # noqa: PLR0912
     error: TelegramAPIError, chat_id: int, services: "Services"
-):
+) -> None:
     """Handles specific Telegram API errors."""
     if not services:
         logger.error(
@@ -51,8 +51,8 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
                     logger.error(
                         "Failed to delete data for blocked/deactivated user %s, though an attempt was made.", chat_id
                     )
-            except SQLAlchemyError as db_err:
-                logger.error("Failed to delete data for blocked/deactivated user %s from DB: %s", chat_id, db_err)
+            except SQLAlchemyError:
+                logger.exception("Failed to delete data for blocked/deactivated user %s from DB.", chat_id)
         else:
             logger.error("Telegram API Forbidden error for chat_id %s: %s", chat_id, error)
 
@@ -70,11 +70,10 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
                     logger.info("Successfully deleted all data for TG ID %s due to chat not found.", chat_id)
                 else:
                     logger.error("Failed to delete all data for TG ID %s after chat not found.", chat_id)
-            except SQLAlchemyError as db_cleanup_err:
-                logger.error(
-                    "Exception during full data cleanup for TG ID %s (chat not found): %s",
+            except SQLAlchemyError:
+                logger.exception(
+                    "Exception during full data cleanup for TG ID %s (chat not found).",
                     chat_id,
-                    db_cleanup_err,
                 )
         else:
             logger.error("Telegram API BadRequest (non 'chat not found') for chat_id %s: %s", chat_id, error)
@@ -106,10 +105,11 @@ async def send_telegram_message_individual(
     bot_instance: AiogramBot,
     chat_id: int,
     services: "Services",
-    language: str = DEFAULT_LANGUAGE,
+    _language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
+    *,
     tt_user_is_online: bool = False,
-    **kwargs,
+    **kwargs: Any,  # noqa: ANN401
 ) -> bool:
     """Sends a single Telegram message to a user, handling potential errors.
 
@@ -117,7 +117,7 @@ async def send_telegram_message_individual(
         bot_instance: The Aiogram Bot instance to use for sending.
         chat_id: The Telegram chat ID to send the message to.
         services: The application's services container.
-        language: The language code for localization (currently unused here, but kept for consistency).
+        _language: The language code for localization (currently unused here, but kept for consistency).
         reply_markup: Optional InlineKeyboardMarkup for the message.
         tt_user_is_online: Whether the user's linked TeamTalk account is currently online.
         **kwargs: Additional arguments to pass to `bot_instance.send_message`.
@@ -125,17 +125,18 @@ async def send_telegram_message_individual(
     Returns:
         True if the message was sent successfully, False otherwise.
     """
-    send_silently = _should_send_silently(chat_id, tt_user_is_online, services)
+    send_silently = _should_send_silently(chat_id=chat_id, tt_user_is_online=tt_user_is_online, services=services)
 
     try:
         await bot_instance.send_message(
             chat_id=chat_id, reply_markup=reply_markup, disable_notification=send_silently, **kwargs
         )
         logger.debug("Message sent to %s. Silent: %s, kwargs used: %s", chat_id, send_silently, kwargs)
-        return True
     except TelegramAPIError as e:
         await _handle_telegram_api_error(e, chat_id, services=services)
         return False
+    else:
+        return True
 
 
 async def send_telegram_messages_to_list(
@@ -145,7 +146,7 @@ async def send_telegram_messages_to_list(
     services: "Services",
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None,
-):
+) -> None:
     """Sends localized messages to a list of Telegram chat IDs.
 
     Args:
@@ -194,7 +195,7 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     bot: AiogramBot | None = None,
-    **kwargs,
+    **kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Sends a new message or edits an existing one with paginated content.
 
@@ -210,7 +211,7 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
             await target.message.edit_text(text=text, reply_markup=reply_markup, **kwargs)
         except TelegramBadRequest as e:
             if "message is not modified" in str(e).lower():
-                logger.debug("Message not modified for chat_id %s, skipping edit.", target.message.chat.id)
+                logger.debug("Message not modified for chat_id %s, skipping edit. Error: %s", target.message.chat.id, e)
                 # Try to answer the callback query to remove the "loading" state
                 if hasattr(target, "answer"):
                     try:
@@ -218,15 +219,15 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
                     except Exception as answer_e:  # Could be already answered
                         logger.warning("Failed to answer CbQ after 'message not modified': %s", answer_e)
             else:  # Other TelegramBadRequest
-                logger.exception("Error editing message for chat_id %s: %s", target.message.chat.id, e)
+                logger.exception("Error editing message for chat_id %s.", target.message.chat.id)
                 if hasattr(target, "answer"):
                     try:
                         await target.answer("Error updating list.", show_alert=True)  # type: ignore
                         answered_with_alert = True
                     except Exception as answer_e:
                         logger.warning("Failed to answer CbQ with alert after edit error: %s", answer_e)
-        except Exception as e:  # Other errors during edit
-            logger.exception("Generic error editing message for chat_id %s: %s", target.message.chat.id, e)
+        except Exception:  # Other errors during edit
+            logger.exception("Generic error editing message for chat_id %s.", target.message.chat.id)
             if hasattr(target, "answer"):
                 try:
                     await target.answer("Error updating list.", show_alert=True)  # type: ignore
@@ -238,8 +239,8 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
         if target:  # Ensure target (Message object) is not None
             try:
                 await target.reply(text=text, reply_markup=reply_markup, **kwargs)
-            except Exception as e:  # Catch potential errors during reply
-                logger.exception("Error replying to message for chat_id %s: %s", target.chat.id, e)
+            except Exception:  # Catch potential errors during reply
+                logger.exception("Error replying to message for chat_id %s.", target.chat.id)
         else:
             logger.error("Attempted to reply to a None message object.")
 
@@ -301,7 +302,6 @@ async def safe_delete_message(message: Message, log_context_message: str = "mess
     """
     try:
         await message.delete()
-        return True
     except TelegramBadRequest as e:
         # Specific check for errors indicating the message can't be deleted because it's too old,
         # doesn't exist, or the bot doesn't have rights. These are often not critical failures
@@ -315,14 +315,15 @@ async def safe_delete_message(message: Message, log_context_message: str = "mess
                 "Could not delete %s (message likely already gone or permissions issue): %s", log_context_message, e
             )
             return True  # Treat as "handled" or "not an issue for caller"
-        else:
-            logger.warning("TelegramBadRequest when trying to delete %s: %s", log_context_message, e)
-            return False  # Other bad requests might be more problematic
+        logger.warning("TelegramBadRequest when trying to delete %s: %s", log_context_message, e)
+        return False  # Other bad requests might be more problematic
     except TelegramAPIError as e:
         # Catches other errors like Forbidden, etc.
         logger.warning("Could not delete %s due to TelegramAPIError: %s", log_context_message, e)
         return False
-    except Exception as e:
+    except Exception:
         # Catch any other unexpected error
-        logger.exception("Unexpected error when trying to delete %s: %s", log_context_message, e)
+        logger.exception("Unexpected error when trying to delete %s.", log_context_message)
         return False
+    else:
+        return True
