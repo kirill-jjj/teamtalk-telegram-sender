@@ -511,7 +511,7 @@ async def create_subscriber_action_menu_keyboard(
         ).pack(),
     )
     builder.button(
-        text=_("📜 View Mute List"), # Placeholder text, might need refinement
+        text=_("📜 View Mute List"),  # Placeholder text, might need refinement
         callback_data=SubscriberActionCallback(
             action=SubscriberAction.ADMIN_VIEW_MUTE_LIST, target_telegram_id=target_telegram_id, page=page
         ).pack(),
@@ -520,7 +520,7 @@ async def create_subscriber_action_menu_keyboard(
         text=_("⬅️ Back to Subscribers List"),
         callback_data=SubscriberListCallback(action=SubscriberListAction.PAGE, page=page).pack(),
     )
-    builder.adjust(1) # Adjust to 1 column for settings, then back button
+    builder.adjust(1)  # Adjust to 1 column for settings, then back button
     return builder.as_markup()
 
 
@@ -615,8 +615,8 @@ async def create_view_mute_list_keyboard(
     translator: gettext.GNUTranslations,
     current_mute_list_page: int,
     total_mute_list_pages: int,
-    target_telegram_id: int, # Subscriber's ID
-    subscriber_context_page: int # Page of the main subscriber list (for back button)
+    target_telegram_id: int,  # Subscriber's ID
+    subscriber_context_page: int,  # Page of the main subscriber list (for back button)
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for viewing a paginated mute list for a specific subscriber."""
     _ = translator.gettext
@@ -626,22 +626,22 @@ async def create_view_mute_list_keyboard(
     if current_mute_list_page > 0:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("⬅️ Prev Page"), # Text for mute list page
+                text=_("⬅️ Prev Page"),  # Text for mute list page
                 callback_data=PaginateMuteListCallback(
                     target_telegram_id=target_telegram_id,
                     mute_list_page=current_mute_list_page - 1,
-                    subscriber_context_page=subscriber_context_page
+                    subscriber_context_page=subscriber_context_page,
                 ).pack(),
             )
         )
     if current_mute_list_page < total_mute_list_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("Next Page ➡️"), # Text for mute list page
+                text=_("Next Page ➡️"),  # Text for mute list page
                 callback_data=PaginateMuteListCallback(
                     target_telegram_id=target_telegram_id,
                     mute_list_page=current_mute_list_page + 1,
-                    subscriber_context_page=subscriber_context_page
+                    subscriber_context_page=subscriber_context_page,
                 ).pack(),
             )
         )
@@ -652,10 +652,10 @@ async def create_view_mute_list_keyboard(
     # Button to go back to the specific subscriber's action menu
     builder.row(
         InlineKeyboardButton(
-            text=_("⬅️ Back to User Actions"), # This text should already be translated
+            text=_("⬅️ Back to User Actions"),  # This text should already be translated
             callback_data=ViewSubscriberCallback(
                 telegram_id=target_telegram_id,
-                page=subscriber_context_page # This page is for the main subscriber list
+                page=subscriber_context_page,  # This page is for the main subscriber list
             ).pack(),
         )
     )
@@ -664,7 +664,7 @@ async def create_view_mute_list_keyboard(
 
 async def create_admin_subscriber_mute_mode_keyboard(
     translator: gettext.GNUTranslations,
-    current_mode: MuteListMode, # Subscriber's current mute mode
+    current_mode: MuteListMode,  # Subscriber's current mute mode
     target_telegram_id: int,
     subscriber_page_context: int,
 ) -> InlineKeyboardMarkup:
@@ -672,7 +672,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
     active_marker = "✅"
-    inactive_marker = "⚪️" # Or some other suitable unicode
+    inactive_marker = "⚪️"  # Or some other suitable unicode
 
     blacklist_marker = active_marker if current_mode == MuteListMode.blacklist else inactive_marker
     whitelist_marker = active_marker if current_mode == MuteListMode.whitelist else inactive_marker
@@ -696,14 +696,12 @@ async def create_admin_subscriber_mute_mode_keyboard(
             subscriber_page_context=subscriber_page_context,
         ).pack(),
     )
-    builder.adjust(1) # Keep as single buttons for clarity, or 2 if space allows. Let's do 1.
+    builder.adjust(1)  # Keep as single buttons for clarity, or 2 if space allows. Let's do 1.
 
     builder.row(
         InlineKeyboardButton(
             text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id, page=subscriber_page_context
-            ).pack(),
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
         )
     )
     return builder.as_markup()
@@ -803,9 +801,9 @@ async def create_linkable_tt_account_list_keyboard(
 
 async def create_admin_subscriber_lang_keyboard(
     translator: gettext.GNUTranslations,
-    available_languages: list[LanguageInfo], # Changed here
+    available_languages: list[LanguageInfo],  # Changed here
     target_telegram_id: int,
-    subscriber_page_context: int, # Page of the main subscriber list
+    subscriber_page_context: int,  # Page of the main subscriber list
 ) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard for an admin to change a subscriber's language."""
     _ = translator.gettext
@@ -828,18 +826,16 @@ async def create_admin_subscriber_lang_keyboard(
     builder.row(
         InlineKeyboardButton(
             text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id, page=subscriber_page_context
-            ).pack(),
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
         )
     )
-    builder.adjust(1) # All buttons in a single column
+    builder.adjust(1)  # All buttons in a single column
     return builder.as_markup()
 
 
 async def create_admin_subscriber_notification_pref_keyboard(
     translator: gettext.GNUTranslations,
-    current_setting: NotificationSetting, # The subscriber's current setting
+    current_setting: NotificationSetting,  # The subscriber's current setting
     target_telegram_id: int,
     subscriber_page_context: int,
 ) -> InlineKeyboardMarkup:
@@ -868,9 +864,7 @@ async def create_admin_subscriber_notification_pref_keyboard(
     builder.row(
         InlineKeyboardButton(
             text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id, page=subscriber_page_context
-            ).pack(),
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
         )
     )
     builder.adjust(1)

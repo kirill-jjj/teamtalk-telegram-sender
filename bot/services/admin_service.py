@@ -1,9 +1,10 @@
 """Service layer for administrator-related operations."""
 
+import gettext  # Added
 import logging
-import gettext # Added
 from typing import TYPE_CHECKING
 
+from sqlalchemy.exc import SQLAlchemyError  # Added
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
@@ -11,9 +12,10 @@ from bot.models import UserSettings
 from bot.services import user_service  # For updating bot commands
 
 if TYPE_CHECKING:
+    import pytalk  # Added
+
     from bot.services_container import Services
-    from bot.teamtalk_bot.connection import TeamTalkConnection # Added
-    import pytalk # Added
+    from bot.teamtalk_bot.connection import TeamTalkConnection  # Added
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,7 @@ async def remove_admin_full(
         return False  # This path is reached if crud.remove_admin_db returns False
 
 
+# ruff: noqa: PLR0912, PLR0915
 async def ban_and_delete_subscriber(
     session: AsyncSession,
     services: "Services",
@@ -112,7 +115,6 @@ async def ban_and_delete_subscriber(
             # Assuming it returns False on actual error or if already banned.
             logger.info("Telegram ID %s might already be banned or DB error occurred.", target_telegram_id)
 
-
         # Ban TeamTalk username
         if tt_username_to_ban:
             banned_tt = await crud.add_to_ban_list(
@@ -129,29 +131,27 @@ async def ban_and_delete_subscriber(
             if tt_connection and tt_connection.instance and tt_connection.is_ready:
                 try:
                     # Placeholder for actual ban logic if/when implemented in pytalk SDK
-                    # await tt_connection.instance.ban_user(username=tt_username_to_ban, ip_address=None, ban_type=pytalk.TeamTalk.GetUserAccount()) # Example
                     logger.info(
-                        "Conceptual TeamTalk server ban for %s on %s (not implemented in pytalk SDK for direct ban by username).",
+                        "Conceptual TT ban for %s on %s (not in SDK by username).", # Shortened
                         tt_username_to_ban,
                         tt_connection.server_info.host,
                     )
-                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError) as e:
+                except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
                     logger.exception(
-                        "Error during conceptual TeamTalk ban for %s on %s: %s",
+                        "Error during conceptual TeamTalk ban for %s on %s.",
                         tt_username_to_ban,
                         tt_connection.server_info.host,
-                        e,
                     )
-                except Exception as e: # pylint: disable=broad-except
+                except Exception: # pylint: disable=broad-except
                     logger.exception(
-                        "Unexpected error during conceptual TeamTalk ban for %s on %s: %s",
+                        "Unexpected error during conceptual TeamTalk ban for %s on %s.",
                         tt_username_to_ban,
                         tt_connection.server_info.host,
-                        e,
                     )
-            elif tt_username_to_ban : # Ensure username exists before logging skip
+            elif tt_username_to_ban:  # Ensure username exists before logging skip
                 logger.warning(
-                    "Skipping conceptual TeamTalk server ban for %s as tt_connection or instance is None/invalid/not ready.",
+                    "Skipping conceptual TeamTalk server ban for %s as tt_connection or instance is"
+                    " None/invalid/not ready.",
                     tt_username_to_ban,
                 )
         # If any ban step failed in a way crud.add_to_ban_list indicates (e.g. returns False on True error)
@@ -166,26 +166,25 @@ async def ban_and_delete_subscriber(
 
         deleted_profile = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
         if deleted_profile:
-            if ban_messages: # Only add "data deleted" if there were preceding ban messages
+            if ban_messages:  # Only add "data deleted" if there were preceding ban messages
                 ban_messages.append(_("Subscriber data also deleted."))
-            else: # If no specific ban messages (e.g. user was already banned), but data was deleted.
+            else:  # If no specific ban messages (e.g. user was already banned), but data was deleted.
                 ban_messages.append(_("Subscriber data deleted."))
         else:
             ban_messages.append(_("Error deleting subscriber data."))
-            overall_success = False # Deletion failure is a significant issue
+            overall_success = False  # Deletion failure is a significant issue
 
-        if not ban_messages: # If nothing happened (e.g. already banned, and delete failed or no data)
+        if not ban_messages:  # If nothing happened (e.g. already banned, and delete failed or no data)
             ban_messages.append(_("User already banned or error occurred during processing."))
 
-
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await session.rollback()
-        logger.exception("SQLAlchemyError in ban_and_delete_subscriber for %s: %s", target_telegram_id, e)
+        logger.exception("SQLAlchemyError in ban_and_delete_subscriber for %s.", target_telegram_id)
         ban_messages.append(_("Database error during ban operation."))
         overall_success = False
-    except Exception as e: # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         await session.rollback()
-        logger.exception("Unexpected error in ban_and_delete_subscriber for %s: %s", target_telegram_id, e)
+        logger.exception("Unexpected error in ban_and_delete_subscriber for %s.", target_telegram_id)
         ban_messages.append(_("An unexpected error occurred."))
         overall_success = False
 

@@ -64,7 +64,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         services_from_kwargs = kwargs.get("services")
         # Check type by name to avoid circular import issues with Services
-        if not hasattr(services_from_kwargs, '__class__') or services_from_kwargs.__class__.__name__ != 'Services':
+        if not hasattr(services_from_kwargs, "__class__") or services_from_kwargs.__class__.__name__ != "Services":
             # This check ensures services_from_kwargs is indeed a Services instance or raises error
             # Define the error message as a constant or a local variable
             error_msg = "Services not found or of incorrect type in kwargs for is_tt_admin."
@@ -262,7 +262,7 @@ async def handle_tt_subscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,
+    _connection: TeamTalkConnection, # Marked as unused
 ) -> None:
     """Handles the /sub command from a TeamTalk user.
 
@@ -290,7 +290,7 @@ async def handle_tt_unsubscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,
+    _connection: TeamTalkConnection, # Marked as unused
 ) -> None:
     """Handles the /unsub command from a TeamTalk user.
 
@@ -318,7 +318,7 @@ async def handle_tt_add_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,  # will be in kwargs for decorator
-    connection: TeamTalkConnection,
+    _connection: TeamTalkConnection, # Marked as unused
     *,
     args_str: str | None,
 ) -> None:
@@ -351,7 +351,7 @@ async def handle_tt_remove_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,
-    connection: TeamTalkConnection,
+    _connection: TeamTalkConnection, # Marked as unused
     *,
     args_str: str | None,
 ) -> None:
@@ -382,7 +382,7 @@ async def handle_tt_help_command(  # Added return type hint
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     services: Services,
-    connection: TeamTalkConnection,
+    _connection: TeamTalkConnection, # Marked as unused
 ) -> None:
     """Handles the /help command from a TeamTalk user.
 

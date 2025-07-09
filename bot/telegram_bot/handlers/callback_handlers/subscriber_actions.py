@@ -14,9 +14,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import SubscriberAction
-# from bot.database import crud # No longer directly used in _handle_ban_subscriber_action
 from bot.models import MuteListMode, NotificationSetting, UserSettings
-from bot.services import user_service, admin_service # Added admin_service
+from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -121,9 +120,7 @@ async def handle_view_subscriber(
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
     if user_to_view:
         details_parts.append(
-            _("Linked TT Account: {tt_username}").format(
-                tt_username=user_to_view.teamtalk_username or _("None")
-            )
+            _("Linked TT Account: {tt_username}").format(tt_username=user_to_view.teamtalk_username or _("None"))
         )
         details_parts.append(_("Language: {lang}").format(lang=user_to_view.language_code))
         noon_status = _("Enabled") if user_to_view.not_on_online_enabled else _("Disabled")
@@ -152,9 +149,13 @@ async def handle_view_subscriber(
 
 
 async def _handle_delete_subscriber_action(
-    query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to handle subscriber deletion."""
     _ = translator.gettext
@@ -175,10 +176,15 @@ async def _handle_delete_subscriber_action(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
         )
 
+
 async def _handle_ban_subscriber_action(
-    query: CallbackQuery, session: AsyncSession, services: "Services",
-    tt_connection: TeamTalkConnection | None, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery,
+    session: AsyncSession,
+    services: "Services",
+    tt_connection: TeamTalkConnection | None,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
 ) -> None:
     """Helper to handle subscriber banning."""
     _ = translator.gettext
@@ -199,10 +205,15 @@ async def _handle_ban_subscriber_action(
     # as the state of the user (banned, deleted) has likely changed.
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
+
 async def _handle_manage_tt_account_action(
-    query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    _services: Optional["Services"] = None,
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to show manage TT account menu for a subscriber."""
     _ = translator.gettext
@@ -214,8 +225,7 @@ async def _handle_manage_tt_account_action(
     current_tt_username = user_settings.teamtalk_username if user_settings else None
 
     keyboard = await create_manage_tt_account_keyboard(
-        translator, target_telegram_id=target_telegram_id,
-        current_tt_username=current_tt_username, page=return_page
+        translator, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
     )
     message_text = _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
         telegram_id=target_telegram_id
@@ -223,10 +233,15 @@ async def _handle_manage_tt_account_action(
     await query.message.edit_text(message_text, reply_markup=keyboard)
     await query.answer()
 
+
 async def _handle_admin_set_language_action(
-    query: CallbackQuery, _unused_session: AsyncSession, # session marked as unused
-    target_telegram_id: int, return_page: int, translator: gettext.GNUTranslations,
-    services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    _unused_session: AsyncSession,  # session marked as unused
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    services: Optional["Services"] = None,
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to show language selection for a subscriber to an admin."""
     _ = translator.gettext
@@ -247,17 +262,24 @@ async def _handle_admin_set_language_action(
         return
 
     lang_keyboard = await create_admin_subscriber_lang_keyboard(
-        translator=translator, available_languages=available_languages,
-        target_telegram_id=target_telegram_id, subscriber_page_context=return_page
+        translator=translator,
+        available_languages=available_languages,
+        target_telegram_id=target_telegram_id,
+        subscriber_page_context=return_page,
     )
     message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
     await query.message.edit_text(message_text, reply_markup=lang_keyboard)
     await query.answer()
 
+
 async def _handle_admin_toggle_noon_action(
-    query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations, services: "Services",
-    _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to toggle NOON for a subscriber."""
     _ = translator.gettext
@@ -266,15 +288,16 @@ async def _handle_admin_toggle_noon_action(
         await query.answer(_("An error occurred."), show_alert=True)
         return
 
-    updated_user_settings = await user_service.admin_toggle_noon_setting(
-        session, services, target_telegram_id
-    )
+    updated_user_settings = await user_service.admin_toggle_noon_setting(session, services, target_telegram_id)
 
     if updated_user_settings:
         new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
         await query.answer(
             _("NOON status for subscriber {tg_id} set to: {status}").format(
-                tg_id=target_telegram_id, status=new_status_text), show_alert=False)
+                tg_id=target_telegram_id, status=new_status_text
+            ),
+            show_alert=False,
+        )
     else:
         await query.answer(_("Failed to toggle NOON status. Please try again."), show_alert=True)
         # If the service function returned None, it means an error occurred and UserSettings might be stale
@@ -283,14 +306,22 @@ async def _handle_admin_toggle_noon_action(
 
     # Refresh the view for the subscriber
     await handle_view_subscriber(
-        query=query, # type: ignore
+        query=query,  # type: ignore
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
-        session=session, translator=translator, services=services)
+        session=session,
+        translator=translator,
+        services=services,
+    )
+
 
 async def _handle_admin_set_notif_pref_action(
-    query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    _services: Optional["Services"] = None,
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to show notification preference selection for a subscriber."""
     _ = translator.gettext
@@ -305,16 +336,24 @@ async def _handle_admin_set_notif_pref_action(
         return
     current_notif_setting = target_user_settings.notification_settings
     notif_pref_keyboard = await create_admin_subscriber_notification_pref_keyboard(
-        translator=translator, current_setting=current_notif_setting,
-        target_telegram_id=target_telegram_id, subscriber_page_context=return_page)
+        translator=translator,
+        current_setting=current_notif_setting,
+        target_telegram_id=target_telegram_id,
+        subscriber_page_context=return_page,
+    )
     message_text = _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id)
     await query.message.edit_text(message_text, reply_markup=notif_pref_keyboard)
     await query.answer()
 
+
 async def _handle_admin_set_mute_mode_action(
-    query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations,
-    _services: Optional["Services"] = None, _tt_connection: TeamTalkConnection | None = None
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int,
+    translator: gettext.GNUTranslations,
+    _services: Optional["Services"] = None,
+    _tt_connection: TeamTalkConnection | None = None,
 ) -> None:
     """Helper to show mute mode selection for a subscriber."""
     _ = translator.gettext
@@ -329,16 +368,24 @@ async def _handle_admin_set_mute_mode_action(
         return
     current_mute_mode = target_user_settings.mute_list_mode
     mute_mode_keyboard = await create_admin_subscriber_mute_mode_keyboard(
-        translator=translator, current_mode=current_mute_mode,
-        target_telegram_id=target_telegram_id, subscriber_page_context=return_page)
+        translator=translator,
+        current_mode=current_mute_mode,
+        target_telegram_id=target_telegram_id,
+        subscriber_page_context=return_page,
+    )
     message_text = _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id)
     await query.message.edit_text(message_text, reply_markup=mute_mode_keyboard)
     await query.answer()
 
+
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter())
 async def handle_subscriber_action(
-    query: CallbackQuery, callback_data: SubscriberActionCallback, session: AsyncSession,
-    tt_connection: TeamTalkConnection | None, translator: gettext.GNUTranslations, services: "Services"
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    tt_connection: TeamTalkConnection | None,
+    translator: gettext.GNUTranslations,
+    services: "Services",
 ) -> None:
     """Dispatches subscriber-related actions by admin from the subscriber action menu."""
     _ = translator.gettext
@@ -379,9 +426,7 @@ async def handle_subscriber_action(
             query, session, target_telegram_id, return_page, translator, services, tt_connection
         )
     elif action == SubscriberAction.ADMIN_VIEW_MUTE_LIST:
-        await _handle_admin_view_mute_list_action(
-            query, session, target_telegram_id, return_page, translator, services
-        )
+        await _handle_admin_view_mute_list_action(query, session, target_telegram_id, return_page, translator, services)
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
@@ -391,10 +436,10 @@ async def _handle_admin_view_mute_list_action(
     query: CallbackQuery,
     session: AsyncSession,
     target_telegram_id: int,
-    return_page: int, # Page of the subscriber list for back button context
+    return_page: int,  # Page of the subscriber list for back button context
     translator: gettext.GNUTranslations,
     services: "Services",
-    page_num: int = 0 # For pagination, defaults to 0 for initial call
+    page_num: int = 0,  # For pagination, defaults to 0 for initial call
 ) -> None:
     """Handles an admin viewing a specific subscriber's mute list with pagination."""
     _ = translator.gettext
@@ -409,14 +454,14 @@ async def _handle_admin_view_mute_list_action(
     statement = (
         select(UserSettings)
         .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(UserSettings.muted_users_list)) # Using getattr
+        .options(selectinload(UserSettings.muted_users_list))  # Using getattr
     )
     result = await session.exec(statement)
     target_user_settings = result.one_or_none()
 
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
-        await handle_view_subscriber( # Navigate back if user not found
+        await handle_view_subscriber(  # Navigate back if user not found
             query=query,
             callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
             session=session,
@@ -429,7 +474,7 @@ async def _handle_admin_view_mute_list_action(
 
     total_items = len(all_muted_usernames)
     total_pages = (total_items + MUTE_LIST_ITEMS_PER_PAGE - 1) // MUTE_LIST_ITEMS_PER_PAGE
-    total_pages = max(total_pages, 1) # Ensure at least 1 page even if empty
+    total_pages = max(total_pages, 1)  # Ensure at least 1 page even if empty
 
     current_page_idx = max(0, min(page_num, total_pages - 1))
     start_index = current_page_idx * MUTE_LIST_ITEMS_PER_PAGE
@@ -465,16 +510,15 @@ async def _handle_admin_view_mute_list_action(
         )
         for username in usernames_on_page:
             message_text_parts.append(f"- {username}")
-        if not usernames_on_page and current_page_idx > 0 : # e.g. user deleted items from last page
-             message_text_parts.append(_("This page is empty. Try previous pages."))
-
+        if not usernames_on_page and current_page_idx > 0:  # e.g. user deleted items from last page
+            message_text_parts.append(_("This page is empty. Try previous pages."))
 
     keyboard = await create_view_mute_list_keyboard(
         translator,
         current_mute_list_page=current_page_idx,
         total_mute_list_pages=total_pages,
         target_telegram_id=target_telegram_id,
-        subscriber_context_page=return_page
+        subscriber_context_page=return_page,
     )
 
     final_text = "\n".join(message_text_parts)
@@ -500,18 +544,21 @@ async def handle_paginate_mute_list(
         query=query,
         session=session,
         target_telegram_id=callback_data.target_telegram_id,
-        return_page=callback_data.subscriber_context_page, # This is the page of the main subscriber list
+        return_page=callback_data.subscriber_context_page,  # This is the page of the main subscriber list
         translator=translator,
         services=services,
-        page_num=callback_data.mute_list_page # Pass the requested page for the mute list
+        page_num=callback_data.mute_list_page,  # Pass the requested page for the mute list
     )
-    await query.answer() # Acknowledge the callback
+    await query.answer()  # Acknowledge the callback
 
 
 async def _display_linkable_tt_accounts_page(
-    query: CallbackQuery, target_telegram_id: int, subscriber_context_page: int,
-    linkable_accounts_page_to_show: int, tt_connection: TeamTalkConnection | None,
-    translator: gettext.GNUTranslations
+    query: CallbackQuery,
+    target_telegram_id: int,
+    subscriber_context_page: int,
+    linkable_accounts_page_to_show: int,
+    tt_connection: TeamTalkConnection | None,
+    translator: gettext.GNUTranslations,
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
@@ -526,7 +573,7 @@ async def _display_linkable_tt_accounts_page(
             _("TeamTalk server accounts cache is not populated or connection error. Please try again later."),
             show_alert=True,
         )
-        session_from_bot = query.bot.get("session") # type: ignore
+        session_from_bot = query.bot.get("session")  # type: ignore
         if not session_from_bot:
             logger.error("Session not found in _display_linkable_tt_accounts_page fallback.")
             if query.message:
@@ -536,8 +583,10 @@ async def _display_linkable_tt_accounts_page(
         user_settings = await session_from_bot.get(UserSettings, target_telegram_id)
         current_tt_username = user_settings.teamtalk_username if user_settings else None
         keyboard = await create_manage_tt_account_keyboard(
-            translator, target_telegram_id=target_telegram_id,
-            current_tt_username=current_tt_username, page=subscriber_context_page
+            translator,
+            target_telegram_id=target_telegram_id,
+            current_tt_username=current_tt_username,
+            page=subscriber_context_page,
         )
         if query.message:
             await query.message.edit_text(
@@ -550,7 +599,10 @@ async def _display_linkable_tt_accounts_page(
     if not all_server_accounts:
         await query.answer(
             _("No TeamTalk server accounts found on {server_host} or unable to fetch.").format(
-                server_host=tt_connection.server_info.host), show_alert=True)
+                server_host=tt_connection.server_info.host
+            ),
+            show_alert=True,
+        )
         return
 
     try:
@@ -564,42 +616,53 @@ async def _display_linkable_tt_accounts_page(
     total_linkable_pages = max(total_linkable_pages, 1)
     current_page_idx = max(0, min(linkable_accounts_page_to_show, total_linkable_pages - 1))
     start_idx = current_page_idx * items_per_page
-    page_items_to_display = all_server_accounts[start_idx:start_idx + items_per_page]
+    page_items_to_display = all_server_accounts[start_idx : start_idx + items_per_page]
 
     link_keyboard = await create_linkable_tt_account_list_keyboard(
-        translator, page_items=page_items_to_display, current_page_idx=current_page_idx,
-        total_pages=total_linkable_pages, target_telegram_id=target_telegram_id,
+        translator,
+        page_items=page_items_to_display,
+        current_page_idx=current_page_idx,
+        total_pages=total_linkable_pages,
+        target_telegram_id=target_telegram_id,
         subscriber_list_page=subscriber_context_page,
     )
-    text_format = (
-        "Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}: "
-        "(Page {cur}/{tot})"
-    )
+    text_format = "Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}: (Page {cur}/{tot})"
     text_content = text_format.format(
-        server_host=tt_connection.server_info.host, telegram_id=target_telegram_id,
-        cur=current_page_idx + 1, tot=total_linkable_pages,
+        server_host=tt_connection.server_info.host,
+        telegram_id=target_telegram_id,
+        cur=current_page_idx + 1,
+        tot=total_linkable_pages,
     )
     if query.message:
         await query.message.edit_text(text_content, reply_markup=link_keyboard)
     await query.answer()
 
+
 @subscriber_actions_router.callback_query(PaginateLinkableAccountsCallback.filter())
 async def handle_paginate_linkable_accounts(
-    query: CallbackQuery, callback_data: PaginateLinkableAccountsCallback,
-    tt_connection: TeamTalkConnection | None, translator: gettext.GNUTranslations,
+    query: CallbackQuery,
+    callback_data: PaginateLinkableAccountsCallback,
+    tt_connection: TeamTalkConnection | None,
+    translator: gettext.GNUTranslations,
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
     await _display_linkable_tt_accounts_page(
-        query=query, target_telegram_id=callback_data.target_telegram_id,
+        query=query,
+        target_telegram_id=callback_data.target_telegram_id,
         subscriber_context_page=callback_data.subscriber_context_page,
         linkable_accounts_page_to_show=callback_data.page,
-        tt_connection=tt_connection, translator=translator,
+        tt_connection=tt_connection,
+        translator=translator,
     )
+
 
 @subscriber_actions_router.callback_query(LinkTTAccountChosenCallback.filter())
 async def handle_link_tt_account_chosen(
-    query: CallbackQuery, callback_data: LinkTTAccountChosenCallback, session: AsyncSession,
-    translator: gettext.GNUTranslations, services: "Services",
+    query: CallbackQuery,
+    callback_data: LinkTTAccountChosenCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
     _ = translator.gettext
@@ -607,7 +670,7 @@ async def handle_link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    if not query.message or not isinstance(query.message, Message): # Ensure message is Message instance
+    if not query.message or not isinstance(query.message, Message):  # Ensure message is Message instance
         await query.answer(_("An error occurred. Please try again."), show_alert=True)
         return
 
@@ -616,7 +679,7 @@ async def handle_link_tt_account_chosen(
     )
 
     alert_message = ""
-    current_tt_for_keyboard = tt_username_to_link # Optimistically assume link will succeed for keyboard
+    current_tt_for_keyboard = tt_username_to_link  # Optimistically assume link will succeed for keyboard
 
     if status_key == "linked":
         alert_message = _("TeamTalk account {new_tt_username} linked successfully.").format(
@@ -627,34 +690,34 @@ async def handle_link_tt_account_chosen(
         # The service function doesn't return it. For simplicity, we'll use a generic message here.
         # A more complex solution would involve the service returning more state or the handler fetching it.
         alert_message = _("TeamTalk account {new_tt_username} linked successfully (previous link updated).").format(
-             new_tt_username=tt_username_to_link
+            new_tt_username=tt_username_to_link
         )
     elif status_key == "banned":
         alert_message = _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(
             tt_username=tt_username_to_link
         )
-        # If banned, the keyboard should show the *original* TT username, not the one attempted
-        # We need to fetch user_settings again or ensure the service call didn't modify the passed one if it failed early
-        # For now, we'll fetch it if updated_user_settings is None (which it will be for "banned")
+        # If banned, keyboard shows original TT username. Fetch if needed.
+        # (Service call doesn't modify passed user_settings on early "banned" return)
         user_s_for_kb = await session.get(UserSettings, target_telegram_id)
         current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
 
     elif status_key == "not_found":
         alert_message = _("User settings not found for this subscriber.")
-        current_tt_for_keyboard = None # No user, no TT username
+        current_tt_for_keyboard = None  # No user, no TT username
     elif status_key == "error":
         alert_message = _("Failed to link TeamTalk account. Please try again.")
         # On error, the TT username might not have changed in DB.
-        user_s_for_kb = await session.get(UserSettings, target_telegram_id) # Re-fetch to be sure
+        user_s_for_kb = await session.get(UserSettings, target_telegram_id)  # Re-fetch to be sure
         current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
-
 
     await query.answer(alert_message, show_alert=True)
 
     # Determine the TT username to display in the keyboard
     # If linking was successful, updated_user_settings will exist.
     # If not (e.g. banned, not_found, error), updated_user_settings is None.
-    final_tt_username_for_keyboard = updated_user_settings.teamtalk_username if updated_user_settings else current_tt_for_keyboard
+    final_tt_username_for_keyboard = (
+        updated_user_settings.teamtalk_username if updated_user_settings else current_tt_for_keyboard
+    )
 
     updated_keyboard = await create_manage_tt_account_keyboard(
         translator,
@@ -667,10 +730,14 @@ async def handle_link_tt_account_chosen(
         reply_markup=updated_keyboard,
     )
 
+
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 async def handle_admin_set_subscriber_language(
-    query: CallbackQuery, callback_data: AdminSetSubscriberLanguageCallback, session: AsyncSession,
-    translator: gettext.GNUTranslations, services: "Services"
+    query: CallbackQuery,
+    callback_data: AdminSetSubscriberLanguageCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
 ) -> None:
     """Handles an admin setting a specific subscriber's language."""
     _ = translator.gettext
@@ -685,25 +752,35 @@ async def handle_admin_set_subscriber_language(
     if updated_user_settings:
         await query.answer(
             _("Language for subscriber {tg_id} changed to {lang_code}.").format(
-                tg_id=target_telegram_id, lang_code=new_lang_code),
-            show_alert=True)
+                tg_id=target_telegram_id, lang_code=new_lang_code
+            ),
+            show_alert=True,
+        )
     else:
         # Check if the user was not found initially by the service, or if another error occurred.
         # The service logs details. Here, we provide generic feedback.
         # We could add a step to check if user_settings exists before calling service if we want different messages.
-        await query.answer(_("Failed to change language. Subscriber settings might be missing or an error occurred."), show_alert=True)
+        await query.answer(
+            _("Failed to change language. Subscriber settings might be missing or an error occurred."), show_alert=True
+        )
 
-    if query.message: # query.message should exist if callback_data exists, but good check
+    if query.message:  # query.message should exist if callback_data exists, but good check
         await handle_view_subscriber(
-            query=query, # type: ignore
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id, page=subscriber_page_context),
-            session=session, translator=translator, services=services)
+            query=query,  # type: ignore
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
+            session=session,
+            translator=translator,
+            services=services,
+        )
+
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 async def handle_admin_set_subscriber_notification_pref(
-    query: CallbackQuery, callback_data: AdminSetSubscriberNotificationPrefCallback, session: AsyncSession,
-    translator: gettext.GNUTranslations, services: "Services"
+    query: CallbackQuery,
+    callback_data: AdminSetSubscriberNotificationPrefCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
 ) -> None:
     """Handles an admin setting a specific subscriber's notification preference."""
     _ = translator.gettext
@@ -712,7 +789,8 @@ async def handle_admin_set_subscriber_notification_pref(
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         if query.message:
             await _refresh_and_display_subscriber_list(
-                query, session, services, callback_data.subscriber_page_context, translator)
+                query, session, services, callback_data.subscriber_page_context, translator
+            )
         return
     old_pref_val = target_user_settings.notification_settings
     new_pref_str = callback_data.setting_value
@@ -731,29 +809,43 @@ async def handle_admin_set_subscriber_notification_pref(
             NotificationSetting.ALL.value: _("All (Join & Leave)"),
             NotificationSetting.LEAVE_OFF.value: _("Join Only"),
             NotificationSetting.JOIN_OFF.value: _("Leave Only"),
-            NotificationSetting.NONE.value: _("None")}
+            NotificationSetting.NONE.value: _("None"),
+        }
         new_pref_display_name = notif_setting_map.get(new_pref_str, new_pref_str)
         await query.answer(
             _("Notification preference for subscriber {tg_id} set to: {pref}").format(
-                tg_id=callback_data.target_telegram_id, pref=new_pref_display_name),
-            show_alert=False)
+                tg_id=callback_data.target_telegram_id, pref=new_pref_display_name
+            ),
+            show_alert=False,
+        )
     except Exception:
-        logger.exception("Failed to update notification preference for subscriber %s to %s",
-                         callback_data.target_telegram_id, new_pref_str)
+        logger.exception(
+            "Failed to update notification preference for subscriber %s to %s",
+            callback_data.target_telegram_id,
+            new_pref_str,
+        )
         target_user_settings.notification_settings = old_pref_val
         await query.answer(_("Failed to change notification preference. Please try again."), show_alert=True)
     if query.message:
         await handle_view_subscriber(
             query=query,
             callback_data=ViewSubscriberCallback(
-                telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
-            session=session, translator=translator, services=services)
+                telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context
+            ),
+            session=session,
+            translator=translator,
+            services=services,
+        )
     return
+
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 async def handle_admin_set_subscriber_mute_mode(
-    query: CallbackQuery, callback_data: AdminSetSubscriberMuteModeCallback, session: AsyncSession,
-    translator: gettext.GNUTranslations, services: "Services"
+    query: CallbackQuery,
+    callback_data: AdminSetSubscriberMuteModeCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
 ) -> None:
     """Handles an admin setting a specific subscriber's mute list mode."""
     _ = translator.gettext
@@ -761,22 +853,24 @@ async def handle_admin_set_subscriber_mute_mode(
     new_mode = callback_data.mode
     subscriber_page_context = callback_data.subscriber_page_context
 
-    updated_user_settings = await user_service.admin_set_user_mute_mode(
-        session, services, target_telegram_id, new_mode
-    )
+    updated_user_settings = await user_service.admin_set_user_mute_mode(session, services, target_telegram_id, new_mode)
 
     if updated_user_settings:
         mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
         await query.answer(
-            _("Mute list mode for subscriber {tg_id} set to: {mode}").format(
-                tg_id=target_telegram_id, mode=mode_text),
-            show_alert=False)
+            _("Mute list mode for subscriber {tg_id} set to: {mode}").format(tg_id=target_telegram_id, mode=mode_text),
+            show_alert=False,
+        )
     else:
-        await query.answer(_("Failed to change mute mode. Subscriber settings might be missing or an error occurred."), show_alert=True)
+        await query.answer(
+            _("Failed to change mute mode. Subscriber settings might be missing or an error occurred."), show_alert=True
+        )
 
-    if query.message: # query.message should exist
+    if query.message:  # query.message should exist
         await handle_view_subscriber(
-            query=query, # type: ignore
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id, page=subscriber_page_context),
-            session=session, translator=translator, services=services)
+            query=query,  # type: ignore
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
+            session=session,
+            translator=translator,
+            services=services,
+        )
