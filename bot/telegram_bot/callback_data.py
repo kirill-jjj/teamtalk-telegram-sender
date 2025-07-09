@@ -10,6 +10,7 @@ from bot.constants import (
     CB_PREFIX_MANAGE_TT_ACC,
     CB_PREFIX_MUTE_MODE_SET,
     CB_PREFIX_NOTIF_ACTION,
+    CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS,  # Added here
     CB_PREFIX_PAGINATE_LIST,
     CB_PREFIX_SETTINGS_NAV,
     CB_PREFIX_SUB_ACTION,
@@ -144,6 +145,7 @@ class ManageTTAccountCallback(CallbackData, prefix=CB_PREFIX_MANAGE_TT_ACC):
     action: ManageTTAccountAction
     target_telegram_id: int
     page: int  # To return to the main subscriber list page
+    linkable_page: int | None = None # Page of the linkable TT accounts list
 
 
 # For choosing a TT account to link from a list
@@ -153,3 +155,12 @@ class LinkTTAccountChosenCallback(CallbackData, prefix=CB_PREFIX_LINK_TT_CHOSEN)
     tt_username: str  # The TeamTalk username chosen for linking
     target_telegram_id: int  # The Telegram user to link to
     page: int  # Page of the subscriber list to return to, or page of TT user list if that's paginated
+
+
+# For paginating the list of linkable TT accounts
+class PaginateLinkableAccountsCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS):
+    """Callback data for paginating the list of TeamTalk accounts available for linking."""
+
+    subscriber_context_page: int  # Original page of the subscriber list (context to return to)
+    target_telegram_id: int       # The Telegram user (subscriber) we are linking an account for
+    page: int                     # The page of linkable TT accounts to display

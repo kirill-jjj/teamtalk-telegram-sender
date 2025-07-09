@@ -35,6 +35,7 @@ from bot.telegram_bot.callback_data import (
     ManageTTAccountCallback,
     MenuCallback,
     NotificationActionCallback,
+    PaginateLinkableAccountsCallback,  # Added
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
@@ -646,26 +647,21 @@ async def create_linkable_tt_account_list_keyboard(
     # rely on the fact that the caller might handle pagination by slicing page_items.
     # The generic helper will add pagination if total_pages > 1.
     # We need *some* callback factory.
-    # Let's use ManageTTAccountCallback and assume the LINK_NEW action can handle `page` for its own pagination.
-    pagination_kwargs_for_tt_list = {
-        "action": ManageTTAccountAction.LINK_NEW,  # Re-calling the same action to show the list
+    # Use PaginateLinkableAccountsCallback for pagination of this list.
+    # `page` in PaginateLinkableAccountsCallback is for the current list of linkable accounts.
+    # `subscriber_context_page` and `target_telegram_id` are fixed for these pagination buttons.
+    pagination_factory_kwargs = {
+        "subscriber_context_page": subscriber_list_page,
         "target_telegram_id": target_telegram_id,
-        # subscriber_list_page is also part of the context for LINK_NEW to return correctly after selection
-        # but for pagination of *this* list, we need to pass it so LINK_NEW can use it.
-        "current_subscriber_page_context": subscriber_list_page,
     }
 
     return await _create_generic_paginated_list_keyboard(
         translator=translator,
         page_items=page_items,
-        current_page=current_page_idx,  # This is the current page of TT accounts
-        total_pages=total_pages,  # Total pages of TT accounts
+        current_page=current_page_idx,
+        total_pages=total_pages,
         item_button_former=tt_account_button_former,
-        # pagination_callback_factory: If this list can be paginated, it needs its own callback factory.
-        # The original ManageTTAccountCallback is for actions, not paginating this list.
-        # We'll use ManageTTAccountCallback, but its handler for LINK_NEW would need to be
-        # updated to understand a 'page' parameter for *this* list's pagination.
-        pagination_callback_factory=ManageTTAccountCallback,
-        pagination_factory_kwargs=pagination_kwargs_for_tt_list,
+        pagination_callback_factory=PaginateLinkableAccountsCallback,  # Use the new callback
+        pagination_factory_kwargs=pagination_factory_kwargs,
         additional_buttons_bottom=bottom_buttons,
     )
