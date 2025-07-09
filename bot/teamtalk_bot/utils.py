@@ -277,7 +277,6 @@ async def forward_tt_message_to_telegram_admin(
     was_sent: bool = await send_telegram_message_individual(
         bot_instance=services.bot_message,
         chat_id=admin_chat_id,
-        language=translator.info().get("language", services.config.general.default_lang),
         services=services,
         text=template_text_parts,
     )

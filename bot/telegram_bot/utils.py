@@ -105,7 +105,6 @@ async def send_telegram_message_individual(
     bot_instance: AiogramBot,
     chat_id: int,
     services: "Services",
-    _language: str = DEFAULT_LANGUAGE,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     tt_user_is_online: bool = False,
