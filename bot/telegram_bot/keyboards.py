@@ -444,7 +444,7 @@ async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_a
     """Creates the main menu keyboard with commands."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    builder.button(text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack())  # noqa: RUF001
+    builder.button(text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack())
     builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:
@@ -554,14 +554,14 @@ async def create_manage_tt_account_keyboard(
 
     if current_tt_username:
         builder.button(
-            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),  # noqa: RUF001
+            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),
             callback_data=ManageTTAccountCallback(
                 action=ManageTTAccountAction.UNLINK, target_telegram_id=target_telegram_id, page=page
             ).pack(),
         )
 
     builder.button(
-        text=_("➕ Link/Change TeamTalk Account"),  # noqa: RUF001
+        text=_("➕ Link/Change TeamTalk Account"),
         callback_data=ManageTTAccountCallback(
             action=ManageTTAccountAction.LINK_NEW, target_telegram_id=target_telegram_id, page=page
         ).pack(),

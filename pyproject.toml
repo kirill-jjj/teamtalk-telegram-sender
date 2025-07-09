@@ -87,6 +87,7 @@ ignore = [
     "D203",
     "D213",
     "PLR0913",
+    "RUF001", # Ignore ambiguous unicode character rule, as we use emojis
 ]
 fixable = ["ALL"]
 unfixable = []
