@@ -4,13 +4,14 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, Any  # Added Any
 
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.models import UserSettings
+from bot.telegram_bot.ui_utils import safe_edit_text  # Import safe_edit_text from its new location
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -105,43 +106,7 @@ async def process_setting_update(  # Added return type hint
         )
 
 
-async def safe_edit_text(
-    message_to_edit: Message,
-    text: str,
-    reply_markup: InlineKeyboardMarkup | None = None,
-    parse_mode: str | None = None,
-    *,  # Make disable_web_page_preview keyword-only
-    disable_web_page_preview: bool | None = None,
-    logger_instance: logging.Logger | None = None,
-    log_context: str = "",
-) -> bool:
-    """Safely edits a message text, handling common Telegram API errors."""
-    current_logger = logger_instance or logger
-    context_for_log = f" ({log_context})" if log_context else ""
-
-    try:
-        await message_to_edit.edit_text(
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode,
-            disable_web_page_preview=disable_web_page_preview,
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log)  # Removed 'e'
-            return False
-        current_logger.debug(
-            "Message not modified for %s (chat_id %s), skipping edit. Error: %s",
-            log_context,
-            message_to_edit.chat.id,
-            e,  # Kept 'e' for debug
-        )
-        return True  # Ensure True is returned for "not modified"
-    except TelegramAPIError:  # Removed 'as e'
-        current_logger.exception("TelegramAPIError editing message%s.", context_for_log)  # Removed 'e'
-        return False
-    else:
-        return True
+# safe_edit_text MOVED to bot/telegram_bot/ui_utils.py
 
 
 def ensure_message_context(

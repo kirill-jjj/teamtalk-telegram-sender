@@ -5,10 +5,10 @@ import gettext
 import logging
 from typing import Any, TypeVar
 
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest  # Added imports
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from bot.constants import USERS_PER_PAGE
-from bot.telegram_bot.handlers.callback_handlers._helpers import safe_edit_text
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
@@ -109,3 +109,42 @@ async def display_paginated_list(
         logger_instance=logger,
         log_context=f"display_paginated_list for {title_text}",
     )
+
+
+async def safe_edit_text(
+    message_to_edit: Message,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    parse_mode: str | None = None,
+    *,  # Make disable_web_page_preview keyword-only
+    disable_web_page_preview: bool | None = None,
+    logger_instance: logging.Logger | None = None,
+    log_context: str = "",
+) -> bool:
+    """Safely edits a message text, handling common Telegram API errors."""
+    current_logger = logger_instance or logger
+    context_for_log = f" ({log_context})" if log_context else ""
+
+    try:
+        await message_to_edit.edit_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode,
+            disable_web_page_preview=disable_web_page_preview,
+        )
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log)
+            return False
+        current_logger.debug(
+            "Message not modified for %s (chat_id %s), skipping edit. Error: %s",
+            log_context,
+            message_to_edit.chat.id,
+            e,
+        )
+        return True
+    except TelegramAPIError:
+        current_logger.exception("TelegramAPIError editing message%s.", context_for_log)
+        return False
+    else:
+        return True
