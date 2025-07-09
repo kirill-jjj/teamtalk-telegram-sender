@@ -24,11 +24,13 @@ logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
 
 
+from bot.core.languages import LanguageInfo # Ensure this is imported
+
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    available_languages: list[dict[str, str]],  # Injected from workflow_data
+    available_languages: list[LanguageInfo],  # Corrected type hint
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext

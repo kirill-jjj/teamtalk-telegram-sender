@@ -26,6 +26,7 @@ from bot.core.enums import (
     ToggleMuteSpecificAction,
     UserListAction,
 )
+from bot.core.languages import LanguageInfo # Added
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
 from bot.telegram_bot.callback_data import (
@@ -107,7 +108,7 @@ async def create_main_settings_keyboard(
 
 
 async def create_language_selection_keyboard(
-    translator: gettext.GNUTranslations, available_languages: list[dict[str, str]]
+    translator: gettext.GNUTranslations, available_languages: list[LanguageInfo]
 ) -> InlineKeyboardBuilder:
     """Creates the language selection keyboard dynamically."""
     _ = translator.gettext
@@ -750,7 +751,7 @@ async def create_linkable_tt_account_list_keyboard(
 
 async def create_admin_subscriber_lang_keyboard(
     translator: gettext.GNUTranslations,
-    available_languages: list[dict[str, str]],
+    available_languages: list[LanguageInfo], # Changed here
     target_telegram_id: int,
     subscriber_page_context: int, # Page of the main subscriber list
 ) -> InlineKeyboardMarkup:
