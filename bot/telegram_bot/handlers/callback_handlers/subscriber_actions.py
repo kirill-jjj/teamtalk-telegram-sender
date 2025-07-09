@@ -21,6 +21,7 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberNotificationPrefCallback,
     LinkTTAccountChosenCallback,
     PaginateLinkableAccountsCallback,
+    PaginateMuteListCallback, # New
     SubscriberActionCallback,
     ViewSubscriberCallback,
 )
@@ -30,8 +31,9 @@ from bot.telegram_bot.keyboards import (
     create_admin_subscriber_notification_pref_keyboard,
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,
-    create_subscriber_action_menu_keyboard,
+    # create_subscriber_action_menu_keyboard, # Will be replaced by create_view_mute_list_keyboard in this handler
     create_subscriber_list_keyboard,
+    create_view_mute_list_keyboard, # New
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 from bot.telegram_bot.utils import format_telegram_user_display_name
@@ -426,18 +428,19 @@ async def _handle_admin_view_mute_list_action(
     return_page: int, # Page of the subscriber list for back button context
     translator: gettext.GNUTranslations,
     services: "Services",
+    page_num: int = 0 # For pagination, defaults to 0 for initial call
 ) -> None:
-    """Handles an admin viewing a specific subscriber's mute list."""
+    """Handles an admin viewing a specific subscriber's mute list with pagination."""
     _ = translator.gettext
+    from bot.constants import MUTE_LIST_ITEMS_PER_PAGE # Use the global constant
+
     if not query.message or not isinstance(query.message, Message):
         logger.warning("ADMIN_VIEW_MUTE_LIST action called without message context.")
         await query.answer(_("An error occurred."), show_alert=True)
         return
 
-    # Explicitly load UserSettings with the muted_users_list relationship
-    # to prevent MissingGreenlet error from async lazy loading.
     from sqlmodel import select
-    from sqlalchemy.orm import selectinload # Correct import for selectinload
+    from sqlalchemy.orm import selectinload
 
     statement = (
         select(UserSettings)
@@ -449,8 +452,7 @@ async def _handle_admin_view_mute_list_action(
 
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
-        # Attempt to return to the subscriber action menu for this user
-        await handle_view_subscriber(
+        await handle_view_subscriber( # Navigate back if user not found
             query=query,
             callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
             session=session,
@@ -459,26 +461,19 @@ async def _handle_admin_view_mute_list_action(
         )
         return
 
-    # The mute list is stored in UserSettings.muted_users_list
-    # This relationship is defined in bot/models.py:
-    # muted_users_list: list["MutedUser"] = Relationship(back_populates="user_settings")
-    # And MutedUser has `muted_teamtalk_username: str`
+    all_muted_usernames = sorted([mu.muted_teamtalk_username for mu in target_user_settings.muted_users_list])
 
-    # We need to explicitly load the relationship if it's not already loaded.
-    # However, with SQLModel and async, direct relationship loading like SQLAlchemy's joinedload/selectinload
-    # needs to be handled carefully, often by ensuring the session remains active.
-    # Let's assume `target_user_settings.muted_users_list` will be populated if the session is correctly managed.
-    # If not, a separate query might be needed:
-    # from sqlmodel import select
-    # statement = select(MutedUser).where(MutedUser.user_settings_telegram_id == target_telegram_id)
-    # results = await session.exec(statement)
-    # muted_users_objects = results.all()
-    # For now, let's try the direct relationship access.
+    total_items = len(all_muted_usernames)
+    total_pages = (total_items + MUTE_LIST_ITEMS_PER_PAGE - 1) // MUTE_LIST_ITEMS_PER_PAGE
+    total_pages = max(total_pages, 1) # Ensure at least 1 page even if empty
 
-    muted_usernames = [muted_user.muted_teamtalk_username for muted_user in target_user_settings.muted_users_list]
+    current_page_idx = max(0, min(page_num, total_pages - 1))
+    start_index = current_page_idx * MUTE_LIST_ITEMS_PER_PAGE
+    end_index = start_index + MUTE_LIST_ITEMS_PER_PAGE
+    usernames_on_page = all_muted_usernames[start_index:end_index]
 
     message_text_parts = []
-    subscriber_display_name = str(target_telegram_id) # Fallback
+    subscriber_display_name = str(target_telegram_id)
     try:
         chat_info = await services.bot_event.get_chat(target_telegram_id)
         subscriber_display_name = format_telegram_user_display_name(chat_info)
@@ -496,31 +491,57 @@ async def _handle_admin_view_mute_list_action(
         )
     )
 
-    if not muted_usernames:
+    if not all_muted_usernames:
         message_text_parts.append(_("The mute list is currently empty."))
     else:
-        message_text_parts.append(_("Muted TeamTalk usernames:"))
-        for username in sorted(muted_usernames):
+        message_text_parts.append(
+            _("Muted TeamTalk usernames (Page {current_page}/{total_pages}):").format(
+                current_page=current_page_idx + 1, total_pages=total_pages
+            )
+        )
+        for username in usernames_on_page:
             message_text_parts.append(f"- {username}")
+        if not usernames_on_page and current_page_idx > 0 : # e.g. user deleted items from last page
+             message_text_parts.append(_("This page is empty. Try previous pages."))
 
-    # Keyboard to go back to the subscriber action menu
-    # We need to reuse the create_subscriber_action_menu_keyboard or similar
-    # For now, a simple back button to the specific user's menu
 
-    # Re-create the subscriber action menu to serve as a "back" mechanism
-    # This ensures the user returns to the exact same menu they were on.
-    action_menu_keyboard = await create_subscriber_action_menu_keyboard(
-        translator, target_telegram_id=target_telegram_id, page=return_page
+    keyboard = await create_view_mute_list_keyboard(
+        translator,
+        current_mute_list_page=current_page_idx,
+        total_mute_list_pages=total_pages,
+        target_telegram_id=target_telegram_id,
+        subscriber_context_page=return_page
     )
 
     final_text = "\n".join(message_text_parts)
 
     try:
-        await query.message.edit_text(final_text, reply_markup=action_menu_keyboard)
+        await query.message.edit_text(final_text, reply_markup=keyboard)
         await query.answer()
     except TelegramAPIError as e:
-        logger.exception("Failed to edit message for viewing mute list: %s", e)
-        await query.answer(_("Error displaying mute list."), show_alert=True)
+        logger.exception("Failed to edit message for viewing mute list (page %s): %s", current_page_idx, e)
+        await query.answer(_("Error displaying mute list page."), show_alert=True)
+
+
+@subscriber_actions_router.callback_query(PaginateMuteListCallback.filter())
+async def handle_paginate_mute_list(
+    query: CallbackQuery,
+    callback_data: PaginateMuteListCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+) -> None:
+    """Handles pagination for the admin's view of a subscriber's mute list."""
+    await _handle_admin_view_mute_list_action(
+        query=query,
+        session=session,
+        target_telegram_id=callback_data.target_telegram_id,
+        return_page=callback_data.subscriber_context_page, # This is the page of the main subscriber list
+        translator=translator,
+        services=services,
+        page_num=callback_data.mute_list_page # Pass the requested page for the mute list
+    )
+    await query.answer() # Acknowledge the callback
 
 
 async def _display_linkable_tt_accounts_page(

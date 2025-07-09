@@ -22,6 +22,7 @@ from bot.constants import (
     CB_PREFIX_TOGGLE_USER_MUTE,
     CB_PREFIX_USER_LIST_NAV,
     CB_PREFIX_VIEW_SUB,
+    CB_PREFIX_PAGINATE_MUTE_LIST # New prefix
 )
 from bot.core.enums import (
     AdminAction,
@@ -195,3 +196,12 @@ class AdminSetSubscriberMuteModeCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SE
     target_telegram_id: int      # The subscriber whose mode is being changed
     mode: MuteListMode           # The MuteListMode to set (blacklist/whitelist)
     subscriber_page_context: int # Page of the subscriber list to return to
+
+
+# For paginating the admin's view of a subscriber's mute list
+class PaginateMuteListCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_MUTE_LIST):
+    """Callback data for paginating the view of a specific subscriber's mute list."""
+
+    target_telegram_id: int       # The subscriber whose mute list is being viewed
+    mute_list_page: int           # The page of the mute list to display
+    subscriber_context_page: int  # Original page of the main subscriber list (for back button context)

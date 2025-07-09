@@ -20,6 +20,7 @@ TT_MAX_MESSAGE_BYTES = 511
 
 CALLBACK_NICKNAME_MAX_LENGTH = 30
 USERS_PER_PAGE = 10  # For pagination in settings menus
+MUTE_LIST_ITEMS_PER_PAGE = 10 # For paginating subscriber's mute list view
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 
@@ -58,3 +59,4 @@ CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS = "pag_link_acc"
 CB_PREFIX_ADMIN_SET_SUB_LANG = "ad_set_sub_lang"
 CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF = "ad_set_sub_notif"
 CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE = "ad_set_sub_mute"
+CB_PREFIX_PAGINATE_MUTE_LIST = "pml" # For PaginateMuteListCallback

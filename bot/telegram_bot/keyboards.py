@@ -40,6 +40,7 @@ from bot.telegram_bot.callback_data import (
     MenuCallback,
     NotificationActionCallback,
     PaginateLinkableAccountsCallback,
+    PaginateMuteListCallback, # New
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
@@ -607,6 +608,57 @@ async def create_manage_tt_account_keyboard(
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=page).pack(),
     )
     builder.adjust(1)
+    return builder.as_markup()
+
+
+async def create_view_mute_list_keyboard(
+    translator: gettext.GNUTranslations,
+    current_mute_list_page: int,
+    total_mute_list_pages: int,
+    target_telegram_id: int, # Subscriber's ID
+    subscriber_context_page: int # Page of the main subscriber list (for back button)
+) -> InlineKeyboardMarkup:
+    """Creates the keyboard for viewing a paginated mute list for a specific subscriber."""
+    _ = translator.gettext
+    builder = InlineKeyboardBuilder()
+
+    pagination_buttons = []
+    if current_mute_list_page > 0:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=_("⬅️ Prev Page"), # Text for mute list page
+                callback_data=PaginateMuteListCallback(
+                    target_telegram_id=target_telegram_id,
+                    mute_list_page=current_mute_list_page - 1,
+                    subscriber_context_page=subscriber_context_page
+                ).pack(),
+            )
+        )
+    if current_mute_list_page < total_mute_list_pages - 1:
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=_("Next Page ➡️"), # Text for mute list page
+                callback_data=PaginateMuteListCallback(
+                    target_telegram_id=target_telegram_id,
+                    mute_list_page=current_mute_list_page + 1,
+                    subscriber_context_page=subscriber_context_page
+                ).pack(),
+            )
+        )
+
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
+
+    # Button to go back to the specific subscriber's action menu
+    builder.row(
+        InlineKeyboardButton(
+            text=_("⬅️ Back to User Actions"), # This text should already be translated
+            callback_data=ViewSubscriberCallback(
+                telegram_id=target_telegram_id,
+                page=subscriber_context_page # This page is for the main subscriber list
+            ).pack(),
+        )
+    )
     return builder.as_markup()
 
 
