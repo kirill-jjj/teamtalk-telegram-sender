@@ -65,33 +65,38 @@ async def _get_paginated_subscribers_info(
         return [], current_page_num, total_pages
 
     chat_info_tasks = [bot.get_chat(tg_id) for tg_id in page_ids_to_fetch]
-    user_settings_tasks = [session.get(UserSettings, tg_id) for tg_id in page_ids_to_fetch]
-
     chat_results = await asyncio.gather(*chat_info_tasks, return_exceptions=True)
-    user_settings_results = await asyncio.gather(*user_settings_tasks, return_exceptions=True)
+
+    # Fetch UserSettings in a single batch
+    from sqlmodel import select # Import select
+    user_settings_list = (
+        await session.exec(select(UserSettings).where(UserSettings.telegram_id.in_(page_ids_to_fetch)))  # type: ignore[attr-defined]
+    ).all()
+    user_settings_map = {us.telegram_id: us for us in user_settings_list}
 
     page_subscribers_info = []
     for i, telegram_id in enumerate(page_ids_to_fetch):
-        display_name = str(telegram_id) # Default display name
+        display_name = str(telegram_id)  # Default display name
 
-        current_chat_for_formatting: Chat | None = None # Explicitly None or Chat
+        current_chat_for_formatting: Chat | None = None  # Explicitly None or Chat
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
             logger.error("Could not fetch chat info for Telegram ID %s: %s", telegram_id, chat_result)
         else:
-            # chat_result is known to be Chat (or ChatFullInfo which is a subtype)
             current_chat_for_formatting = cast(Chat, chat_result)
-            # Update display_name only if chat info was successfully fetched
             display_name = format_telegram_user_display_name(current_chat_for_formatting)
 
         tt_username: str | None = None
-        user_setting_result = user_settings_results[i]
-        if isinstance(user_setting_result, Exception):
-            logger.error("Could not fetch user settings for Telegram ID %s: %s", telegram_id, user_setting_result)
-        elif user_setting_result: # If not an Exception and not None
-            # Explicitly assert/cast that user_setting_result is UserSettings here for MyPy
-            loaded_user_settings = cast(UserSettings, user_setting_result)
-            tt_username = loaded_user_settings.teamtalk_username
+        user_setting = user_settings_map.get(telegram_id)
+        if user_setting:
+            tt_username = user_setting.teamtalk_username
+        else:
+            logger.warning(
+                "Could not find user settings in batch for Telegram ID %s. "
+                "This might happen if a user unsubscribed while the list was being fetched.",
+                telegram_id,
+            )
+
 
         page_subscribers_info.append(
             SubscriberInfo(telegram_id=telegram_id, display_name=display_name, teamtalk_username=tt_username)
