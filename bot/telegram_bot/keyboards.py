@@ -393,7 +393,7 @@ async def _create_generic_paginated_list_keyboard(
 
 async def create_subscriber_list_keyboard(
     translator: gettext.GNUTranslations,
-    page_subscribers_info: list[SubscriberInfo],
+    page_items: list[SubscriberInfo],  # Changed from page_subscribers_info
     current_page: int,
     total_pages: int,
 ) -> InlineKeyboardMarkup:
@@ -417,7 +417,7 @@ async def create_subscriber_list_keyboard(
 
     return await _create_generic_paginated_list_keyboard(
         translator=translator,
-        page_items=page_subscribers_info,
+        page_items=page_items,  # Use the new parameter name
         current_page=current_page,
         total_pages=total_pages,
         item_button_former=subscriber_button_former,
