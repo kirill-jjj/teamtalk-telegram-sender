@@ -410,9 +410,105 @@ async def handle_subscriber_action(
         await _handle_admin_set_mute_mode_action(
             query, session, target_telegram_id, return_page, translator, services, tt_connection
         )
+    elif action == SubscriberAction.ADMIN_VIEW_MUTE_LIST:
+        await _handle_admin_view_mute_list_action(
+            query, session, target_telegram_id, return_page, translator, services
+        )
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
+
+
+async def _handle_admin_view_mute_list_action(
+    query: CallbackQuery,
+    session: AsyncSession,
+    target_telegram_id: int,
+    return_page: int, # Page of the subscriber list for back button context
+    translator: gettext.GNUTranslations,
+    services: "Services",
+) -> None:
+    """Handles an admin viewing a specific subscriber's mute list."""
+    _ = translator.gettext
+    if not query.message or not isinstance(query.message, Message):
+        logger.warning("ADMIN_VIEW_MUTE_LIST action called without message context.")
+        await query.answer(_("An error occurred."), show_alert=True)
+        return
+
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        # Attempt to return to the subscriber action menu for this user
+        await handle_view_subscriber(
+            query=query,
+            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
+            session=session,
+            translator=translator,
+            services=services,
+        )
+        return
+
+    # The mute list is stored in UserSettings.muted_users_list
+    # This relationship is defined in bot/models.py:
+    # muted_users_list: list["MutedUser"] = Relationship(back_populates="user_settings")
+    # And MutedUser has `muted_teamtalk_username: str`
+
+    # We need to explicitly load the relationship if it's not already loaded.
+    # However, with SQLModel and async, direct relationship loading like SQLAlchemy's joinedload/selectinload
+    # needs to be handled carefully, often by ensuring the session remains active.
+    # Let's assume `target_user_settings.muted_users_list` will be populated if the session is correctly managed.
+    # If not, a separate query might be needed:
+    # from sqlmodel import select
+    # statement = select(MutedUser).where(MutedUser.user_settings_telegram_id == target_telegram_id)
+    # results = await session.exec(statement)
+    # muted_users_objects = results.all()
+    # For now, let's try the direct relationship access.
+
+    muted_usernames = [muted_user.muted_teamtalk_username for muted_user in target_user_settings.muted_users_list]
+
+    message_text_parts = []
+    subscriber_display_name = str(target_telegram_id) # Fallback
+    try:
+        chat_info = await services.bot_event.get_chat(target_telegram_id)
+        subscriber_display_name = format_telegram_user_display_name(chat_info)
+    except Exception:
+        logger.warning("Could not fetch display name for %s in view_mute_list", target_telegram_id)
+
+    message_text_parts.append(
+        _("Mute list for subscriber: {subscriber_name} (ID: {subscriber_id})").format(
+            subscriber_name=subscriber_display_name, subscriber_id=target_telegram_id
+        )
+    )
+    message_text_parts.append(
+        _("Mute Mode: {mode}").format(
+            mode=_("Blacklist") if target_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+        )
+    )
+
+    if not muted_usernames:
+        message_text_parts.append(_("The mute list is currently empty."))
+    else:
+        message_text_parts.append(_("Muted TeamTalk usernames:"))
+        for username in sorted(muted_usernames):
+            message_text_parts.append(f"- {username}")
+
+    # Keyboard to go back to the subscriber action menu
+    # We need to reuse the create_subscriber_action_menu_keyboard or similar
+    # For now, a simple back button to the specific user's menu
+
+    # Re-create the subscriber action menu to serve as a "back" mechanism
+    # This ensures the user returns to the exact same menu they were on.
+    action_menu_keyboard = await create_subscriber_action_menu_keyboard(
+        translator, target_telegram_id=target_telegram_id, page=return_page
+    )
+
+    final_text = "\n".join(message_text_parts)
+
+    try:
+        await query.message.edit_text(final_text, reply_markup=action_menu_keyboard)
+        await query.answer()
+    except TelegramAPIError as e:
+        logger.exception("Failed to edit message for viewing mute list: %s", e)
+        await query.answer(_("Error displaying mute list."), show_alert=True)
 
 
 async def _display_linkable_tt_accounts_page(
