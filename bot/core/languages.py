@@ -22,7 +22,7 @@ class LanguageInfo(TypedDict):
     native_name: str
 
 
-def discover_languages(locales_path: str = _LOCALE_DIR) -> list[LanguageInfo]:
+def discover_languages(locales_path: Path = _LOCALE_DIR) -> list[LanguageInfo]:
     """Scans the locales directory for translated languages and always includes English as the base language."""
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.

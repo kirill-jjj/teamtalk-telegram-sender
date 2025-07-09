@@ -12,6 +12,7 @@ from bot.database import crud
 from bot.models import Deeplink as DeeplinkModel  # Renamed to avoid conflict
 from bot.models import UserSettings
 from bot.services import user_service
+from typing import Callable
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -104,6 +105,14 @@ async def process_unsubscribe_deeplink(
 
 
 DEEPLINK_ACTION_HANDLERS = {
+    DeeplinkAction.SUBSCRIBE: process_subscribe_deeplink,
+    DeeplinkAction.UNSUBSCRIBE: process_unsubscribe_deeplink,
+# Define the expected signature for handler functions
+# This is a simplified version; you might need to use a Protocol or more complex Callable
+# if the signatures vary significantly and you want stricter checking for all.
+DeeplinkHandlerType = Callable[..., str]  # Args can vary, returns str
+
+DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandlerType] = {
     DeeplinkAction.SUBSCRIBE: process_subscribe_deeplink,
     DeeplinkAction.UNSUBSCRIBE: process_unsubscribe_deeplink,
 }

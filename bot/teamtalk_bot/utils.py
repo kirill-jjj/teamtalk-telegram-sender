@@ -30,10 +30,12 @@ ttstr = sdk.ttstr
 # --- Functions moved from bot.core.utils ---
 
 
+from bot.config import Settings
+
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
     translator: gettext.GNUTranslations,
-    app_cfg: Services.config,  # More specific type for app_cfg
+    app_cfg: Settings,
 ) -> str:
     """Determines the effective server name to display.
 
@@ -87,9 +89,9 @@ def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslat
         The display name string.
     """
     _ = translator.gettext
-    display_name = ttstr(user.nickname)
+    display_name = str(ttstr(user.nickname))
     if not display_name:
-        display_name = ttstr(user.username)
+        display_name = str(ttstr(user.username))
     if not display_name:
         display_name = _("unknown user")
     return display_name
@@ -112,7 +114,7 @@ def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> 
     elif hasattr(user_or_account, "szUsername"):
         username = user_or_account.szUsername
     if isinstance(username, bytes):
-        return ttstr(username)
+        return str(ttstr(username))
     return str(username) if username is not None else ""
 
 

@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 # Define a type alias for the specific sessionmaker we're creating
 # It's a sessionmaker that produces AsyncSession instances
-AsyncSessionFactoryType: TypeAlias = sessionmaker[AsyncSession]  # type: ignore[type-var]
+AsyncSessionFactoryType: TypeAlias = sessionmaker[AsyncSession]
 
 
-def create_session_factory(config: Settings) -> AsyncSessionFactoryType:  # type: ignore[type-var]
+def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     """Creates and returns a new session factory based on the provided configuration."""
     # This import is needed for SQLModel/Alembic to correctly see all tables.
     # The variable `_` is used to prevent linters from complaining about an unused import.
@@ -33,4 +33,4 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:  # type
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature when class_ is specified.
-    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
+    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)

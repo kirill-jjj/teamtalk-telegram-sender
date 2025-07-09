@@ -57,14 +57,17 @@ class AdminIdArgs(BaseModel):
         return {"valid_ids": valid_ids, "invalid_entries": invalid_entries}
 
 
-def is_tt_admin(func: Callable) -> Callable:
+def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
-        services: Services = kwargs.get("services")  # Changed to services
-        if not services:
-            raise ValueError("Services not in kwargs for is_tt_admin.")  # noqa: TRY003
+        services_from_kwargs = kwargs.get("services")
+        if not isinstance(services_from_kwargs, Services): # type: ignore
+            # This check ensures services_from_kwargs is indeed a Services instance or raises error
+            raise ValueError("Services not found or of incorrect type in kwargs for is_tt_admin.") # noqa: TRY003
+        services: Services = services_from_kwargs
+
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, gettext.GNUTranslations):
@@ -275,7 +278,6 @@ async def handle_tt_subscribe_command(
         reply_text_source=_(
             "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
-        error_reply_source=_("An error occurred. Please try again later."),
         services=services,
     )
 
@@ -302,7 +304,6 @@ async def handle_tt_unsubscribe_command(
         reply_text_source=_(
             "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
-        error_reply_source=_("An error occurred. Please try again later."),
         services=services,
     )
 

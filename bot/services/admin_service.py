@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
 from bot.models import UserSettings

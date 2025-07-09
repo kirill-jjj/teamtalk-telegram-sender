@@ -98,7 +98,7 @@ async def _get_all_entity_ids(session: AsyncSession, model_class: type[T]) -> li
     table_name = model_class.__tablename__
     try:
         # Assuming all models used with this function have 'telegram_id'
-        statement = select(model_class.telegram_id)
+        statement = select(model_class.telegram_id)  # type: ignore[attr-defined]
         result = await session.exec(statement)
         return list(result.all())
     except SQLAlchemyError:

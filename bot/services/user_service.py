@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's A
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, UserSettings
+from bot.models import MutedUser, SubscribedUser, UserSettings
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 if TYPE_CHECKING:
@@ -103,7 +103,7 @@ async def process_new_subscription(
         # After the attempt, verify if the user is actually subscribed in the DB.
         # This covers both cases: newly added, or already existed.
         # session.get() is the most direct way to check existence after an operation.
-        subscribed_user_record = await session.get(crud.SubscribedUser, user_settings.telegram_id)
+        subscribed_user_record = await session.get(SubscribedUser, user_settings.telegram_id)
 
         if not subscribed_user_record:
             # This means crud.add_subscriber failed for a reason other than "already exists" (e.g., DB error during add)
