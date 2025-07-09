@@ -137,7 +137,8 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "mypy",
-    "ruff"
+    "ruff",
+    "types-toml"
 ]
 
 [tool.mypy]
