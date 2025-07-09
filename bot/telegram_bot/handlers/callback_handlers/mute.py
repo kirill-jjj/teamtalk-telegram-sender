@@ -390,51 +390,65 @@ async def cq_set_mute_mode_action(
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    managed_user_settings = await session.merge(user_settings)
     new_mode = callback_data.mode
-    if managed_user_settings.mute_list_mode == new_mode:
-        await callback_query.answer()
-        return
 
-    original_mode = managed_user_settings.mute_list_mode
-    managed_user_settings.mute_list_mode = new_mode
-    mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
-    if new_mode == MuteListMode.blacklist:
-        new_current_mode_desc = _(
+    # The user_settings object from middleware should already be session-managed.
+    # The service function `set_user_mute_mode` will handle merging if necessary,
+    # committing, cache updates, and error handling.
+    updated_user_settings = await user_service.set_user_mute_mode(
+        session, services, user_settings, new_mode
+    )
+
+    if not updated_user_settings:
+        # Service function handles logging and rollback.
+        # Inform user of failure. The user_settings object might be in its original state
+        # or state before the failed commit attempt if service function restored it.
+        await callback_query.answer(_("An error occurred while updating mute mode. Please try again later."), show_alert=True)
+        # We might need to refresh the UI to reflect the (potentially) unchanged state.
+        # For now, just answering. If the settings object was mutated then rolled back,
+        # the keyboard might be built with this transient state if not careful.
+        # However, create_manage_muted_users_keyboard should use the state from the object as it is.
+        # Let's ensure we pass the original user_settings if update failed, or the updated one if success.
+        # The `user_settings` variable itself might have been modified by `set_user_mute_mode` if it did a rollback
+        # and restored the original value to the passed object.
+        # For simplicity, we'll rely on the service to have restored the object's state on failure.
+        current_settings_for_keyboard = user_settings
+    else:
+        # Success
+        mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+        success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
+        await callback_query.answer(success_toast_text)
+        current_settings_for_keyboard = updated_user_settings
+
+
+    # Determine description and build keyboard based on the settings state
+    # (either updated or original if service call failed and restored it)
+    if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist:
+        current_mode_desc = _(
             "Current mode is Blacklist. You receive notifications from everyone except those on the list."
         )
     else:
-        new_current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+        current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+
     menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
-        current_mode_description=new_current_mode_desc
+        current_mode_description=current_mode_desc
     )
-    updated_keyboard = await create_manage_muted_users_keyboard(translator, managed_user_settings)
-    try:
-        await session.commit()
-        await session.refresh(managed_user_settings)
-        services.cache.update_user_settings(managed_user_settings)
-        success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
-        await callback_query.answer(success_toast_text)
-        if isinstance(callback_query.message, Message):
-            await safe_edit_text(
-                message_to_edit=callback_query.message,
-                text=menu_text,
-                reply_markup=updated_keyboard.as_markup(),
-                logger_instance=logger,
-                log_context="cq_set_mute_mode_action",
-            )
-        else:
-            logger.warning(
-                "cq_set_mute_mode_action: Message None/inaccessible for user %s. UI not updated. CB: %s",
-                callback_query.from_user.id if callback_query.from_user else "Unknown",
-                callback_data.pack() if callback_data else callback_query.data,
-            )
-    except SQLAlchemyError:  # Removed 'as e'
-        managed_user_settings.mute_list_mode = original_mode
-        await session.merge(managed_user_settings)
-        await session.rollback()
-        logger.exception("Failed to update mute list mode for user %s.", callback_query.from_user.id)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+    updated_keyboard_markup = await create_manage_muted_users_keyboard(translator, current_settings_for_keyboard)
+
+    if isinstance(callback_query.message, Message):
+        await safe_edit_text(
+            message_to_edit=callback_query.message,
+            text=menu_text,
+            reply_markup=updated_keyboard_markup.as_markup(), # Corrected: use the markup
+            logger_instance=logger,
+            log_context="cq_set_mute_mode_action (after service call)",
+        )
+    else:
+        logger.warning(
+            "cq_set_mute_mode_action: Message None/inaccessible for user %s after service call. UI not updated. CB: %s",
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+            callback_data.pack() if callback_data else callback_query.data,
+        )
 
 
 @mute_router.callback_query(

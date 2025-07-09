@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's A
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, SubscribedUser, UserSettings
+from bot.models import MutedUser, SubscribedUser, UserSettings, NotificationSetting, MuteListMode # Added MuteListMode
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 if TYPE_CHECKING:
@@ -57,6 +57,352 @@ async def delete_full_user_profile(
         return False
     else:
         return True
+
+
+async def admin_toggle_noon_setting(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+) -> UserSettings | None:
+    """Toggles the NOON (Not On Online Notifications) setting for a target user.
+
+    Handles DB session, commit, rollback, and cache update.
+    Returns the updated UserSettings object or None on failure.
+    """
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
+        return None
+
+    original_status = target_user_settings.not_on_online_enabled
+    try:
+        target_user_settings.not_on_online_enabled = not target_user_settings.not_on_online_enabled
+        if target_user_settings.not_on_online_enabled:
+            # Ensure not_on_online_confirmed is True if NOON is enabled.
+            # If it's being disabled, the confirmed status doesn't need to change here,
+            # as it reflects prior confirmation if it was ever enabled.
+            target_user_settings.not_on_online_confirmed = True
+
+        await session.commit()
+        await session.refresh(target_user_settings)
+        services.cache.update_user_settings(target_user_settings)
+        logger.info(
+            "Successfully toggled NOON setting for user %s to %s. DB and cache updated.",
+            target_telegram_id,
+            target_user_settings.not_on_online_enabled,
+        )
+        return target_user_settings
+    except SQLAlchemyError:
+        await session.rollback()
+        # Restore in-memory object to pre-change state if DB operation failed
+        target_user_settings.not_on_online_enabled = original_status
+        # Consider if not_on_online_confirmed also needs reverting based on logic
+        if original_status is False and target_user_settings.not_on_online_enabled is True: # if it was false, and we tried to make it true
+             target_user_settings.not_on_online_confirmed = False # Revert confirmation only if it was set in this attempt
+
+        logger.exception(
+            "SQLAlchemyError while toggling NOON setting for user %s. Rolled back.",
+            target_telegram_id,
+        )
+        return None
+
+
+async def set_user_mute_mode(
+    session: AsyncSession,
+    services: "Services",
+    user_settings: UserSettings, # User's own settings object
+    new_mode: "MuteListMode",
+) -> UserSettings | None:
+    """Sets the mute list mode for the user themselves.
+
+    Handles DB session, commit, rollback, and cache update.
+    Assumes user_settings is a session-managed object.
+    Returns the updated UserSettings object or None on failure.
+    """
+    # user_settings is passed in, assumed to be managed by the session already
+    # (e.g., from UserSettingsMiddleware)
+    # If it's not merged, operations might not persist as expected.
+    # For safety, merge it, though middleware should typically provide a merged object.
+    managed_user_settings = await session.merge(user_settings)
+    if not managed_user_settings: # Should not happen if user_settings was valid
+        logger.error("set_user_mute_mode: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
+        return None
+
+
+    original_mode = managed_user_settings.mute_list_mode
+    if original_mode == new_mode: # No change needed
+        return managed_user_settings
+
+    try:
+        managed_user_settings.mute_list_mode = new_mode
+        await session.commit()
+        await session.refresh(managed_user_settings) # Refresh to get any DB-side changes/confirm state
+        services.cache.update_user_settings(managed_user_settings)
+        logger.info(
+            "Successfully set mute list mode to '%s' for user %s (self). DB and cache updated.",
+            new_mode.value,
+            managed_user_settings.telegram_id,
+        )
+        return managed_user_settings
+
+    except SQLAlchemyError:
+        await session.rollback()
+        # Revert in-memory change on the merged object if DB op failed
+        managed_user_settings.mute_list_mode = original_mode
+        logger.exception(
+            "SQLAlchemyError while setting mute list mode to '%s' for user %s (self). Rolled back.",
+            new_mode.value,
+            managed_user_settings.telegram_id,
+        )
+        return None # Indicate failure
+    except Exception:
+        await session.rollback()
+        managed_user_settings.mute_list_mode = original_mode
+        logger.exception(
+            "Unexpected error while setting mute list mode to '%s' for user %s (self). Rolled back.",
+            new_mode.value,
+            managed_user_settings.telegram_id,
+        )
+        return None
+
+
+async def admin_set_user_mute_mode(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    new_mode: "MuteListMode",
+) -> UserSettings | None:
+    """Sets the mute list mode for a target user, managed by an admin.
+
+    Handles DB session, commit, rollback, and cache update.
+    Returns the updated UserSettings object or None on failure.
+    """
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
+        return None
+
+    original_mode = target_user_settings.mute_list_mode
+    try:
+        target_user_settings.mute_list_mode = new_mode
+        await session.commit()
+        await session.refresh(target_user_settings)
+        services.cache.update_user_settings(target_user_settings)
+        logger.info(
+            "Successfully set mute list mode to '%s' for user %s by admin. DB and cache updated.",
+            new_mode.value,
+            target_telegram_id,
+        )
+        return target_user_settings
+
+    except SQLAlchemyError:
+        await session.rollback()
+        target_user_settings.mute_list_mode = original_mode # Revert in-memory change
+        logger.exception(
+            "SQLAlchemyError while setting mute list mode to '%s' for user %s by admin. Rolled back.",
+            new_mode.value,
+            target_telegram_id,
+        )
+        return None
+    except Exception:
+        await session.rollback()
+        target_user_settings.mute_list_mode = original_mode # Revert in-memory change
+        logger.exception(
+            "Unexpected error while setting mute list mode to '%s' for user %s by admin. Rolled back.",
+            new_mode.value,
+            target_telegram_id,
+        )
+        return None
+
+
+async def admin_set_user_notification_preference(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    new_pref_enum: "NotificationSetting",  # Use NotificationSetting enum directly
+) -> UserSettings | None:
+    """Sets the notification preference for a target user, managed by an admin.
+
+    Handles DB session, commit, rollback, and cache update.
+    Returns the updated UserSettings object or None on failure.
+    """
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning(
+            "admin_set_user_notification_preference: UserSettings not found for %s.", target_telegram_id
+        )
+        return None
+
+    original_pref = target_user_settings.notification_settings
+    try:
+        target_user_settings.notification_settings = new_pref_enum
+        await session.commit()
+        await session.refresh(target_user_settings)
+        services.cache.update_user_settings(target_user_settings)
+        logger.info(
+            "Successfully set notification preference to '%s' for user %s by admin. DB and cache updated.",
+            new_pref_enum.value,
+            target_telegram_id,
+        )
+        return target_user_settings
+
+    except SQLAlchemyError:
+        await session.rollback()
+        target_user_settings.notification_settings = original_pref # Revert in-memory change
+        logger.exception(
+            "SQLAlchemyError while setting notification preference to '%s' for user %s by admin. Rolled back.",
+            new_pref_enum.value,
+            target_telegram_id,
+        )
+        return None
+    except Exception:
+        await session.rollback()
+        target_user_settings.notification_settings = original_pref # Revert in-memory change
+        logger.exception(
+            "Unexpected error while setting notification preference to '%s' for user %s by admin. Rolled back.",
+            new_pref_enum.value,
+            target_telegram_id,
+        )
+        return None
+
+
+async def admin_link_tt_account(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    tt_username_to_link: str,
+) -> tuple[UserSettings | None, str]:
+    """Links a TeamTalk account to a subscriber, managed by an admin.
+
+    Checks if the TT username is banned before linking.
+    Handles DB session, commit, rollback, and cache update.
+    Returns a tuple: (updated UserSettings | None, status_message_key: str).
+    Status message keys: "linked", "relinked", "banned", "not_found", "error".
+    """
+    if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
+        logger.warning(
+            "Attempt to link banned TeamTalk username '%s' to user %s.",
+            tt_username_to_link,
+            target_telegram_id,
+        )
+        return None, "banned"
+
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning("admin_link_tt_account: UserSettings not found for %s.", target_telegram_id)
+        return None, "not_found"
+
+    original_tt_username = target_user_settings.teamtalk_username
+    try:
+        target_user_settings.teamtalk_username = tt_username_to_link
+        # Linking by admin should also confirm NOON if it's enabled.
+        # If NOON is enabled, it means the user wants notifications.
+        # If it's not enabled, this confirmation doesn't hurt.
+        target_user_settings.not_on_online_confirmed = True
+
+        await session.commit()
+        await session.refresh(target_user_settings)
+        services.cache.update_user_settings(target_user_settings)
+
+        logger.info(
+            "Successfully linked TT username '%s' to user %s (was '%s'). DB and cache updated.",
+            tt_username_to_link,
+            target_telegram_id,
+            original_tt_username,
+        )
+        if original_tt_username and original_tt_username != tt_username_to_link:
+            return target_user_settings, "relinked"
+        return target_user_settings, "linked"
+
+    except SQLAlchemyError:
+        await session.rollback()
+        target_user_settings.teamtalk_username = original_tt_username # Revert in-memory change
+        # Consider if not_on_online_confirmed needs reverting based on more complex logic
+        logger.exception(
+            "SQLAlchemyError while linking TT username '%s' for user %s. Rolled back.",
+            tt_username_to_link,
+            target_telegram_id,
+        )
+        return None, "error"
+
+
+async def admin_set_user_language(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    new_lang_code: str,
+) -> UserSettings | None:
+    """Sets the language for a target user, managed by an admin.
+
+    Handles DB session, commit, rollback, cache update, and bot command update.
+    Returns the updated UserSettings object or None on failure.
+    """
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning("admin_set_user_language: UserSettings not found for %s.", target_telegram_id)
+        return None
+
+    original_lang_code = target_user_settings.language_code
+    try:
+        target_user_settings.language_code = new_lang_code
+        await session.commit()
+        await session.refresh(target_user_settings)
+        services.cache.update_user_settings(target_user_settings)
+        logger.info(
+            "Successfully set language to '%s' for user %s by admin. DB and cache updated.",
+            new_lang_code,
+            target_telegram_id,
+        )
+
+        # Update bot commands for the target user
+        commands_updated = await update_user_bot_commands(
+            target_telegram_id, new_lang_code, services
+        )
+        if not commands_updated:
+            logger.warning(
+                "Failed to update bot commands for user %s after language change by admin to '%s'.",
+                target_telegram_id,
+                new_lang_code
+            )
+        return target_user_settings
+
+    except SQLAlchemyError:
+        await session.rollback()
+        target_user_settings.language_code = original_lang_code # Revert in-memory change
+        logger.exception(
+            "SQLAlchemyError while setting language to '%s' for user %s by admin. Rolled back.",
+            new_lang_code,
+            target_telegram_id,
+        )
+        return None
+    except Exception:
+        await session.rollback()
+        target_user_settings.language_code = original_lang_code # Revert in-memory change
+        logger.exception(
+            "Unexpected error while setting language to '%s' for user %s by admin. Rolled back.",
+            new_lang_code,
+            target_telegram_id,
+        )
+        return None
+    except Exception:
+        await session.rollback()
+        target_user_settings.teamtalk_username = original_tt_username # Revert in-memory change
+        logger.exception(
+            "Unexpected error while linking TT username '%s' for user %s. Rolled back.",
+            tt_username_to_link,
+            target_telegram_id,
+        )
+        return None, "error"
+    except Exception:
+        await session.rollback()
+        target_user_settings.not_on_online_enabled = original_status
+        if original_status is False and target_user_settings.not_on_online_enabled is True:
+             target_user_settings.not_on_online_confirmed = False
+        logger.exception(
+            "Unexpected error while toggling NOON setting for user %s. Rolled back.",
+            target_telegram_id,
+        )
+        return None
 
 
 async def update_user_language_settings(

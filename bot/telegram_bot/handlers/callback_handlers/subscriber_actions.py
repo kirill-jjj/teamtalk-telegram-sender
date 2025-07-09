@@ -14,9 +14,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import SubscriberAction
-from bot.database import crud
+# from bot.database import crud # No longer directly used in _handle_ban_subscriber_action
 from bot.models import MuteListMode, NotificationSetting, UserSettings
-from bot.services import user_service
+from bot.services import user_service, admin_service # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -187,45 +187,16 @@ async def _handle_ban_subscriber_action(
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
-    user_settings = await session.get(UserSettings, target_telegram_id)
-    tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
-
-    banned_tg = await crud.add_to_ban_list(
-        session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu"
+    # Call the service function to handle all ban and deletion logic
+    _success, ban_messages = await admin_service.ban_and_delete_subscriber(
+        session, services, tt_connection, target_telegram_id, translator
     )
-    banned_tt = False
-    if tt_username_to_ban:
-        banned_tt = await crud.add_to_ban_list(
-            session, teamtalk_username=tt_username_to_ban,
-            reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
-        )
-        if tt_connection and tt_connection.instance:
-            try:
-                logger.info(
-                    "Conceptual TeamTalk server ban for %s on %s (not implemented in this step)",
-                    tt_username_to_ban, tt_connection.server_info.host)
-            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
-                logger.exception("Error during conceptual TeamTalk ban for %s on %s.",
-                                 tt_username_to_ban, tt_connection.server_info.host)
-            except Exception:
-                logger.exception("Unexpected error during conceptual TeamTalk ban for %s on %s.",
-                                 tt_username_to_ban, tt_connection.server_info.host)
-        else:
-            logger.warning(
-                "Skipping conceptual TeamTalk ban for %s as tt_connection or instance is None/invalid.",
-                tt_username_to_ban,
-            )
 
-    await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
-    ban_messages = []
-    if banned_tg:
-        ban_messages.append(_("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id))
-    if tt_username_to_ban and banned_tt:
-        ban_messages.append(_("TeamTalk username {tt_username} banned.").format(tt_username=tt_username_to_ban))
     alert_message = " ".join(ban_messages)
-    alert_message = _("{ban_report} Subscriber data also deleted.").format(ban_report=alert_message) if alert_message \
-        else _("User already banned or error occurred.")
     await query.answer(alert_message, show_alert=True)
+
+    # Refresh the subscriber list UI, regardless of exact success/failure details,
+    # as the state of the user (banned, deleted) has likely changed.
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 async def _handle_manage_tt_account_action(
@@ -295,32 +266,24 @@ async def _handle_admin_toggle_noon_action(
         await query.answer(_("An error occurred."), show_alert=True)
         return
 
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
+    updated_user_settings = await user_service.admin_toggle_noon_setting(
+        session, services, target_telegram_id
+    )
 
-    old_status = target_user_settings.not_on_online_enabled
-    target_user_settings.not_on_online_enabled = not old_status
-    if target_user_settings.not_on_online_enabled:
-        target_user_settings.not_on_online_confirmed = True
-    try:
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        new_status_text = _("Enabled") if target_user_settings.not_on_online_enabled else _("Disabled")
+    if updated_user_settings:
+        new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
         await query.answer(
             _("NOON status for subscriber {tg_id} set to: {status}").format(
                 tg_id=target_telegram_id, status=new_status_text), show_alert=False)
-    except Exception:
-        logger.exception("Failed to toggle NOON for subscriber %s", target_telegram_id)
-        target_user_settings.not_on_online_enabled = old_status
-        if target_user_settings.not_on_online_enabled and not old_status:
-             target_user_settings.not_on_online_confirmed = False
+    else:
         await query.answer(_("Failed to toggle NOON status. Please try again."), show_alert=True)
+        # If the service function returned None, it means an error occurred and UserSettings might be stale
+        # or unchanged. Re-fetching or using a potentially stale object for handle_view_subscriber
+        # might show incorrect info. However, handle_view_subscriber re-fetches.
 
+    # Refresh the view for the subscriber
     await handle_view_subscriber(
-        query=query,
+        query=query, # type: ignore
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
         session=session, translator=translator, services=services)
 
@@ -644,55 +607,65 @@ async def handle_link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    if not query.message:
+    if not query.message or not isinstance(query.message, Message): # Ensure message is Message instance
         await query.answer(_("An error occurred. Please try again."), show_alert=True)
         return
 
-    if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
-        await query.answer(
-            _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(
-                tt_username=tt_username_to_link), show_alert=True)
-        user_s = await session.get(UserSettings, target_telegram_id)
-        current_tt_username = user_s.teamtalk_username if user_s else None
-        kb = await create_manage_tt_account_keyboard(
-            translator, target_telegram_id, current_tt_username, return_page)
-        if isinstance(query.message, Message):
-            await query.message.edit_text(
-                _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-                    telegram_id=target_telegram_id), reply_markup=kb)
-        return
+    updated_user_settings, status_key = await user_service.admin_link_tt_account(
+        session, services, target_telegram_id, tt_username_to_link
+    )
 
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        await query.answer(_("User settings not found for this subscriber."), show_alert=True)
-        return
+    alert_message = ""
+    current_tt_for_keyboard = tt_username_to_link # Optimistically assume link will succeed for keyboard
 
-    old_tt_username = target_user_settings.teamtalk_username
-    target_user_settings.teamtalk_username = tt_username_to_link
-    target_user_settings.not_on_online_confirmed = True
-    try:
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        alert_text_parts = [
-            _("TeamTalk account {new_tt_username} linked successfully.").format(new_tt_username=tt_username_to_link)]
-        if old_tt_username and old_tt_username != tt_username_to_link:
-            alert_text_parts.append(_("(Replaced {old_tt_username})").format(old_tt_username=old_tt_username))
-        await query.answer(" ".join(alert_text_parts), show_alert=True)
-    except Exception:
-        logger.exception("Failed to link TeamTalk account %s for subscriber %s",
-                         tt_username_to_link, target_telegram_id)
-        target_user_settings.teamtalk_username = old_tt_username
-        await query.answer(_("Failed to link TeamTalk account. Please try again."), show_alert=True)
+    if status_key == "linked":
+        alert_message = _("TeamTalk account {new_tt_username} linked successfully.").format(
+            new_tt_username=tt_username_to_link
+        )
+    elif status_key == "relinked":
+        # We need the old username to display this message correctly.
+        # The service function doesn't return it. For simplicity, we'll use a generic message here.
+        # A more complex solution would involve the service returning more state or the handler fetching it.
+        alert_message = _("TeamTalk account {new_tt_username} linked successfully (previous link updated).").format(
+             new_tt_username=tt_username_to_link
+        )
+    elif status_key == "banned":
+        alert_message = _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(
+            tt_username=tt_username_to_link
+        )
+        # If banned, the keyboard should show the *original* TT username, not the one attempted
+        # We need to fetch user_settings again or ensure the service call didn't modify the passed one if it failed early
+        # For now, we'll fetch it if updated_user_settings is None (which it will be for "banned")
+        user_s_for_kb = await session.get(UserSettings, target_telegram_id)
+        current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
 
-    if isinstance(query.message, Message):
-        updated_keyboard = await create_manage_tt_account_keyboard(
-            translator, target_telegram_id=target_telegram_id,
-            current_tt_username=target_user_settings.teamtalk_username, page=return_page)
-        await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-            reply_markup=updated_keyboard)
-    return
+    elif status_key == "not_found":
+        alert_message = _("User settings not found for this subscriber.")
+        current_tt_for_keyboard = None # No user, no TT username
+    elif status_key == "error":
+        alert_message = _("Failed to link TeamTalk account. Please try again.")
+        # On error, the TT username might not have changed in DB.
+        user_s_for_kb = await session.get(UserSettings, target_telegram_id) # Re-fetch to be sure
+        current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
+
+
+    await query.answer(alert_message, show_alert=True)
+
+    # Determine the TT username to display in the keyboard
+    # If linking was successful, updated_user_settings will exist.
+    # If not (e.g. banned, not_found, error), updated_user_settings is None.
+    final_tt_username_for_keyboard = updated_user_settings.teamtalk_username if updated_user_settings else current_tt_for_keyboard
+
+    updated_keyboard = await create_manage_tt_account_keyboard(
+        translator,
+        target_telegram_id=target_telegram_id,
+        current_tt_username=final_tt_username_for_keyboard,
+        page=return_page,
+    )
+    await query.message.edit_text(
+        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+        reply_markup=updated_keyboard,
+    )
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 async def handle_admin_set_subscriber_language(
@@ -701,36 +674,31 @@ async def handle_admin_set_subscriber_language(
 ) -> None:
     """Handles an admin setting a specific subscriber's language."""
     _ = translator.gettext
-    target_user_settings = await session.get(UserSettings, callback_data.target_telegram_id)
-    if not target_user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        if query.message:
-            await _refresh_and_display_subscriber_list(
-                query, session, services, callback_data.subscriber_page_context, translator)
-        return
-    old_lang = target_user_settings.language_code
+    target_telegram_id = callback_data.target_telegram_id
     new_lang_code = callback_data.lang_code
-    target_user_settings.language_code = new_lang_code
-    try:
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
+    subscriber_page_context = callback_data.subscriber_page_context
+
+    updated_user_settings = await user_service.admin_set_user_language(
+        session, services, target_telegram_id, new_lang_code
+    )
+
+    if updated_user_settings:
         await query.answer(
             _("Language for subscriber {tg_id} changed to {lang_code}.").format(
-                tg_id=callback_data.target_telegram_id, lang_code=new_lang_code),
+                tg_id=target_telegram_id, lang_code=new_lang_code),
             show_alert=True)
-    except Exception:
-        logger.exception("Failed to update language for subscriber %s to %s",
-                         callback_data.target_telegram_id, new_lang_code)
-        target_user_settings.language_code = old_lang
-        await query.answer(_("Failed to change language. Please try again."), show_alert=True)
-    if query.message:
+    else:
+        # Check if the user was not found initially by the service, or if another error occurred.
+        # The service logs details. Here, we provide generic feedback.
+        # We could add a step to check if user_settings exists before calling service if we want different messages.
+        await query.answer(_("Failed to change language. Subscriber settings might be missing or an error occurred."), show_alert=True)
+
+    if query.message: # query.message should exist if callback_data exists, but good check
         await handle_view_subscriber(
-            query=query,
+            query=query, # type: ignore
             callback_data=ViewSubscriberCallback(
-                telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
+                telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session, translator=translator, services=services)
-    return
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 async def handle_admin_set_subscriber_notification_pref(
@@ -789,34 +757,26 @@ async def handle_admin_set_subscriber_mute_mode(
 ) -> None:
     """Handles an admin setting a specific subscriber's mute list mode."""
     _ = translator.gettext
-    target_user_settings = await session.get(UserSettings, callback_data.target_telegram_id)
-    if not target_user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        if query.message:
-            await _refresh_and_display_subscriber_list(
-                query, session, services, callback_data.subscriber_page_context, translator)
-        return
-    old_mode = target_user_settings.mute_list_mode
+    target_telegram_id = callback_data.target_telegram_id
     new_mode = callback_data.mode
-    target_user_settings.mute_list_mode = new_mode
-    try:
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
+    subscriber_page_context = callback_data.subscriber_page_context
+
+    updated_user_settings = await user_service.admin_set_user_mute_mode(
+        session, services, target_telegram_id, new_mode
+    )
+
+    if updated_user_settings:
+        mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
         await query.answer(
             _("Mute list mode for subscriber {tg_id} set to: {mode}").format(
-                tg_id=callback_data.target_telegram_id, mode=mode_text),
+                tg_id=target_telegram_id, mode=mode_text),
             show_alert=False)
-    except Exception:
-        logger.exception("Failed to update mute mode for subscriber %s to %s",
-                         callback_data.target_telegram_id, new_mode.value)
-        target_user_settings.mute_list_mode = old_mode
-        await query.answer(_("Failed to change mute mode. Please try again."), show_alert=True)
-    if query.message:
+    else:
+        await query.answer(_("Failed to change mute mode. Subscriber settings might be missing or an error occurred."), show_alert=True)
+
+    if query.message: # query.message should exist
         await handle_view_subscriber(
-            query=query,
+            query=query, # type: ignore
             callback_data=ViewSubscriberCallback(
-                telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
+                telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session, translator=translator, services=services)
-    return
