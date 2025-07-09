@@ -6,7 +6,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import gettext
 import html
-from typing import TYPE_CHECKING, Any, cast  # Added TYPE_CHECKING and cast
+from typing import TYPE_CHECKING, Any, Type, cast # Added TYPE_CHECKING, Type and cast
 
 from aiogram.filters.callback_data import CallbackData  # Import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -224,8 +224,8 @@ async def _add_pagination_controls(
     translator: gettext.GNUTranslations,
     current_page: int,
     total_pages: int,
-    list_type: UserListAction,
-    callback_factory: "Callable[[UserListAction, int], CallbackData]",
+    list_type: UserListAction, # This argument might become part of a more generic callback_factory signature
+    callback_factory: Type[PaginateUsersCallback], # Changed to Type[PaginateUsersCallback]
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext
@@ -233,13 +233,13 @@ async def _add_pagination_controls(
     if current_page > 0:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("⬅️ Prev"), callback_data=callback_factory(list_type, current_page - 1).pack()
+                text=_("⬅️ Prev"), callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack()
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("Next ➡️"), callback_data=callback_factory(list_type, current_page + 1).pack()
+                text=_("Next ➡️"), callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack()
             )
         )
     if pagination_buttons:
@@ -537,7 +537,7 @@ async def _create_generic_user_toggle_list_keyboard(
         builder.adjust(1)
 
     await _add_pagination_controls(
-        builder, translator, current_page, total_pages, list_type_for_callback, PaginateUsersCallback # type: ignore[arg-type]
+        builder, translator, current_page, total_pages, list_type_for_callback, PaginateUsersCallback
     )
 
     builder.row(InlineKeyboardButton(text=_(back_button_text_key), callback_data=back_button_callback_data))
