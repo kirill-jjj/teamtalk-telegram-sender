@@ -1,6 +1,7 @@
 """Telegram bot command handlers for regular user interactions."""
 
 import asyncio
+import functools  # Moved import functools to the top
 import gettext  # For type hinting translator
 from html import escape
 import logging
@@ -232,12 +233,26 @@ async def who_command_handler(
         await message.reply(translator.gettext("An error occurred. Please try again later."))
         return
 
+    # Prepare the function call with keyword arguments
+    func_to_run_in_thread = functools.partial(
+        _group_users_for_who_command,
+        is_caller_admin=is_caller_admin,
+        translator=translator
+    )
+    # Pass only positional arguments to to_thread
     grouped_data, total_users_to_display = await asyncio.to_thread(
-        _group_users_for_who_command, all_users_list, bot_user_id, is_caller_admin, translator
+        func_to_run_in_thread, all_users_list, bot_user_id
     )
 
+    # Prepare the function call with keyword arguments for _format_who_message
+    format_func_to_run_in_thread = functools.partial(
+        _format_who_message,
+        translator=translator,
+        server_host=server_host_for_log_and_display
+    )
+    # Pass only positional arguments to to_thread
     formatted_message = await asyncio.to_thread(
-        _format_who_message, grouped_data, total_users_to_display, translator, server_host_for_log_and_display
+        format_func_to_run_in_thread, grouped_data, total_users_to_display
     )
 
     await message.reply(formatted_message)

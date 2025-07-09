@@ -124,7 +124,7 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> Non
 
 
 async def global_error_handler(
-    event: ErrorEvent, _dispatcher: Dispatcher, services: "Services", app_config: "Settings"
+    event: ErrorEvent, services: "Services", app_config: "Settings"
 ) -> None:
     """Global error handler for uncaught exceptions in Aiogram handlers."""
     logger = services.logger
