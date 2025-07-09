@@ -7,11 +7,10 @@ from typing import TYPE_CHECKING
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import ManageTTAccountAction, SubscriberAction
+from bot.core.enums import SubscriberAction
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services import user_service
@@ -21,7 +20,6 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     LinkTTAccountChosenCallback,
-    ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
     SubscriberActionCallback,
     ViewSubscriberCallback,
@@ -112,7 +110,7 @@ async def handle_view_subscriber(
             display_name = format_telegram_user_display_name(chat_info)
         except TelegramAPIError:
             logger.exception("Could not fetch chat info for %s via Telegram API.", user_to_view.telegram_id)
-        except Exception: # noqa: BLE001
+        except Exception:
             logger.exception("Unexpected error fetching chat info for %s.", user_to_view.telegram_id)
 
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
@@ -131,7 +129,7 @@ async def handle_view_subscriber(
             NotificationSetting.JOIN_OFF.value: _("Leave Only"),
             NotificationSetting.NONE.value: _("None"),
         }
-        notif_setting_str = user_to_view.notification_settings.value # Corrected: notification_settings
+        notif_setting_str = user_to_view.notification_settings.value
         details_parts.append(
             _("Notifications: {setting}").format(setting=notif_setting_map.get(notif_setting_str, notif_setting_str))
         )
@@ -150,7 +148,8 @@ async def handle_view_subscriber(
 
 async def _handle_delete_subscriber_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations, services: "Services"
+    return_page: int, translator: gettext.GNUTranslations, services: "Services",
+    _tt_connection: TeamTalkConnection | None = None # Marked as unused
 ) -> None:
     """Helper to handle subscriber deletion."""
     _ = translator.gettext
@@ -203,7 +202,7 @@ async def _handle_ban_subscriber_action(
             except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
                 logger.exception("Error during conceptual TeamTalk ban for %s on %s.",
                                  tt_username_to_ban, tt_connection.server_info.host)
-            except Exception: # noqa: BLE001
+            except Exception:
                 logger.exception("Unexpected error during conceptual TeamTalk ban for %s on %s.",
                                  tt_username_to_ban, tt_connection.server_info.host)
         else:
@@ -225,8 +224,9 @@ async def _handle_ban_subscriber_action(
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 async def _handle_manage_tt_account_action(
-    query: CallbackQuery, current_session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery, session: AsyncSession, target_telegram_id: int, # Renamed current_session
+    return_page: int, translator: gettext.GNUTranslations,
+    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
 ) -> None:
     """Helper to show manage TT account menu for a subscriber."""
     _ = translator.gettext
@@ -234,22 +234,23 @@ async def _handle_manage_tt_account_action(
         logger.warning("_handle_manage_tt_account_action called without message context.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
-    user_settings = await current_session.get(UserSettings, target_telegram_id)
+    user_settings = await session.get(UserSettings, target_telegram_id)
     current_tt_username = user_settings.teamtalk_username if user_settings else None
 
     keyboard = await create_manage_tt_account_keyboard(
         translator, target_telegram_id=target_telegram_id,
         current_tt_username=current_tt_username, page=return_page
     )
-    await query.message.edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-        reply_markup=keyboard,
+    message_text = _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
+        telegram_id=target_telegram_id
     )
+    await query.message.edit_text(message_text, reply_markup=keyboard)
     await query.answer()
 
 async def _handle_admin_set_language_action(
-    query: CallbackQuery, _session: AsyncSession, # session marked as unused
-    target_telegram_id: int, return_page: int, translator: gettext.GNUTranslations
+    query: CallbackQuery, _unused_session: AsyncSession,
+    target_telegram_id: int, return_page: int, translator: gettext.GNUTranslations,
+    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
 ) -> None:
     """Helper to show language selection for a subscriber to an admin."""
     _ = translator.gettext
@@ -270,15 +271,14 @@ async def _handle_admin_set_language_action(
         translator=translator, available_languages=available_languages,
         target_telegram_id=target_telegram_id, subscriber_page_context=return_page
     )
-    await query.message.edit_text(
-        _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
-        reply_markup=lang_keyboard
-    )
+    message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
+    await query.message.edit_text(message_text, reply_markup=lang_keyboard)
     await query.answer()
 
 async def _handle_admin_toggle_noon_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations, services: "Services"
+    return_page: int, translator: gettext.GNUTranslations, services: "Services",
+    _tt_connection: TeamTalkConnection | None = None # Marked unused
 ) -> None:
     """Helper to toggle NOON for a subscriber."""
     _ = translator.gettext
@@ -318,7 +318,8 @@ async def _handle_admin_toggle_noon_action(
 
 async def _handle_admin_set_notif_pref_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations
+    return_page: int, translator: gettext.GNUTranslations,
+    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
 ) -> None:
     """Helper to show notification preference selection for a subscriber."""
     _ = translator.gettext
@@ -331,18 +332,18 @@ async def _handle_admin_set_notif_pref_action(
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
-    current_notif_setting = target_user_settings.notification_settings # Corrected
+    current_notif_setting = target_user_settings.notification_settings
     notif_pref_keyboard = await create_admin_subscriber_notification_pref_keyboard(
         translator=translator, current_setting=current_notif_setting,
         target_telegram_id=target_telegram_id, subscriber_page_context=return_page)
-    await query.message.edit_text(
-        _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id),
-        reply_markup=notif_pref_keyboard)
+    message_text = _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id)
+    await query.message.edit_text(message_text, reply_markup=notif_pref_keyboard)
     await query.answer()
 
 async def _handle_admin_set_mute_mode_action(
     query: CallbackQuery, session: AsyncSession, target_telegram_id: int,
-    return_page: int, translator: gettext.GNUTranslations
+    return_page: int, translator: gettext.GNUTranslations,
+    _services: "Services" | None = None, _tt_connection: TeamTalkConnection | None = None # Marked unused
 ) -> None:
     """Helper to show mute mode selection for a subscriber."""
     _ = translator.gettext
@@ -359,9 +360,8 @@ async def _handle_admin_set_mute_mode_action(
     mute_mode_keyboard = await create_admin_subscriber_mute_mode_keyboard(
         translator=translator, current_mode=current_mute_mode,
         target_telegram_id=target_telegram_id, subscriber_page_context=return_page)
-    await query.message.edit_text(
-        _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id),
-        reply_markup=mute_mode_keyboard)
+    message_text = _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id)
+    await query.message.edit_text(message_text, reply_markup=mute_mode_keyboard)
     await query.answer()
 
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter())
@@ -369,9 +369,7 @@ async def handle_subscriber_action(
     query: CallbackQuery, callback_data: SubscriberActionCallback, session: AsyncSession,
     tt_connection: TeamTalkConnection | None, translator: gettext.GNUTranslations, services: "Services"
 ) -> None:
-    """
-    Dispatches subscriber-related actions triggered by admin from the subscriber action menu.
-    """
+    """Dispatches subscriber-related actions by admin from the subscriber action menu."""
     _ = translator.gettext
     if not query.message:
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -381,32 +379,27 @@ async def handle_subscriber_action(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    action_handlers_map = {
-        SubscriberAction.DELETE: _handle_delete_subscriber_action,
-        SubscriberAction.BAN: _handle_ban_subscriber_action,
-        SubscriberAction.MANAGE_TT_ACCOUNT: _handle_manage_tt_account_action,
-        SubscriberAction.ADMIN_SET_LANGUAGE: _handle_admin_set_language_action,
-        SubscriberAction.ADMIN_TOGGLE_NOON: _handle_admin_toggle_noon_action,
-        SubscriberAction.ADMIN_SET_NOTIF_PREF: _handle_admin_set_notif_pref_action,
-        SubscriberAction.ADMIN_SET_MUTE_MODE: _handle_admin_set_mute_mode_action,
-    }
-
-    handler_func = action_handlers_map.get(action)
-
-    if handler_func:
-        kwargs_for_handler = {
-            "query": query, "session": session, "target_telegram_id": target_telegram_id,
-            "return_page": return_page, "translator": translator
-        }
-        if action in {SubscriberAction.DELETE, SubscriberAction.BAN, SubscriberAction.ADMIN_TOGGLE_NOON}:
-            kwargs_for_handler["services"] = services
-        if action == SubscriberAction.BAN:
-            kwargs_for_handler["tt_connection"] = tt_connection
-
-        if action == SubscriberAction.ADMIN_SET_LANGUAGE:
-             kwargs_for_handler.pop("session", None)
-
-        await handler_func(**kwargs_for_handler) # type: ignore
+    if action == SubscriberAction.DELETE:
+        await _handle_delete_subscriber_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
+    elif action == SubscriberAction.BAN:
+        await _handle_ban_subscriber_action(
+            query, session, services, tt_connection, target_telegram_id, return_page, translator)
+    elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
+        await _handle_manage_tt_account_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
+    elif action == SubscriberAction.ADMIN_SET_LANGUAGE:
+        await _handle_admin_set_language_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
+    elif action == SubscriberAction.ADMIN_TOGGLE_NOON:
+        await _handle_admin_toggle_noon_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
+    elif action == SubscriberAction.ADMIN_SET_NOTIF_PREF:
+        await _handle_admin_set_notif_pref_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
+    elif action == SubscriberAction.ADMIN_SET_MUTE_MODE:
+        await _handle_admin_set_mute_mode_action(
+            query, session, target_telegram_id, return_page, translator, services, tt_connection)
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
@@ -559,6 +552,7 @@ async def handle_link_tt_account_chosen(
         await query.message.edit_text(
             _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
             reply_markup=updated_keyboard)
+    return
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 async def handle_admin_set_subscriber_language(
@@ -596,6 +590,7 @@ async def handle_admin_set_subscriber_language(
             callback_data=ViewSubscriberCallback(
                 telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
             session=session, translator=translator, services=services)
+    return
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 async def handle_admin_set_subscriber_notification_pref(
@@ -611,7 +606,7 @@ async def handle_admin_set_subscriber_notification_pref(
             await _refresh_and_display_subscriber_list(
                 query, session, services, callback_data.subscriber_page_context, translator)
         return
-    old_pref_val = target_user_settings.notification_settings # Corrected
+    old_pref_val = target_user_settings.notification_settings
     new_pref_str = callback_data.setting_value
     try:
         new_pref_enum = NotificationSetting(new_pref_str)
@@ -619,7 +614,7 @@ async def handle_admin_set_subscriber_notification_pref(
         logger.exception("Invalid notification setting value received: %s", new_pref_str)
         await query.answer(_("Invalid setting value. Please try again."), show_alert=True)
         return
-    target_user_settings.notification_settings = new_pref_enum # Corrected
+    target_user_settings.notification_settings = new_pref_enum
     try:
         await session.commit()
         await session.refresh(target_user_settings)
@@ -637,7 +632,7 @@ async def handle_admin_set_subscriber_notification_pref(
     except Exception:
         logger.exception("Failed to update notification preference for subscriber %s to %s",
                          callback_data.target_telegram_id, new_pref_str)
-        target_user_settings.notification_settings = old_pref_val # Corrected
+        target_user_settings.notification_settings = old_pref_val
         await query.answer(_("Failed to change notification preference. Please try again."), show_alert=True)
     if query.message:
         await handle_view_subscriber(
@@ -645,6 +640,7 @@ async def handle_admin_set_subscriber_notification_pref(
             callback_data=ViewSubscriberCallback(
                 telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
             session=session, translator=translator, services=services)
+    return
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 async def handle_admin_set_subscriber_mute_mode(
@@ -683,3 +679,4 @@ async def handle_admin_set_subscriber_mute_mode(
             callback_data=ViewSubscriberCallback(
                 telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context),
             session=session, translator=translator, services=services)
+    return
