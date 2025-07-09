@@ -434,7 +434,19 @@ async def _handle_admin_view_mute_list_action(
         await query.answer(_("An error occurred."), show_alert=True)
         return
 
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    # Explicitly load UserSettings with the muted_users_list relationship
+    # to prevent MissingGreenlet error from async lazy loading.
+    from sqlmodel import select
+    from sqlalchemy.orm import selectinload # Correct import for selectinload
+
+    statement = (
+        select(UserSettings)
+        .where(UserSettings.telegram_id == target_telegram_id)
+        .options(selectinload(UserSettings.muted_users_list))
+    )
+    result = await session.exec(statement)
+    target_user_settings = result.one_or_none()
+
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         # Attempt to return to the subscriber action menu for this user
