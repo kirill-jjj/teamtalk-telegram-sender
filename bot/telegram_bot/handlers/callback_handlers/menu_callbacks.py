@@ -131,7 +131,7 @@ async def menu_ban_handler(
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,
-    _callback_data: MenuCallback,
+    _callback_data: MenuCallback, # <--- ИЗМЕНЕННАЯ СТРОКА: добавлено '_'
     session: AsyncSession,  # Injected
     translator: "gettext.GNUTranslations",  # Injected
     services: "Services", # Injected
