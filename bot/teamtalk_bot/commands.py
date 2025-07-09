@@ -22,9 +22,9 @@ from bot.database.crud import create_deeplink
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import send_long_tt_reply
+from bot.services_container import Services
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
@@ -261,7 +261,7 @@ async def handle_tt_subscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    connection: TeamTalkConnection,
 ) -> None:
     """Handles the /sub command from a TeamTalk user.
 
@@ -289,7 +289,7 @@ async def handle_tt_unsubscribe_command(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: Services,
-    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    connection: TeamTalkConnection,
 ) -> None:
     """Handles the /unsub command from a TeamTalk user.
 
@@ -317,7 +317,7 @@ async def handle_tt_add_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,  # will be in kwargs for decorator
-    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    connection: TeamTalkConnection,
     *,
     args_str: str | None,
 ) -> None:
@@ -350,7 +350,7 @@ async def handle_tt_remove_admin_command(
     translator: gettext.GNUTranslations,
     session: AsyncSession,
     services: Services,
-    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    connection: TeamTalkConnection,
     *,
     args_str: str | None,
 ) -> None:
@@ -381,7 +381,7 @@ async def handle_tt_help_command(  # Added return type hint
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     services: Services,
-    _connection: TeamTalkConnection,  # Keep for consistent signature, though not used
+    connection: TeamTalkConnection,
 ) -> None:
     """Handles the /help command from a TeamTalk user.
 
