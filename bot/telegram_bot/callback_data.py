@@ -4,13 +4,16 @@ from aiogram.filters.callback_data import CallbackData
 
 from bot.constants import (
     CB_PREFIX_ADMIN_ACTION,
+    CB_PREFIX_ADMIN_SET_SUB_LANG,
+    CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE,  # Added here
+    CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF,
     CB_PREFIX_LANG_SET,
     CB_PREFIX_LINK_TT_CHOSEN,
     CB_PREFIX_MAIN_MENU,
     CB_PREFIX_MANAGE_TT_ACC,
     CB_PREFIX_MUTE_MODE_SET,
     CB_PREFIX_NOTIF_ACTION,
-    CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS,  # Added here
+    CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS,
     CB_PREFIX_PAGINATE_LIST,
     CB_PREFIX_SETTINGS_NAV,
     CB_PREFIX_SUB_ACTION,
@@ -164,3 +167,31 @@ class PaginateLinkableAccountsCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_L
     subscriber_context_page: int  # Original page of the subscriber list (context to return to)
     target_telegram_id: int       # The Telegram user (subscriber) we are linking an account for
     page: int                     # The page of linkable TT accounts to display
+
+
+# For admin setting a subscriber's language
+class AdminSetSubscriberLanguageCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_LANG):
+    """Callback data for an admin setting a specific subscriber's language."""
+
+    target_telegram_id: int  # The subscriber whose language is being changed
+    lang_code: str           # The language code to set (e.g., "en", "ru")
+    # Page of the subscriber list to return to after action, passed through ViewSubscriberCallback
+    subscriber_page_context: int
+
+
+# For admin setting a subscriber's notification preferences
+class AdminSetSubscriberNotificationPrefCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF):
+    """Callback data for an admin setting a specific subscriber's notification preferences."""
+
+    target_telegram_id: int      # The subscriber whose setting is being changed
+    setting_value: str           # The notification setting value (e.g., "all", "none")
+    subscriber_page_context: int # Page of the subscriber list to return to
+
+
+# For admin setting a subscriber's mute list mode
+class AdminSetSubscriberMuteModeCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE):
+    """Callback data for an admin setting a specific subscriber's mute list mode."""
+
+    target_telegram_id: int      # The subscriber whose mode is being changed
+    mode: MuteListMode           # The MuteListMode to set (blacklist/whitelist)
+    subscriber_page_context: int # Page of the subscriber list to return to

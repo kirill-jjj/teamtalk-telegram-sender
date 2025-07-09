@@ -30,12 +30,15 @@ from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
 from bot.telegram_bot.callback_data import (
     AdminActionCallback,
+    AdminSetSubscriberLanguageCallback,
+    AdminSetSubscriberMuteModeCallback,  # Added
+    AdminSetSubscriberNotificationPrefCallback,
     LanguageCallback,
     LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
     MenuCallback,
     NotificationActionCallback,
-    PaginateLinkableAccountsCallback,  # Added
+    PaginateLinkableAccountsCallback,
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
@@ -480,11 +483,42 @@ async def create_subscriber_action_menu_keyboard(
             action=SubscriberAction.MANAGE_TT_ACCOUNT, target_telegram_id=target_telegram_id, page=page
         ).pack(),
     )
+    # New admin settings modification buttons
+    builder.button(
+        text=_("🗣️ Change Language"),
+        callback_data=SubscriberActionCallback(
+            action=SubscriberAction.ADMIN_SET_LANGUAGE, target_telegram_id=target_telegram_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text=_("🌞 Toggle NOON"),
+        callback_data=SubscriberActionCallback(
+            action=SubscriberAction.ADMIN_TOGGLE_NOON, target_telegram_id=target_telegram_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text=_("🔔 Set Notification Prefs"),
+        callback_data=SubscriberActionCallback(
+            action=SubscriberAction.ADMIN_SET_NOTIF_PREF, target_telegram_id=target_telegram_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text=_("🔇 Set Mute Mode"),
+        callback_data=SubscriberActionCallback(
+            action=SubscriberAction.ADMIN_SET_MUTE_MODE, target_telegram_id=target_telegram_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text=_("📜 View Mute List"), # Placeholder text, might need refinement
+        callback_data=SubscriberActionCallback(
+            action=SubscriberAction.ADMIN_VIEW_MUTE_LIST, target_telegram_id=target_telegram_id, page=page
+        ).pack(),
+    )
     builder.button(
         text=_("⬅️ Back to Subscribers List"),
         callback_data=SubscriberListCallback(action=SubscriberListAction.PAGE, page=page).pack(),
     )
-    builder.adjust(1)
+    builder.adjust(1) # Adjust to 1 column for settings, then back button
     return builder.as_markup()
 
 
@@ -572,6 +606,53 @@ async def create_manage_tt_account_keyboard(
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=page).pack(),
     )
     builder.adjust(1)
+    return builder.as_markup()
+
+
+async def create_admin_subscriber_mute_mode_keyboard(
+    translator: gettext.GNUTranslations,
+    current_mode: MuteListMode, # Subscriber's current mute mode
+    target_telegram_id: int,
+    subscriber_page_context: int,
+) -> InlineKeyboardMarkup:
+    """Creates the mute mode selection keyboard for an admin to change for a subscriber."""
+    _ = translator.gettext
+    builder = InlineKeyboardBuilder()
+    active_marker = "✅"
+    inactive_marker = "⚪️" # Or some other suitable unicode
+
+    blacklist_marker = active_marker if current_mode == MuteListMode.blacklist else inactive_marker
+    whitelist_marker = active_marker if current_mode == MuteListMode.whitelist else inactive_marker
+
+    blacklist_text = _("{marker} Blacklist Mode").format(marker=blacklist_marker)
+    whitelist_text = _("{marker} Whitelist Mode").format(marker=whitelist_marker)
+
+    builder.button(
+        text=blacklist_text,
+        callback_data=AdminSetSubscriberMuteModeCallback(
+            target_telegram_id=target_telegram_id,
+            mode=MuteListMode.blacklist,
+            subscriber_page_context=subscriber_page_context,
+        ).pack(),
+    )
+    builder.button(
+        text=whitelist_text,
+        callback_data=AdminSetSubscriberMuteModeCallback(
+            target_telegram_id=target_telegram_id,
+            mode=MuteListMode.whitelist,
+            subscriber_page_context=subscriber_page_context,
+        ).pack(),
+    )
+    builder.adjust(1) # Keep as single buttons for clarity, or 2 if space allows. Let's do 1.
+
+    builder.row(
+        InlineKeyboardButton(
+            text=_("⬅️ Back to User Actions"),
+            callback_data=ViewSubscriberCallback(
+                telegram_id=target_telegram_id, page=subscriber_page_context
+            ).pack(),
+        )
+    )
     return builder.as_markup()
 
 
@@ -665,3 +746,79 @@ async def create_linkable_tt_account_list_keyboard(
         pagination_factory_kwargs=pagination_factory_kwargs,
         additional_buttons_bottom=bottom_buttons,
     )
+
+
+async def create_admin_subscriber_lang_keyboard(
+    translator: gettext.GNUTranslations,
+    available_languages: list[dict[str, str]],
+    target_telegram_id: int,
+    subscriber_page_context: int, # Page of the main subscriber list
+) -> InlineKeyboardMarkup:
+    """Creates the language selection keyboard for an admin to change a subscriber's language."""
+    _ = translator.gettext
+    builder = InlineKeyboardBuilder()
+
+    if not available_languages:
+        # This case should ideally not happen if languages are configured
+        builder.button(text=_("No languages available"), callback_data="noop_admin_lang_sel")
+    else:
+        for lang_info in available_languages:
+            builder.button(
+                text=lang_info["native_name"],
+                callback_data=AdminSetSubscriberLanguageCallback(
+                    target_telegram_id=target_telegram_id,
+                    lang_code=lang_info["code"],
+                    subscriber_page_context=subscriber_page_context,
+                ).pack(),
+            )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=_("⬅️ Back to User Actions"),
+            callback_data=ViewSubscriberCallback(
+                telegram_id=target_telegram_id, page=subscriber_page_context
+            ).pack(),
+        )
+    )
+    builder.adjust(1) # All buttons in a single column
+    return builder.as_markup()
+
+
+async def create_admin_subscriber_notification_pref_keyboard(
+    translator: gettext.GNUTranslations,
+    current_setting: NotificationSetting, # The subscriber's current setting
+    target_telegram_id: int,
+    subscriber_page_context: int,
+) -> InlineKeyboardMarkup:
+    """Creates the notification preference selection keyboard for an admin to change for a subscriber."""
+    _ = translator.gettext
+    builder = InlineKeyboardBuilder()
+
+    settings_map_source = {
+        NotificationSetting.ALL: ("All (Join & Leave)", "all"),
+        NotificationSetting.LEAVE_OFF: ("Join Only", "leave_off"),
+        NotificationSetting.JOIN_OFF: ("Leave Only", "join_off"),
+        NotificationSetting.NONE: ("None", "none"),
+    }
+
+    for setting_enum, (text_source, val_str) in settings_map_source.items():
+        button_text = _("✅ {text}").format(text=_(text_source)) if current_setting == setting_enum else _(text_source)
+        builder.button(
+            text=button_text,
+            callback_data=AdminSetSubscriberNotificationPrefCallback(
+                target_telegram_id=target_telegram_id,
+                setting_value=val_str,
+                subscriber_page_context=subscriber_page_context,
+            ).pack(),
+        )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=_("⬅️ Back to User Actions"),
+            callback_data=ViewSubscriberCallback(
+                telegram_id=target_telegram_id, page=subscriber_page_context
+            ).pack(),
+        )
+    )
+    builder.adjust(1)
+    return builder.as_markup()

@@ -84,6 +84,11 @@ class SubscriberAction(str, Enum):
     DELETE = "delete"
     BAN = "ban"
     MANAGE_TT_ACCOUNT = "manage_tt"
+    ADMIN_SET_LANGUAGE = "admin_set_language"
+    ADMIN_TOGGLE_NOON = "admin_toggle_noon"
+    ADMIN_SET_NOTIF_PREF = "admin_set_notification_preferences" # longer for clarity
+    ADMIN_SET_MUTE_MODE = "admin_set_mute_mode"
+    ADMIN_VIEW_MUTE_LIST = "admin_view_mute_list"
 
 
 class ManageTTAccountAction(str, Enum):
