@@ -131,7 +131,9 @@ def _group_users_for_who_command(
         if bot_user_id is not None and user_obj.id == bot_user_id and not is_caller_admin:
             continue
 
-        user_display_channel_name = _get_user_display_channel_name(user_obj, is_caller_admin, translator)
+        user_display_channel_name = _get_user_display_channel_name(
+            user_obj, is_caller_admin=is_caller_admin, translator=translator
+        )
 
         if user_display_channel_name not in channels_display_data:
             channels_display_data[user_display_channel_name] = []
