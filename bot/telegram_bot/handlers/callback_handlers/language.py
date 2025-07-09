@@ -2,11 +2,12 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast  # Added cast
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import CallbackQuery, Message
+from sqlalchemy.ext.asyncio import AsyncSession  # This will be SQLAlchemyAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
 from bot.core.enums import LanguageAction, SettingsNavAction
 from bot.models import UserSettings
@@ -37,12 +38,16 @@ async def cq_show_language_menu(
         translator, available_languages=available_languages
     )
 
-    if not callback_query.message:
-        logger.warning("cq_show_language_menu: callback_query.message is None, cannot edit.")
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "cq_show_language_menu: Message is None or inaccessible for user %s. Callback data: %s",
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+            callback_query.data, # Using callback_query.data as _callback_data is not available here
+        )
         return
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message, # Now known to be Message
         text=_("Please choose your language:"),
         reply_markup=language_menu_builder.as_markup(),
         logger_instance=logger,
@@ -90,7 +95,7 @@ async def cq_set_language(
 
     # --- Update language settings (DB and cache) ---
     settings_updated = await user_service.update_user_language_settings(
-        session, managed_user_settings, new_lang_code, services
+        cast(SQLModelAsyncSession, session), managed_user_settings, new_lang_code, services
     )
 
     if not settings_updated:
@@ -126,13 +131,20 @@ async def cq_set_language(
     try:
         main_settings_builder = await create_main_settings_keyboard(new_lang_translator)
         main_settings_text = new_lang_translator.gettext("Settings")
-        await safe_edit_text(
-            message_to_edit=callback_query.message,
-            text=main_settings_text,
-            reply_markup=main_settings_builder.as_markup(),
-            logger_instance=logger,
-            log_context="cq_set_language_ui_refresh",
-        )
+        if isinstance(callback_query.message, Message):
+            await safe_edit_text(
+                message_to_edit=callback_query.message,
+                text=main_settings_text,
+                reply_markup=main_settings_builder.as_markup(),
+                logger_instance=logger,
+                log_context="cq_set_language_ui_refresh",
+            )
+        else:
+            logger.warning(
+                "cq_set_language: Message None/inaccessible for user %s. UI not updated. CB: %s",
+                callback_query.from_user.id if callback_query.from_user else "Unknown",
+                callback_data.pack() if callback_data else callback_query.data
+            )
     except Exception:
         logger.exception(
             "Failed to refresh settings UI for user %s after language change to %s.", telegram_id, new_lang_code

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import gettext
 from html import escape
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast  # Added cast
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -25,7 +25,8 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import sessionmaker  # For DbSessionFactory alias if used as a type
 
     # Using a more specific alias to avoid conflict if DbSessionFactory is used elsewhere
-    from bot.database.engine import SessionFactory as DbEngineSessionFactoryType
+    from bot.config import Settings  # Added import for Settings
+    from bot.database.engine import AsyncSessionFactoryType as DbEngineSessionFactoryType
     from bot.services_container import Services
 
     DbSessionFactory = sessionmaker  # Alias for SessionFactory from sqlalchemy.orm for type hints in this module
@@ -56,7 +57,7 @@ def _should_ignore_initial_event(
     return True
 
 
-def _is_user_globally_ignored(username: str, app_cfg: "Services.config") -> bool:
+def _is_user_globally_ignored(username: str, app_cfg: "Settings") -> bool:
     # app_cfg is expected to be an instance of Settings
     # Accessing teamtalk.global_ignore_usernames which is a list[str]
     global_ignore_list = app_cfg.teamtalk.global_ignore_usernames
@@ -80,7 +81,7 @@ async def _get_recipients_for_notification(
 
     async with session_factory() as session:
         filters = [
-            UserSettings.telegram_id.in_(subscriber_ids),
+            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
             UserSettings.notification_settings != NotificationSetting.NONE,
         ]
         if event_type == NOTIFICATION_EVENT_JOIN:
@@ -99,13 +100,19 @@ async def _get_recipients_for_notification(
             .exists()
         )
         mute_logic = or_(
-            and_(UserSettings.mute_list_mode == MuteListMode.blacklist, ~user_is_in_list_subquery),
-            and_(UserSettings.mute_list_mode == MuteListMode.whitelist, user_is_in_list_subquery),
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.blacklist.value,
+                ~user_is_in_list_subquery
+            ),
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.whitelist.value,
+                user_is_in_list_subquery
+            ),
         )
-        filters.append(mute_logic)
+        filters.append(mute_logic)  # type: ignore[arg-type]
         stmt = select(UserSettings.telegram_id).where(and_(*filters))
         result = await session.execute(stmt)
-        return result.scalars().all()
+        return cast(list[int], result.scalars().all())
 
 
 def _generate_join_leave_notification_text(

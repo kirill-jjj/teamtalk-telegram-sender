@@ -17,6 +17,7 @@ from bot.models import Admin, BanList, Deeplink, SubscribedUser, UserSettings
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "Admin",
     "add_admin",
     "add_subscriber",
     "add_to_ban_list",
@@ -26,14 +27,13 @@ __all__ = [
     "delete_deeplink_by_token",
     "get_all_admins_ids",
     "get_all_subscribers_ids",
-    "get_ban_entries_for_telegram_id",
     "get_ban_entries_for_teamtalk_username",
+    "get_ban_entries_for_telegram_id",
     "get_deeplink",
     "is_teamtalk_username_banned",
     "is_telegram_id_banned",
     "remove_admin_db",
     "remove_from_ban_list_by_id",
-    "Admin",
 ]
 
 T = TypeVar("T", bound=SQLModel)

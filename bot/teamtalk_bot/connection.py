@@ -240,10 +240,10 @@ class TeamTalkConnection:
                     len(self.online_users_cache),
                 )
         elif event_type == "user_account_new":
-            acc: PytalkUserAccount = data
-            acc_username = self.ttstr(acc.username) if acc.username else ""
+            new_acc: PytalkUserAccount = data
+            acc_username = self.ttstr(new_acc.username) if new_acc.username else ""
             if acc_username:
-                self.user_accounts_cache[acc_username] = acc
+                self.user_accounts_cache[acc_username] = new_acc
             logger.debug(
                 "[%s] Account '%s' added. Cache size: %s.",
                 self.server_info.host,
@@ -251,8 +251,8 @@ class TeamTalkConnection:
                 len(self.user_accounts_cache),
             )
         elif event_type == "user_account_remove":
-            acc: PytalkUserAccount = data
-            acc_username = self.ttstr(acc.username) if acc.username else ""
+            removed_acc: PytalkUserAccount = data
+            acc_username = self.ttstr(removed_acc.username) if removed_acc.username else ""
             if acc_username and acc_username in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username]
             logger.debug(
@@ -496,7 +496,7 @@ class TeamTalkConnection:
                 # All current commands in handlers dict require session except /help
                 if cmd != tt_cmds.TT_CMD_HELP:
                     kwargs["session"] = session
-                await handler(**kwargs)
+                await handler(**kwargs)  # type: ignore[operator]
             elif content.startswith("/"):
                 await handle_tt_unknown_command(message, translator, connection=self)
             else:

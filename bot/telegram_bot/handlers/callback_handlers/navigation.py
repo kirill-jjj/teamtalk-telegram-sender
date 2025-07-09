@@ -4,7 +4,7 @@ import gettext
 import logging
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message  # Added Message
 
 from bot.core.enums import SettingsNavAction
 from bot.telegram_bot.callback_data import SettingsCallback
@@ -29,9 +29,9 @@ async def cq_back_to_main_settings_menu(
     main_settings_builder = await create_main_settings_keyboard(translator)
     main_settings_text = _("Settings")
 
-    if callback_query.message:
+    if isinstance(callback_query.message, Message):
         await safe_edit_text(
-            message_to_edit=callback_query.message,
+            message_to_edit=callback_query.message, # Now known to be Message
             text=main_settings_text,
             reply_markup=main_settings_builder.as_markup(),
             logger_instance=logger,

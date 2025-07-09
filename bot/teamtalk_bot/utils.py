@@ -33,7 +33,7 @@ ttstr = sdk.ttstr
 
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
-    translator: gettext.GNUTranslations,
+    translator: gettext.GNUTranslations | gettext.NullTranslations,
     app_cfg: Settings,
 ) -> str:
     """Determines the effective server name to display.
@@ -254,7 +254,7 @@ async def send_long_tt_reply(
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     services: Services,
-    translator: gettext.GNUTranslations,
+    translator: gettext.GNUTranslations | gettext.NullTranslations,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""
     _ = translator.gettext

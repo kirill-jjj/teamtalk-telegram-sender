@@ -1,6 +1,6 @@
 """Service layer for handling deeplink actions."""
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable  # Moved Awaitable here
 import gettext
 import logging
 from typing import TYPE_CHECKING, TypeGuard
@@ -104,8 +104,6 @@ async def process_unsubscribe_deeplink(
     return _("You were not subscribed to notifications.")
 
 
-from collections.abc import Awaitable # Add Awaitable
-
 # Define the expected signature for handler functions
 # This is a simplified version; you might need to use a Protocol or more complex Callable
 # if the signatures vary significantly and you want stricter checking for all.
@@ -122,14 +120,16 @@ DeeplinkHandler = SubscribeDeeplinkHandlerType | UnsubscribeDeeplinkHandlerType
 
 
 def is_subscribe_handler(
-    handler: DeeplinkHandler, action: DeeplinkAction
+    _handler: DeeplinkHandler, action: DeeplinkAction
 ) -> TypeGuard[SubscribeDeeplinkHandlerType]:
+    """Checks if the handler is for a subscribe action."""
     return action == DeeplinkAction.SUBSCRIBE
 
 
 def is_unsubscribe_handler(
-    handler: DeeplinkHandler, action: DeeplinkAction
+    _handler: DeeplinkHandler, action: DeeplinkAction
 ) -> TypeGuard[UnsubscribeDeeplinkHandlerType]:
+    """Checks if the handler is for an unsubscribe action."""
     return action == DeeplinkAction.UNSUBSCRIBE
 
 
@@ -163,10 +163,10 @@ async def execute_deeplink_action(
         else:
             try:
                 if is_unsubscribe_handler(handler, action_enum_member):
-                    return_message = await handler(session, telegram_id, translator, services=services)
+                    return_message = await handler(session, telegram_id, translator, services)
                 elif is_subscribe_handler(handler, action_enum_member):
                     return_message = await handler(
-                        session, telegram_id, translator, deeplink_obj.payload, user_settings, services=services
+                        session, telegram_id, translator, deeplink_obj.payload, user_settings, services
                     )
                 else:
                     # This case should ideally not be reached if DEEPLINK_ACTION_HANDLERS is exhaustive

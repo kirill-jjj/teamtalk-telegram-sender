@@ -1,17 +1,25 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable  # Added Awaitable
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import (  # Added Any, TypeVar
+    TYPE_CHECKING,
+    Any,
+    TypeVar,
+    cast,  # Separate import for cast
+)
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message  # Added Message
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession as SQLAlchemyAsyncSession  # Keep if other functions use it
 from sqlmodel import select
+
+# Import SQLModel's AsyncSession and alias the other one if needed, or just use one consistently.
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
@@ -47,26 +55,27 @@ mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default
 mute_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 ttstr = pytalk.instance.sdk.ttstr
 
+T = TypeVar('T')
 
-def _paginate_list_util(full_list: list, page: int, page_size: int) -> tuple[list, int, int]:
+def _paginate_list_util(full_list: list[T], page: int, page_size: int) -> tuple[list[T], int, int]:
     total_items = len(full_list)
     total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
     page = max(0, min(page, total_pages - 1))
     start_index = page * page_size
     end_index = start_index + page_size
-    page_slice = full_list[start_index:end_index]
+    page_slice: list[T] = full_list[start_index:end_index]
     return page_slice, total_pages, page
 
 
 async def _display_paginated_list_ui(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
-    items: list,
+    items: list[Any],
     page: int,
     header_text_key: str,
     empty_list_text_key: str,
-    keyboard_factory: Callable[..., InlineKeyboardMarkup],
-    keyboard_factory_kwargs: dict,
+    keyboard_factory: Callable[..., Awaitable[InlineKeyboardMarkup]],
+    keyboard_factory_kwargs: dict[str, Any],
     server_host_for_display: str | None = None,
 ) -> None:
     _ = translator.gettext
@@ -82,9 +91,16 @@ async def _display_paginated_list_ui(
     message_parts.append(f"\n{page_indicator_text}")
     final_message_text = "\n".join(message_parts)
 
-    if not callback_query.message:
-        logger.warning("Cannot display paginated list for '%s', callback_query.message is None.", header_text_key)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "Cannot display paginated list for '%s', callback_query.message is None or inaccessible. User: %s",
+            header_text_key,
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+        )
+        # Still try to answer the callback to acknowledge, even if we can't edit.
+        await callback_query.answer(
+            _("Could not update the message view. Please try navigating again."), show_alert=True
+        )
         return
 
     keyboard_markup = await keyboard_factory(
@@ -110,7 +126,7 @@ async def _display_internal_user_list(
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
-    session: AsyncSession | None = None,
+    session: SQLModelAsyncSession | None = None, # Expect SQLModel session
 ) -> None:
     _ = translator.gettext
     if not session:
@@ -121,7 +137,7 @@ async def _display_internal_user_list(
         statement = select(MutedUser.muted_teamtalk_username).where(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
-        results = await session.exec(statement)
+        results = await session.exec(statement) # Now compatible
         users_to_process = [str(username) for username in results.all()]
         sorted_items = sorted(users_to_process)
     except SQLAlchemyError:
@@ -161,16 +177,21 @@ async def _display_all_server_accounts_list(
     page: int = 0,
 ) -> None:
     _ = translator.gettext
-    if not callback_query.message:
-        logger.warning("_display_all_server_accounts_list: message is None.")
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "_display_all_server_accounts_list: Message is None or inaccessible for user %s.",
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+        )
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     user_accounts_cache = tt_connection.user_accounts_cache
     server_host = tt_connection.server_info.host
+    message_obj: Message = callback_query.message # Assign to new variable after check
+
     if not user_accounts_cache:
         try:
-            await callback_query.message.edit_text(
+            await message_obj.edit_text(
                 _("Server user accounts are not loaded yet for {server_host}. Please try again in a moment.").format(
                     server_host=server_host
                 )
@@ -200,7 +221,7 @@ async def _display_all_server_accounts_list(
 async def _get_username_to_toggle_from_callback(
     callback_data: ToggleMuteSpecificCallback,
     user_settings: UserSettings,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession,
     tt_connection: TeamTalkConnection | None,
 ) -> str | None:
     user_idx = callback_data.user_idx
@@ -218,17 +239,18 @@ async def _get_username_to_toggle_from_callback(
         )
         page_items, _, _ = _paginate_list_util(all_accounts, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
-            username = page_items[user_idx].username
-            return ttstr(username) if isinstance(username, bytes) else str(username)
+            username_attr = page_items[user_idx].username
+            # Assuming ttstr handles bytes and returns str. If username_attr can be None, handle it.
+            return cast(str, ttstr(username_attr)) if username_attr is not None else None
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         statement = select(MutedUser.muted_teamtalk_username).where(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
-        results = await session.exec(statement)
-        relevant_usernames = sorted([str(uname) for uname in results.all()])
+        results = await session.execute(statement)
+        relevant_usernames = sorted([str(uname) for uname in results.scalars().all()]) # Use .scalars()
         page_items, _, _ = _paginate_list_util(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
-            return page_items[user_idx]
+            return page_items[user_idx]  # type: ignore[no-any-return]
     logger.warning(
         "Could not find username for toggle. Idx: %s, List: %s, Page: %s",
         user_idx,
@@ -267,7 +289,7 @@ async def _refresh_mute_related_ui(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession, # Parameter is SQLAlchemy's session
 ) -> None:
     """Refreshes the mute list UI after an action."""
     _ = translator.gettext
@@ -299,7 +321,12 @@ async def _refresh_mute_related_ui(
             await cq_show_manage_muted_menu(callback_query, translator, user_settings, manage_muted_cb_data)
     else:
         await _display_internal_user_list(
-            callback_query, translator, user_settings, list_type_user_was_on, current_page_for_refresh, session
+            callback_query,
+            translator,
+            user_settings,
+            list_type_user_was_on,
+            current_page_for_refresh,
+            cast(SQLModelAsyncSession, session),
         )
 
 
@@ -321,11 +348,24 @@ async def cq_show_manage_muted_menu(
     else:
         current_mode_text = _("Current mode is Whitelist. You only receive notifications from users on the list.")
     full_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_text)
-    if not callback_query.message:
-        logger.warning("cq_show_manage_muted_menu: callback_query.message is None.")
+
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "cq_show_manage_muted_menu: Message is None or inaccessible for user %s. Callback data: %s",
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+            _callback_data.pack() if _callback_data else callback_query.data,
+        )
+        # Attempt to answer the callback even if we can't edit the message
+        try:
+            await callback_query.answer(
+                _("Could not update the message view. Please try navigating again."), show_alert=True
+            )
+        except TelegramAPIError:
+            logger.exception("Failed to answer callback in cq_show_manage_muted_menu for inaccessible message.")
         return
+
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message, # Now known to be Message
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
         logger_instance=logger,
@@ -336,7 +376,7 @@ async def cq_show_manage_muted_menu(
 @mute_router.callback_query(SetMuteModeCallback.filter())
 async def cq_set_mute_mode_action(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
@@ -374,13 +414,20 @@ async def cq_set_mute_mode_action(
         services.cache.update_user_settings(managed_user_settings)
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)
-        await safe_edit_text(
-            message_to_edit=callback_query.message,
-            text=menu_text,
-            reply_markup=updated_keyboard.as_markup(),
-            logger_instance=logger,
-            log_context="cq_set_mute_mode_action",
-        )
+        if isinstance(callback_query.message, Message):
+            await safe_edit_text(
+                message_to_edit=callback_query.message,
+                text=menu_text,
+                reply_markup=updated_keyboard.as_markup(),
+                logger_instance=logger,
+                log_context="cq_set_mute_mode_action",
+            )
+        else:
+            logger.warning(
+                "cq_set_mute_mode_action: Message None/inaccessible for user %s. UI not updated. CB: %s",
+                callback_query.from_user.id if callback_query.from_user else "Unknown",
+                callback_data.pack() if callback_data else callback_query.data
+            )
     except SQLAlchemyError:  # Removed 'as e'
         managed_user_settings.mute_list_mode = original_mode
         await session.merge(managed_user_settings)
@@ -394,7 +441,7 @@ async def cq_set_mute_mode_action(
 )
 async def cq_list_internal_users_action(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession, # Explicitly SQLAlchemy's session
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: UserListCallback,
@@ -402,7 +449,14 @@ async def cq_list_internal_users_action(
     """Displays the first page of the internal muted/allowed user list."""
     _ = translator.gettext
     await callback_query.answer()
-    await _display_internal_user_list(callback_query, translator, user_settings, callback_data.action, 0, session)
+    await _display_internal_user_list(
+        callback_query,
+        translator,
+        user_settings,
+        callback_data.action,
+        0,
+        cast(SQLModelAsyncSession, session),
+    )
 
 
 @mute_router.callback_query(
@@ -410,7 +464,7 @@ async def cq_list_internal_users_action(
 )
 async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: PaginateUsersCallback,
@@ -419,7 +473,12 @@ async def cq_paginate_internal_user_list_action(
     _ = translator.gettext
     await callback_query.answer()
     await _display_internal_user_list(
-        callback_query, translator, user_settings, callback_data.list_type, callback_data.page, session
+        callback_query,
+        translator,
+        user_settings,
+        callback_data.list_type,
+        callback_data.page,
+        cast(SQLModelAsyncSession, session),
     )
 
 
@@ -461,7 +520,7 @@ async def cq_paginate_all_accounts_list_action(
 @mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
 async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLAlchemyAsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
@@ -496,7 +555,7 @@ async def cq_toggle_specific_user_mute_action(
     # or if it directly manipulates the list and it's part of the same session.
     # The UserSettingsMiddleware should provide a session-attached object.
     was_successful, resulting_action = await user_service.toggle_mute_status_for_tt_user(
-        session, user_settings, username_to_toggle, services
+        cast(SQLModelAsyncSession, session), user_settings, username_to_toggle, services
     )
     # ----------------------------------------------------
 

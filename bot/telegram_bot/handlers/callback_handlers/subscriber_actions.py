@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from aiogram import Router  # Bot can be imported from here if needed by other parts, or directly
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message  # Added Message
 
 # If Bot is needed for type hinting services.bot_event explicitly, import it as `from aiogram import Bot`
 import pytalk
@@ -61,16 +61,22 @@ async def _refresh_and_display_subscriber_list(
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
+    message_obj = query.message # Assign before use
+    if not isinstance(message_obj, Message):
+        logger.warning("_refresh_and_display_subscriber_list: Message is None or inaccessible.")
+        # Already answered callback if message was None initially.
+        return
+
     page_subscribers_info, current_page, total_pages = await _get_paginated_subscribers_info(
         session, active_bot, return_page
     )
     if total_pages == 0 or not page_subscribers_info:
-        await query.message.edit_text(_("No subscribers found."))
+        await message_obj.edit_text(_("No subscribers found."))
     else:
         new_keyboard = await create_subscriber_list_keyboard(
             translator, page_subscribers_info=page_subscribers_info, current_page=current_page, total_pages=total_pages
         )
-        await query.message.edit_text(
+        await message_obj.edit_text(
             _("Here is the list of subscribers. Page {current_page_display}/{total_pages}").format(
                 current_page_display=current_page + 1, total_pages=total_pages
             ),
@@ -120,7 +126,13 @@ async def handle_view_subscriber(
     else:
         text = _("Actions for subscriber: {display_name}").format(display_name=display_name)
 
-    await query.message.edit_text(text, reply_markup=keyboard)
+    message_obj = query.message
+    if isinstance(message_obj, Message):
+        await message_obj.edit_text(text, reply_markup=keyboard)
+    else:
+        logger.warning("handle_view_subscriber: Message is None or inaccessible.")
+        # Cannot edit, but still answer the query if not already done.
+        # Query answer might have happened earlier if message was None initially.
     await query.answer()
 
 
@@ -293,10 +305,14 @@ async def _handle_manage_tt_account_action(
     keyboard = await create_manage_tt_account_keyboard(
         translator, target_telegram_id=target_telegram_id, current_tt_username=current_tt_username, page=return_page
     )
-    await query.message.edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-        reply_markup=keyboard,
-    )
+    message_obj = query.message
+    if isinstance(message_obj, Message):
+        await message_obj.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard,
+        )
+    else:
+        logger.warning("_handle_manage_tt_account_action: Message is None or inaccessible.")
     await query.answer()
 
 
@@ -341,10 +357,14 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
         keyboard = await create_manage_tt_account_keyboard(
             translator, target_telegram_id=target_telegram_id, current_tt_username=None, page=return_page
         )
-        await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-            reply_markup=keyboard,
-        )
+        message_obj = query.message
+        if isinstance(message_obj, Message):
+            await message_obj.edit_text(
+                _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+                reply_markup=keyboard,
+            )
+        else:
+            logger.warning("handle_manage_tt_account (unlink): Message is None or inaccessible.")
         return
 
     if action == ManageTTAccountAction.LINK_NEW:
@@ -374,12 +394,16 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
             target_telegram_id=target_telegram_id,
             subscriber_list_page=return_page,
         )
-        await query.message.edit_text(
-            _("Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:").format(
-                server_host=tt_connection.server_info.host, telegram_id=target_telegram_id
-            ),
-            reply_markup=link_keyboard,
-        )
+        message_obj = query.message
+        if isinstance(message_obj, Message):
+            await message_obj.edit_text(
+                _("Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:").format(
+                    server_host=tt_connection.server_info.host, telegram_id=target_telegram_id
+                ),
+                reply_markup=link_keyboard,
+            )
+        else:
+            logger.warning("handle_manage_tt_account (link_new): Message is None or inaccessible.")
         await query.answer()
         return
 
@@ -415,10 +439,14 @@ async def handle_link_tt_account_chosen(
         user_s = await session.get(UserSettings, target_telegram_id)
         current_tt_username = user_s.teamtalk_username if user_s else None
         kb = await create_manage_tt_account_keyboard(translator, target_telegram_id, current_tt_username, return_page)
-        await query.message.edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-            reply_markup=kb,
-        )
+        message_obj = query.message
+        if isinstance(message_obj, Message):
+            await message_obj.edit_text(
+                _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+                reply_markup=kb,
+            )
+        else:
+            logger.warning("handle_link_tt_account_chosen (banned): Message is None or inaccessible.")
         return
 
     user_settings = await session.get(UserSettings, target_telegram_id)
@@ -443,7 +471,11 @@ async def handle_link_tt_account_chosen(
     keyboard = await create_manage_tt_account_keyboard(
         translator, target_telegram_id=target_telegram_id, current_tt_username=tt_username_to_link, page=return_page
     )
-    await query.message.edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-        reply_markup=keyboard,
-    )
+    message_obj = query.message
+    if isinstance(message_obj, Message):
+        await message_obj.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=keyboard,
+        )
+    else:
+        logger.warning("handle_link_tt_account_chosen (success): Message is None or inaccessible.")

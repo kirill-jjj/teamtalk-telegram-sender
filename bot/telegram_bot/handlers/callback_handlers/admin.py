@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message  # Added Message
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
@@ -157,7 +157,7 @@ async def process_user_action_selection(
             show_alert=True,
         )
         try:
-            if callback_query.message:
+            if isinstance(callback_query.message, Message):
                 await callback_query.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError:
             logger.debug(
@@ -177,9 +177,10 @@ async def process_user_action_selection(
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        if callback_query.message:
+        message_obj = callback_query.message # Assign to variable
+        if isinstance(message_obj, Message): # Check type of the new variable
             try:
-                await callback_query.message.edit_text(message_text, reply_markup=None)
+                await message_obj.edit_text(message_text, reply_markup=None)
             except TelegramAPIError as e:
                 logger.warning(
                     "Failed to edit message text after user action on %s: %s. Trying to edit reply markup only.",
@@ -187,7 +188,7 @@ async def process_user_action_selection(
                     e,
                 )
                 try:
-                    await callback_query.message.edit_reply_markup(reply_markup=None)
+                    await message_obj.edit_reply_markup(reply_markup=None) # Use the typed variable
                 except TelegramAPIError:
                     logger.exception(
                         "Failed to even remove reply markup after user action on %s.",

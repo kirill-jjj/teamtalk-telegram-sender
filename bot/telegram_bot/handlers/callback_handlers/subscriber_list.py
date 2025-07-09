@@ -4,11 +4,14 @@ import gettext  # Added gettext
 import logging
 
 # For type hinting app instance
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast  # Added cast
 
 from aiogram import Router
 from aiogram.types import CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # Will be SQLAlchemyAsyncSession
+
+# Import SQLModel's AsyncSession for casting
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import SubscriberListAction
 from bot.services import user_service
@@ -45,7 +48,7 @@ async def handle_subscriber_list_actions(
 
         telegram_id_to_delete = callback_data.telegram_id
         success = await user_service.delete_full_user_profile(
-            session, telegram_id_to_delete, services=services
+            cast(SQLModelAsyncSession, session), telegram_id_to_delete, services=services
         )  # Pass services
 
         if success:
@@ -59,7 +62,7 @@ async def handle_subscriber_list_actions(
             )
 
         await _show_subscriber_list_page(
-            query, session, services.bot_event, translator, page=page_from_callback
+            query, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=page_from_callback
         )  # Use services.bot_event
 
     elif action == SubscriberListAction.PAGE:
@@ -69,7 +72,7 @@ async def handle_subscriber_list_actions(
             return
 
         await _show_subscriber_list_page(
-            query, session, services.bot_event, translator, page=requested_page
+            query, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=requested_page
         )  # Use services.bot_event
     else:
         logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)

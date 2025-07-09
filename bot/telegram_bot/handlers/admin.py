@@ -2,13 +2,16 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast  # Added cast
 
 # Removed: from aiogram import Bot as AiogramBot
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Import SQLModel's AsyncSession for casting
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -100,4 +103,6 @@ async def subscribers_command_handler(
     services: "Services",  # Injected from workflow_data
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(message, session, services.bot_event, translator, page=0)
+    await _show_subscriber_list_page(
+        message, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=0
+    )

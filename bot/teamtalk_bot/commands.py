@@ -279,6 +279,7 @@ async def handle_tt_subscribe_command(
         reply_text_source=_(
             "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
+        _error_reply_source=_("An error occurred processing your request. Please try again later."),
         services=services,
     )
 
@@ -305,6 +306,7 @@ async def handle_tt_unsubscribe_command(
         reply_text_source=_(
             "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
+        _error_reply_source=_("An error occurred processing your request. Please try again later."),
         services=services,
     )
 
@@ -402,7 +404,9 @@ async def handle_tt_help_command(  # Added return type hint
 
 
 async def handle_tt_unknown_command(  # Added return type hint
-    tt_message: TeamTalkMessage, translator: gettext.GNUTranslations, connection: TeamTalkConnection
+    tt_message: TeamTalkMessage,
+    translator: gettext.GNUTranslations | gettext.NullTranslations,
+    connection: TeamTalkConnection,
 ) -> None:
     """Handles unknown commands received from a TeamTalk user."""
     _ = translator.gettext

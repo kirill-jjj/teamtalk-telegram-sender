@@ -7,9 +7,10 @@ from __future__ import annotations
 import asyncio
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast  # Added cast
 
 from aiogram import Bot
+from aiogram.types import Chat  # Added Chat
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
@@ -71,24 +72,26 @@ async def _get_paginated_subscribers_info(
 
     page_subscribers_info = []
     for i, telegram_id in enumerate(page_ids_to_fetch):
-        display_name = str(telegram_id)
-        chat_info = None
+        display_name = str(telegram_id) # Default display name
+
+        current_chat_for_formatting: Chat | None = None # Explicitly None or Chat
         chat_result = chat_results[i]
         if isinstance(chat_result, Exception):
             logger.error("Could not fetch chat info for Telegram ID %s: %s", telegram_id, chat_result)
-            # display_name remains str(telegram_id)
         else:
-            chat_info = chat_result
-            display_name = format_telegram_user_display_name(chat_info)
-            # If format_telegram_user_display_name defaults to ID on insufficient info,
-            # it will still be str(telegram_id) if chat_info had no names/username.
+            # chat_result is known to be Chat (or ChatFullInfo which is a subtype)
+            current_chat_for_formatting = cast(Chat, chat_result)
+            # Update display_name only if chat info was successfully fetched
+            display_name = format_telegram_user_display_name(current_chat_for_formatting)
 
         tt_username: str | None = None
         user_setting_result = user_settings_results[i]
         if isinstance(user_setting_result, Exception):
             logger.error("Could not fetch user settings for Telegram ID %s: %s", telegram_id, user_setting_result)
-        elif user_setting_result:
-            tt_username = user_setting_result.teamtalk_username
+        elif user_setting_result: # If not an Exception and not None
+            # Explicitly assert/cast that user_setting_result is UserSettings here for MyPy
+            loaded_user_settings = cast(UserSettings, user_setting_result)
+            tt_username = loaded_user_settings.teamtalk_username
 
         page_subscribers_info.append(
             SubscriberInfo(telegram_id=telegram_id, display_name=display_name, teamtalk_username=tt_username)

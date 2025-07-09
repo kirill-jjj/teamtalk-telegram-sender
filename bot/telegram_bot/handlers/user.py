@@ -9,6 +9,7 @@ import logging
 # For type hinting Services
 from typing import (
     TYPE_CHECKING,  # For admin_ids_cache type hint
+    cast,
 )
 
 from aiogram import Router
@@ -18,6 +19,9 @@ from aiogram.types import Message
 import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Import SQLModel's AsyncSession for casting
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
@@ -65,7 +69,9 @@ async def start_command_handler(
     token = command.args
     if token:
         # TODO: Call to handle_deeplink_payload might need review if its own dependencies change.
-        await handle_deeplink_payload(message, token, session, translator, user_settings, services)
+        await handle_deeplink_payload(
+            message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services
+        )
     else:
         await message.reply(_("Hello! Use /help to see available commands."))
 

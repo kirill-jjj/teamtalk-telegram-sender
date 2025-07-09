@@ -6,7 +6,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import gettext
 import html
-from typing import TYPE_CHECKING, Any  # Added TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast  # Added TYPE_CHECKING and cast
 
 from aiogram.filters.callback_data import CallbackData  # Import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -86,7 +86,9 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
 # --- Settings Keyboards ---
 
 
-async def create_main_settings_keyboard(translator: gettext.GNUTranslations) -> InlineKeyboardBuilder:
+async def create_main_settings_keyboard(
+    translator: gettext.GNUTranslations | gettext.NullTranslations,
+) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
@@ -231,13 +233,13 @@ async def _add_pagination_controls(
     if current_page > 0:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("⬅️ Prev"), callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack()
+                text=_("⬅️ Prev"), callback_data=callback_factory(list_type, current_page - 1).pack()
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
-                text=_("Next ➡️"), callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack()
+                text=_("Next ➡️"), callback_data=callback_factory(list_type, current_page + 1).pack()
             )
         )
     if pagination_buttons:
@@ -286,10 +288,10 @@ async def create_account_list_keyboard(
     _ = translator.gettext
 
     def username_extractor(item: pytalk.UserAccount) -> str:
-        return ttstr(item.username)
+        return cast(str, ttstr(item.username))
 
     def display_name_extractor(item: pytalk.UserAccount) -> str:
-        return ttstr(item.username)
+        return cast(str, ttstr(item.username))
 
     return await _create_generic_user_toggle_list_keyboard(
         translator=translator,
@@ -345,7 +347,7 @@ async def _create_generic_paginated_list_keyboard(
     total_pages: int,
     item_button_former: "Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | list[InlineKeyboardButton]]",
     pagination_callback_factory: "Callable[..., Any]",
-    pagination_factory_kwargs: dict | None = None,  # For additional fixed args to pagination_callback_factory
+    pagination_factory_kwargs: dict[str, Any] | None = None,  # For additional fixed args to pagination_callback_factory
     additional_buttons_top: list[list[InlineKeyboardButton]] | None = None,
     additional_buttons_bottom: list[list[InlineKeyboardButton]] | None = None,
 ) -> InlineKeyboardMarkup:
@@ -535,7 +537,7 @@ async def _create_generic_user_toggle_list_keyboard(
         builder.adjust(1)
 
     await _add_pagination_controls(
-        builder, translator, current_page, total_pages, list_type_for_callback, PaginateUsersCallback
+        builder, translator, current_page, total_pages, list_type_for_callback, PaginateUsersCallback # type: ignore[arg-type]
     )
 
     builder.row(InlineKeyboardButton(text=_(back_button_text_key), callback_data=back_button_callback_data))

@@ -154,7 +154,7 @@ class Services:
             stmt = select(UserSettings).options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
             result = await session.exec(stmt)
             all_settings = result.all()
-            self.cache.load_all_user_settings(all_settings)
+            self.cache.load_all_user_settings(list(all_settings))
             # Logging is handled by cache_service.load_all_user_settings
 
     async def get_or_create_user_settings(self, telegram_id: int, session: AsyncSession) -> UserSettings:
@@ -191,7 +191,7 @@ class Services:
 
     def initialize_languages(self) -> None:
         """Discovers and caches available languages."""
-        self.available_languages = discover_languages(locales_path=str(LOCALE_DIR))
+        self.available_languages = discover_languages(locales_path=LOCALE_DIR)
         if not self.available_languages:
             self.logger.critical("No languages discovered. Check locales setup.")
             # Decide error handling: raise, or operate with default only

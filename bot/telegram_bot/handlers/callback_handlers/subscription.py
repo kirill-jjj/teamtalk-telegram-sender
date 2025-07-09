@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message  # Added Message
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,13 +44,21 @@ async def cq_show_subscriptions_menu(
     _ = translator.gettext
     await callback_query.answer()
 
+    if not isinstance(callback_query.message, Message):
+        logger.warning(
+            "cq_show_subscriptions_menu: Message is None or inaccessible for user %s. Callback data: %s",
+            callback_query.from_user.id if callback_query.from_user else "Unknown",
+            _callback_data.pack() if _callback_data else callback_query.data, # Use _callback_data if available
+        )
+        return
+
     current_notification_setting = user_settings.notification_settings
     subscription_settings_builder = await create_subscription_settings_keyboard(
         translator, current_notification_setting
     )
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message, # Now known to be Message
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_builder.as_markup(),
         logger_instance=logger,
