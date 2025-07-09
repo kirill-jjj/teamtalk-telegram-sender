@@ -510,8 +510,7 @@ class TeamTalkConnection:
                 await handle_tt_unknown_command(message, translator, connection=self)
             else:
                 await forward_tt_message_to_telegram_admin(
-                    message=message, services=self.services,
-                    server_host_for_display=self.server_info.host, translator=translator
+                    message=message, services=self.services, translator=translator
                 )
 
     async def on_user_login(self, user: PytalkUser) -> None:

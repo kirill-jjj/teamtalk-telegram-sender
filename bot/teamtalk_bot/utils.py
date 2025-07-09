@@ -251,7 +251,6 @@ async def send_long_tt_reply(
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     services: Services,
-    _server_host_for_display: str, # Keep for consistent signature, though not used directly
     translator: gettext.GNUTranslations,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""
