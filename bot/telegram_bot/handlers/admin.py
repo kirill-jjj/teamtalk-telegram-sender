@@ -97,7 +97,7 @@ async def subscribers_command_handler(
     message: Message,
     session: AsyncSession,  # Injected by DbSessionMiddleware
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    services: "Services", # Injected from workflow_data
+    services: "Services",  # Injected from workflow_data
 ) -> None:
     """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(message, session, services.bot_event, translator, page=0)

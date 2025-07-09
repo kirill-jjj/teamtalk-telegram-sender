@@ -80,9 +80,7 @@ async def cq_set_language(
         await callback_query.answer()
         return
 
-    selected_lang_info = next(
-        (lang for lang in services.available_languages if lang["code"] == new_lang_code), None
-    )
+    selected_lang_info = next((lang for lang in services.available_languages if lang["code"] == new_lang_code), None)
     if not selected_lang_info:
         logger.error("Attempt to set unknown language code: %s for user %s", new_lang_code, telegram_id)
         await callback_query.answer(_("Selected language is not available."), show_alert=True)
@@ -99,8 +97,7 @@ async def cq_set_language(
         # Error already logged by user_service. Revert in-memory object just in case.
         managed_user_settings.language_code = original_lang_code
         await callback_query.answer(
-            _("An error occurred while updating language settings. Please try again later."),
-            show_alert=True
+            _("An error occurred while updating language settings. Please try again later."), show_alert=True
         )
         return
 
@@ -138,14 +135,12 @@ async def cq_set_language(
         )
     except Exception:
         logger.exception(
-            "Failed to refresh settings UI for user %s after language change to %s.",
-            telegram_id, new_lang_code
+            "Failed to refresh settings UI for user %s after language change to %s.", telegram_id, new_lang_code
         )
         # Don't send another alert if commands failed, as user already got one.
         # If commands succeeded but UI failed, this is the first major error user sees.
         if commands_updated:  # Only show this if commands didn't already show an error.
             # Use the gettext method from the new translator for this specific message
             await callback_query.answer(
-                new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."),
-                show_alert=True
+                new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."), show_alert=True
             )

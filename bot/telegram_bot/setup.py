@@ -54,10 +54,10 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
 
     async with services.session_factory() as session:
         db_admin_ids = await crud.get_all_admins_ids(session)
-        services.cache.load_admins_from_db(db_admin_ids) # Use CacheService
+        services.cache.load_admins_from_db(db_admin_ids)  # Use CacheService
 
         db_subscriber_ids = await crud.get_all_subscribers_ids(session)
-        services.cache.load_subscribers_from_db(db_subscriber_ids) # Use CacheService
+        services.cache.load_subscribers_from_db(db_subscriber_ids)  # Use CacheService
 
     # load_user_settings_to_app_cache will be modified in services_container.py to use CacheService
     await services.load_user_settings_to_app_cache()
@@ -67,18 +67,20 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
         # is_admin will also be routed through CacheService if we decide to make reads consistent,
         # but for now, direct read for check is fine as per CacheService internal comment.
         # However, for modification consistency, we use the service.
-        if not services.cache.is_admin(tg_admin_chat_id): # Use CacheService for checking
+        if not services.cache.is_admin(tg_admin_chat_id):  # Use CacheService for checking
             async with services.session_factory() as session:
                 await crud.add_admin(session, tg_admin_chat_id)
-                services.cache.add_admin(tg_admin_chat_id) # Use CacheService for adding
+                services.cache.add_admin(tg_admin_chat_id)  # Use CacheService for adding
             logger.debug("Admin ID %s from config added to DB and cache via CacheService.", tg_admin_chat_id)
         else:
             logger.debug("Admin ID %s from config already in admin cache (via CacheService).", tg_admin_chat_id)
     else:
         logger.info("telegram.admin_chat_id is 0 or not configured to be added as main admin.")
 
-    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count()) # Use CacheService
-    logger.debug("Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()) # Use CacheService
+    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count())  # Use CacheService
+    logger.debug(
+        "Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()
+    )  # Use CacheService
 
     await set_telegram_commands(services=services)
     logger.info("Telegram bot commands set.")
@@ -97,7 +99,7 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> Non
             await teamtalk_task
         except asyncio.CancelledError:
             logger.info("Pytalk main event loop task cancelled successfully.")
-        except Exception: # Corrected indentation
+        except Exception:  # Corrected indentation
             logger.exception("Error awaiting cancelled Pytalk task.")
     elif teamtalk_task:
         logger.info("Pytalk main event loop task was already done.")
@@ -123,9 +125,7 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> Non
     logger.info("Application shutdown sequence complete.")
 
 
-async def global_error_handler(
-    event: ErrorEvent, services: "Services", app_config: "Settings"
-) -> None:
+async def global_error_handler(event: ErrorEvent, services: "Services", app_config: "Settings") -> None:
     """Global error handler for uncaught exceptions in Aiogram handlers."""
     logger = services.logger
     escaped_exception_text = html.quote(str(event.exception))

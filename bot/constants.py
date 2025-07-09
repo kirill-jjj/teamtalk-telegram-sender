@@ -29,7 +29,7 @@ DB_MAIN_NAME = "main"
 WHO_CHANNEL_ID_ROOT = 1
 WHO_CHANNEL_ID_SERVER_ROOT_ALT = 0  # Sometimes used for users not in a specific channel
 WHO_CHANNEL_ID_SERVER_ROOT_ALT2 = -1  # Also seen for users not in a specific channel
-INVALID_CHANNEL_ID = -1 # Represents an invalid or non-numeric channel ID
+INVALID_CHANNEL_ID = -1  # Represents an invalid or non-numeric channel ID
 
 
 # --- Parameters ---

@@ -105,7 +105,7 @@ async def handle_view_subscriber(
         try:
             chat_info = await active_bot.get_chat(user_to_view.telegram_id)
             display_name = format_telegram_user_display_name(chat_info)
-        except TelegramAPIError: # Removed 'as e_tg'
+        except TelegramAPIError:  # Removed 'as e_tg'
             logger.exception(
                 "Could not fetch chat info for %s via Telegram API.",
                 user_to_view.telegram_id,
@@ -146,7 +146,7 @@ async def _handle_delete_subscriber_action(
             _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
             show_alert=True,
         )
-        await _refresh_and_display_subscriber_list(query, session, services, return_page, translator) # Pass services
+        await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)  # Pass services
     else:
         await query.answer(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
@@ -193,9 +193,7 @@ async def handle_subscriber_action(
             translator,
         )
     elif action == SubscriberAction.MANAGE_TT_ACCOUNT:
-        await _handle_manage_tt_account_action(
-            query, session, target_telegram_id, return_page, translator
-        )
+        await _handle_manage_tt_account_action(query, session, target_telegram_id, return_page, translator)
     else:
         await query.answer(_("Unknown action."), show_alert=True)
         logger.warning("Unknown subscriber action: %s", action)
@@ -205,7 +203,7 @@ async def _handle_ban_subscriber_action(
     query: CallbackQuery,
     session: AsyncSession,
     # active_bot: AiogramBot, # Removed
-    services: "Services", # Added services directly
+    services: "Services",  # Added services directly
     tt_connection: TeamTalkConnection | None,
     target_telegram_id: int,
     return_page: int,
@@ -240,9 +238,9 @@ async def _handle_ban_subscriber_action(
                     tt_username_to_ban,
                     tt_connection.server_info.host,
                 )
-            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError): # Removed 'as e_tt'
+            except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):  # Removed 'as e_tt'
                 logger.exception(
-                    "Error during conceptual TeamTalk ban for %s on %s.", # Removed trailing : %s
+                    "Error during conceptual TeamTalk ban for %s on %s.",  # Removed trailing : %s
                     tt_username_to_ban,
                     tt_connection.server_info.host,
                 )
@@ -273,7 +271,7 @@ async def _handle_ban_subscriber_action(
         alert_message = _("User already banned or error occurred.")
 
     await query.answer(alert_message, show_alert=True)
-    await _refresh_and_display_subscriber_list(query, session, services, return_page, translator) # Pass services
+    await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)  # Pass services
 
 
 async def _handle_manage_tt_account_action(
@@ -333,7 +331,7 @@ async def handle_manage_tt_account(  # This function itself might become a dispa
             user_settings.not_on_online_confirmed = False
             await session.commit()
             await session.refresh(user_settings)
-            services.cache.update_user_settings(user_settings) # Use CacheService
+            services.cache.update_user_settings(user_settings)  # Use CacheService
             await query.answer(
                 _("TeamTalk account {tt_username} unlinked.").format(tt_username=unlinked_tt_username), show_alert=True
             )
@@ -430,10 +428,10 @@ async def handle_link_tt_account_chosen(
 
     old_tt_username = user_settings.teamtalk_username
     user_settings.teamtalk_username = tt_username_to_link
-    user_settings.not_on_online_confirmed = True # Linking by admin implies confirmation for NOON
+    user_settings.not_on_online_confirmed = True  # Linking by admin implies confirmation for NOON
     await session.commit()
     await session.refresh(user_settings)
-    services.cache.update_user_settings(user_settings) # Use CacheService
+    services.cache.update_user_settings(user_settings)  # Use CacheService
 
     alert_text = _("TeamTalk account {new_tt_username} linked successfully.").format(
         new_tt_username=tt_username_to_link

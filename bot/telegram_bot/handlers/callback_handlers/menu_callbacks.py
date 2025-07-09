@@ -55,7 +55,7 @@ async def menu_who_handler(
     await who_command_handler(
         message=query.message,  # type: ignore
         translator=translator,
-        services=services, # Pass services
+        services=services,  # Pass services
         tt_connection=tt_connection,
     )
     await query.answer()
@@ -75,7 +75,7 @@ async def menu_help_handler(
     await help_command_handler(
         message=query.message,  # type: ignore
         translator=translator,
-        services=services, # Pass services
+        services=services,  # Pass services
     )
     await query.answer()
 
@@ -134,7 +134,7 @@ async def menu_subscribers_handler(
     callback_data: MenuCallback,  # noqa: ARG001
     session: AsyncSession,  # Injected
     translator: "gettext.GNUTranslations",  # Injected
-    services: "Services", # Injected
+    services: "Services",  # Injected
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     # Ensure query.message exists

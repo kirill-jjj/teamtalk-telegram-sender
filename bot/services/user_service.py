@@ -75,7 +75,7 @@ async def update_user_language_settings(
             new_lang_code,
             user_settings.telegram_id,
         )
-    except SQLAlchemyError: # Removed 'as e_db'
+    except SQLAlchemyError:  # Removed 'as e_db'
         # update_user_settings_in_db should handle rollback on its own error.
         # If commit is outside, then consider rollback here.
         logger.exception(
@@ -108,10 +108,7 @@ async def process_new_subscription(
         if not subscribed_user_record:
             # This means crud.add_subscriber failed for a reason other than "already exists" (e.g., DB error during add)
             # and the user is not in the SubscribedUser table.
-            logger.error(
-                "Failed to ensure user %s is a subscriber in DB after add attempt.",
-                user_settings.telegram_id
-            )
+            logger.error("Failed to ensure user %s is a subscriber in DB after add attempt.", user_settings.telegram_id)
             return False
 
         # At this point, user is confirmed to be in SubscribedUser table.
@@ -124,7 +121,7 @@ async def process_new_subscription(
             )
 
         # Ensure cache consistency for subscriber status
-        if not services.cache.is_subscribed(user_settings.telegram_id): # Corrected method name
+        if not services.cache.is_subscribed(user_settings.telegram_id):  # Corrected method name
             services.cache.add_subscriber(user_settings.telegram_id)
             logger.info("Added user %s to subscriber cache.", user_settings.telegram_id)
 
@@ -139,22 +136,24 @@ async def process_new_subscription(
         if settings_updated:
             logger.info(
                 "User settings updated for %s with TT username '%s' (was '%s').",
-                user_settings.telegram_id, tt_username, original_tt_username
+                user_settings.telegram_id,
+                tt_username,
+                original_tt_username,
             )
-            services.cache.update_user_settings(user_settings) # Update cache with new settings
+            services.cache.update_user_settings(user_settings)  # Update cache with new settings
             return True
         # Rollback tt_username change in memory if DB update failed?
         # update_user_settings_in_db should have rolled back the session.
         # The user_settings object in memory would be stale if not refreshed.
         logger.error(
             "Failed to update user settings in DB for user %s with TT username '%s'.",
-            user_settings.telegram_id, tt_username
+            user_settings.telegram_id,
+            tt_username,
         )
 
     except Exception:
         logger.exception(
-            "Error in process_new_subscription for user %s, tt_username %s.",
-            user_settings.telegram_id, tt_username
+            "Error in process_new_subscription for user %s, tt_username %s.", user_settings.telegram_id, tt_username
         )
         # Ensure session is rolled back if any unhandled exception occurred before commits in crud/update_user_settings
         # However, called functions are expected to manage their own session states.
@@ -184,7 +183,7 @@ async def toggle_mute_status_for_tt_user(
     # For now, assume it's loaded as per typical usage with SQLModel relationships.
 
     existing_entry: MutedUser | None = None
-    if user_settings.muted_users_list is None: # Should not happen if relationships are set up
+    if user_settings.muted_users_list is None:  # Should not happen if relationships are set up
         user_settings.muted_users_list = []
 
     for muted_user_entry in user_settings.muted_users_list:
@@ -198,8 +197,7 @@ async def toggle_mute_status_for_tt_user(
             await session.delete(existing_entry)
             resulting_action = "unmuted"
             logger.info(
-                "User %s unmuted TeamTalk user '%s'. Pending commit.",
-                user_settings.telegram_id, tt_username_to_toggle
+                "User %s unmuted TeamTalk user '%s'. Pending commit.", user_settings.telegram_id, tt_username_to_toggle
             )
         else:
             new_entry = MutedUser(
@@ -212,8 +210,7 @@ async def toggle_mute_status_for_tt_user(
             session.add(new_entry)
             resulting_action = "muted"
             logger.info(
-                "User %s muted TeamTalk user '%s'. Pending commit.",
-                user_settings.telegram_id, tt_username_to_toggle
+                "User %s muted TeamTalk user '%s'. Pending commit.", user_settings.telegram_id, tt_username_to_toggle
             )
 
         await session.commit()
@@ -224,21 +221,25 @@ async def toggle_mute_status_for_tt_user(
         services.cache.update_user_settings(user_settings)
         logger.info(
             "Successfully toggled mute for '%s' for user %s to '%s'. DB and cache updated.",
-            tt_username_to_toggle, user_settings.telegram_id, resulting_action
+            tt_username_to_toggle,
+            user_settings.telegram_id,
+            resulting_action,
         )
 
     except SQLAlchemyError:
         await session.rollback()
         logger.exception(
             "SQLAlchemyError while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
-            tt_username_to_toggle, user_settings.telegram_id
+            tt_username_to_toggle,
+            user_settings.telegram_id,
         )
         return False, None
     except Exception:
-        await session.rollback() # Rollback on any other unexpected error during DB operations
+        await session.rollback()  # Rollback on any other unexpected error during DB operations
         logger.exception(
             "Unexpected error while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
-            tt_username_to_toggle, user_settings.telegram_id
+            tt_username_to_toggle,
+            user_settings.telegram_id,
         )
         return False, None
     else:

@@ -29,6 +29,7 @@ ttstr = sdk.ttstr
 
 # --- Functions moved from bot.core.utils ---
 
+
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
     translator: gettext.GNUTranslations,
@@ -139,6 +140,7 @@ async def get_online_teamtalk_users(
             tt_instance.server_info.host if tt_instance.server_info else "N/A",
         )
         return []
+
 
 # --- End of moved functions ---
 
@@ -262,8 +264,8 @@ async def forward_tt_message_to_telegram_admin(
     admin_chat_id = services.config.telegram.admin_chat_id
     server_name_to_display = get_effective_server_name(
         message.teamtalk_instance, translator, services.config
-    ) # Now local
-    sender_display = get_tt_user_display_name(message.user, translator) # Now local
+    )  # Now local
+    sender_display = get_tt_user_display_name(message.user, translator)  # Now local
     message_content = message.content
 
     template_text_parts = _(

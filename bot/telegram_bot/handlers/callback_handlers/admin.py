@@ -95,7 +95,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
-    except (ValueError, TypeError, AttributeError): # Removed 'as e_data'
+    except (ValueError, TypeError, AttributeError):  # Removed 'as e_data'
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
         logger.exception(
             "Data error during '%s' on TT user (ID: %s) on server %s.",

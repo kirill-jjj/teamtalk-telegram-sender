@@ -55,15 +55,15 @@ def get_db_url() -> str:
     """
     config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
     config_file = Path(config_file_str)
-    print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}") # noqa: T201
+    print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}")  # noqa: T201
 
     try:
         settings = Settings.from_toml(config_file)
     except FileNotFoundError:
-        print(f"ERROR [alembic.env] Configuration file '{config_file}' not found.") # noqa: T201
+        print(f"ERROR [alembic.env] Configuration file '{config_file}' not found.")  # noqa: T201
         raise
-    except ValueError as e: # Covers TOMLDecodeError and other Pydantic validation errors
-        print(f"ERROR [alembic.env] Error loading configuration from '{config_file}': {e}") # noqa: T201
+    except ValueError as e:  # Covers TOMLDecodeError and other Pydantic validation errors
+        print(f"ERROR [alembic.env] Error loading configuration from '{config_file}': {e}")  # noqa: T201
         raise
 
     db_file_name = settings.database.db_file

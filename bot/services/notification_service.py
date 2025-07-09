@@ -1,4 +1,5 @@
 """Service for advanced notification logic like NOON."""
+
 import logging
 from typing import TYPE_CHECKING
 

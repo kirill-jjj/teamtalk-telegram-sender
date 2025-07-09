@@ -65,9 +65,13 @@ class TeamTalkEventHandler:
         tt_config = self.services.config.teamtalk
 
         pytalk_server_info = pytalk.TeamTalkServerInfo(
-            host=tt_config.host_name, tcp_port=tt_config.port, udp_port=tt_config.port,
-            username=tt_config.user_name, password=tt_config.password,
-            encrypted=tt_config.encrypted, nickname=tt_config.nick_name,
+            host=tt_config.host_name,
+            tcp_port=tt_config.port,
+            udp_port=tt_config.port,
+            username=tt_config.user_name,
+            password=tt_config.password,
+            encrypted=tt_config.encrypted,
+            nickname=tt_config.nick_name,
             join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else INVALID_CHANNEL_ID,
             join_channel_password=tt_config.channel_password or "",
         )
@@ -97,8 +101,9 @@ class TeamTalkEventHandler:
 
     async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Routes a user join event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or \
-                      (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
+        tt_instance = getattr(user, "teamtalk_instance", None) or (
+            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
+        )
         if not tt_instance:
             logger.error("UserJoin: Cannot determine instance for user %s", user.username)
             return
@@ -120,12 +125,9 @@ class TeamTalkEventHandler:
                 if conn_by_info:
                     await conn_by_info.on_my_connection_lost(server)
                 else:
-                    logger.error(
-                        "ConnectionLost: Still no conn for %s:%s",
-                        server.info.host, server.info.tcp_port
-                    )
+                    logger.error("ConnectionLost: Still no conn for %s:%s", server.info.host, server.info.tcp_port)
             else:
-                 logger.error("ConnectionLost: server or server.info is None.")
+                logger.error("ConnectionLost: server or server.info is None.")
 
     async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Routes a kicked from channel event for the bot to the appropriate connection."""
@@ -145,8 +147,9 @@ class TeamTalkEventHandler:
 
     async def on_pytalk_user_login(self, user: PytalkUser) -> None:
         """Routes a user login event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or \
-                      (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
+        tt_instance = getattr(user, "teamtalk_instance", None) or (
+            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
+        )
         if not tt_instance:
             logger.error("UserLogin: Cannot determine instance for user %s", user.username)
             return
@@ -158,8 +161,9 @@ class TeamTalkEventHandler:
 
     async def on_pytalk_user_logout(self, user: PytalkUser) -> None:
         """Routes a user logout event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or \
-                      (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
+        tt_instance = getattr(user, "teamtalk_instance", None) or (
+            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
+        )
         if not tt_instance:
             logger.error("UserLogout: Cannot determine instance for user %s", user.username)
             return
@@ -171,8 +175,9 @@ class TeamTalkEventHandler:
 
     async def on_pytalk_user_update(self, user: PytalkUser) -> None:
         """Routes a user update event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or \
-                      (hasattr(user, 'server') and getattr(user.server, "teamtalk_instance", None))
+        tt_instance = getattr(user, "teamtalk_instance", None) or (
+            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
+        )
         if not tt_instance:
             logger.error("UserUpdate: Cannot determine instance for user %s", user.username)
             return

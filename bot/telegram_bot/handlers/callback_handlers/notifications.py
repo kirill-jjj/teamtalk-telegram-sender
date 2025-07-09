@@ -51,7 +51,7 @@ async def cq_toggle_noon_setting_action(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    _callback_data: NotificationActionCallback | None = None, # Keep for consistent signature, though not used
+    _callback_data: NotificationActionCallback | None = None,  # Keep for consistent signature, though not used
     *,
     services: Services,
 ) -> None:
@@ -70,7 +70,7 @@ async def cq_toggle_noon_setting_action(
         await callback_query.answer(_("An error occurred while saving. Please try again."), show_alert=True)
         return
 
-    services.cache.update_user_settings(user_settings) # Use CacheService
+    services.cache.update_user_settings(user_settings)  # Use CacheService
     logger.debug(
         "NOON setting for user %s toggled to %s and saved to DB/cache via CacheService.",
         user_settings.telegram_id,

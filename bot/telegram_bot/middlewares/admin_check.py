@@ -53,7 +53,7 @@ class AdminCheckMiddleware(BaseMiddleware):
             logger.critical("AdminCheckMiddleware: 'services' not found in data. Cannot perform admin check.")
             # Optionally, send a generic error message to the user before returning
             # This situation should ideally not happen if middlewares are set up correctly.
-            return None # Or raise an exception
+            return None  # Or raise an exception
 
         if not services.cache.is_admin(user.id):
             # I18nMiddleware runs before this, so 'translator' is guaranteed to be in data.

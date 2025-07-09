@@ -39,7 +39,7 @@ class AdminIdArgs(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def parse_str_to_dict(cls, data: str | None) -> dict[str, list[int] | list[str]]: # More specific type
+    def parse_str_to_dict(cls, data: str | None) -> dict[str, list[int] | list[str]]:  # More specific type
         """Parses a string of space-separated arguments into valid IDs and invalid entries."""
         if data is None or not isinstance(data, str):
             return {"valid_ids": [], "invalid_entries": []}
@@ -144,32 +144,28 @@ async def _manage_admin_ids(
         action_successful = False
         if action_type == "add":
             logger.info(
-                "Attempting to add admin for TG ID %s by TT admin %s.",
-                telegram_id, ttstr(tt_message.user.username)
+                "Attempting to add admin for TG ID %s by TT admin %s.", telegram_id, ttstr(tt_message.user.username)
             )
-            action_successful = await admin_service.add_admin_full(
-                session, telegram_id, user_settings, services
-            )
+            action_successful = await admin_service.add_admin_full(session, telegram_id, user_settings, services)
         elif action_type == "remove":
             logger.info(
-                "Attempting to remove admin for TG ID %s by TT admin %s.",
-                telegram_id, ttstr(tt_message.user.username)
+                "Attempting to remove admin for TG ID %s by TT admin %s.", telegram_id, ttstr(tt_message.user.username)
             )
-            action_successful = await admin_service.remove_admin_full(
-                session, telegram_id, user_settings, services
-            )
+            action_successful = await admin_service.remove_admin_full(session, telegram_id, user_settings, services)
 
         if action_successful:
             success_count += 1
             logger.info(
                 "Successfully processed %s admin for TG ID %s (DB, cache, commands updated via admin_service).",
-                action_type, telegram_id
+                action_type,
+                telegram_id,
             )
         else:
             failed_action_ids.append(telegram_id)
             logger.warning(
                 "Failed to process %s admin for TG ID %s (e.g., already in state or service error).",
-                action_type, telegram_id,
+                action_type,
+                telegram_id,
             )
 
     success_message_formatted = ""
@@ -408,13 +404,15 @@ async def handle_tt_unknown_command(  # Added return type hint
 ) -> None:
     """Handles unknown commands received from a TeamTalk user."""
     _ = translator.gettext
-    available_commands = ", ".join([
-        tt_cmds.TT_CMD_SUBSCRIBE,
-        tt_cmds.TT_CMD_UNSUBSCRIBE,
-        tt_cmds.TT_CMD_ADD_ADMIN,
-        tt_cmds.TT_CMD_REMOVE_ADMIN,
-        tt_cmds.TT_CMD_HELP,
-    ])
+    available_commands = ", ".join(
+        [
+            tt_cmds.TT_CMD_SUBSCRIBE,
+            tt_cmds.TT_CMD_UNSUBSCRIBE,
+            tt_cmds.TT_CMD_ADD_ADMIN,
+            tt_cmds.TT_CMD_REMOVE_ADMIN,
+            tt_cmds.TT_CMD_HELP,
+        ]
+    )
     reply_text = _("Unknown command. Available commands: {commands}.").format(commands=available_commands)
     tt_message.reply(reply_text)
     logger.warning(

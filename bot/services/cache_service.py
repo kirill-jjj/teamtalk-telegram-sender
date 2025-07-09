@@ -10,8 +10,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class CacheService:
     """Provides an interface to manage various in-memory caches."""
+
     def __init__(self, services: "Services") -> None:
         """Initializes the CacheService with underlying cache storages."""
         self._services = services
@@ -37,13 +39,13 @@ class CacheService:
 
     def load_admins_from_db(self, admin_ids: list[int]) -> None:
         """Loads admin IDs from the database into the cache, clearing existing ones."""
-        self._admin_ids_cache.clear() # Clear before loading to ensure consistency
+        self._admin_ids_cache.clear()  # Clear before loading to ensure consistency
         self._admin_ids_cache.update(admin_ids)
         logger.info("Admin cache populated with %d IDs.", len(admin_ids))
 
     def get_all_admin_ids(self) -> set[int]:
         """Returns a copy of all admin IDs from the cache."""
-        return self._admin_ids_cache.copy() # Return a copy to prevent external modification
+        return self._admin_ids_cache.copy()  # Return a copy to prevent external modification
 
     def get_admin_count(self) -> int:
         """Returns the count of admin IDs in the cache."""
@@ -66,13 +68,13 @@ class CacheService:
 
     def load_subscribers_from_db(self, subscriber_ids: list[int]) -> None:
         """Loads subscriber IDs from the database into the cache, clearing existing ones."""
-        self._subscribed_users_cache.clear() # Clear before loading
+        self._subscribed_users_cache.clear()  # Clear before loading
         self._subscribed_users_cache.update(subscriber_ids)
         logger.info("Subscriber cache populated with %d IDs.", len(subscriber_ids))
 
     def get_all_subscriber_ids(self) -> set[int]:
         """Returns a copy of all subscriber IDs from the cache."""
-        return self._subscribed_users_cache.copy() # Return a copy
+        return self._subscribed_users_cache.copy()  # Return a copy
 
     # --- Methods for user settings ---
     def get_user_settings(self, telegram_id: int) -> UserSettings | None:
@@ -95,10 +97,9 @@ class CacheService:
         else:
             logger.debug("Attempted to remove user settings for %s, but user was not in cache.", telegram_id)
 
-
     def load_all_user_settings(self, all_settings: list[UserSettings]) -> None:
         """Loads all user settings from a list into the cache, clearing existing ones."""
-        self._user_settings_cache.clear() # Clear before loading
+        self._user_settings_cache.clear()  # Clear before loading
         for setting in all_settings:
             if not isinstance(setting, UserSettings):
                 logger.warning("Skipping non-UserSettings object during bulk load: %s", type(setting))

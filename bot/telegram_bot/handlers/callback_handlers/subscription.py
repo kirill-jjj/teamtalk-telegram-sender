@@ -38,7 +38,7 @@ async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    _callback_data: SettingsCallback | None = None, # Prefixed
+    _callback_data: SettingsCallback | None = None,  # Prefixed
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext

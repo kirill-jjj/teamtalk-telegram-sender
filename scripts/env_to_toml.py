@@ -209,27 +209,35 @@ def main() -> None:
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--config", type=Path, metavar="<path_to_env_file>",
-        help="Path to a specific input .env file to convert."
+        "--config", type=Path, metavar="<path_to_env_file>", help="Path to a specific input .env file to convert."
     )
     group.add_argument(
-        "--all", action="store_true",
-        help="Convert all *.env files found in the project root and subdirectories (respects --exclude-dirs)."
+        "--all",
+        action="store_true",
+        help="Convert all *.env files found in the project root and subdirectories (respects --exclude-dirs).",
     )
     parser.add_argument(
-        "--output", type=Path, metavar="<path_to_toml_file>",
+        "--output",
+        type=Path,
+        metavar="<path_to_toml_file>",
         help="Path for the output .toml file (only applicable if --config is specified).\n"
-             "Defaults to the input filename with .toml extension in the same directory, "
-             "or 'config.toml' if input is '.env'."
+        "Defaults to the input filename with .toml extension in the same directory, "
+        "or 'config.toml' if input is '.env'.",
     )
     parser.add_argument(
-        "--exclude-dirs", type=str, default=",".join(DEFAULT_EXCLUDE_DIRS),
-        help=(f"Comma-separated list of directory names to exclude when using --all.\n"
-              f"Default: {','.join(DEFAULT_EXCLUDE_DIRS)}")
+        "--exclude-dirs",
+        type=str,
+        default=",".join(DEFAULT_EXCLUDE_DIRS),
+        help=(
+            f"Comma-separated list of directory names to exclude when using --all.\n"
+            f"Default: {','.join(DEFAULT_EXCLUDE_DIRS)}"
+        ),
     )
     parser.add_argument(
-        "--project-root", type=Path, default=Path.cwd(),
-        help="Project root directory for --all scan. Default: current working directory."
+        "--project-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Project root directory for --all scan. Default: current working directory.",
     )
 
     args = parser.parse_args()

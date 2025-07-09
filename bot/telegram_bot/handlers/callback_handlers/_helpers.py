@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def process_setting_update( # Added return type hint
+async def process_setting_update(  # Added return type hint
     callback_query: CallbackQuery,
     session: AsyncSession,
     user_settings: UserSettings,
@@ -29,7 +29,7 @@ async def process_setting_update( # Added return type hint
     new_text: str,
     new_markup: InlineKeyboardMarkup,
     services: "Services",
-) -> None: # Added return type hint
+) -> None:  # Added return type hint
     _ = translator.gettext
     if not callback_query.message or not callback_query.from_user:
         logger.warning("process_setting_update: Callback query is missing message or from_user.")
@@ -79,7 +79,7 @@ async def safe_edit_text(
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     parse_mode: str | None = None,
-    *, # Make disable_web_page_preview keyword-only
+    *,  # Make disable_web_page_preview keyword-only
     disable_web_page_preview: bool | None = None,
     logger_instance: logging.Logger | None = None,
     log_context: str = "",
@@ -97,15 +97,17 @@ async def safe_edit_text(
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log) # Removed 'e'
+            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log)  # Removed 'e'
             return False
         current_logger.debug(
             "Message not modified for %s (chat_id %s), skipping edit. Error: %s",
-            log_context, message_to_edit.chat.id, e # Kept 'e' for debug
+            log_context,
+            message_to_edit.chat.id,
+            e,  # Kept 'e' for debug
         )
         return True  # Ensure True is returned for "not modified"
-    except TelegramAPIError: # Removed 'as e'
-        current_logger.exception("TelegramAPIError editing message%s.", context_for_log) # Removed 'e'
+    except TelegramAPIError:  # Removed 'as e'
+        current_logger.exception("TelegramAPIError editing message%s.", context_for_log)  # Removed 'e'
         return False
     else:
         return True
@@ -119,7 +121,9 @@ def ensure_message_context(func: Callable) -> Callable[[CallbackQuery, Any, Any]
 
     @functools.wraps(func)
     async def wrapper(
-        query: CallbackQuery, *args: Any, **kwargs: Any  # noqa: ANN401
+        query: CallbackQuery,
+        *args: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Any | None:  # noqa: ANN401
         # I18nMiddleware is expected to inject 'translator' into kwargs
         translator = kwargs.get("translator")

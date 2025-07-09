@@ -23,12 +23,12 @@ async def add_admin_full(
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
     try:
-        if await crud.add_admin(session, telegram_id): # crud.add_admin handles its own commit
+        if await crud.add_admin(session, telegram_id):  # crud.add_admin handles its own commit
             logger.info("Admin %s added to DB.", telegram_id)
             services.cache.add_admin(telegram_id)
             logger.info("Admin %s added to cache.", telegram_id)
 
-            if user_settings: # Should always have user_settings if adding admin
+            if user_settings:  # Should always have user_settings if adding admin
                 commands_updated = await user_service.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services
                 )
@@ -45,7 +45,7 @@ async def add_admin_full(
         # crud.add_admin should manage its own session rollback on error.
         return False
     else:
-        return False # This path is reached if crud.add_admin returns False
+        return False  # This path is reached if crud.add_admin returns False
 
 
 async def remove_admin_full(
@@ -56,12 +56,12 @@ async def remove_admin_full(
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
     try:
-        if await crud.remove_admin_db(session, telegram_id): # crud.remove_admin_db handles its own commit
+        if await crud.remove_admin_db(session, telegram_id):  # crud.remove_admin_db handles its own commit
             logger.info("Admin %s removed from DB.", telegram_id)
             services.cache.remove_admin(telegram_id)
             logger.info("Admin %s removed from cache.", telegram_id)
 
-            if user_settings: # Should always have user_settings
+            if user_settings:  # Should always have user_settings
                 commands_updated = await user_service.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services
                 )
@@ -78,4 +78,4 @@ async def remove_admin_full(
         # crud.remove_admin_db should manage its own session rollback on error.
         return False
     else:
-        return False # This path is reached if crud.remove_admin_db returns False
+        return False  # This path is reached if crud.remove_admin_db returns False

@@ -206,7 +206,7 @@ async def send_join_leave_notification_logic(
         recipients=recipients,
         event_user=tt_user,
         tt_instance=tt_instance,
-        online_users_cache=online_users_cache_for_instance, # Renamed for clarity in service
+        online_users_cache=online_users_cache_for_instance,  # Renamed for clarity in service
         services=services,
     )
 

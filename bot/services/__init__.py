@@ -30,13 +30,13 @@ __all__ = [
     "deeplink_service",
     # User service functions
     "delete_full_user_profile",
-    "execute_deeplink_action", # Deeplink service functions
-    "filter_recipients_for_noon", # Notification service functions
-    "is_linked_user_online", # Notification service functions
-    "is_user_subject_to_noon_check", # Notification service functions
+    "execute_deeplink_action",  # Deeplink service functions
+    "filter_recipients_for_noon",  # Notification service functions
+    "is_linked_user_online",  # Notification service functions
+    "is_user_subject_to_noon_check",  # Notification service functions
     "notification_service",
-    "process_subscribe_deeplink", # Deeplink service functions
-    "process_unsubscribe_deeplink", # Deeplink service functions
+    "process_subscribe_deeplink",  # Deeplink service functions
+    "process_unsubscribe_deeplink",  # Deeplink service functions
     "user_service",
     # "get_user_settings_from_db_or_default",
     # "update_user_settings_in_db",

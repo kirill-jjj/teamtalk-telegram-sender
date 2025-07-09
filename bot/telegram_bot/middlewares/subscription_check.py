@@ -41,8 +41,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         services = data.get("services")
         if not services:
             logger.critical(
-                "SubscriptionCheckMiddleware: 'services' not found in data. "
-                "Cannot perform subscription check."
+                "SubscriptionCheckMiddleware: 'services' not found in data. Cannot perform subscription check."
             )
             # This situation should ideally not happen.
             # Depending on policy, might want to inform user or just block.

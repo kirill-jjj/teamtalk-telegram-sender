@@ -94,7 +94,7 @@ def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "S
         logger.debug(
             "Message to %s will be silent: linked user is online and NOON is subject to check "
             "(via notification_service).",
-            chat_id
+            chat_id,
         )
         return True
 
@@ -179,7 +179,6 @@ async def send_telegram_messages_to_list(
             send_telegram_message_individual(
                 bot_instance=bot_instance_to_use,
                 chat_id=chat_id,
-                language=language_code,
                 reply_markup=current_reply_markup,
                 tt_user_is_online=individual_tt_user_is_online,
                 services=services,

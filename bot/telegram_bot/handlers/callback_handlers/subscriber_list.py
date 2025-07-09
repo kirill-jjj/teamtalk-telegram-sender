@@ -72,7 +72,5 @@ async def handle_subscriber_list_actions(
             query, session, services.bot_event, translator, page=requested_page
         )  # Use services.bot_event
     else:
-        logger.warning(
-            "Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id
-        )
+        logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

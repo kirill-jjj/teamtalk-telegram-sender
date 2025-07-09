@@ -81,9 +81,7 @@ async def set_telegram_commands(services: "Services") -> None:
                     "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
                 )
             except TelegramAPIError:
-                logger.exception(
-                    "Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code
-                )
+                logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
 
 
 async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int) -> None:

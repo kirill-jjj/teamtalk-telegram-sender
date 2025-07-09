@@ -34,7 +34,7 @@ async def process_subscribe_deeplink(
         return _("Your Telegram account is banned from using this service.")
 
     tt_username_from_payload = payload
-    if not tt_username_from_payload: # Payload (TT username) is essential for subscription
+    if not tt_username_from_payload:  # Payload (TT username) is essential for subscription
         logger.error(
             "Deeplink for '%s' missing TeamTalk username in payload for user %s.",
             DeeplinkAction.SUBSCRIBE,
@@ -60,7 +60,8 @@ async def process_subscribe_deeplink(
     if not subscription_processed:
         logger.error(
             "Failed to process subscription for user %s with TT username '%s' via user_service.",
-            telegram_id, tt_username_from_payload
+            telegram_id,
+            tt_username_from_payload,
         )
         # The user_service.process_new_subscription should log specifics.
         # Provide a generic error to the user.
@@ -70,7 +71,7 @@ async def process_subscribe_deeplink(
     # This check is done after successful subscription processing.
     admin_record = await session.get(crud.Admin, telegram_id)
     if admin_record:
-        if not services.cache.is_admin(telegram_id): # Check before adding to avoid redundant logs if already cached
+        if not services.cache.is_admin(telegram_id):  # Check before adding to avoid redundant logs if already cached
             services.cache.add_admin(telegram_id)
             logger.info("User %s (subscriber) is also an admin, added to admin_ids_cache.", telegram_id)
         else:
@@ -78,7 +79,8 @@ async def process_subscribe_deeplink(
 
     logger.info(
         "User %s successfully subscribed/settings updated with TT username '%s' via deeplink.",
-        telegram_id, tt_username_from_payload
+        telegram_id,
+        tt_username_from_payload,
     )
     return _("You have successfully subscribed to notifications.")
 
@@ -141,7 +143,7 @@ async def execute_deeplink_action(
                         "Deeplink action %s not explicitly handled in execute_deeplink_action.", action_enum_member
                     )
                     return_message = _("Invalid deeplink action.")
-            except (SQLAlchemyError, ValueError): # Removed 'as e_handler'
+            except (SQLAlchemyError, ValueError):  # Removed 'as e_handler'
                 logger.exception(
                     "Handler error for deeplink action '%s', token %s.",
                     action_enum_member,
