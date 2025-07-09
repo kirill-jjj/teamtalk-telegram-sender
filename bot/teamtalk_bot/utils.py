@@ -15,6 +15,7 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
 
+from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
 
 # Removed: from bot.core.utils import get_effective_server_name, get_tt_user_display_name
@@ -29,8 +30,6 @@ ttstr = sdk.ttstr
 
 # --- Functions moved from bot.core.utils ---
 
-
-from bot.config import Settings
 
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,

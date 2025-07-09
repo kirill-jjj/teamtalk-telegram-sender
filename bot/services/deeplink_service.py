@@ -3,7 +3,7 @@
 from collections.abc import Callable
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -104,12 +104,36 @@ async def process_unsubscribe_deeplink(
     return _("You were not subscribed to notifications.")
 
 
+from collections.abc import Awaitable # Add Awaitable
+
 # Define the expected signature for handler functions
 # This is a simplified version; you might need to use a Protocol or more complex Callable
 # if the signatures vary significantly and you want stricter checking for all.
-DeeplinkHandlerType = Callable[..., str]  # Args can vary, returns str
+SubscribeDeeplinkHandlerType = Callable[
+    [AsyncSession, int, gettext.GNUTranslations, str | None, UserSettings, "Services"],
+    Awaitable[str],
+]
+UnsubscribeDeeplinkHandlerType = Callable[
+    [AsyncSession, int, gettext.GNUTranslations, "Services"], Awaitable[str]
+]
 
-DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandlerType] = {
+# Using a Union for the handler type to accommodate different signatures
+DeeplinkHandler = SubscribeDeeplinkHandlerType | UnsubscribeDeeplinkHandlerType
+
+
+def is_subscribe_handler(
+    handler: DeeplinkHandler, action: DeeplinkAction
+) -> TypeGuard[SubscribeDeeplinkHandlerType]:
+    return action == DeeplinkAction.SUBSCRIBE
+
+
+def is_unsubscribe_handler(
+    handler: DeeplinkHandler, action: DeeplinkAction
+) -> TypeGuard[UnsubscribeDeeplinkHandlerType]:
+    return action == DeeplinkAction.UNSUBSCRIBE
+
+
+DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandler] = {
     DeeplinkAction.SUBSCRIBE: process_subscribe_deeplink,
     DeeplinkAction.UNSUBSCRIBE: process_unsubscribe_deeplink,
 }
@@ -138,13 +162,16 @@ async def execute_deeplink_action(
             return_message = _("Invalid deeplink action.")
         else:
             try:
-                if action_enum_member == DeeplinkAction.UNSUBSCRIBE:
+                if is_unsubscribe_handler(handler, action_enum_member):
                     return_message = await handler(session, telegram_id, translator, services=services)
-                elif action_enum_member == DeeplinkAction.SUBSCRIBE:
+                elif is_subscribe_handler(handler, action_enum_member):
                     return_message = await handler(
                         session, telegram_id, translator, deeplink_obj.payload, user_settings, services=services
                     )
                 else:
+                    # This case should ideally not be reached if DEEPLINK_ACTION_HANDLERS is exhaustive
+                    # and action_enum_member is a valid DeeplinkAction.
+                    # However, it's good for robustness.
                     logger.error(
                         "Deeplink action %s not explicitly handled in execute_deeplink_action.", action_enum_member
                     )

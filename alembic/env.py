@@ -1,15 +1,15 @@
 """Alembic environment configuration script."""
 
-from collections.abc import Iterable # Import Iterable
+from collections.abc import Iterable  # Import Iterable
 from logging.config import fileConfig
 import os  # For path operations
 from pathlib import Path  # Added for Path operations
 
 from alembic import context
-from alembic.runtime.migration import MigrationContext
 from alembic.operations.ops import MigrationScript  # Corrected import for MigrationScript
+from alembic.runtime.migration import MigrationContext
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection # Import Connection
+from sqlalchemy.engine import Connection  # Import Connection
 from sqlalchemy.ext.asyncio import create_async_engine  # Moved here for PLC0415
 from sqlmodel import SQLModel
 
@@ -68,7 +68,7 @@ def get_db_url() -> str:
     print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}")  # noqa: T201
 
     try:
-        settings = Settings.from_toml(str(config_file)) # Ensure it's a string for mypy
+        settings = Settings.from_toml(str(config_file))  # Ensure it's a string for mypy
     except FileNotFoundError:
         print(f"ERROR [alembic.env] Configuration file '{config_file}' not found.")  # noqa: T201
         raise

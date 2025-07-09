@@ -8,8 +8,8 @@ import gettext
 import html
 from typing import TYPE_CHECKING, Any  # Added TYPE_CHECKING
 
+from aiogram.filters.callback_data import CallbackData  # Import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.filters.callback_data import CallbackData # Import CallbackData
 
 # Removed unused import: from collections.abc import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder

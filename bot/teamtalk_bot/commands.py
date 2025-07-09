@@ -65,9 +65,10 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
         services_from_kwargs = kwargs.get("services")
         if not isinstance(services_from_kwargs, Services):
             # This check ensures services_from_kwargs is indeed a Services instance or raises error
-            raise ValueError("Services not found or of incorrect type in kwargs for is_tt_admin.") # noqa: TRY003
+            # Define the error message as a constant or a local variable
+            error_msg = "Services not found or of incorrect type in kwargs for is_tt_admin."
+            raise TypeError(error_msg)
         services: Services = services_from_kwargs
-
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, gettext.GNUTranslations):

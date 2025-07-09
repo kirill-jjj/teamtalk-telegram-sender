@@ -114,7 +114,7 @@ async def safe_edit_text(
 
 
 def ensure_message_context(
-    func: Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]
+    func: Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]],
 ) -> Callable[[CallbackQuery, Any, Any], Awaitable[Any | None]]:
     """Decorator to ensure that a callback query handler has a message context.
 
@@ -124,7 +124,7 @@ def ensure_message_context(
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> Any | None:  # noqa: ANN401
         # I18nMiddleware is expected to inject 'translator' into kwargs

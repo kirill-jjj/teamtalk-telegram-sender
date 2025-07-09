@@ -1,5 +1,6 @@
 """Database engine and session factory setup."""
 
+from collections.abc import Callable  # Import Callable
 import logging
 from pathlib import Path  # Added for Path operations
 from typing import TypeAlias  # For sessionmaker type hint
@@ -12,8 +13,6 @@ from bot import models  # Important for SQLModel to discover models
 from bot.config import Settings
 
 logger = logging.getLogger(__name__)
-
-from collections.abc import Callable # Import Callable
 
 # Define a type alias for the specific sessionmaker we're creating
 # It's a sessionmaker that produces AsyncSession instances

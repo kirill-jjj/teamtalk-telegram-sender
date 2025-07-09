@@ -205,12 +205,14 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
     """
     answered_with_alert = False
     if isinstance(target, CallbackQuery) and target.message:  # Handles CallbackQuery
-        if hasattr(target.message, "edit_text"): # Check if message is not InaccessibleMessage
+        if hasattr(target.message, "edit_text"):  # Check if message is not InaccessibleMessage
             try:
                 await target.message.edit_text(text=text, reply_markup=reply_markup, **kwargs)
             except TelegramBadRequest as e:
                 if "message is not modified" in str(e).lower():
-                    logger.debug("Message not modified for chat_id %s, skipping edit. Error: %s", target.message.chat.id, e)
+                    logger.debug(
+                        "Message not modified for chat_id %s, skipping edit. Error: %s", target.message.chat.id, e
+                    )
                     # Try to answer the callback query to remove the "loading" state
                     try:
                         await target.answer()
@@ -232,7 +234,6 @@ async def send_or_edit_paginated_list(  # noqa: PLR0912, PLR0915
                     logger.warning("Failed to answer CbQ with alert after generic edit error: %s", answer_e)
         else:
             logger.warning("Cannot edit InaccessibleMessage in chat_id %s.", target.message.chat.id)
-
 
     elif isinstance(target, Message) and bot:  # Handles Message
         if target:  # Ensure target (Message object) is not None
