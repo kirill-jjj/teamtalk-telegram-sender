@@ -497,7 +497,8 @@ async def _handle_admin_view_mute_list_action(
 
     # 4. Call display_paginated_list
     await display_paginated_list(
-        callback_query=query,
+        target=query,  # Changed to target
+        bot=query.bot,  # Added bot instance
         translator=translator,
         items=all_muted_usernames,
         page=page_num,  # page_num is the requested page for the mute list
@@ -598,7 +599,8 @@ async def _display_linkable_tt_accounts_page(
         )
 
     await display_paginated_list(
-        callback_query=query,
+        target=query,  # Changed to target
+        bot=query.bot,  # Added bot instance
         translator=translator,
         items=all_server_accounts,
         page=linkable_accounts_page_to_show,

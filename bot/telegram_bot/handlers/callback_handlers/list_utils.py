@@ -100,49 +100,17 @@ async def _show_subscriber_list_page(
     """Fetches all subscribers and displays a paginated list."""
     _ = translator.gettext
 
-    if not isinstance(target, CallbackQuery):
-        # display_paginated_list expects a CallbackQuery to edit its message.
-        # If target is Message, it implies a command was used to show the list initially.
-        # This scenario needs a proper way to send a new message that can then be paginated.
-        # For now, we'll log a warning and attempt to proceed if it's a Message,
-        # but this might not work as display_paginated_list expects callback_query.message.
-        # A better approach would be for command handlers to send an initial message
-        # and then pass a "dummy" CallbackQuery or adapt display_paginated_list.
-        # This refactoring focuses on CallbackQuery-driven pagination updates.
-        logger.warning(
-            "_show_subscriber_list_page called with Message target. "
-            "display_paginated_list primarily supports CallbackQuery for message editing."
-        )
-        # If we must support Message target, we'd need to send a new message here and store it
-        # or have display_paginated_list handle initial message sending.
-        # This is outside the immediate scope of DRY refactoring of pagination logic itself.
-        # For now, if it's a Message, we can't use display_paginated_list directly.
-        # We could revert to send_or_edit_paginated_list for the initial send,
-        # but subsequent pagination callbacks would then use the new system.
-        # This part of the logic might need further review based on how initial lists are shown.
-        # Let's assume for this refactor that `target` will be a CallbackQuery for pagination.
-        # If a command calls this, it should first send a placeholder and then simulate a CallbackQuery
-        # or this function needs to be split for initial send vs. update.
-        # For now, this refactor assumes `target` is a `CallbackQuery` when pagination is involved.
-        # The original function `send_or_edit_paginated_list` could handle `Message` for initial send.
-        # Let's stick to the plan: `display_paginated_list` is for callback query updates.
+    # The isinstance(target, CallbackQuery) check is removed,
+    # as display_paginated_list now handles both Message and CallbackQuery targets.
 
-        # If the entry point is a command sending a Message, that command should send the
-        # first page itself, perhaps using a simplified version of this logic or calling
-        # display_paginated_list with a specially crafted initial CallbackQuery-like object if feasible.
-        # This is a larger architectural consideration.
-        # For now, if target is not CallbackQuery, we cannot proceed with display_paginated_list.
-        # This function is mostly called from callback handlers elsewhere, so target should be CallbackQuery.
-        await target.answer(_("This view can only be updated via buttons."), show_alert=True)  # type: ignore
-        return
+    all_subscribers_info = await _get_all_subscribers_info(session, bot)
 
-    all_subscribers_info = await _get_all_subscribers_info(session, bot)  # Renamed function
-
-    # The `bot` object might not be directly needed by `display_paginated_list`
+    # The `bot` object passed to this function will be relayed to display_paginated_list.
     # if `callback_query.bot` is used internally by `safe_edit_text`.
     # However, `create_subscriber_list_keyboard` might need it or other specific args.
     await display_paginated_list(
-        callback_query=target,  # target is now confirmed/assumed to be CallbackQuery
+        target=target,  # Pass target
+        bot=bot,  # Pass bot instance
         translator=translator,
         items=all_subscribers_info,
         page=page,

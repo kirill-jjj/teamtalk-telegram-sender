@@ -5,7 +5,8 @@ import gettext
 import logging
 from typing import Any, TypeVar
 
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest  # Added imports
+from aiogram import Bot  # Added Bot import
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from bot.constants import USERS_PER_PAGE
@@ -40,7 +41,8 @@ def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
 
 
 async def display_paginated_list(
-    callback_query: CallbackQuery,
+    target: CallbackQuery | Message,  # Changed parameter
+    bot: Bot,  # Added bot parameter
     translator: gettext.GNUTranslations,
     items: list[Any],
     page: int,
@@ -51,10 +53,13 @@ async def display_paginated_list(
     page_size: int = USERS_PER_PAGE,
     server_host_for_display: str | None = None,
 ) -> None:
-    """Displays a paginated list in a Telegram message and updates it.
+    """Displays or updates a paginated list in a Telegram message.
+
+    Can send a new message or edit an existing one based on the target type.
 
     Args:
-        callback_query: The Aiogram CallbackQuery that triggered this action.
+        target: The Aiogram CallbackQuery (to edit message) or Message (to send new message / get chat_id).
+        bot: The Aiogram Bot instance.
         translator: The gettext GNUTranslations object for localization.
         items: The full list of items to display.
         page: The current page number (0-indexed).
@@ -82,17 +87,6 @@ async def display_paginated_list(
     message_parts.append(f"\n{page_indicator_text}")
     final_message_text = "\n".join(message_parts)
 
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "Cannot display paginated list for '%s', callback_query.message is None or inaccessible. User: %s",
-            title_text,
-            callback_query.from_user.id if callback_query.from_user else "Unknown",
-        )
-        await callback_query.answer(
-            _("Could not update the message view. Please try navigating again."), show_alert=True
-        )
-        return
-
     keyboard_markup = await keyboard_factory(
         translator,
         page_items=page_slice,
@@ -101,14 +95,64 @@ async def display_paginated_list(
         **keyboard_factory_kwargs,
     )
 
-    await safe_edit_text(
-        message_to_edit=callback_query.message,
-        text=final_message_text,
-        reply_markup=keyboard_markup,
-        parse_mode="HTML",
-        logger_instance=logger,
-        log_context=f"display_paginated_list for {title_text}",
-    )
+    if isinstance(target, CallbackQuery) and isinstance(target.message, Message):
+        # Edit existing message from callback query
+        await safe_edit_text(
+            message_to_edit=target.message,
+            text=final_message_text,
+            reply_markup=keyboard_markup,
+            parse_mode="HTML",
+            logger_instance=logger,
+            log_context=f"display_paginated_list (edit) for {title_text}",
+        )
+        try:
+            await target.answer()  # Acknowledge callback if not already done by safe_edit_text
+        except TelegramAPIError:  # Can happen if already answered or expired
+            logger.debug("Failed to answer callback, possibly already answered or expired for %s", title_text)
+
+    elif isinstance(target, Message):
+        # Send new message
+        try:
+            await bot.send_message(
+                chat_id=target.chat.id,
+                text=final_message_text,
+                reply_markup=keyboard_markup,
+                parse_mode="HTML",
+            )
+        except TelegramAPIError:
+            logger.exception(
+                "TelegramAPIError sending new paginated list for '%s' to chat %s", title_text, target.chat.id
+            )
+    elif isinstance(target, CallbackQuery) and target.message is None:
+        # This case might occur if the original message for a callback was deleted or is otherwise unavailable.
+        # We can try to send a new message to the chat from which the callback originated.
+        # The chat_id should be available from `target.chat_instance` or `target.from_user.id` (if private chat).
+        # However, `target.chat_instance` is for inline messages.
+        # A more robust way for callbacks without a message might be to use `target.from_user.id` as chat_id.
+        # This is an edge case. For now, log and potentially try to answer the callback.
+        logger.warning(
+            "CallbackQuery target for '%s' has no associated message. User: %s. Attempting to answer callback only.",
+            title_text,
+            target.from_user.id,
+        )
+        try:
+            await target.answer(
+                _("Could not display the list as the original message is unavailable. Please try the command again."),
+                show_alert=True,
+            )
+        except TelegramAPIError:
+            logger.exception("Failed to answer callback for missing message scenario for %s", title_text)
+    else:
+        logger.error(
+            "Invalid target type or state for display_paginated_list for '%s'. Target type: %s",
+            title_text,
+            type(target).__name__,
+        )
+        if isinstance(target, CallbackQuery):
+            try:
+                await target.answer(_("Error displaying list."), show_alert=True)
+            except TelegramAPIError:
+                logger.exception("Failed to answer callback for invalid target type for %s", title_text)
 
 
 async def safe_edit_text(

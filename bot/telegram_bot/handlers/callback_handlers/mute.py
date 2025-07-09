@@ -101,7 +101,8 @@ async def _display_internal_user_list(
         return
 
     await display_paginated_list(
-        callback_query=callback_query,
+        target=callback_query,  # Changed to target
+        bot=callback_query.bot,  # Added bot instance
         translator=translator,
         items=sorted_items,
         page=page,
@@ -148,8 +149,9 @@ async def _display_all_server_accounts_list(
         all_accounts_tt,
         key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
     )
-    await display_paginated_list(  # Updated to display_paginated_list
-        callback_query=callback_query,
+    await display_paginated_list(
+        target=callback_query,  # Changed to target
+        bot=callback_query.bot,  # Added bot instance
         translator=translator,
         items=sorted_items,
         page=page,
