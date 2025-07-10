@@ -53,7 +53,7 @@ def route_event_to_connection(
         if not tt_instance and hasattr(event_primary_obj, "teamtalk"):
             tt_instance = getattr(event_primary_obj, "teamtalk", None)
 
-        # Special handling for on_my_connection_lost (SIM102 fix incorporated)
+        # Special handling for on_my_connection_lost
         if (
             not tt_instance
             and handler_method_on_event_handler_class.__name__ == "on_pytalk_my_connection_lost"
@@ -70,35 +70,93 @@ def route_event_to_connection(
                 )
             return
 
+        method_name_on_connection = handler_method_on_event_handler_class.__name__.replace("on_pytalk_", "on_")
+        handler_name_for_logs = handler_method_on_event_handler_class.__name__
+
         if not tt_instance:
+            if handler_name_for_logs in ("on_pytalk_user_account_new", "on_pytalk_user_account_remove"):
+                await _broadcast_event_to_all_connections(
+                    self_event_handler,
+                    event_primary_obj,
+                    method_name_on_connection,
+                    handler_name_for_logs,
+                    *args,
+                    **kwargs
+                )
+                return
             logger.error(
-                "Decorator: Could not determine TeamTalk instance for event_obj type '%s' in handler '%s'.",
+                "Decorator: No TT instance for evt type '%s' in '%s'. Not routed.",
                 type(event_primary_obj).__name__,
-                handler_method_on_event_handler_class.__name__,
+                handler_name_for_logs,
             )
             return
 
         connection = self_event_handler._get_connection_by_instance(tt_instance)
         if connection:
-            method_name_on_connection = handler_method_on_event_handler_class.__name__.replace("on_pytalk_", "on_")
             actual_connection_method = getattr(connection, method_name_on_connection, None)
-
             if actual_connection_method and callable(actual_connection_method):
                 await actual_connection_method(event_primary_obj, *args, **kwargs)
             else:
                 logger.error(
-                    "Decorator: Method '%s' not found or not callable on TeamTalkConnection for Pytalk event '%s'.",
+                    "Decorator: Method '%s' not found/callable on TTConnection for Pytalk evt '%s'.",
                     method_name_on_connection,
-                    handler_method_on_event_handler_class.__name__,
+                    handler_name_for_logs,
                 )
         else:
             logger.warning(
-                "Decorator: No active TeamTalkConnection found for instance %s in Pytalk event '%s'.",
+                "Decorator: No active TTConnection for instance %s in Pytalk evt '%s'.",
                 tt_instance,
-                handler_method_on_event_handler_class.__name__,
+                handler_name_for_logs,
             )
-
     return wrapper
+
+
+async def _broadcast_event_to_all_connections(
+    self_event_handler: "TeamTalkEventHandler",
+    event_primary_obj: Any,  # noqa: ANN401
+    method_name_on_connection: str,
+    handler_name_for_logs: str,
+    *args: Any,  # noqa: ANN401
+    **kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Helper to broadcast an event to all active TeamTalkConnection instances."""
+    logger.info(
+        "Broadcasting: Evt '%s' (type: %s) to all conns (no specific instance).",
+        handler_name_for_logs,
+        type(event_primary_obj).__name__
+    )
+    broadcast_count = 0
+    if not hasattr(self_event_handler, "services") or not hasattr(self_event_handler.services, "connections"):
+        logger.error("Broadcast: services.connections unavailable for '%s'.", handler_name_for_logs)
+        return
+
+    for conn_key, connection_obj in self_event_handler.services.connections.items():
+        if not isinstance(connection_obj, TeamTalkConnection):
+            logger.error("Broadcast: Invalid obj for key '%s' (event: '%s'). Skip.", conn_key, handler_name_for_logs)
+            continue
+        actual_connection_method = getattr(connection_obj, method_name_on_connection, None)
+        if actual_connection_method and callable(actual_connection_method):
+            try:
+                await actual_connection_method(event_primary_obj, *args, **kwargs)
+                broadcast_count += 1
+            except Exception:
+                logger.exception(
+                    "Broadcast: Error during call of method '%s' to conn for key '%s' for evt '%s'.",
+                    method_name_on_connection,
+                    conn_key,
+                    handler_name_for_logs,
+                )
+        else:
+            logger.error(
+                "Broadcast: Method '%s' not on TTConn for key '%s', evt '%s'.",
+                method_name_on_connection,
+                conn_key,
+                handler_name_for_logs,
+            )
+    if broadcast_count > 0:
+        logger.info("Broadcast: Event '%s' sent to %d connections.", handler_name_for_logs, broadcast_count)
+    else:
+        logger.warning("Broadcast: Evt '%s' for broadcast, not sent to any conns.", handler_name_for_logs)
 
 
 class TeamTalkEventHandler:
@@ -214,30 +272,12 @@ class TeamTalkEventHandler:
         """Routes a user update event to the appropriate connection via decorator."""
         # Logic moved to decorator and TeamTalkConnection.on_user_update
 
+    @route_event_to_connection
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
-        """Routes a new user account event, potentially to all connections."""
-        tt_instance = getattr(account, "teamtalk_instance", None)
-        if tt_instance:
-            connection = self._get_connection_by_instance(tt_instance)
-            if connection:
-                await connection.on_user_account_new(account)
-            else:
-                logger.error("AccountNew: No connection for instance %s", tt_instance)
-        else:
-            logger.warning("AccountNew: No instance on account. Broadcasting.")
-            for _conn_key, conn_val in self.services.connections.items():  # Use items()
-                await conn_val.on_user_account_new(account)
+        """Routes a new user account event. Specific instance or broadcast handled by decorator."""
+        # Logic moved to decorator route_event_to_connection
 
+    @route_event_to_connection
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
-        """Routes a removed user account event, potentially to all connections."""
-        tt_instance = getattr(account, "teamtalk_instance", None)
-        if tt_instance:
-            connection = self._get_connection_by_instance(tt_instance)
-            if connection:
-                await connection.on_user_account_remove(account)
-            else:
-                logger.error("AccountRemove: No connection for instance %s", tt_instance)
-        else:
-            logger.warning("AccountRemove: No instance on account. Broadcasting.")
-            for _conn_key, conn_val in self.services.connections.items():  # Use items()
-                await conn_val.on_user_account_remove(account)
+        """Routes a removed user account event. Specific instance or broadcast handled by decorator."""
+        # Logic moved to decorator route_event_to_connection

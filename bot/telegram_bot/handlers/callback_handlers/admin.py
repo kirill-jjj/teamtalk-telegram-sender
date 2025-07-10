@@ -138,18 +138,18 @@ async def process_user_action_selection(
     _ = translator.gettext
     # Decorator ensures callback_query.message exists.
 
-    # Admin check is now handled by AdminCheckMiddleware applied to the admin_actions_router.
+    # Note: AdminCheckMiddleware is NOT on this specific callback router (admin_actions_router).
+    # This task focuses on the TT connection check redundancy.
 
-    # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection and instance are valid
-    if not tt_connection or not tt_connection.instance:
-        # This check is somewhat redundant if TeamTalkConnectionCheckMiddleware is effective
-        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
-        return
+    # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection is valid and ready.
+    # The manual check 'if not tt_connection or not tt_connection.instance:' is removed.
+    # tt_connection is type hinted as TeamTalkConnection | None from ActiveTeamTalkConnectionMiddleware.
+    # TeamTalkConnectionCheckMiddleware should prevent execution if it's None or not ready.
 
-    tt_instance = tt_connection.instance
-    server_host_for_display = tt_connection.server_info.host
+    tt_instance = tt_connection.instance # type: ignore[union-attr] # Middleware ensures tt_connection is not None here
+    server_host_for_display = tt_connection.server_info.host # type: ignore[union-attr]
 
-    user_to_act_on = tt_instance.get_user(callback_data.user_id)
+    user_to_act_on = tt_instance.get_user(callback_data.user_id) # type: ignore[union-attr] # Middleware ensures tt_instance is not None
     if not user_to_act_on:
         await callback_query.answer(
             _("User not found on server {server_host} anymore.").format(server_host=server_host_for_display),
