@@ -53,14 +53,14 @@ async def cq_show_subscriptions_menu(
         return
 
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_builder = await create_subscription_settings_keyboard(
+    subscription_settings_markup = await create_subscription_settings_keyboard(  # Renamed variable
         translator, current_notification_setting
     )
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,  # Now known to be Message
+        message_to_edit=callback_query.message,
         text=_("Subscription Settings"),
-        reply_markup=subscription_settings_builder.as_markup(),
+        reply_markup=subscription_settings_markup,  # Use directly
         logger_instance=logger,
         log_context="cq_show_subscriptions_menu",
     )
@@ -114,7 +114,7 @@ async def cq_set_subscription_setting(
     # Prepare text and markup for UI refresh.
     # new_setting_enum (which is user_settings.notification_settings after update_logic)
     # reflects the new state for UI generation. This happens before process_setting_update commits.
-    updated_builder = await create_subscription_settings_keyboard(translator, new_setting_enum)
+    updated_markup = await create_subscription_settings_keyboard(translator, new_setting_enum)  # Renamed
     menu_text = _("Subscription Settings")
 
     await process_setting_update(
@@ -126,6 +126,6 @@ async def cq_set_subscription_setting(
         revert_action=revert_logic,
         success_toast_text=success_toast_text,
         new_text=menu_text,
-        new_markup=updated_builder.as_markup(),
+        new_markup=updated_markup,  # Use directly
         services=services,  # Pass services
     )

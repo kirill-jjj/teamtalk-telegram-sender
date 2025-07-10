@@ -266,7 +266,7 @@ async def _handle_admin_set_language_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(message_text, reply_markup=lang_keyboard)
+    await query.message.edit_text(message_text, reply_markup=lang_keyboard)  # lang_keyboard is now InlineKeyboardMarkup
     await query.answer()
 
 
@@ -340,7 +340,9 @@ async def _handle_admin_set_notif_pref_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(message_text, reply_markup=notif_pref_keyboard)
+    await query.message.edit_text(
+        message_text, reply_markup=notif_pref_keyboard
+    )  # notif_pref_keyboard is now InlineKeyboardMarkup
     await query.answer()
 
 
@@ -372,7 +374,9 @@ async def _handle_admin_set_mute_mode_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(message_text, reply_markup=mute_mode_keyboard)
+    await query.message.edit_text(
+        message_text, reply_markup=mute_mode_keyboard
+    )  # mute_mode_keyboard is now InlineKeyboardMarkup
     await query.answer()
 
 

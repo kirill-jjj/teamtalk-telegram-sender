@@ -35,22 +35,21 @@ async def cq_show_language_menu(
     _ = translator.gettext
     await callback_query.answer()
 
-    language_menu_builder = await create_language_selection_keyboard(
-        translator, available_languages=available_languages
-    )
+    # create_language_selection_keyboard now returns InlineKeyboardMarkup directly
+    language_markup = await create_language_selection_keyboard(translator, available_languages=available_languages)
 
     if not isinstance(callback_query.message, Message):
         logger.warning(
             "cq_show_language_menu: Message is None or inaccessible for user %s. Callback data: %s",
             callback_query.from_user.id if callback_query.from_user else "Unknown",
-            callback_query.data,  # Using callback_query.data as _callback_data is not available here
+            callback_query.data,
         )
         return
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,  # Now known to be Message
+        message_to_edit=callback_query.message,
         text=_("Please choose your language:"),
-        reply_markup=language_menu_builder.as_markup(),
+        reply_markup=language_markup,  # Use the markup directly
         logger_instance=logger,
         log_context="cq_show_language_menu",
     )
