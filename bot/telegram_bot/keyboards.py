@@ -6,7 +6,7 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 import gettext
 import html
-from typing import TYPE_CHECKING, Any, cast  # Added TYPE_CHECKING, Type and cast, removed Type
+from typing import TYPE_CHECKING, Any, Protocol, cast  # Added Protocol
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -88,6 +88,58 @@ def _is_username_effectively_muted(username: str, user_settings: UserSettings, m
     return is_in_set  # Muted if in the block list
 
 
+# --- Generic Option Selection Keyboard Helper ---
+
+
+class PackableCallbackData(Protocol):
+    """A protocol for objects that have a .pack() method returning a string.
+
+    Typically used for Aiogram CallbackData subclasses.
+    """
+
+    def pack(self) -> str:
+        """Serializes the callback data into a string."""
+        ...
+
+
+async def _create_option_selection_keyboard(
+    translator: gettext.GNUTranslations,
+    options: list[tuple[str, str]],  # list of (value, display_text)
+    current_value: str | None,
+    callback_data_factory: Callable[[str], PackableCallbackData],  # Use Protocol
+    back_button_callback_data: PackableCallbackData,  # Use Protocol
+    back_button_text_key: str = "⬅️ Back",
+    buttons_per_row: int = 1,
+) -> InlineKeyboardMarkup:
+    """Creates a generic keyboard for selecting one option from a list.
+
+    Args:
+        translator: The gettext translator.
+        options: A list of tuples, where each tuple is (option_value, option_display_text).
+        current_value: The value of the currently selected option, to be marked.
+        callback_data_factory: A function that takes an option's value and returns
+                               the corresponding CallbackData object for that option button.
+        back_button_callback_data: The CallbackData object for the 'Back' button.
+        back_button_text_key: The translation key for the 'Back' button text.
+        buttons_per_row: Number of option buttons to place in a single row.
+    """
+    _ = translator.gettext
+    builder = InlineKeyboardBuilder()
+
+    active_marker = "✅ "  # Note the space for better readability
+
+    for value, display_text in options:
+        button_text = f"{active_marker}{_(display_text)}" if value == current_value else _(display_text)
+        button_callback_data = callback_data_factory(value)
+        builder.button(text=button_text, callback_data=button_callback_data.pack())
+
+    if options:  # Only adjust if there were option buttons
+        builder.adjust(buttons_per_row)
+
+    builder.row(InlineKeyboardButton(text=_(back_button_text_key), callback_data=back_button_callback_data.pack()))
+    return builder.as_markup()
+
+
 # --- Settings Keyboards ---
 
 
@@ -109,54 +161,73 @@ async def create_main_settings_keyboard(
 
 
 async def create_language_selection_keyboard(
-    translator: gettext.GNUTranslations, available_languages: list[LanguageInfo]
-) -> InlineKeyboardBuilder:
-    """Creates the language selection keyboard dynamically."""
-    _ = translator.gettext
-    builder = InlineKeyboardBuilder()
-    if not available_languages:
-        builder.button(text="No languages available", callback_data="noop")
-    else:
-        for lang_info in available_languages:
-            builder.button(
-                text=lang_info["native_name"],
-                callback_data=LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_info["code"]).pack(),
-            )
+    translator: gettext.GNUTranslations,
+    available_languages: list[LanguageInfo],
+) -> InlineKeyboardMarkup:  # Changed return type
+    """Creates the language selection keyboard using the generic helper."""
+    _ = translator.gettext  # For default "No languages" or back button text if not overridden
 
-    builder.button(
-        text=_("⬅️ Back to Settings"), callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
+    options = [(lang["code"], lang["native_name"]) for lang in available_languages]
+
+    current_lang_code = None  # Original function did not mark current language
+
+    if not available_languages:  # Handle case of no languages explicitly to show a placeholder
+        builder = InlineKeyboardBuilder()  # Create builder only for this special case
+        builder.button(text=_("No languages available"), callback_data="noop_lang_sel")  # More specific noop
+        builder.row(
+            InlineKeyboardButton(
+                text=_("⬅️ Back to Settings"),
+                callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack(),
+            )
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+    def lang_callback_factory(lang_code_value: str) -> LanguageCallback:
+        return LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_code_value)
+
+    back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
+
+    return await _create_option_selection_keyboard(
+        translator=translator,
+        options=options,
+        current_value=current_lang_code,
+        callback_data_factory=lang_callback_factory,
+        back_button_callback_data=back_button_cb_data,
+        back_button_text_key="⬅️ Back to Settings",
+        buttons_per_row=1,
     )
-    builder.adjust(1)
-    return builder
 
 
 async def create_subscription_settings_keyboard(
     translator: gettext.GNUTranslations, current_setting: NotificationSetting
-) -> InlineKeyboardBuilder:
-    """Creates the subscription settings keyboard."""
-    _ = translator.gettext
-    builder = InlineKeyboardBuilder()
-
+) -> InlineKeyboardMarkup:  # Changed return type
+    """Creates the subscription settings keyboard using the generic helper."""
     settings_map_source = {
-        NotificationSetting.ALL: ("All (Join & Leave)", "all"),
-        NotificationSetting.LEAVE_OFF: ("Join Only", "leave_off"),
-        NotificationSetting.JOIN_OFF: ("Leave Only", "join_off"),
-        NotificationSetting.NONE: ("None", "none"),
+        NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
+        NotificationSetting.LEAVE_OFF: ("Join Only", NotificationSetting.LEAVE_OFF.value),
+        NotificationSetting.JOIN_OFF: ("Leave Only", NotificationSetting.JOIN_OFF.value),
+        NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
     }
 
-    for setting_enum, (text_source, val_str) in settings_map_source.items():
-        button_text = _("✅ {text}").format(text=_(text_source)) if current_setting == setting_enum else _(text_source)
+    # The option value should be the string that callback_data expects (e.g., "all", "leave_off")
+    # The display text is what the user sees.
+    options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
 
-        builder.button(
-            text=button_text,
-            callback_data=SubscriptionCallback(action=SubscriptionAction.SET_SUB, setting_value=val_str).pack(),
-        )
+    def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
+        return SubscriptionCallback(action=SubscriptionAction.SET_SUB, setting_value=setting_value_str)
 
-    builder.button(
-        text=_("⬅️ Back to Settings"), callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
+    back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
+
+    return await _create_option_selection_keyboard(
+        translator=translator,
+        options=options,
+        current_value=current_setting.value,  # current_setting is NotificationSetting enum, .value gives the string
+        callback_data_factory=sub_callback_factory,
+        back_button_callback_data=back_button_cb_data,
+        back_button_text_key="⬅️ Back to Settings",
+        buttons_per_row=1,
     )
-    builder.adjust(1)
-    return builder
 
 
 async def create_notification_settings_keyboard(
@@ -668,47 +739,39 @@ async def create_view_mute_list_keyboard(
 
 async def create_admin_subscriber_mute_mode_keyboard(
     translator: gettext.GNUTranslations,
-    current_mode: MuteListMode,  # Subscriber's current mute mode
+    current_mode: MuteListMode,
     target_telegram_id: int,
     subscriber_page_context: int,
 ) -> InlineKeyboardMarkup:
-    """Creates the mute mode selection keyboard for an admin to change for a subscriber."""
-    _ = translator.gettext
-    builder = InlineKeyboardBuilder()
-    active_marker = "✅"
-    inactive_marker = "⚪️"  # Or some other suitable unicode
+    """Creates the mute mode selection keyboard for an admin using the generic helper."""
+    _ = translator.gettext  # For direct use of _ if needed for display texts not from options
 
-    blacklist_marker = active_marker if current_mode == MuteListMode.blacklist else inactive_marker
-    whitelist_marker = active_marker if current_mode == MuteListMode.whitelist else inactive_marker
+    options = [
+        (MuteListMode.blacklist.value, _("Blacklist Mode")),  # Use translated display text directly
+        (MuteListMode.whitelist.value, _("Whitelist Mode")),
+    ]
 
-    blacklist_text = _("{marker} Blacklist Mode").format(marker=blacklist_marker)
-    whitelist_text = _("{marker} Whitelist Mode").format(marker=whitelist_marker)
-
-    builder.button(
-        text=blacklist_text,
-        callback_data=AdminSetSubscriberMuteModeCallback(
+    def mute_mode_callback_factory(mode_value_str: str) -> AdminSetSubscriberMuteModeCallback:
+        # The mode_value_str will be "blacklist" or "whitelist" (enum values)
+        # We need to convert it back to MuteListMode enum member
+        mode_enum = MuteListMode(mode_value_str)
+        return AdminSetSubscriberMuteModeCallback(
             target_telegram_id=target_telegram_id,
-            mode=MuteListMode.blacklist,
+            mode=mode_enum,
             subscriber_page_context=subscriber_page_context,
-        ).pack(),
-    )
-    builder.button(
-        text=whitelist_text,
-        callback_data=AdminSetSubscriberMuteModeCallback(
-            target_telegram_id=target_telegram_id,
-            mode=MuteListMode.whitelist,
-            subscriber_page_context=subscriber_page_context,
-        ).pack(),
-    )
-    builder.adjust(1)  # Keep as single buttons for clarity, or 2 if space allows. Let's do 1.
-
-    builder.row(
-        InlineKeyboardButton(
-            text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
         )
+
+    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+
+    return await _create_option_selection_keyboard(
+        translator=translator,
+        options=options,
+        current_value=current_mode.value,  # Pass the string value of the current enum
+        callback_data_factory=mute_mode_callback_factory,
+        back_button_callback_data=back_button_cb_data,
+        back_button_text_key="⬅️ Back to User Actions",
+        buttons_per_row=1,  # Original had 1 button per option row (after adjust(1))
     )
-    return builder.as_markup()
 
 
 async def create_linkable_tt_account_list_keyboard(
@@ -805,71 +868,82 @@ async def create_linkable_tt_account_list_keyboard(
 
 async def create_admin_subscriber_lang_keyboard(
     translator: gettext.GNUTranslations,
-    available_languages: list[LanguageInfo],  # Changed here
+    available_languages: list[LanguageInfo],
     target_telegram_id: int,
     subscriber_page_context: int,  # Page of the main subscriber list
 ) -> InlineKeyboardMarkup:
-    """Creates the language selection keyboard for an admin to change a subscriber's language."""
-    _ = translator.gettext
-    builder = InlineKeyboardBuilder()
+    """Creates the language selection keyboard for an admin using the generic helper."""
+    _ = translator.gettext  # Keep for back button text if not passed explicitly
 
-    if not available_languages:
-        # This case should ideally not happen if languages are configured
+    options = [(lang["code"], lang["native_name"]) for lang in available_languages]
+
+    # For language selection, there isn't a "current" language explicitly marked on this admin keyboard
+    # in the original design, so current_value is None.
+    # If no languages, options list will be empty, generic helper handles it.
+    if not available_languages:  # Handle case of no languages explicitly to show a placeholder
+        builder = InlineKeyboardBuilder()
         builder.button(text=_("No languages available"), callback_data="noop_admin_lang_sel")
-    else:
-        for lang_info in available_languages:
-            builder.button(
-                text=lang_info["native_name"],
-                callback_data=AdminSetSubscriberLanguageCallback(
-                    target_telegram_id=target_telegram_id,
-                    lang_code=lang_info["code"],
-                    subscriber_page_context=subscriber_page_context,
+        builder.row(
+            InlineKeyboardButton(
+                text=_("⬅️ Back to User Actions"),  # Default back button text
+                callback_data=ViewSubscriberCallback(
+                    telegram_id=target_telegram_id, page=subscriber_page_context
                 ).pack(),
             )
-
-    builder.row(
-        InlineKeyboardButton(
-            text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
         )
+        return builder.as_markup()
+
+    def lang_callback_factory(lang_code_value: str) -> AdminSetSubscriberLanguageCallback:
+        return AdminSetSubscriberLanguageCallback(
+            target_telegram_id=target_telegram_id,
+            lang_code=lang_code_value,
+            subscriber_page_context=subscriber_page_context,
+        )
+
+    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+
+    return await _create_option_selection_keyboard(
+        translator=translator,
+        options=options,
+        current_value=None,  # No specific current value highlighted in this admin view
+        callback_data_factory=lang_callback_factory,
+        back_button_callback_data=back_button_cb_data,
+        back_button_text_key="⬅️ Back to User Actions",  # Explicitly pass the text key
+        buttons_per_row=1,  # Original was 1 button per row
     )
-    builder.adjust(1)  # All buttons in a single column
-    return builder.as_markup()
 
 
 async def create_admin_subscriber_notification_pref_keyboard(
     translator: gettext.GNUTranslations,
-    current_setting: NotificationSetting,  # The subscriber's current setting
+    current_setting: NotificationSetting,
     target_telegram_id: int,
     subscriber_page_context: int,
 ) -> InlineKeyboardMarkup:
-    """Creates the notification preference selection keyboard for an admin to change for a subscriber."""
-    _ = translator.gettext
-    builder = InlineKeyboardBuilder()
-
+    """Creates the notification preference selection keyboard for an admin using the generic helper."""
     settings_map_source = {
-        NotificationSetting.ALL: ("All (Join & Leave)", "all"),
-        NotificationSetting.LEAVE_OFF: ("Join Only", "leave_off"),
-        NotificationSetting.JOIN_OFF: ("Leave Only", "join_off"),
-        NotificationSetting.NONE: ("None", "none"),
+        NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
+        NotificationSetting.LEAVE_OFF: ("Join Only", NotificationSetting.LEAVE_OFF.value),
+        NotificationSetting.JOIN_OFF: ("Leave Only", NotificationSetting.JOIN_OFF.value),
+        NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
     }
 
-    for setting_enum, (text_source, val_str) in settings_map_source.items():
-        button_text = _("✅ {text}").format(text=_(text_source)) if current_setting == setting_enum else _(text_source)
-        builder.button(
-            text=button_text,
-            callback_data=AdminSetSubscriberNotificationPrefCallback(
-                target_telegram_id=target_telegram_id,
-                setting_value=val_str,
-                subscriber_page_context=subscriber_page_context,
-            ).pack(),
+    options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
+
+    def notif_pref_callback_factory(setting_value_str: str) -> AdminSetSubscriberNotificationPrefCallback:
+        return AdminSetSubscriberNotificationPrefCallback(
+            target_telegram_id=target_telegram_id,
+            setting_value=setting_value_str,
+            subscriber_page_context=subscriber_page_context,
         )
 
-    builder.row(
-        InlineKeyboardButton(
-            text=_("⬅️ Back to User Actions"),
-            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context).pack(),
-        )
+    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+
+    return await _create_option_selection_keyboard(
+        translator=translator,
+        options=options,
+        current_value=current_setting.value,  # Pass the string value of the current enum
+        callback_data_factory=notif_pref_callback_factory,
+        back_button_callback_data=back_button_cb_data,
+        back_button_text_key="⬅️ Back to User Actions",
+        buttons_per_row=1,
     )
-    builder.adjust(1)
-    return builder.as_markup()
