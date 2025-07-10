@@ -79,20 +79,19 @@ async def _get_recipients_for_notification(
         # Base query
         stmt = select(UserSettings.telegram_id)
 
-        # LEFT JOIN to MutedUser
-        # isouter=True makes it a LEFT JOIN
+        # LEFT JOIN to MutedUser, incorporating username_to_check in the ON clause
         stmt = stmt.join(
             MutedUser,
             and_(
                 UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
                 MutedUser.muted_teamtalk_username == username_to_check
             ),
-            isouter=True
+            isouter=True  # Ensures it's a LEFT JOIN
         )
 
         # Base filters
         filters = [
-            UserSettings.telegram_id.in_(subscriber_ids), # type: ignore[attr-defined] # Keep if still needed
+            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined] # Retaining for now
             UserSettings.notification_settings != NotificationSetting.NONE,
         ]
         if event_type == NOTIFICATION_EVENT_JOIN:
@@ -101,21 +100,21 @@ async def _get_recipients_for_notification(
             filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
         # Mute logic based on JOIN result
-        # Assuming mute_list_mode stores the string value of the enum (e.g., "blacklist", "whitelist")
-        # This will be verified in the next step.
         mute_logic = or_(
-            # Blacklist: receive notification if NOT in MutedUser (MutedUser.id IS NULL)
+            # Blacklist: User gets notification if their mode is blacklist AND
+            #            there's NO corresponding MutedUser entry for username_to_check (MutedUser.id IS NULL).
             and_(
                 UserSettings.mute_list_mode == MuteListMode.blacklist.value,
-                MutedUser.id is None  # Translates to IS NULL
+                MutedUser.id.is_(None)
             ),
-            # Whitelist: receive notification if IN MutedUser (MutedUser.id IS NOT NULL)
+            # Whitelist: User gets notification if their mode is whitelist AND
+            #            there IS a corresponding MutedUser entry for username_to_check (MutedUser.id IS NOT NULL).
             and_(
                 UserSettings.mute_list_mode == MuteListMode.whitelist.value,
-                MutedUser.id is not None  # Translates to IS NOT NULL
+                MutedUser.id.is_not(None)
             )
         )
-        filters.append(mute_logic) # type: ignore[arg-type] # Keep if still needed
+        filters.append(mute_logic)  # type: ignore[arg-type] # Retaining for now
 
         stmt = stmt.where(and_(*filters))
 
