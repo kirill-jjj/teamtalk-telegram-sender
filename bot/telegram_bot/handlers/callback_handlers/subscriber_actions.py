@@ -449,7 +449,7 @@ async def _handle_admin_view_mute_list_action(
     statement = (
         select(UserSettings)
         .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(getattr(UserSettings, "muted_users_list")))  # Use getattr for clarity
+        .options(selectinload(UserSettings.muted_users_list))  # Use getattr for clarity
     )
     target_user_settings = await session.scalar(statement)  # Using scalar for one_or_none equivalent
 

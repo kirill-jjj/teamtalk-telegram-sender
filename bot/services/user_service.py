@@ -3,17 +3,14 @@
 import logging
 from typing import TYPE_CHECKING
 
-from aiogram.exceptions import TelegramAPIError
-from aiogram.types import BotCommandScopeChat
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, SubscribedUser, UserSettings
-# get_admin_commands and get_user_commands are now used in _utils.py
-# from bot.telegram_bot.commands import get_admin_commands, get_user_commands
-from . import _utils # Import the new utils module
+
+from . import _utils  # Import the new utils module
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -77,7 +74,13 @@ async def set_user_mute_mode(
         logger.error("set_user_mute_mode: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
         return None
 
-    return await _utils._update_user_mute_mode_in_db(session, services, managed_user_settings, new_mode, log_context=" (self)")
+    return await _utils._update_user_mute_mode_in_db(
+        session,
+        services,
+        managed_user_settings,
+        new_mode,
+        log_context=" (self)",
+    )
 
 
 async def update_user_language_settings(  # User-initiated
