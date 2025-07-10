@@ -19,6 +19,7 @@ from bot.telegram_bot.callback_data import AdminActionCallback
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from ._helpers import ensure_message_context
 
 if TYPE_CHECKING:
     pass
@@ -124,6 +125,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
 
 
 @admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))
+@ensure_message_context
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
@@ -133,9 +135,7 @@ async def process_user_action_selection(
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     _ = translator.gettext
-    if not callback_query.message:
-        await callback_query.answer(_("Error: Message context not found."), show_alert=True)
-        return
+    # Decorator ensures callback_query.message exists.
 
     # Admin check is now handled by AdminCheckMiddleware applied to the admin_actions_router.
 

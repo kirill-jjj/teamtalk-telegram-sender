@@ -17,6 +17,7 @@ from bot.core.enums import SubscriberListAction
 from bot.services import user_service
 from bot.telegram_bot.callback_data import SubscriberListCallback
 
+from ._helpers import ensure_message_context
 from .list_utils import _show_subscriber_list_page
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 
 
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
+@ensure_message_context
 async def handle_subscriber_list_actions(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,

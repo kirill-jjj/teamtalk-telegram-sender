@@ -10,13 +10,14 @@ from bot.core.enums import SettingsNavAction
 from bot.telegram_bot.callback_data import SettingsCallback
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
 
-from ._helpers import safe_edit_text
+from ._helpers import ensure_message_context, safe_edit_text
 
 logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")
 
 
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
+@ensure_message_context
 async def cq_back_to_main_settings_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
@@ -24,16 +25,16 @@ async def cq_back_to_main_settings_menu(
 ) -> None:
     """Handles navigating back to the main settings menu."""
     _ = translator.gettext
-    await callback_query.answer()
+    # await callback_query.answer() # Decorator or safe_edit_text will handle.
 
     main_settings_builder = await create_main_settings_keyboard(translator)
     main_settings_text = _("Settings")
 
-    if isinstance(callback_query.message, Message):
-        await safe_edit_text(
-            message_to_edit=callback_query.message,  # Now known to be Message
-            text=main_settings_text,
-            reply_markup=main_settings_builder.as_markup(),
-            logger_instance=logger,
-            log_context="cq_back_to_main_settings_menu",
-        )
+    # Decorator ensures callback_query.message is a Message object.
+    await safe_edit_text(
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        text=main_settings_text,
+        reply_markup=main_settings_builder.as_markup(),
+        logger_instance=logger,
+        log_context="cq_back_to_main_settings_menu",
+    )

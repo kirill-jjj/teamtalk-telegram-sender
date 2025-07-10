@@ -16,7 +16,7 @@ from bot.models import NotificationSetting, UserSettings
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
-from ._helpers import process_setting_update, safe_edit_text
+from ._helpers import ensure_message_context, process_setting_update, safe_edit_text
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -34,6 +34,7 @@ subscription_router = Router(name="callback_handlers.subscription")
 
 
 @subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
+@ensure_message_context
 async def cq_show_subscriptions_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
@@ -42,23 +43,16 @@ async def cq_show_subscriptions_menu(
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
-    await callback_query.answer()
+    # await callback_query.answer() # Decorator or safe_edit_text will handle.
 
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "cq_show_subscriptions_menu: Message is None or inaccessible for user %s. Callback data: %s",
-            callback_query.from_user.id if callback_query.from_user else "Unknown",
-            _callback_data.pack() if _callback_data else callback_query.data,  # Use _callback_data if available
-        )
-        return
-
+    # Decorator ensures callback_query.message is a Message object.
     current_notification_setting = user_settings.notification_settings
     subscription_settings_markup = await create_subscription_settings_keyboard(  # Renamed variable
         translator, current_notification_setting
     )
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message, # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_markup,  # Use directly
         logger_instance=logger,
@@ -67,6 +61,7 @@ async def cq_show_subscriptions_menu(
 
 
 @subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionAction.SET_SUB))
+@ensure_message_context
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
     session: AsyncSession,

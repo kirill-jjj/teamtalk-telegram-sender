@@ -15,7 +15,7 @@ from bot.models import UserSettings
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 
-from ._helpers import process_setting_update, safe_edit_text
+from ._helpers import ensure_message_context, process_setting_update, safe_edit_text
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -25,6 +25,7 @@ notifications_router = Router(name="callback_handlers.notifications")
 
 
 @notifications_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS))
+@ensure_message_context
 async def cq_show_notifications_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
@@ -33,19 +34,12 @@ async def cq_show_notifications_menu(
 ) -> None:
     """Shows the notification settings menu."""
     _ = translator.gettext
-    await callback_query.answer()
+    # await callback_query.answer() # Decorator or safe_edit_text will handle.
 
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "cq_show_notifications_menu: Message is None or inaccessible for user %s. Callback data: %s",
-            callback_query.from_user.id if callback_query.from_user else "Unknown",
-            _callback_data.pack() if _callback_data else callback_query.data,
-        )
-        return
-
+    # Decorator ensures callback_query.message is a Message object.
     notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)
     await safe_edit_text(
-        message_to_edit=callback_query.message,  # Now known to be Message
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),
         logger_instance=logger,
@@ -54,6 +48,7 @@ async def cq_show_notifications_menu(
 
 
 @notifications_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.TOGGLE_NOON))
+@ensure_message_context
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
     session: AsyncSession,

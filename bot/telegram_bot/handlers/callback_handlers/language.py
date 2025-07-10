@@ -16,7 +16,7 @@ from bot.services import _utils, user_service  # Add _utils
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 
-from ._helpers import safe_edit_text
+from ._helpers import ensure_message_context, safe_edit_text
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -26,6 +26,7 @@ language_router = Router(name="callback_handlers.language")
 
 
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
+@ensure_message_context
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
@@ -33,21 +34,19 @@ async def cq_show_language_menu(
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext
-    await callback_query.answer()
+    # await callback_query.answer() # Decorator handles answering if message is None, otherwise we might answer twice.
+                                 # If message exists, answer is usually done after successful operation or by safe_edit_text.
+                                 # For menu display, an immediate answer is fine if not editing.
+                                 # However, safe_edit_text also tries to answer.
+                                 # Let's rely on safe_edit_text or final answer.
+                                 # The decorator will answer if message is None.
 
     # create_language_selection_keyboard now returns InlineKeyboardMarkup directly
     language_markup = await create_language_selection_keyboard(translator, available_languages=available_languages)
 
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "cq_show_language_menu: Message is None or inaccessible for user %s. Callback data: %s",
-            callback_query.from_user.id if callback_query.from_user else "Unknown",
-            callback_query.data,
-        )
-        return
-
+    # The decorator ensures callback_query.message is a Message object.
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Please choose your language:"),
         reply_markup=language_markup,  # Use the markup directly
         logger_instance=logger,
@@ -56,6 +55,7 @@ async def cq_show_language_menu(
 
 
 @language_router.callback_query(LanguageCallback.filter(F.action == LanguageAction.SET_LANG))
+@ensure_message_context
 async def cq_set_language(
     callback_query: CallbackQuery,
     session: AsyncSession,  # Injected by DbSessionMiddleware
@@ -66,14 +66,17 @@ async def cq_set_language(
 ) -> None:
     """Sets the user's language preference."""
     _ = translator.gettext  # Original translator for initial messages if needed
+    # Decorator ensures callback_query.message exists. We still need to check from_user and lang_code.
     if callback_data.lang_code is None:
-        logger.warning("LanguageCallback received with lang_code=None")
+        logger.warning("LanguageCallback received with lang_code=None for user %s", callback_query.from_user.id)
         await callback_query.answer(_("Invalid language selection."), show_alert=True)
         return
 
-    if not callback_query.message or not callback_query.from_user:
-        logger.warning("cq_set_language: callback_query.message or from_user is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+    if not callback_query.from_user: # from_user check remains
+        logger.warning("cq_set_language: callback_query.from_user is None. Callback data: %s", callback_query.data)
+        # Though from_user is usually present in CallbackQuery, good to be safe.
+        # The decorator doesn't cover this.
+        await callback_query.answer(_("An error occurred: User information missing."), show_alert=True)
         return
 
     managed_user_settings = await session.merge(user_settings)
@@ -128,23 +131,17 @@ async def cq_set_language(
         # Proceed to update UI anyway
 
     # --- Update UI (Settings Menu) ---
+    # Decorator ensures callback_query.message is a Message object.
     try:
         main_settings_builder = await create_main_settings_keyboard(new_lang_translator)
         main_settings_text = new_lang_translator.gettext("Settings")
-        if isinstance(callback_query.message, Message):
-            await safe_edit_text(
-                message_to_edit=callback_query.message,
-                text=main_settings_text,
-                reply_markup=main_settings_builder.as_markup(),
-                logger_instance=logger,
-                log_context="cq_set_language_ui_refresh",
-            )
-        else:
-            logger.warning(
-                "cq_set_language: Message None/inaccessible for user %s. UI not updated. CB: %s",
-                callback_query.from_user.id if callback_query.from_user else "Unknown",
-                callback_data.pack() if callback_data else callback_query.data,
-            )
+        await safe_edit_text(
+            message_to_edit=callback_query.message,  # type: ignore[arg-type]
+            text=main_settings_text,
+            reply_markup=main_settings_builder.as_markup(),
+            logger_instance=logger,
+            log_context="cq_set_language_ui_refresh",
+        )
     except Exception:
         logger.exception(
             "Failed to refresh settings UI for user %s after language change to %s.", telegram_id, new_lang_code
