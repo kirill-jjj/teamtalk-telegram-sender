@@ -393,7 +393,7 @@ async def _create_generic_paginated_list_keyboard(
 
 async def create_subscriber_list_keyboard(
     translator: gettext.GNUTranslations,
-    page_items: list[SubscriberInfo],  # Changed from page_subscribers_info
+    page_items: list[SubscriberInfo],
     current_page: int,
     total_pages: int,
 ) -> InlineKeyboardMarkup:
@@ -611,8 +611,12 @@ async def create_manage_tt_account_keyboard(
     return builder.as_markup()
 
 
+# ... (other imports might be present above, ensure Any is added or already there)
+
+
 async def create_view_mute_list_keyboard(
     translator: gettext.GNUTranslations,
+    page_items: list[Any],  # noqa: ARG001 # Added page_items parameter, unused but required by caller
     current_mute_list_page: int,
     total_mute_list_pages: int,
     target_telegram_id: int,  # Subscriber's ID
