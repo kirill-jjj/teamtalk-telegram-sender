@@ -767,7 +767,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
 async def create_linkable_tt_account_list_keyboard(
     translator: gettext.GNUTranslations,
     page_items: list[pytalk.UserAccount],
-    current_page: int, # Renamed from current_page_idx
+    current_page: int,  # Renamed from current_page_idx
     total_pages: int,
     target_telegram_id: int,
     subscriber_list_page: int,
@@ -847,7 +847,7 @@ async def create_linkable_tt_account_list_keyboard(
     return await _create_generic_paginated_list_keyboard(
         translator=translator,
         page_items=page_items,
-        current_page=current_page, # Use the new parameter name
+        current_page=current_page,  # Use the new parameter name
         total_pages=total_pages,
         item_button_former=tt_account_button_former,
         pagination_callback_factory=PaginateLinkableAccountsCallback,  # Use the new callback

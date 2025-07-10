@@ -78,7 +78,7 @@ class UserSettingsMiddleware(BaseMiddleware):
             # The merge operation above ensures the UserSettings object is session-attached.
             logger.debug(
                 "Skipping refresh of muted_users_list for user %s in middleware; relying on explicit cache updates.",
-                user_obj.id
+                user_obj.id,
             )
         except Exception:
             logger.exception(

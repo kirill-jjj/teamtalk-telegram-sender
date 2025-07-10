@@ -29,9 +29,7 @@ logger = logging.getLogger(__name__)
 SUBSCRIBERS_PER_PAGE = 10
 
 
-async def _get_all_subscribers_info(
-    session: AsyncSession, bot: Bot
-) -> list[SubscriberInfo]:
+async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[SubscriberInfo]:
     """Fetches all subscriber IDs, gets their details, and returns a list of all subscribers.
 
     Returns:

@@ -81,7 +81,7 @@ def route_event_to_connection(
                     method_name_on_connection,
                     handler_name_for_logs,
                     *args,
-                    **kwargs
+                    **kwargs,
                 )
                 return
             logger.error(
@@ -108,6 +108,7 @@ def route_event_to_connection(
                 tt_instance,
                 handler_name_for_logs,
             )
+
     return wrapper
 
 
@@ -123,7 +124,7 @@ async def _broadcast_event_to_all_connections(
     logger.info(
         "Broadcasting: Evt '%s' (type: %s) to all conns (no specific instance).",
         handler_name_for_logs,
-        type(event_primary_obj).__name__
+        type(event_primary_obj).__name__,
     )
     broadcast_count = 0
     if not hasattr(self_event_handler, "services") or not hasattr(self_event_handler.services, "connections"):

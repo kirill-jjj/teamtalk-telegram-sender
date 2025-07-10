@@ -111,10 +111,10 @@ class BanList(SQLModel, table=True):
 # --- Service Operation Result ---
 
 
-
 class OperationResult(SQLModel):
     """Represents a structured result for service operations."""
+
     success: bool
     message_key: str  # For localization key, e.g., "link_tt_account_success_linked"
-    message_args: dict[str, Any] | None = Field(default=None) # For formatting the localized string
-    user_settings: UserSettings | None = Field(default=None) # Optional UserSettings object
+    message_args: dict[str, Any] | None = Field(default=None)  # For formatting the localized string
+    user_settings: UserSettings | None = Field(default=None)  # Optional UserSettings object

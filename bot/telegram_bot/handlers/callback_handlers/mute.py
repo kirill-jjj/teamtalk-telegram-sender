@@ -108,7 +108,7 @@ async def _display_internal_user_list(
 
     await display_paginated_list(
         target=callback_query,
-        bot=callback_query.bot, # Now known to be non-None
+        bot=callback_query.bot,  # Now known to be non-None
         translator=translator,
         items=sorted_items,
         page=page,
@@ -161,7 +161,7 @@ async def _display_all_server_accounts_list(
 
     await display_paginated_list(
         target=callback_query,
-        bot=callback_query.bot, # Now known to be non-None
+        bot=callback_query.bot,  # Now known to be non-None
         translator=translator,
         items=sorted_items,
         page=page,
@@ -176,7 +176,7 @@ async def _display_all_server_accounts_list(
 async def _get_username_to_toggle_from_callback(
     callback_data: ToggleMuteSpecificCallback,
     user_settings: UserSettings,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     tt_connection: TeamTalkConnection | None,
 ) -> str | None:
     user_idx = callback_data.user_idx
@@ -245,7 +245,7 @@ async def _refresh_mute_related_ui(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteSpecificCallback,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
 ) -> None:
     """Refreshes the mute list UI after an action."""
     _ = translator.gettext
@@ -280,7 +280,7 @@ async def _refresh_mute_related_ui(
             user_settings,
             list_type_user_was_on,
             current_page_for_refresh,
-            session, # No longer need to cast
+            session,  # No longer need to cast
         )
 
 
@@ -318,7 +318,7 @@ async def cq_show_manage_muted_menu(
 @ensure_message_context
 async def cq_set_mute_mode_action(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SetMuteModeCallback,
@@ -386,7 +386,7 @@ async def cq_set_mute_mode_action(
 @ensure_message_context
 async def cq_list_internal_users_action(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: UserListCallback,
@@ -400,7 +400,7 @@ async def cq_list_internal_users_action(
         user_settings,
         callback_data.action,
         0,
-        session, # No longer need to cast
+        session,  # No longer need to cast
     )
 
 
@@ -410,7 +410,7 @@ async def cq_list_internal_users_action(
 @ensure_message_context
 async def cq_paginate_internal_user_list_action(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: PaginateUsersCallback,
@@ -424,7 +424,7 @@ async def cq_paginate_internal_user_list_action(
         user_settings,
         callback_data.list_type,
         callback_data.page,
-        session, # No longer need to cast
+        session,  # No longer need to cast
     )
 
 
@@ -439,11 +439,9 @@ async def cq_show_all_accounts_list_action(
     """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
     _ = translator.gettext
     # Callback answering handled by decorator or _display_all_server_accounts_list.
-    if not tt_connection:
-        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
-        return
+    # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
     # Decorator ensures callback_query.message exists.
-    await _display_all_server_accounts_list(callback_query, translator, user_settings, tt_connection, 0)
+    await _display_all_server_accounts_list(callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), 0)
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
@@ -458,12 +456,10 @@ async def cq_paginate_all_accounts_list_action(
     """Handles pagination for the list of all TeamTalk server accounts."""
     _ = translator.gettext
     # Callback answering handled by decorator or _display_all_server_accounts_list.
-    if not tt_connection:
-        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
-        return
+    # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
     # Decorator ensures callback_query.message exists.
     await _display_all_server_accounts_list(
-        callback_query, translator, user_settings, tt_connection, callback_data.page
+        callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), callback_data.page
     )
 
 
@@ -471,7 +467,7 @@ async def cq_paginate_all_accounts_list_action(
 @ensure_message_context
 async def cq_toggle_specific_user_mute_action(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed to SQLModel's AsyncSession
+    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
@@ -480,12 +476,10 @@ async def cq_toggle_specific_user_mute_action(
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
-    if not tt_connection:  # Should be caught by middleware, but good check
-        # tt_connection might not be strictly needed if _get_username_to_toggle_from_callback can work without it
-        # for list_type != LIST_ALL_ACCOUNTS. However, _refresh_mute_related_ui might need it.
-        # For now, keeping the check.
-        await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
-        return
+    # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
+    # tt_connection might not be strictly needed if _get_username_to_toggle_from_callback can work without it
+    # for list_type != LIST_ALL_ACCOUNTS. However, _refresh_mute_related_ui might need it.
+    # Middleware handles the absence of tt_connection.
 
     # user_settings is already managed by middleware, no need to merge unless making changes before service call
     # which we are not.
@@ -506,7 +500,10 @@ async def cq_toggle_specific_user_mute_action(
     # or if it directly manipulates the list and it's part of the same session.
     # The UserSettingsMiddleware should provide a session-attached object.
     was_successful, resulting_action = await user_service.toggle_mute_status_for_tt_user(
-        session, user_settings, username_to_toggle, services # No longer need to cast
+        session,
+        user_settings,
+        username_to_toggle,
+        services,  # No longer need to cast
     )
     # ----------------------------------------------------
 

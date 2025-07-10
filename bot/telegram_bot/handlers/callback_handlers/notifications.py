@@ -55,7 +55,7 @@ async def cq_show_notifications_menu(
 @ensure_message_context
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed type hint
+    session: SQLModelAsyncSession,  # Changed type hint
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     _callback_data: NotificationActionCallback | None = None,  # Keep for consistent signature, though not used
@@ -106,7 +106,7 @@ async def cq_toggle_noon_setting_action(
             # The primary toggle succeeded, proceed with UI update based on that.
             # final_user_settings is already user_settings reflecting the first change.
         else:
-            final_user_settings = confirmed_settings # Both updates succeeded
+            final_user_settings = confirmed_settings  # Both updates succeeded
 
     # UI Update
     new_status_display_text = _("Enabled") if final_user_settings.not_on_online_enabled else _("Disabled")

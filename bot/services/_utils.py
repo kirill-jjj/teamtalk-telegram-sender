@@ -58,7 +58,7 @@ async def update_user_bot_commands(
 
 
 async def _update_user_setting_field(
-    session: AsyncSession, # Reverted type hint
+    session: AsyncSession,  # Reverted type hint
     services: "Services",
     settings_to_update: UserSettings,
     field_name: str,
@@ -86,10 +86,10 @@ async def _update_user_setting_field(
         setattr(settings_to_update, field_name, new_value)
         await session.commit()
         await session.refresh(settings_to_update)
-        services.cache.update_user_settings(settings_to_update) # Update cache with the modified UserSettings
+        services.cache.update_user_settings(settings_to_update)  # Update cache with the modified UserSettings
 
         # For logging, display .value for enums if new_value is an enum (like MuteListMode)
-        display_value = new_value.value if hasattr(new_value, 'value') else new_value
+        display_value = new_value.value if hasattr(new_value, "value") else new_value
 
         logger.info(
             "Successfully set field '%s' to '%s' for user %s%s. DB and cache updated.",
@@ -100,9 +100,9 @@ async def _update_user_setting_field(
         )
     except SQLAlchemyError:
         await session.rollback()
-        setattr(settings_to_update, field_name, original_value) # Revert in-memory change
+        setattr(settings_to_update, field_name, original_value)  # Revert in-memory change
 
-        display_value_err = new_value.value if hasattr(new_value, 'value') else new_value
+        display_value_err = new_value.value if hasattr(new_value, "value") else new_value
         logger.exception(
             "SQLAlchemyError while setting field '%s' to '%s' for user %s%s. Rolled back.",
             field_name,
@@ -113,9 +113,9 @@ async def _update_user_setting_field(
         return None
     except Exception:  # Catch any other unexpected errors
         await session.rollback()
-        setattr(settings_to_update, field_name, original_value) # Revert in-memory change
+        setattr(settings_to_update, field_name, original_value)  # Revert in-memory change
 
-        display_value_err = new_value.value if hasattr(new_value, 'value') else new_value
+        display_value_err = new_value.value if hasattr(new_value, "value") else new_value
         logger.exception(
             "Unexpected error while setting field '%s' to '%s' for user %s%s. Rolled back.",
             field_name,

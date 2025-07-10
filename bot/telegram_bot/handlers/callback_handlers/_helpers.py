@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "ensure_message_context",
     # "process_setting_update", # Removed
-    "safe_edit_text", # Note: safe_edit_text is imported from ui_utils, then re-exported here.
+    "safe_edit_text",  # Note: safe_edit_text is imported from ui_utils, then re-exported here.
 ]
 
 # process_setting_update function definition removed.

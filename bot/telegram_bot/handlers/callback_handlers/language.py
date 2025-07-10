@@ -67,7 +67,7 @@ async def cq_set_language(
         await callback_query.answer(_("Invalid language selection."), show_alert=True)
         return
 
-    if not callback_query.from_user: # from_user check remains
+    if not callback_query.from_user:  # from_user check remains
         logger.warning("cq_set_language: callback_query.from_user is None. Callback data: %s", callback_query.data)
         # Though from_user is usually present in CallbackQuery, good to be safe.
         # The decorator doesn't cover this.

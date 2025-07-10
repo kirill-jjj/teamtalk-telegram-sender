@@ -219,8 +219,8 @@ async def who_command_handler(
     # TeamTalkConnectionCheckMiddleware (applied to user_commands_router) ensures tt_connection is valid and ready.
     # The manual check 'if not tt_connection or not tt_connection.instance:' is removed.
 
-    tt_instance = tt_connection.instance # type: ignore[union-attr] # Middleware ensures tt_connection is not None
-    server_host_for_log_and_display = tt_connection.server_info.host # type: ignore[union-attr]
+    tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None
+    server_host_for_log_and_display = tt_connection.server_info.host  # type: ignore[union-attr]
 
     # Use the online_users_cache from tt_connection
     # The TeamTalkConnectionCheckMiddleware should ensure tt_connection is valid and ready.
@@ -232,7 +232,7 @@ async def who_command_handler(
         # Log a warning if tt_connection or cache is unexpectedly None.
         if not tt_connection:
             logger.warning("/who: tt_connection is None, despite middleware. Defaulting to empty user list.")
-        elif tt_connection.online_users_cache is None: # Should not happen as it's initialized to {}
+        elif tt_connection.online_users_cache is None:  # Should not happen as it's initialized to {}
             logger.warning("/who: tt_connection.online_users_cache is None. Defaulting to empty user list.")
         all_users_list = []
 
@@ -241,7 +241,7 @@ async def who_command_handler(
 
     is_caller_admin = services.cache.is_admin(message.from_user.id)
     # tt_instance is still needed for getMyUserID()
-    bot_user_id = tt_instance.getMyUserID() # type: ignore[union-attr] # Middleware ensures tt_instance is not None
+    bot_user_id = tt_instance.getMyUserID()  # type: ignore[union-attr] # Middleware ensures tt_instance is not None
 
     if bot_user_id is None:
         log_msg = f"Could not get bot's own user ID from TeamTalk instance on server {server_host_for_log_and_display}."

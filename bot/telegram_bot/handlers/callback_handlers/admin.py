@@ -146,10 +146,10 @@ async def process_user_action_selection(
     # tt_connection is type hinted as TeamTalkConnection | None from ActiveTeamTalkConnectionMiddleware.
     # TeamTalkConnectionCheckMiddleware should prevent execution if it's None or not ready.
 
-    tt_instance = tt_connection.instance # type: ignore[union-attr] # Middleware ensures tt_connection is not None here
-    server_host_for_display = tt_connection.server_info.host # type: ignore[union-attr]
+    tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None here
+    server_host_for_display = tt_connection.server_info.host  # type: ignore[union-attr]
 
-    user_to_act_on = tt_instance.get_user(callback_data.user_id) # type: ignore[union-attr] # Middleware ensures tt_instance is not None
+    user_to_act_on = tt_instance.get_user(callback_data.user_id)  # type: ignore[union-attr] # Middleware ensures tt_instance is not None
     if not user_to_act_on:
         await callback_query.answer(
             _("User not found on server {server_host} anymore.").format(server_host=server_host_for_display),

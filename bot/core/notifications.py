@@ -84,9 +84,9 @@ async def _get_recipients_for_notification(
             MutedUser,
             and_(
                 UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
-                MutedUser.muted_teamtalk_username == username_to_check
+                MutedUser.muted_teamtalk_username == username_to_check,
             ),
-            isouter=True  # Ensures it's a LEFT JOIN
+            isouter=True,  # Ensures it's a LEFT JOIN
         )
 
         # Base filters
@@ -103,16 +103,10 @@ async def _get_recipients_for_notification(
         mute_logic = or_(
             # Blacklist: User gets notification if their mode is blacklist AND
             #            there's NO corresponding MutedUser entry for username_to_check (MutedUser.id IS NULL).
-            and_(
-                UserSettings.mute_list_mode == MuteListMode.blacklist.value,
-                MutedUser.id.is_(None)
-            ),
+            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
             # Whitelist: User gets notification if their mode is whitelist AND
             #            there IS a corresponding MutedUser entry for username_to_check (MutedUser.id IS NOT NULL).
-            and_(
-                UserSettings.mute_list_mode == MuteListMode.whitelist.value,
-                MutedUser.id.is_not(None)
-            )
+            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
         )
         filters.append(mute_logic)  # type: ignore[arg-type] # Retaining for now
 

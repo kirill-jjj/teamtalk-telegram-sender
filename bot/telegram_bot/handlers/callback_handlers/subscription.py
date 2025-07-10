@@ -56,7 +56,7 @@ async def cq_show_subscriptions_menu(
     )
 
     await safe_edit_text(
-        message_to_edit=callback_query.message, # type: ignore[arg-type]
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_markup,  # Use directly
         logger_instance=logger,
@@ -68,7 +68,7 @@ async def cq_show_subscriptions_menu(
 @ensure_message_context
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession, # Changed type hint
+    session: SQLModelAsyncSession,  # Changed type hint
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
@@ -92,7 +92,7 @@ async def cq_set_subscription_setting(
     original_setting = user_settings.notification_settings
 
     if new_setting_enum == original_setting:
-        await callback_query.answer() # No change, just acknowledge.
+        await callback_query.answer()  # No change, just acknowledge.
         return
 
     # Call the generic helper to update the field
@@ -125,15 +125,14 @@ async def cq_set_subscription_setting(
     menu_text = _("Subscription Settings")
     # Use updated_settings (which is user_settings after in-place modification by helper) for keyboard
     updated_keyboard_markup = await create_subscription_settings_keyboard(
-        translator,
-        updated_settings.notification_settings
+        translator, updated_settings.notification_settings
     )
 
     # @ensure_message_context guarantees query.message is a Message
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=menu_text,
-        reply_markup=updated_keyboard_markup, # Use directly
+        reply_markup=updated_keyboard_markup,  # Use directly
         logger_instance=logger,
         log_context="cq_set_subscription_setting_ui_refresh",
     )

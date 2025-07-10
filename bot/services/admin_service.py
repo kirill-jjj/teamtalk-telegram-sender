@@ -231,8 +231,8 @@ async def admin_toggle_noon_setting(
             session=session,
             services=services,
             settings_to_update=updated_settings,
-                field_name="not_on_online_confirmed",
-                new_value=True,
+            field_name="not_on_online_confirmed",
+            new_value=True,
             log_context=f" by admin for user {target_telegram_id} (confirm NOON after toggle)",
         )
         if not confirmed_settings:
@@ -313,9 +313,7 @@ async def admin_link_tt_account(
             target_telegram_id,
         )
         return OperationResult(
-            success=False,
-            message_key="link_tt_account_error_banned",
-            message_args={"tt_username": tt_username_to_link}
+            success=False, message_key="link_tt_account_error_banned", message_args={"tt_username": tt_username_to_link}
         )
 
     target_user_settings = await session.get(UserSettings, target_telegram_id)
@@ -346,7 +344,7 @@ async def admin_link_tt_account(
 
     message_args = {
         "new_tt_username": tt_username_to_link,
-        "original_tt_username": original_tt_username or "" # Ensure not None for formatting
+        "original_tt_username": original_tt_username or "",  # Ensure not None for formatting
     }
 
     final_settings = updated_settings_tt_link
@@ -355,7 +353,7 @@ async def admin_link_tt_account(
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
             services=services,
-            settings_to_update=updated_settings_tt_link, # Use the already updated settings object
+            settings_to_update=updated_settings_tt_link,  # Use the already updated settings object
             field_name="not_on_online_confirmed",
             new_value=True,
             log_context=f" by admin for user {target_telegram_id} (confirm NOON for TT link)",
@@ -370,13 +368,10 @@ async def admin_link_tt_account(
             )
             # final_settings remains updated_settings_tt_link from the first successful update
         else:
-            final_settings = confirmed_settings # Both updates were successful
+            final_settings = confirmed_settings  # Both updates were successful
 
     return OperationResult(
-        success=True,
-        message_key=success_message_key,
-        message_args=message_args,
-        user_settings=final_settings
+        success=True, message_key=success_message_key, message_args=message_args, user_settings=final_settings
     )
 
 
