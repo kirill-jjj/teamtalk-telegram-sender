@@ -767,62 +767,62 @@ async def handle_admin_set_subscriber_notification_pref(
     translator: gettext.GNUTranslations,
     services: "Services",
 ) -> None:
-    """Handles an admin setting a specific subscriber's notification preference."""
+    """Handles an admin setting a specific subscriber's notification preference using the service layer."""
     _ = translator.gettext
     # The ensure_message_context decorator handles the query.message check.
-    target_user_settings = await session.get(UserSettings, callback_data.target_telegram_id)
-    if not target_user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        # query.message is guaranteed to exist here.
-        await _refresh_and_display_subscriber_list(
-            query, session, services, callback_data.subscriber_page_context, translator
-        )
-        return
-    old_pref_val = target_user_settings.notification_settings
+    target_telegram_id = callback_data.target_telegram_id
     new_pref_str = callback_data.setting_value
+    subscriber_page_context = callback_data.subscriber_page_context
+
     try:
         new_pref_enum = NotificationSetting(new_pref_str)
     except ValueError:
-        logger.exception("Invalid notification setting value received: %s", new_pref_str)
+        logger.exception("Invalid notification setting value received: %s for user %s", new_pref_str, target_telegram_id)
         await query.answer(_("Invalid setting value. Please try again."), show_alert=True)
         return
-    target_user_settings.notification_settings = new_pref_enum
-    try:
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
+
+    updated_user_settings = await user_service.admin_set_user_notification_preference(
+        session, services, target_telegram_id, new_pref_enum
+    )
+
+    if updated_user_settings:
         notif_setting_map = {
             NotificationSetting.ALL.value: _("All (Join & Leave)"),
             NotificationSetting.LEAVE_OFF.value: _("Join Only"),
             NotificationSetting.JOIN_OFF.value: _("Leave Only"),
             NotificationSetting.NONE.value: _("None"),
         }
-        new_pref_display_name = notif_setting_map.get(new_pref_str, new_pref_str)
+        # Use the value from the updated_user_settings which is confirmed from DB
+        new_pref_display_name = notif_setting_map.get(
+            updated_user_settings.notification_settings.value, updated_user_settings.notification_settings.value
+        )
         await query.answer(
             _("Notification preference for subscriber {tg_id} set to: {pref}").format(
-                tg_id=callback_data.target_telegram_id, pref=new_pref_display_name
+                tg_id=target_telegram_id, pref=new_pref_display_name
             ),
             show_alert=False,
         )
-    except Exception:
-        logger.exception(
-            "Failed to update notification preference for subscriber %s to %s",
-            callback_data.target_telegram_id,
-            new_pref_str,
+    else:
+        # Service function handles logging of specific error (e.g., user not found, DB error)
+        await query.answer(
+            _("Failed to change notification preference for subscriber {tg_id}. Please check logs or try again.").format(
+                tg_id=target_telegram_id
+            ),
+            show_alert=True,
         )
-        target_user_settings.notification_settings = old_pref_val
-        await query.answer(_("Failed to change notification preference. Please try again."), show_alert=True)
-    # query.message is guaranteed to exist here.
+
+    # Refresh the main subscriber view to show updated details
+    # query.message is guaranteed to exist here due to @ensure_message_context.
     await handle_view_subscriber(
         query=query,
         callback_data=ViewSubscriberCallback(
-                telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context
-            ),
-            session=session,
-            translator=translator,
-            services=services,
-        )
-    return
+            telegram_id=target_telegram_id, page=subscriber_page_context
+        ),
+        session=session,
+        translator=translator,
+        services=services,
+    )
+    # No explicit return needed as it's the end of the function
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
