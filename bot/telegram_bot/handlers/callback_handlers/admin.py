@@ -21,7 +21,7 @@ from bot.telegram_bot.callback_data import AdminActionCallback
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
+    pass
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
@@ -128,7 +128,7 @@ async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    services: "Services",  # Injected from workflow_data
+    # services: "Services",  # No longer needed after removing manual admin check
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
@@ -138,9 +138,6 @@ async def process_user_action_selection(
         return
 
     # Admin check is now handled by AdminCheckMiddleware applied to the admin_actions_router.
-    # if not services.cache.is_admin(callback_query.from_user.id):
-    #     await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
-    #     return
 
     # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection and instance are valid
     if not tt_connection or not tt_connection.instance:

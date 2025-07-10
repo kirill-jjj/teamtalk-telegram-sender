@@ -219,7 +219,12 @@ async def _handle_manage_tt_account_action(
     message_text = _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
         telegram_id=target_telegram_id
     )
-    await query.message.edit_text(message_text, reply_markup=keyboard)
+    if isinstance(query.message, Message):
+        await query.message.edit_text(message_text, reply_markup=keyboard)
+    else:
+        logger.warning("_handle_manage_tt_account_action: query.message is not a Message instance, cannot edit.")
+        # Optionally, answer the query if an edit isn't possible but the action was otherwise okay
+        # await query.answer(_("Action processed, but view could not be updated."), show_alert=True)
     await query.answer()
 
 
@@ -255,7 +260,10 @@ async def _handle_admin_set_language_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(message_text, reply_markup=lang_keyboard)  # lang_keyboard is now InlineKeyboardMarkup
+    if isinstance(query.message, Message):
+        await query.message.edit_text(message_text, reply_markup=lang_keyboard)  # lang_keyboard is now InlineKeyboardMarkup
+    else:
+        logger.warning("_handle_admin_set_language_action: query.message is not a Message instance, cannot edit.")
     await query.answer()
 
 
@@ -291,7 +299,7 @@ async def _handle_admin_toggle_noon_action(
 
     # Refresh the view for the subscriber
     await handle_view_subscriber(
-        query=query,  # type: ignore
+        query=query,
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
         session=session,
         translator=translator,
@@ -325,9 +333,12 @@ async def _handle_admin_set_notif_pref_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(
-        message_text, reply_markup=notif_pref_keyboard
-    )  # notif_pref_keyboard is now InlineKeyboardMarkup
+    if isinstance(query.message, Message):
+        await query.message.edit_text(
+            message_text, reply_markup=notif_pref_keyboard
+        )  # notif_pref_keyboard is now InlineKeyboardMarkup
+    else:
+        logger.warning("_handle_admin_set_notif_pref_action: query.message is not a Message instance, cannot edit.")
     await query.answer()
 
 
@@ -357,9 +368,12 @@ async def _handle_admin_set_mute_mode_action(
         subscriber_page_context=return_page,
     )
     message_text = _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-    await query.message.edit_text(
-        message_text, reply_markup=mute_mode_keyboard
-    )  # mute_mode_keyboard is now InlineKeyboardMarkup
+    if isinstance(query.message, Message):
+        await query.message.edit_text(
+            message_text, reply_markup=mute_mode_keyboard
+        )  # mute_mode_keyboard is now InlineKeyboardMarkup
+    else:
+        logger.warning("_handle_admin_set_mute_mode_action: query.message is not a Message instance, cannot edit.")
     await query.answer()
 
 
@@ -428,7 +442,8 @@ async def _handle_admin_view_mute_list_action(
     """Handles an admin viewing a specific subscriber's mute list using display_paginated_list."""
     _ = translator.gettext
 
-    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action or handle_paginate_mute_list)
+    # query.message check is handled by the decorator on the calling handler
+    # (e.g., handle_subscriber_action or handle_paginate_mute_list).
     # We assume query.message is a Message instance if this helper is reached.
 
     # 1. Fetch UserSettings with preloaded muted_users_list
@@ -687,10 +702,15 @@ async def handle_link_tt_account_chosen(
         current_tt_username=final_tt_username_for_keyboard,
         page=return_page,
     )
-    await query.message.edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
-        reply_markup=updated_keyboard,
-    )
+    if isinstance(query.message, Message):
+        await query.message.edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+            reply_markup=updated_keyboard,
+        )
+    else:
+        # This case should ideally not be reached if @ensure_message_context works as expected
+        # and the message was not deleted/made inaccessible between handler start and here.
+        logger.warning("handle_link_tt_account_chosen: query.message is not a Message instance, cannot edit.")
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
@@ -730,7 +750,7 @@ async def handle_admin_set_subscriber_language(
 
     # query.message is guaranteed to exist here due to the @ensure_message_context decorator.
     await handle_view_subscriber(
-        query=query,  # type: ignore
+        query=query,
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session,
             translator=translator,
@@ -836,7 +856,7 @@ async def handle_admin_set_subscriber_mute_mode(
 
     # query.message is guaranteed to exist here.
     await handle_view_subscriber(
-        query=query,  # type: ignore
+        query=query,
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session,
             translator=translator,

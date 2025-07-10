@@ -10,7 +10,6 @@ import html
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk  # For UserAccount type hint
 

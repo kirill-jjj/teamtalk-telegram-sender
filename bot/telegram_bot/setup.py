@@ -14,6 +14,7 @@ from bot.core.languages import DEFAULT_LANGUAGE_CODE
 from bot.database import crud
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.handlers.admin import admin_router
+from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
     subscriber_actions_router,
 )
@@ -213,8 +214,7 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     admin_router.message.middleware(AdminCheckMiddleware())
-    # Apply AdminCheckMiddleware to admin_actions_router for callback queries
-    from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router  # Ensure router is imported if not already
+    # admin_actions_router is imported at the top-level now.
     admin_actions_router.callback_query.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 
