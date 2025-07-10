@@ -2,20 +2,20 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, Optional, cast # Added Optional and cast
+from typing import TYPE_CHECKING, Optional, cast  # Added Optional and cast
 
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.orm import selectinload
-from sqlalchemy.orm.attributes import QueryableAttribute # Added for cast
+from sqlalchemy.orm.attributes import QueryableAttribute  # Added for cast
 from sqlmodel import select  # Moved here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import SubscriberAction
-from bot.models import MuteListMode, NotificationSetting, UserSettings, MutedUser # Added MutedUser
+from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings  # Added MutedUser
 from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (

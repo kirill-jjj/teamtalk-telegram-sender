@@ -489,7 +489,7 @@ class TeamTalkConnection:
                     "tt_message": message,
                     "translator": translator,
                     "services": self.services,
-                    "connection": self,
+                    "_connection": self,  # Changed key to _connection
                 }
                 if cmd in [tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN]:
                     kwargs["args_str"] = args
