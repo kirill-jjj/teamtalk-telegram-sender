@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  #
 from bot.core.enums import LanguageAction, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
-from bot.services import user_service
+from bot.services import _utils, user_service # Add _utils
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 
@@ -114,10 +114,10 @@ async def cq_set_language(
         show_alert=False,
     )
 
-    commands_updated = await user_service.update_user_bot_commands(telegram_id, new_lang_code, services)
+    commands_updated = await _utils.update_user_bot_commands(telegram_id, new_lang_code, services)
 
     if not commands_updated:
-        # Error logged by user_service. Inform user.
+        # Error logged by _utils. Inform user.
         await callback_query.answer(
             new_lang_translator.gettext(
                 "Language updated, but commands might not refresh immediately. "

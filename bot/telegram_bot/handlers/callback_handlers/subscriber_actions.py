@@ -2,19 +2,20 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, Optional  # Added Optional
+from typing import TYPE_CHECKING, Optional, cast # Added Optional and cast
 
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import QueryableAttribute # Added for cast
 from sqlmodel import select  # Moved here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import SubscriberAction
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.models import MuteListMode, NotificationSetting, UserSettings, MutedUser # Added MutedUser
 from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
@@ -449,7 +450,7 @@ async def _handle_admin_view_mute_list_action(
     statement = (
         select(UserSettings)
         .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(UserSettings.muted_users_list))  # Use getattr for clarity
+        .options(selectinload(cast(QueryableAttribute[list[MutedUser]], UserSettings.muted_users_list)))
     )
     target_user_settings = await session.scalar(statement)  # Using scalar for one_or_none equivalent
 
