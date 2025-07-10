@@ -98,7 +98,11 @@ async def update_user_language_settings(  # User-initiated
         )
         return None  # Or handle error as appropriate
 
-    updated_settings = await _utils._update_user_setting_field(
+    # The original function also called update_user_bot_commands.
+    # Command updates are now handled by the calling handler.
+    # The _update_user_setting_field was being called twice.
+    # The first assignment to updated_settings was unused.
+    return await _utils._update_user_setting_field(
         session=session,
         services=services,
         settings_to_update=managed_user_settings,
@@ -106,17 +110,6 @@ async def update_user_language_settings(  # User-initiated
         new_value=new_lang_code,
         log_context=" (self)",
     )
-    # The original function also called update_user_bot_commands.
-    # This should be consistent for both user and admin paths if it's a general side effect of language change.
-    if updated_settings:
-        commands_updated = await _utils.update_user_bot_commands(updated_settings.telegram_id, new_lang_code, services)
-        if not commands_updated:
-            logger.warning(
-                "Failed to update bot commands for user %s after self-language change to '%s'.",
-                updated_settings.telegram_id,
-                new_lang_code,
-            )
-    return updated_settings
 
 
 async def process_new_subscription(

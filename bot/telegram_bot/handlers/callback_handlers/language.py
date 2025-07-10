@@ -74,9 +74,10 @@ async def cq_set_language(
         await callback_query.answer(_("An error occurred: User information missing."), show_alert=True)
         return
 
-    managed_user_settings = await session.merge(user_settings)
+    # user_settings is provided by UserSettingsMiddleware and should be session-managed or merged by the service.
+    # No need to merge it here.
     new_lang_code = callback_data.lang_code
-    original_lang_code = managed_user_settings.language_code
+    original_lang_code = user_settings.language_code  # Use user_settings directly
     telegram_id = callback_query.from_user.id
 
     if new_lang_code == original_lang_code:
@@ -92,44 +93,56 @@ async def cq_set_language(
     new_lang_translator = services.get_translator(new_lang_code)
 
     # --- Update language settings (DB and cache) ---
-    settings_updated = await user_service.update_user_language_settings(
-        cast(SQLModelAsyncSession, session), managed_user_settings, new_lang_code, services
+    # The user_service.update_user_language_settings now only handles language update, not commands.
+    settings_updated_successfully = await user_service.update_user_language_settings(
+        cast(SQLModelAsyncSession, session), user_settings, new_lang_code, services
     )
 
-    if not settings_updated:
-        # Error already logged by user_service. Revert in-memory object just in case.
-        managed_user_settings.language_code = original_lang_code
-        await callback_query.answer(
-            _("An error occurred while updating language settings. Please try again later."), show_alert=True
-        )
-        return
+    final_translator: gettext.GNUTranslations | gettext.NullTranslations = translator  # Default to original translator
+    toast_message = ""
+    toast_show_alert = False
 
-    # --- Language settings updated successfully, now update commands ---
-    await callback_query.answer(
-        new_lang_translator.gettext("Language updated to {lang_name}.").format(
-            lang_name=selected_lang_info["native_name"]
-        ),
-        show_alert=False,
-    )
+    if not settings_updated_successfully:
+        # Language update in DB/cache failed. Service layer logs details.
+        # UI should reflect that language was NOT changed.
+        toast_message = _("An error occurred while updating language settings. Please try again later.")
+        toast_show_alert = True
+        # UI will be updated with the original language settings at the end.
+        # No need to revert user_settings.language_code here, as it wasn't committed.
+        # The new_lang_translator should not be used.
+    else:
+        # Language setting in DB is updated. user_settings object might be updated by the service.
+        # Use the new language's translator for subsequent messages.
+        final_translator = new_lang_translator
+        user_settings.language_code = new_lang_code  # Ensure in-memory model reflects change for UI
 
-    commands_updated = await _utils.update_user_bot_commands(telegram_id, new_lang_code, services)
+        # --- Try to update bot commands ---
+        commands_updated_successfully = await _utils.update_user_bot_commands(telegram_id, new_lang_code, services)
 
-    if not commands_updated:
-        # Error logged by _utils. Inform user.
-        await callback_query.answer(
-            new_lang_translator.gettext(
+        if commands_updated_successfully:
+            toast_message = final_translator.gettext("Language updated to {lang_name}.").format(
+                lang_name=selected_lang_info["native_name"]
+            )
+            toast_show_alert = False
+        else:
+            # Language updated, but commands failed. Service layer logs details.
+            toast_message = final_translator.gettext(
                 "Language updated, but commands might not refresh immediately. "
                 "You may need to restart the chat with the bot."
-            ),
-            show_alert=True,
-        )
-        # Proceed to update UI anyway
+            )
+            toast_show_alert = True
 
-    # --- Update UI (Settings Menu) ---
-    # Decorator ensures callback_query.message is a Message object.
+    # --- Show combined toast message ---
+    if toast_message:
+        await callback_query.answer(toast_message, show_alert=toast_show_alert)
+    else:  # Should not happen if logic is correct, but as a fallback
+        await callback_query.answer()
+
+    # --- Update UI (Settings Menu) using the final_translator ---
+    # This will use new language if settings_updated_successfully was true, otherwise original.
     try:
-        main_settings_builder = await create_main_settings_keyboard(new_lang_translator)
-        main_settings_text = new_lang_translator.gettext("Settings")
+        main_settings_builder = await create_main_settings_keyboard(final_translator)
+        main_settings_text = final_translator.gettext("Settings")
         await safe_edit_text(
             message_to_edit=callback_query.message,  # type: ignore[arg-type]
             text=main_settings_text,
@@ -139,12 +152,12 @@ async def cq_set_language(
         )
     except Exception:
         logger.exception(
-            "Failed to refresh settings UI for user %s after language change to %s.", telegram_id, new_lang_code
+            "Failed to refresh settings UI for user %s after language change attempt to %s.", telegram_id, new_lang_code
         )
-        # Don't send another alert if commands failed, as user already got one.
-        # If commands succeeded but UI failed, this is the first major error user sees.
-        if commands_updated:  # Only show this if commands didn't already show an error.
-            # Use the gettext method from the new translator for this specific message
+        # If a toast was already shown for command failure, this additional one might be noisy.
+        # However, if the primary operations seemed fine but UI failed, this is important.
+        # For simplicity, show a generic UI error if it hasn't been covered by a more specific prior alert.
+        if not toast_show_alert:  # Only show if a more critical alert wasn't already displayed
             await callback_query.answer(
-                new_lang_translator.gettext("Language and commands updated, but UI failed to refresh."), show_alert=True
+                final_translator.gettext("Settings UI failed to refresh. Please try navigating again."), show_alert=True
             )

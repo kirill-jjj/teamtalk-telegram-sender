@@ -441,7 +441,9 @@ async def cq_show_all_accounts_list_action(
     # Callback answering handled by decorator or _display_all_server_accounts_list.
     # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
     # Decorator ensures callback_query.message exists.
-    await _display_all_server_accounts_list(callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), 0)
+    await _display_all_server_accounts_list(
+        callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), 0
+    )
 
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))

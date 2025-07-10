@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast  # Added Optional and cast
 
 from aiogram import F, Router  # Added F
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message # Added Message back
+from aiogram.types import CallbackQuery, Message  # Added Message back
 import pytalk
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import QueryableAttribute  # Added for cast
@@ -231,10 +231,10 @@ async def handle_admin_toggle_noon(
         await query.answer(_("Failed to toggle NOON status. Please try again."), show_alert=True)
 
     # Refresh the view for the subscriber
-    # @ensure_message_context guarantees query.message is valid for handle_view_subscriber
-    await handle_view_subscriber(
-        query=query,  # Pass the original query
-        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=return_page),
+    await _display_subscriber_view(
+        query=query,
+        target_telegram_id=target_telegram_id,
+        page_context=return_page,
         session=session,
         translator=translator,
         services=services,
@@ -442,24 +442,22 @@ async def _refresh_and_display_subscriber_list(
     )
 
 
-@subscriber_actions_router.callback_query(ViewSubscriberCallback.filter())
-@ensure_message_context
-async def handle_view_subscriber(
+async def _display_subscriber_view(
     query: CallbackQuery,
-    callback_data: ViewSubscriberCallback,
+    target_telegram_id: int,
+    page_context: int,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
 ) -> None:
-    """Handles viewing details and actions for a specific subscriber."""
+    """Helper function to display the subscriber details view."""
     _ = translator.gettext
-    # The ensure_message_context decorator handles the query.message check.
 
     keyboard = await create_subscriber_action_menu_keyboard(
-        translator, target_telegram_id=callback_data.telegram_id, page=callback_data.page
+        translator, target_telegram_id=target_telegram_id, page=page_context
     )
-    user_to_view = await session.get(UserSettings, callback_data.telegram_id)
-    display_name = str(callback_data.telegram_id)
+    user_to_view = await session.get(UserSettings, target_telegram_id)
+    display_name = str(target_telegram_id)
 
     active_bot = services.bot_event
     if user_to_view and user_to_view.telegram_id:
@@ -496,9 +494,28 @@ async def handle_view_subscriber(
 
     text = "\n".join(details_parts)
     # @ensure_message_context guarantees query.message is a Message
-    # so, the isinstance check and the else branch are redundant.
     await cast(Message, query.message).edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await query.answer()
+
+
+@subscriber_actions_router.callback_query(ViewSubscriberCallback.filter())
+@ensure_message_context
+async def handle_view_subscriber(
+    query: CallbackQuery,
+    callback_data: ViewSubscriberCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+) -> None:
+    """Handles viewing details and actions for a specific subscriber by calling the display helper."""
+    await _display_subscriber_view(
+        query=query,
+        target_telegram_id=callback_data.telegram_id,
+        page_context=callback_data.page,
+        session=session,
+        translator=translator,
+        services=services,
+    )
 
 
 # Removed _handle_delete_subscriber_action (logic moved to handle_delete_subscriber)
