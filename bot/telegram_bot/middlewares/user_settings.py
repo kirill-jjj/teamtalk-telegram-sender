@@ -72,12 +72,17 @@ class UserSettingsMiddleware(BaseMiddleware):
                     user_settings = await session_obj.merge(user_settings)
                     logger.debug("User settings for %s merged into current session.", user_obj.id)
 
-            # Refresh to ensure relationship data is up-to-date for this session
-            await session_obj.refresh(user_settings, attribute_names=["muted_users_list"])
-            logger.debug("Refreshed muted_users_list for user %s in current session.", user_obj.id)
-        except Exception:  # Catch more specific SQLAlchemy errors if possible, removed 'as refresh_e'
+            # The muted_users_list is now expected to be up-to-date in the cached UserSettings object
+            # due to explicit cache updates after modification (e.g., in user_service).
+            # Therefore, the explicit refresh of muted_users_list here is removed.
+            # The merge operation above ensures the UserSettings object is session-attached.
+            logger.debug(
+                "Skipping refresh of muted_users_list for user %s in middleware; relying on explicit cache updates.",
+                user_obj.id
+            )
+        except Exception:
             logger.exception(
-                "Error merging or refreshing muted_users_list for user %s in session.",
+                "Error merging UserSettings for user %s in session (refresh of list is now skipped).",
                 user_obj.id,
             )
             error_lang_code = (
