@@ -213,6 +213,9 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     admin_router.message.middleware(AdminCheckMiddleware())
+    # Apply AdminCheckMiddleware to admin_actions_router for callback queries
+    from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router  # Ensure router is imported if not already
+    admin_actions_router.callback_query.middleware(AdminCheckMiddleware())
     subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(user_commands_router)

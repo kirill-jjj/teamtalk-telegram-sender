@@ -137,9 +137,10 @@ async def process_user_action_selection(
         await callback_query.answer(_("Error: Message context not found."), show_alert=True)
         return
 
-    if not services.cache.is_admin(callback_query.from_user.id):
-        await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
-        return
+    # Admin check is now handled by AdminCheckMiddleware applied to the admin_actions_router.
+    # if not services.cache.is_admin(callback_query.from_user.id):
+    #     await callback_query.answer(_("You are not authorized for this action."), show_alert=True)
+    #     return
 
     # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection and instance are valid
     if not tt_connection or not tt_connection.instance:

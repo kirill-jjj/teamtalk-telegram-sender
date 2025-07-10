@@ -40,6 +40,7 @@ from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, Tea
 from bot.telegram_bot.ui_utils import display_paginated_list  # Added import
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
+from ._helpers import ensure_message_context
 from .list_utils import (
     SUBSCRIBERS_PER_PAGE,
     _show_subscriber_list_page,
@@ -85,6 +86,7 @@ async def _refresh_and_display_subscriber_list(
 
 
 @subscriber_actions_router.callback_query(ViewSubscriberCallback.filter())
+@ensure_message_context
 async def handle_view_subscriber(
     query: CallbackQuery,
     callback_data: ViewSubscriberCallback,
@@ -94,10 +96,7 @@ async def handle_view_subscriber(
 ) -> None:
     """Handles viewing details and actions for a specific subscriber."""
     _ = translator.gettext
-    if not query.message:
-        logger.warning("handle_view_subscriber called without message context.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # The ensure_message_context decorator handles the query.message check.
 
     keyboard = await create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=callback_data.telegram_id, page=callback_data.page
@@ -157,10 +156,7 @@ async def _handle_delete_subscriber_action(
 ) -> None:
     """Helper to handle subscriber deletion."""
     _ = translator.gettext
-    if not query.message:
-        logger.warning("_handle_delete_subscriber_action called without message context.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
 
     success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
     if success:
@@ -186,10 +182,7 @@ async def _handle_ban_subscriber_action(
 ) -> None:
     """Helper to handle subscriber banning."""
     _ = translator.gettext
-    if not query.message:
-        logger.warning("_handle_ban_subscriber_action called without message context.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
 
     # Call the service function to handle all ban and deletion logic
     _success, ban_messages = await admin_service.ban_and_delete_subscriber(
@@ -215,10 +208,8 @@ async def _handle_manage_tt_account_action(
 ) -> None:
     """Helper to show manage TT account menu for a subscriber."""
     _ = translator.gettext
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("_handle_manage_tt_account_action called without message context.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
+    # We assume query.message is a Message instance if this helper is reached.
     user_settings = await session.get(UserSettings, target_telegram_id)
     current_tt_username = user_settings.teamtalk_username if user_settings else None
 
@@ -243,10 +234,8 @@ async def _handle_admin_set_language_action(
 ) -> None:
     """Helper to show language selection for a subscriber to an admin."""
     _ = translator.gettext
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("ADMIN_SET_LANGUAGE action called without message context.")
-        await query.answer(_("An error occurred."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
+    # We assume query.message is a Message instance if this helper is reached.
 
     if not services:
         logger.error("Services not available in _handle_admin_set_language_action.")
@@ -281,10 +270,8 @@ async def _handle_admin_toggle_noon_action(
 ) -> None:
     """Helper to toggle NOON for a subscriber."""
     _ = translator.gettext
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("ADMIN_TOGGLE_NOON action called without message context.")
-        await query.answer(_("An error occurred."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
+    # We assume query.message is a Message instance if this helper is reached.
 
     updated_user_settings = await user_service.admin_toggle_noon_setting(session, services, target_telegram_id)
 
@@ -323,10 +310,8 @@ async def _handle_admin_set_notif_pref_action(
 ) -> None:
     """Helper to show notification preference selection for a subscriber."""
     _ = translator.gettext
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("ADMIN_SET_NOTIF_PREF action called without message context.")
-        await query.answer(_("An error occurred."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
+    # We assume query.message is a Message instance if this helper is reached.
 
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
@@ -357,10 +342,8 @@ async def _handle_admin_set_mute_mode_action(
 ) -> None:
     """Helper to show mute mode selection for a subscriber."""
     _ = translator.gettext
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("ADMIN_SET_MUTE_MODE action called without message context.")
-        await query.answer(_("An error occurred."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
+    # We assume query.message is a Message instance if this helper is reached.
 
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
@@ -381,6 +364,7 @@ async def _handle_admin_set_mute_mode_action(
 
 
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter())
+@ensure_message_context
 async def handle_subscriber_action(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -391,9 +375,7 @@ async def handle_subscriber_action(
 ) -> None:
     """Dispatches subscriber-related actions by admin from the subscriber action menu."""
     _ = translator.gettext
-    if not query.message:
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # The ensure_message_context decorator handles the query.message check.
 
     action = callback_data.action
     target_telegram_id = callback_data.target_telegram_id
@@ -446,10 +428,8 @@ async def _handle_admin_view_mute_list_action(
     """Handles an admin viewing a specific subscriber's mute list using display_paginated_list."""
     _ = translator.gettext
 
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning("ADMIN_VIEW_MUTE_LIST action called without message context for user %s.", query.from_user.id)
-        await query.answer(_("An error occurred. Please try again."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handler (handle_subscriber_action or handle_paginate_mute_list)
+    # We assume query.message is a Message instance if this helper is reached.
 
     # 1. Fetch UserSettings with preloaded muted_users_list
     statement = (
@@ -522,6 +502,7 @@ async def _handle_admin_view_mute_list_action(
 
 
 @subscriber_actions_router.callback_query(PaginateMuteListCallback.filter())
+@ensure_message_context
 async def handle_paginate_mute_list(
     query: CallbackQuery,
     callback_data: PaginateMuteListCallback,
@@ -530,6 +511,7 @@ async def handle_paginate_mute_list(
     services: "Services",
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
+    # The ensure_message_context decorator handles the query.message check.
     await _handle_admin_view_mute_list_action(
         query=query,
         session=session,
@@ -553,12 +535,8 @@ async def _display_linkable_tt_accounts_page(
     """Helper to display a paginated list of linkable TeamTalk accounts using display_paginated_list."""
     _ = translator.gettext
 
-    if not query.message or not isinstance(query.message, Message):
-        logger.warning(
-            "_display_linkable_tt_accounts_page: Message is None or inaccessible for user %s.", query.from_user.id
-        )
-        await query.answer(_("An error occurred. Please try again."), show_alert=True)
-        return
+    # query.message check is handled by the decorator on the calling handlers.
+    # We assume query.message is a Message instance if this helper is reached.
 
     if not tt_connection or not tt_connection.is_ready or not tt_connection.user_accounts_cache:
         logger.warning(
@@ -622,6 +600,7 @@ async def _display_linkable_tt_accounts_page(
 
 
 @subscriber_actions_router.callback_query(PaginateLinkableAccountsCallback.filter())
+@ensure_message_context
 async def handle_paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
@@ -629,6 +608,7 @@ async def handle_paginate_linkable_accounts(
     translator: gettext.GNUTranslations,
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
+    # The ensure_message_context decorator handles the query.message check.
     await _display_linkable_tt_accounts_page(
         query=query,
         target_telegram_id=callback_data.target_telegram_id,
@@ -640,6 +620,7 @@ async def handle_paginate_linkable_accounts(
 
 
 @subscriber_actions_router.callback_query(LinkTTAccountChosenCallback.filter())
+@ensure_message_context
 async def handle_link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
@@ -649,13 +630,11 @@ async def handle_link_tt_account_chosen(
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
     _ = translator.gettext
+    # The ensure_message_context decorator handles the query.message check.
+    # We assume query.message is a Message instance if this handler is reached.
     target_telegram_id = callback_data.target_telegram_id
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
-
-    if not query.message or not isinstance(query.message, Message):  # Ensure message is Message instance
-        await query.answer(_("An error occurred. Please try again."), show_alert=True)
-        return
 
     updated_user_settings, status_key = await user_service.admin_link_tt_account(
         session, services, target_telegram_id, tt_username_to_link
@@ -715,6 +694,7 @@ async def handle_link_tt_account_chosen(
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
+@ensure_message_context
 async def handle_admin_set_subscriber_language(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberLanguageCallback,
@@ -724,6 +704,7 @@ async def handle_admin_set_subscriber_language(
 ) -> None:
     """Handles an admin setting a specific subscriber's language."""
     _ = translator.gettext
+    # The ensure_message_context decorator handles the query.message check.
     target_telegram_id = callback_data.target_telegram_id
     new_lang_code = callback_data.lang_code
     subscriber_page_context = callback_data.subscriber_page_context
@@ -747,10 +728,10 @@ async def handle_admin_set_subscriber_language(
             _("Failed to change language. Subscriber settings might be missing or an error occurred."), show_alert=True
         )
 
-    if query.message:  # query.message should exist if callback_data exists, but good check
-        await handle_view_subscriber(
-            query=query,  # type: ignore
-            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
+    # query.message is guaranteed to exist here due to the @ensure_message_context decorator.
+    await handle_view_subscriber(
+        query=query,  # type: ignore
+        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session,
             translator=translator,
             services=services,
@@ -758,6 +739,7 @@ async def handle_admin_set_subscriber_language(
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
+@ensure_message_context
 async def handle_admin_set_subscriber_notification_pref(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberNotificationPrefCallback,
@@ -767,13 +749,14 @@ async def handle_admin_set_subscriber_notification_pref(
 ) -> None:
     """Handles an admin setting a specific subscriber's notification preference."""
     _ = translator.gettext
+    # The ensure_message_context decorator handles the query.message check.
     target_user_settings = await session.get(UserSettings, callback_data.target_telegram_id)
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
-        if query.message:
-            await _refresh_and_display_subscriber_list(
-                query, session, services, callback_data.subscriber_page_context, translator
-            )
+        # query.message is guaranteed to exist here.
+        await _refresh_and_display_subscriber_list(
+            query, session, services, callback_data.subscriber_page_context, translator
+        )
         return
     old_pref_val = target_user_settings.notification_settings
     new_pref_str = callback_data.setting_value
@@ -809,10 +792,10 @@ async def handle_admin_set_subscriber_notification_pref(
         )
         target_user_settings.notification_settings = old_pref_val
         await query.answer(_("Failed to change notification preference. Please try again."), show_alert=True)
-    if query.message:
-        await handle_view_subscriber(
-            query=query,
-            callback_data=ViewSubscriberCallback(
+    # query.message is guaranteed to exist here.
+    await handle_view_subscriber(
+        query=query,
+        callback_data=ViewSubscriberCallback(
                 telegram_id=callback_data.target_telegram_id, page=callback_data.subscriber_page_context
             ),
             session=session,
@@ -823,6 +806,7 @@ async def handle_admin_set_subscriber_notification_pref(
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
+@ensure_message_context
 async def handle_admin_set_subscriber_mute_mode(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberMuteModeCallback,
@@ -832,6 +816,7 @@ async def handle_admin_set_subscriber_mute_mode(
 ) -> None:
     """Handles an admin setting a specific subscriber's mute list mode."""
     _ = translator.gettext
+    # The ensure_message_context decorator handles the query.message check.
     target_telegram_id = callback_data.target_telegram_id
     new_mode = callback_data.mode
     subscriber_page_context = callback_data.subscriber_page_context
@@ -849,10 +834,10 @@ async def handle_admin_set_subscriber_mute_mode(
             _("Failed to change mute mode. Subscriber settings might be missing or an error occurred."), show_alert=True
         )
 
-    if query.message:  # query.message should exist
-        await handle_view_subscriber(
-            query=query,  # type: ignore
-            callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
+    # query.message is guaranteed to exist here.
+    await handle_view_subscriber(
+        query=query,  # type: ignore
+        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
             session=session,
             translator=translator,
             services=services,
