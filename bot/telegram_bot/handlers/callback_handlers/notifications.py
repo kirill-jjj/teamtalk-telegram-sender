@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery  # Added Message
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # Changed import
 
 from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.models import UserSettings
@@ -55,7 +55,7 @@ async def cq_show_notifications_menu(
 @ensure_message_context
 async def cq_toggle_noon_setting_action(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLModelAsyncSession, # Changed type hint
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     _callback_data: NotificationActionCallback | None = None,  # Keep for consistent signature, though not used

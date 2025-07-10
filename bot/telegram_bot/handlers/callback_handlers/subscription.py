@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from aiogram import F, Router
 from aiogram.types import CallbackQuery  # Added Message
 from pydantic import BaseModel, Field, ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # Changed import
 
 from bot.core.enums import SettingsNavAction, SubscriptionAction
 from bot.models import NotificationSetting, UserSettings
@@ -68,7 +68,7 @@ async def cq_show_subscriptions_menu(
 @ensure_message_context
 async def cq_set_subscription_setting(
     callback_query: CallbackQuery,
-    session: AsyncSession,
+    session: SQLModelAsyncSession, # Changed type hint
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
