@@ -202,7 +202,7 @@ async def handle_admin_toggle_noon(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
+    tt_connection: TeamTalkConnection | None, # Unused in this handler
 ) -> None:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
@@ -243,8 +243,8 @@ async def handle_admin_set_notif_pref_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # noqa: ARG001 Unused in this handler
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
+    services: "Services", # Unused in this handler
+    tt_connection: TeamTalkConnection | None, # Unused in this handler
 ) -> None:
     """Shows notification preference selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -280,8 +280,8 @@ async def handle_admin_set_mute_mode_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # noqa: ARG001 Unused in this handler
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
+    services: "Services", # Unused in this handler
+    tt_connection: TeamTalkConnection | None, # Unused in this handler
 ) -> None:
     """Shows mute mode selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -318,7 +318,7 @@ async def handle_admin_view_mute_list(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Injected by middleware, unused
+    tt_connection: TeamTalkConnection | None, # Injected by middleware, unused
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list (shows page 0)."""
     await _display_subscriber_mute_list_page(
@@ -557,11 +557,11 @@ async def handle_paginate_mute_list(
 async def handle_link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
-    session: AsyncSession,  # noqa: ARG001 - Injected by DbSessionMiddleware
+    session: AsyncSession, # Injected by DbSessionMiddleware
     translator: gettext.GNUTranslations, # Injected by I18nMiddleware
-    services: "Services",  # noqa: ARG001 - From workflow_data
+    services: "Services", # From workflow_data
     tt_connection: TeamTalkConnection | None, # Injected by ActiveTeamTalkConnectionMiddleware
-    user_settings: UserSettings,  # noqa: ARG001 - Injected by UserSettingsMiddleware
+    user_settings: UserSettings, # Injected by UserSettingsMiddleware
 ) -> None:
     """Handles the 'Link/Change TeamTalk Account' action by showing a list of linkable accounts."""
     await _display_linkable_tt_accounts_page(
