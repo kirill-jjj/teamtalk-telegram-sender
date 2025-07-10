@@ -14,7 +14,7 @@ from sqlmodel import select  # Moved here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
-from bot.core.enums import SubscriberAction, ManageTTAccountAction # Added ManageTTAccountAction
+from bot.core.enums import ManageTTAccountAction, SubscriberAction  # Added ManageTTAccountAction
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings  # Added MutedUser
 from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -23,11 +23,11 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     LinkTTAccountChosenCallback,
+    ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
     PaginateMuteListCallback,  # New
     SubscriberActionCallback,
     ViewSubscriberCallback,
-    ManageTTAccountCallback,
 )
 from bot.telegram_bot.keyboards import (
     create_admin_subscriber_lang_keyboard,
@@ -68,7 +68,7 @@ async def handle_delete_subscriber(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Injected by middleware, unused
+    tt_connection: TeamTalkConnection | None, # Injected by middleware, unused
 ) -> None:
     """Handles deleting a subscriber."""
     _ = translator.gettext
@@ -123,8 +123,8 @@ async def handle_manage_tt_account(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # noqa: ARG001 Unused in this handler
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
+    services: "Services", # Unused in this handler
+    tt_connection: TeamTalkConnection | None, # Unused in this handler
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
@@ -154,10 +154,10 @@ async def handle_manage_tt_account(
 async def handle_admin_set_language_choice(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
-    session: AsyncSession,  # noqa: ARG001 Unused in this handler
+    session: AsyncSession, # Unused in this handler
     translator: gettext.GNUTranslations,
     services: "Services",
-    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
+    tt_connection: TeamTalkConnection | None, # Unused in this handler
 ) -> None:
     """Shows language selection menu for a subscriber to an admin."""
     _ = translator.gettext
