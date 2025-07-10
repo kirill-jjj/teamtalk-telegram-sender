@@ -67,7 +67,7 @@ async def handle_delete_subscriber(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    _tt_connection: TeamTalkConnection | None, # Injected by middleware, unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Injected by middleware, unused
 ) -> None:
     """Handles deleting a subscriber."""
     _ = translator.gettext
@@ -122,8 +122,8 @@ async def handle_manage_tt_account(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    _services: "Services", # Unused in this handler
-    _tt_connection: TeamTalkConnection | None, # Unused in this handler
+    services: "Services",  # noqa: ARG001 Unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
@@ -153,10 +153,10 @@ async def handle_manage_tt_account(
 async def handle_admin_set_language_choice(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
-    _session: AsyncSession, # Unused in this handler
+    session: AsyncSession,  # noqa: ARG001 Unused in this handler
     translator: gettext.GNUTranslations,
     services: "Services",
-    _tt_connection: TeamTalkConnection | None, # Unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
 ) -> None:
     """Shows language selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -201,7 +201,7 @@ async def handle_admin_toggle_noon(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    _tt_connection: TeamTalkConnection | None, # Unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
 ) -> None:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
@@ -242,8 +242,8 @@ async def handle_admin_set_notif_pref_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    _services: "Services", # Unused in this handler
-    _tt_connection: TeamTalkConnection | None, # Unused in this handler
+    services: "Services",  # noqa: ARG001 Unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
 ) -> None:
     """Shows notification preference selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -279,8 +279,8 @@ async def handle_admin_set_mute_mode_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    _services: "Services", # Unused in this handler
-    _tt_connection: TeamTalkConnection | None, # Unused in this handler
+    services: "Services",  # noqa: ARG001 Unused in this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Unused in this handler
 ) -> None:
     """Shows mute mode selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -317,7 +317,7 @@ async def handle_admin_view_mute_list(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-    _tt_connection: TeamTalkConnection | None, # Injected by middleware, unused by this handler
+    tt_connection: TeamTalkConnection | None,  # noqa: ARG001 Injected by middleware, unused
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list (shows page 0)."""
     await _display_subscriber_mute_list_page(
