@@ -699,7 +699,7 @@ async def create_view_mute_list_keyboard(
     if total_pages > 1:
         # Wrapper to align parameter names for PaginateMuteListCallback,
         # which expects `mute_list_page` instead of `page`.
-        def mute_list_pagination_factory_adapter(**kwargs: Any) -> PaginateMuteListCallback:
+        def mute_list_pagination_factory_adapter(**kwargs: dict[str, Any]) -> PaginateMuteListCallback:
             page_num = kwargs.pop("page")  # `page` is passed by _add_pagination_controls_generic
             return PaginateMuteListCallback(mute_list_page=page_num, **kwargs)
 

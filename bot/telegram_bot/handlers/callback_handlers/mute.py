@@ -101,7 +101,9 @@ async def _display_internal_user_list(
 
     if callback_query.bot is None:
         logger.error("_display_internal_user_list: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(_("An error occurred while displaying the list. Bot instance not found."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
+        )
         return
 
     await display_paginated_list(
@@ -156,7 +158,9 @@ async def _display_all_server_accounts_list(
 
     if callback_query.bot is None:
         logger.error("_display_all_server_accounts_list: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(_("An error occurred while displaying the list. Bot instance not found."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
+        )
         return
 
     await display_paginated_list(
@@ -201,8 +205,9 @@ async def _get_username_to_toggle_from_callback(
         statement = select(MutedUser.muted_teamtalk_username).where(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
-        results = await session.exec(statement) # Changed to session.exec for SQLModel
-        relevant_usernames = sorted([str(uname) for uname in results.all()]) # SQLModel's exec results directly give items
+        results = await session.exec(statement)  # Changed to session.exec for SQLModel
+        # SQLModel's exec results directly give items
+        relevant_usernames = sorted([str(uname) for uname in results.all()])
         page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]  # type: ignore[no-any-return]

@@ -223,8 +223,6 @@ async def _handle_manage_tt_account_action(
         await query.message.edit_text(message_text, reply_markup=keyboard)
     else:
         logger.warning("_handle_manage_tt_account_action: query.message is not a Message instance, cannot edit.")
-        # Optionally, answer the query if an edit isn't possible but the action was otherwise okay
-        # await query.answer(_("Action processed, but view could not be updated."), show_alert=True)
     await query.answer()
 
 
@@ -261,7 +259,8 @@ async def _handle_admin_set_language_action(
     )
     message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
     if isinstance(query.message, Message):
-        await query.message.edit_text(message_text, reply_markup=lang_keyboard)  # lang_keyboard is now InlineKeyboardMarkup
+        # lang_keyboard is now InlineKeyboardMarkup
+        await query.message.edit_text(message_text, reply_markup=lang_keyboard)
     else:
         logger.warning("_handle_admin_set_language_action: query.message is not a Message instance, cannot edit.")
     await query.answer()
@@ -777,7 +776,9 @@ async def handle_admin_set_subscriber_notification_pref(
     try:
         new_pref_enum = NotificationSetting(new_pref_str)
     except ValueError:
-        logger.exception("Invalid notification setting value received: %s for user %s", new_pref_str, target_telegram_id)
+        logger.exception(
+            "Invalid notification setting value received: %s for user %s", new_pref_str, target_telegram_id
+        )
         await query.answer(_("Invalid setting value. Please try again."), show_alert=True)
         return
 
@@ -804,12 +805,11 @@ async def handle_admin_set_subscriber_notification_pref(
         )
     else:
         # Service function handles logging of specific error (e.g., user not found, DB error)
-        await query.answer(
-            _("Failed to change notification preference for subscriber {tg_id}. Please check logs or try again.").format(
-                tg_id=target_telegram_id
-            ),
-            show_alert=True,
-        )
+        msg = _(
+            "Failed to change notification preference for subscriber {tg_id}. "
+            "Please check logs or try again."
+        ).format(tg_id=target_telegram_id)
+        await query.answer(msg, show_alert=True)
 
     # Refresh the main subscriber view to show updated details
     # query.message is guaranteed to exist here due to @ensure_message_context.
@@ -841,7 +841,9 @@ async def handle_admin_set_subscriber_mute_mode(
     new_mode = callback_data.mode
     subscriber_page_context = callback_data.subscriber_page_context
 
-    updated_user_settings = await admin_service.admin_set_user_mute_mode(session, services, target_telegram_id, new_mode)
+    updated_user_settings = await admin_service.admin_set_user_mute_mode(
+        session, services, target_telegram_id, new_mode
+    )
 
     if updated_user_settings:
         mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
