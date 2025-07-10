@@ -13,10 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import SettingsNavAction, SubscriptionAction
 from bot.models import NotificationSetting, UserSettings
+from bot.services import _utils as service_utils  # Added import
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
-from ._helpers import ensure_message_context, process_setting_update, safe_edit_text
+from ._helpers import (  # process_setting_update will be removed later
+    ensure_message_context,
+    safe_edit_text,
+)
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -88,39 +92,48 @@ async def cq_set_subscription_setting(
     original_setting = user_settings.notification_settings
 
     if new_setting_enum == original_setting:
-        await callback_query.answer()
+        await callback_query.answer() # No change, just acknowledge.
         return
 
-    def update_logic() -> None:
-        user_settings.notification_settings = new_setting_enum
+    # Call the generic helper to update the field
+    # user_settings object from middleware is already session-managed.
+    updated_settings = await service_utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=user_settings,
+        field_name="notification_settings",
+        new_value=new_setting_enum,
+        log_context=" (user set subscription)",
+    )
 
-    def revert_logic() -> None:
-        user_settings.notification_settings = original_setting
+    if not updated_settings:
+        await callback_query.answer(_("Failed to update subscription setting. Please try again."), show_alert=True)
+        return
 
+    # UI Update
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),
         NotificationSetting.LEAVE_OFF: _("Join Only"),
         NotificationSetting.JOIN_OFF: _("Leave Only"),
         NotificationSetting.NONE: _("None"),
     }
-    setting_display_name = setting_to_text_map.get(new_setting_enum, _("unknown setting"))
-    success_toast_text = _("Subscription setting updated to: {setting_name}").format(setting_name=setting_display_name)
+    # Use the value from updated_settings which is confirmed from DB
+    setting_display_name = setting_to_text_map.get(updated_settings.notification_settings, _("unknown setting"))
+    success_toast_text = _("Subscription setting updated to: {setting_name}.").format(setting_name=setting_display_name)
+    await callback_query.answer(success_toast_text, show_alert=False)
 
-    # Prepare text and markup for UI refresh.
-    # new_setting_enum (which is user_settings.notification_settings after update_logic)
-    # reflects the new state for UI generation. This happens before process_setting_update commits.
-    updated_markup = await create_subscription_settings_keyboard(translator, new_setting_enum)  # Renamed
     menu_text = _("Subscription Settings")
+    # Use updated_settings (which is user_settings after in-place modification by helper) for keyboard
+    updated_keyboard_markup = await create_subscription_settings_keyboard(
+        translator,
+        updated_settings.notification_settings
+    )
 
-    await process_setting_update(
-        callback_query=callback_query,
-        session=session,
-        user_settings=user_settings,
-        translator=translator,  # Pass translator object
-        update_action=update_logic,
-        revert_action=revert_logic,
-        success_toast_text=success_toast_text,
-        new_text=menu_text,
-        new_markup=updated_markup,  # Use directly
-        services=services,  # Pass services
+    # @ensure_message_context guarantees query.message is a Message
+    await safe_edit_text(
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        text=menu_text,
+        reply_markup=updated_keyboard_markup, # Use directly
+        logger_instance=logger,
+        log_context="cq_set_subscription_setting_ui_refresh",
     )

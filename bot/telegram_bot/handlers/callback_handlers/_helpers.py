@@ -5,110 +5,22 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import CallbackQuery
 
-from bot.core.user_settings import update_user_settings_in_db
-from bot.models import UserSettings
 from bot.telegram_bot.ui_utils import safe_edit_text  # Import safe_edit_text from its new location
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
+    pass
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "ensure_message_context",
-    "process_setting_update",
+    # "process_setting_update", # Removed
     "safe_edit_text", # Note: safe_edit_text is imported from ui_utils, then re-exported here.
 ]
 
-async def process_setting_update(
-    callback_query: CallbackQuery,
-    session: AsyncSession,
-    user_settings: UserSettings,
-    translator: gettext.GNUTranslations,
-    update_action: Callable[[], None],
-    revert_action: Callable[[], None],
-    success_toast_text: str,
-    new_text: str,
-    new_markup: InlineKeyboardMarkup,
-    services: "Services",
-) -> None:
-    _ = translator.gettext
-
-    if not callback_query.from_user:
-        logger.warning("process_setting_update: Callback query is missing from_user.")
-        try:
-            await callback_query.answer(_("Error: Callback query is missing user data."), show_alert=True)
-        except TelegramAPIError:
-            logger.exception("Critical error: Failed to answer callback for missing user data.")
-        return
-
-    if not isinstance(callback_query.message, Message):
-        logger.warning(
-            "process_setting_update: Callback query message is None or inaccessible for user %s. Callback data: %s. "
-            "Settings will be updated, but UI may not refresh.",
-            callback_query.from_user.id,
-            callback_query.data,
-        )
-        # Attempt to update settings anyway, then answer callback, then return.
-        update_action()
-        try:
-            await update_user_settings_in_db(session, user_settings)
-            services.cache.update_user_settings(user_settings)
-            await callback_query.answer(success_toast_text, show_alert=False)  # Inform success of setting change
-        except SQLAlchemyError:
-            logger.exception(
-                "Failed to update settings in DB for user %s (message inaccessible path).",
-                callback_query.from_user.id,
-            )
-            revert_action()  # Revert in-memory change
-            try:
-                await callback_query.answer(
-                    _("An error occurred updating settings. Please try again."), show_alert=True
-                )
-            except TelegramAPIError:
-                logger.exception("Failed to answer callback for DB error (message inaccessible path).")
-        except TelegramAPIError:  # For the answer itself
-            logger.exception("Failed to answer callback after settings update (message inaccessible path).")
-        return  # Stop before trying to edit the message
-
-    # If we reach here, callback_query.message is a valid Message object
-    update_action()
-
-    try:
-        await update_user_settings_in_db(session, user_settings)
-        services.cache.update_user_settings(user_settings)
-        await callback_query.answer(success_toast_text, show_alert=False)
-
-        await safe_edit_text(
-            message_to_edit=callback_query.message,
-            text=new_text,
-            reply_markup=new_markup,
-            logger_instance=logger,
-            log_context="process_setting_update_ui_refresh",
-        )
-
-    except SQLAlchemyError:
-        logger.exception(
-            "Failed to update settings in DB for user %s.",
-            callback_query.from_user.id,
-        )
-        revert_action()
-        try:
-            await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        except TelegramAPIError as ans_err_revert:
-            logger.warning("Could not send error alert for DB update failure/revert: %s", ans_err_revert)
-        return
-
-    except TelegramAPIError as e_tg:
-        logger.warning(
-            "Telegram API error during UI update for user %s after settings were saved. Error: %s",
-            callback_query.from_user.id,
-            e_tg,
-        )
+# process_setting_update function definition removed.
 
 
 # safe_edit_text MOVED to bot/telegram_bot/ui_utils.py

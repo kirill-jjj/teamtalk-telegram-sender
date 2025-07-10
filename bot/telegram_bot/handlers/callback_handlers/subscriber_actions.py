@@ -15,7 +15,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
 from bot.core.enums import ManageTTAccountAction, SubscriberAction  # Added ManageTTAccountAction
-from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings  # Added MutedUser
+from bot.models import (  # Added OperationResult
+    MutedUser,
+    MuteListMode,
+    NotificationSetting,
+    OperationResult,
+    UserSettings,
+)
 from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
@@ -691,56 +697,36 @@ async def handle_link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    updated_user_settings, status_key = await admin_service.admin_link_tt_account(
+    operation_result: OperationResult = await admin_service.admin_link_tt_account(
         session, services, target_telegram_id, tt_username_to_link
     )
 
-    alert_message = ""
-    # Optimistically assume link will succeed for keyboard, allow None
-    current_tt_for_keyboard: str | None = tt_username_to_link
+    alert_message_args = operation_result.message_args or {}
+    # Ensure all required args for specific keys are present, or provide defaults
+    if "tt_username" not in alert_message_args: # For banned message
+        alert_message_args["tt_username"] = tt_username_to_link
+    if "new_tt_username" not in alert_message_args: # For success messages
+        alert_message_args["new_tt_username"] = tt_username_to_link
 
-    if status_key == "linked":
-        alert_message = _("TeamTalk account {new_tt_username} linked successfully.").format(
-            new_tt_username=tt_username_to_link
-        )
-    elif status_key == "relinked":
-        # We need the old username to display this message correctly.
-        # The service function doesn't return it. For simplicity, we'll use a generic message here.
-        # A more complex solution would involve the service returning more state or the handler fetching it.
-        alert_message = _("TeamTalk account {new_tt_username} linked successfully (previous link updated).").format(
-            new_tt_username=tt_username_to_link
-        )
-    elif status_key == "banned":
-        alert_message = _("This TeamTalk username ({tt_username}) is banned and cannot be linked.").format(
-            tt_username=tt_username_to_link
-        )
-        # If banned, keyboard shows original TT username. Fetch if needed.
-        # (Service call doesn't modify passed user_settings on early "banned" return)
-        user_s_for_kb = await session.get(UserSettings, target_telegram_id)
-        current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
-
-    elif status_key == "not_found":
-        alert_message = _("User settings not found for this subscriber.")
-        current_tt_for_keyboard = None  # No user, no TT username
-    elif status_key == "error":
-        alert_message = _("Failed to link TeamTalk account. Please try again.")
-        # On error, the TT username might not have changed in DB.
-        user_s_for_kb = await session.get(UserSettings, target_telegram_id)  # Re-fetch to be sure
-        current_tt_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
-
+    alert_message = _(operation_result.message_key).format(**alert_message_args)
     await query.answer(alert_message, show_alert=True)
 
-    # Determine the TT username to display in the keyboard
-    # If linking was successful, updated_user_settings will exist.
-    # If not (e.g. banned, not_found, error), updated_user_settings is None.
-    final_tt_username_for_keyboard = (
-        updated_user_settings.teamtalk_username if updated_user_settings else current_tt_for_keyboard
-    )
+    # Determine the TT username to display in the keyboard for UI refresh
+    # If operation was successful and returned user_settings, use that.
+    # Otherwise, fetch current settings to display the potentially unchanged TT username.
+    final_tt_username_for_keyboard: str | None
+    if operation_result.success and operation_result.user_settings:
+        final_tt_username_for_keyboard = operation_result.user_settings.teamtalk_username
+    else:
+        # Fetch current settings as the operation might have failed or not returned settings
+        user_s_for_kb = await session.get(UserSettings, target_telegram_id)
+        final_tt_username_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
+        # If user_s_for_kb is None (e.g. "not_found" case), final_tt_username_for_keyboard will be None
 
     updated_keyboard = await create_manage_tt_account_keyboard(
         translator,
         target_telegram_id=target_telegram_id,
-        current_tt_username=final_tt_username_for_keyboard,
+        current_tt_username=final_tt_username_for_keyboard, # Use the determined username
         page=return_page,
     )
     if isinstance(query.message, Message):

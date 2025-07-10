@@ -12,10 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.models import UserSettings
+from bot.services import _utils as service_utils  # Added import
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 
-from ._helpers import ensure_message_context, process_setting_update, safe_edit_text
+from ._helpers import (  # process_setting_update will be removed later
+    ensure_message_context,
+    safe_edit_text,
+)
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -61,52 +65,63 @@ async def cq_toggle_noon_setting_action(
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
 
-    # Store original states for potential revert
-    original_noon_enabled = user_settings.not_on_online_enabled
-    original_noon_confirmed = user_settings.not_on_online_confirmed
+    # UserSettings object from middleware is already session-managed.
+    # _utils._update_user_setting_field will use this session.
 
-    # Determine the new state first to generate UI elements correctly
-    new_noon_enabled_state = not original_noon_enabled
+    new_noon_enabled_value = not user_settings.not_on_online_enabled
 
-    def update_noon_action() -> None:
-        user_settings.not_on_online_enabled = new_noon_enabled_state
-        if new_noon_enabled_state: # If NOON is being enabled
-            user_settings.not_on_online_confirmed = True
-        # If NOON is being disabled, not_on_online_confirmed remains as is,
-        # as per current logic in admin_service (it's only set to True on enable).
-        # However, for a toggle, it might be more consistent to also handle this.
-        # For now, sticking to mimicking existing explicit logic.
+    # Update the 'not_on_online_enabled' field
+    # The user_settings object will be updated in-place by the helper if successful
+    updated_settings_noon_toggle = await service_utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=user_settings,
+        field_name="not_on_online_enabled",
+        new_value=new_noon_enabled_value,
+        log_context=" (user toggle NOON)",
+    )
 
-    def revert_noon_action() -> None:
-        user_settings.not_on_online_enabled = original_noon_enabled
-        user_settings.not_on_online_confirmed = original_noon_confirmed
+    if not updated_settings_noon_toggle:
+        await callback_query.answer(_("Failed to update NOON setting. Please try again."), show_alert=True)
+        # UI will not be refreshed to avoid showing potentially inconsistent state
+        return
 
-    # --- Prepare parameters for process_setting_update ---
+    # If NOON was enabled, also set not_on_online_confirmed to True
+    # Use the 'user_settings' object which should now reflect the updated 'not_on_online_enabled' state
+    final_user_settings = user_settings
+    if user_settings.not_on_online_enabled and not user_settings.not_on_online_confirmed:
+        confirmed_settings = await service_utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=user_settings,
+            field_name="not_on_online_confirmed",
+            new_value=True,
+            log_context=" (user confirm NOON after toggle)",
+        )
+        if not confirmed_settings:
+            logger.warning(
+                "NOON setting enabled for user %s, but failed to set not_on_online_confirmed to True.",
+                user_settings.telegram_id,
+            )
+            # The primary toggle succeeded, proceed with UI update based on that.
+            # final_user_settings is already user_settings reflecting the first change.
+        else:
+            final_user_settings = confirmed_settings # Both updates succeeded
 
-    # 1. Perform the update action in memory to get the correct state for UI elements
-    update_noon_action()
-
-    # 2. Generate UI elements based on the new state
-    new_status_display_text = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
+    # UI Update
+    new_status_display_text = _("Enabled") if final_user_settings.not_on_online_enabled else _("Disabled")
     success_toast_text = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
+    await callback_query.answer(success_toast_text, show_alert=False)
 
     menu_text = _("Notification Settings")
-    updated_keyboard = await create_notification_settings_keyboard(translator, user_settings)
+    # final_user_settings reflects the latest state after all successful DB updates and cache updates
+    updated_keyboard_markup = await create_notification_settings_keyboard(translator, final_user_settings)
 
-    # 3. Call the helper
-    # The update_action is already performed, but process_setting_update expects it.
-    # We pass the same update_noon_action. If process_setting_update calls it again,
-    # it should be idempotent or the state should be correctly set.
-    # Given new_noon_enabled_state is fixed, it will be idempotent.
-    await process_setting_update(
-        callback_query=callback_query,
-        session=session,
-        user_settings=user_settings,
-        translator=translator,
-        update_action=update_noon_action, # This will effectively re-apply the state
-        revert_action=revert_noon_action,
-        success_toast_text=success_toast_text,
-        new_text=menu_text,
-        new_markup=updated_keyboard.as_markup(),
-        services=services,
+    # @ensure_message_context guarantees query.message is a Message
+    await safe_edit_text(
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        text=menu_text,
+        reply_markup=updated_keyboard_markup.as_markup(),
+        logger_instance=logger,
+        log_context="cq_toggle_noon_setting_action_ui_refresh",
     )

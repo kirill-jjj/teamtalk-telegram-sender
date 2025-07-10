@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import enum
+from typing import Any  # Moved import to top
 
 from sqlalchemy import CheckConstraint
 from sqlmodel import Field, Relationship, SQLModel
@@ -105,3 +106,15 @@ class BanList(SQLModel, table=True):
             "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL", name="ck_ban_list_identifier_not_both_null"
         ),
     )
+
+
+# --- Service Operation Result ---
+
+
+
+class OperationResult(SQLModel):
+    """Represents a structured result for service operations."""
+    success: bool
+    message_key: str  # For localization key, e.g., "link_tt_account_success_linked"
+    message_args: dict[str, Any] | None = Field(default=None) # For formatting the localized string
+    user_settings: UserSettings | None = Field(default=None) # Optional UserSettings object

@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
-from bot.models import MuteListMode, NotificationSetting, UserSettings  # Added MuteListMode, NotificationSetting
+from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings  # Added OperationResult
 from bot.services import user_service  # Will be partially replaced by _utils
 
 from . import _utils  # Import the new utils module
@@ -301,23 +301,29 @@ async def admin_link_tt_account(
     services: "Services",
     target_telegram_id: int,
     tt_username_to_link: str,
-) -> tuple[UserSettings | None, str]:
-    """Links a TeamTalk account to a subscriber, managed by an admin."""
+) -> OperationResult:
+    """Links a TeamTalk account to a subscriber, managed by an admin.
+
+    Returns an OperationResult indicating success/failure and relevant details.
+    """
     if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
         logger.warning(
             "Attempt to link banned TeamTalk username '%s' to user %s.",
             tt_username_to_link,
             target_telegram_id,
         )
-        return None, "banned"
+        return OperationResult(
+            success=False,
+            message_key="link_tt_account_error_banned",
+            message_args={"tt_username": tt_username_to_link}
+        )
 
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
         logger.warning("admin_link_tt_account: UserSettings not found for %s.", target_telegram_id)
-        return None, "not_found"
+        return OperationResult(success=False, message_key="link_tt_account_error_not_found")
 
     original_tt_username = target_user_settings.teamtalk_username
-    status_key = "error" # Default status key
 
     # Update teamtalk_username
     updated_settings_tt_link = await _utils._update_user_setting_field(
@@ -330,32 +336,48 @@ async def admin_link_tt_account(
     )
 
     if not updated_settings_tt_link:
-        return None, "error" # Error already logged by helper
+        # Error already logged by helper _update_user_setting_field
+        return OperationResult(success=False, message_key="link_tt_account_error_generic")
 
-    # If teamtalk_username update was successful, determine status and update not_on_online_confirmed
-    status_key = "relinked" if original_tt_username and original_tt_username != tt_username_to_link else "linked"
+    # Determine message key based on whether it was a new link or a re-link
+    is_relink = bool(original_tt_username and original_tt_username != tt_username_to_link)
+    link_type_message_key_suffix = "relinked" if is_relink else "linked"
+    success_message_key = f"link_tt_account_success_{link_type_message_key_suffix}"
+
+    message_args = {
+        "new_tt_username": tt_username_to_link,
+        "original_tt_username": original_tt_username or "" # Ensure not None for formatting
+    }
 
     final_settings = updated_settings_tt_link
+    # Ensure not_on_online_confirmed is set to True
     if updated_settings_tt_link.not_on_online_confirmed is not True:
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
             services=services,
-            settings_to_update=updated_settings_tt_link,
+            settings_to_update=updated_settings_tt_link, # Use the already updated settings object
             field_name="not_on_online_confirmed",
             new_value=True,
             log_context=f" by admin for user {target_telegram_id} (confirm NOON for TT link)",
         )
         if not confirmed_settings:
-            # Log a warning if confirmation failed, but proceed with the successful tt_username link
+            # Log a warning if the confirmation step failed, but the primary link operation was successful.
+            # The overall operation is still considered a success regarding the link.
             logger.warning(
-                "TT username linked for user %s, but failed to set not_on_online_confirmed to True.",
+                "TT username '%s' linked for user %s, but failed to set not_on_online_confirmed to True.",
+                tt_username_to_link,
                 target_telegram_id,
             )
-            # final_settings remains updated_settings_tt_link
+            # final_settings remains updated_settings_tt_link from the first successful update
         else:
-            final_settings = confirmed_settings
+            final_settings = confirmed_settings # Both updates were successful
 
-    return final_settings, status_key
+    return OperationResult(
+        success=True,
+        message_key=success_message_key,
+        message_args=message_args,
+        user_settings=final_settings
+    )
 
 
 async def admin_set_user_language(
