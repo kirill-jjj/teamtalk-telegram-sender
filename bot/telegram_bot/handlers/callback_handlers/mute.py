@@ -10,7 +10,7 @@ from typing import (
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select

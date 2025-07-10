@@ -208,42 +208,48 @@ async def admin_toggle_noon_setting(
         logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
         return None
 
-    original_status = target_user_settings.not_on_online_enabled
-    try:
-        target_user_settings.not_on_online_enabled = not target_user_settings.not_on_online_enabled
-        if target_user_settings.not_on_online_enabled:
-            target_user_settings.not_on_online_confirmed = True
+    # Determine the new value for not_on_online_enabled
+    new_noon_enabled_value = not target_user_settings.not_on_online_enabled
 
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        logger.info(
-            "Successfully toggled NOON setting for user %s to %s. DB and cache updated.",
-            target_telegram_id,
-            target_user_settings.not_on_online_enabled,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        target_user_settings.not_on_online_enabled = original_status
-        if original_status is False and target_user_settings.not_on_online_enabled is True:
-            target_user_settings.not_on_online_confirmed = False
-        logger.exception(
-            "SQLAlchemyError while toggling NOON setting for user %s. Rolled back.",
-            target_telegram_id,
-        )
+    # Update the 'not_on_online_enabled' field
+    updated_settings = await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=target_user_settings,
+        field_name="not_on_online_enabled",
+        new_value=new_noon_enabled_value,
+        log_context=f" by admin for user {target_telegram_id} (toggle NOON)",
+    )
+
+    if not updated_settings:
+        # Error occurred and was logged by _update_user_setting_field
         return None
-    except Exception:
-        await session.rollback()
-        target_user_settings.not_on_online_enabled = original_status
-        if original_status is False and target_user_settings.not_on_online_enabled is True:
-            target_user_settings.not_on_online_confirmed = False
-        logger.exception(
-            "Unexpected error while toggling NOON setting for user %s. Rolled back.",
-            target_telegram_id,
+
+    # If NOON was enabled and not yet confirmed, attempt to set not_on_online_confirmed to True
+    if updated_settings.not_on_online_enabled and (updated_settings.not_on_online_confirmed is not True):
+        confirmed_settings = await _utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=updated_settings,
+                field_name="not_on_online_confirmed",
+                new_value=True,
+            log_context=f" by admin for user {target_telegram_id} (confirm NOON after toggle)",
         )
-        return None
-    else:
-        return target_user_settings
+        if not confirmed_settings:
+            # Log a warning if the confirmation step failed
+            logger.warning(
+                "NOON setting was toggled to enabled for user %s, "
+                "but the subsequent confirmation of 'not_on_online_confirmed' failed. "
+                "The 'not_on_online_enabled' field remains updated.",
+                target_telegram_id,
+            )
+            return updated_settings  # Return the settings from the first successful update
+        return confirmed_settings  # Both updates succeeded
+    # Conditions for this path:
+    # 1. NOON was toggled to False.
+    # 2. NOON was toggled to True, but 'not_on_online_confirmed' was already True.
+    # In these cases, the 'updated_settings' from the first call is the final state.
+    return updated_settings
 
 
 async def admin_set_user_mute_mode(
@@ -280,37 +286,14 @@ async def admin_set_user_notification_preference(
         logger.warning("admin_set_user_notification_preference: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    original_pref = target_user_settings.notification_settings
-    try:
-        target_user_settings.notification_settings = new_pref_enum
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        logger.info(
-            "Successfully set notification preference to '%s' for user %s by admin. DB and cache updated.",
-            new_pref_enum.value,
-            target_telegram_id,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        target_user_settings.notification_settings = original_pref
-        logger.exception(
-            "SQLAlchemyError while setting notification preference to '%s' for user %s by admin. Rolled back.",
-            new_pref_enum.value,
-            target_telegram_id,
-        )
-        return None
-    except Exception:
-        await session.rollback()
-        target_user_settings.notification_settings = original_pref
-        logger.exception(
-            "Unexpected error while setting notification preference to '%s' for user %s by admin. Rolled back.",
-            new_pref_enum.value,
-            target_telegram_id,
-        )
-        return None
-    else:
-        return target_user_settings
+    return await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=target_user_settings,
+        field_name="notification_settings",
+        new_value=new_pref_enum,
+        log_context=f" by admin for user {target_telegram_id}",
+    )
 
 
 async def admin_link_tt_account(
@@ -334,39 +317,45 @@ async def admin_link_tt_account(
         return None, "not_found"
 
     original_tt_username = target_user_settings.teamtalk_username
-    try:
-        target_user_settings.teamtalk_username = tt_username_to_link
-        target_user_settings.not_on_online_confirmed = True
-        await session.commit()
-        await session.refresh(target_user_settings)
-        services.cache.update_user_settings(target_user_settings)
-        logger.info(
-            "Successfully linked TT username '%s' to user %s (was '%s'). DB and cache updated.",
-            tt_username_to_link,
-            target_telegram_id,
-            original_tt_username,
+    status_key = "error" # Default status key
+
+    # Update teamtalk_username
+    updated_settings_tt_link = await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=target_user_settings,
+        field_name="teamtalk_username",
+        new_value=tt_username_to_link,
+        log_context=f" by admin for user {target_telegram_id} (link TT account)",
+    )
+
+    if not updated_settings_tt_link:
+        return None, "error" # Error already logged by helper
+
+    # If teamtalk_username update was successful, determine status and update not_on_online_confirmed
+    status_key = "relinked" if original_tt_username and original_tt_username != tt_username_to_link else "linked"
+
+    final_settings = updated_settings_tt_link
+    if updated_settings_tt_link.not_on_online_confirmed is not True:
+        confirmed_settings = await _utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=updated_settings_tt_link,
+            field_name="not_on_online_confirmed",
+            new_value=True,
+            log_context=f" by admin for user {target_telegram_id} (confirm NOON for TT link)",
         )
-        status_key = "relinked" if original_tt_username and original_tt_username != tt_username_to_link else "linked"
-    except SQLAlchemyError:
-        await session.rollback()
-        target_user_settings.teamtalk_username = original_tt_username
-        logger.exception(
-            "SQLAlchemyError while linking TT username '%s' for user %s. Rolled back.",
-            tt_username_to_link,
-            target_telegram_id,
-        )
-        return None, "error"
-    except Exception:
-        await session.rollback()
-        target_user_settings.teamtalk_username = original_tt_username
-        logger.exception(
-            "Unexpected error while linking TT username '%s' for user %s. Rolled back.",
-            tt_username_to_link,
-            target_telegram_id,
-        )
-        return None, "error"
-    else:
-        return target_user_settings, status_key
+        if not confirmed_settings:
+            # Log a warning if confirmation failed, but proceed with the successful tt_username link
+            logger.warning(
+                "TT username linked for user %s, but failed to set not_on_online_confirmed to True.",
+                target_telegram_id,
+            )
+            # final_settings remains updated_settings_tt_link
+        else:
+            final_settings = confirmed_settings
+
+    return final_settings, status_key
 
 
 async def admin_set_user_language(

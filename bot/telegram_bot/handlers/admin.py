@@ -17,6 +17,8 @@ from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
+from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
+from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
 
 from .callback_handlers.list_utils import _show_subscriber_list_page
 
@@ -26,28 +28,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
+admin_router.message.middleware(AdminCheckMiddleware())
+# ActiveTeamTalkConnectionMiddleware is assumed to be on a parent router.
+# TeamTalkConnectionCheckMiddleware will check the tt_connection provided.
+admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
 async def _show_user_buttons(
     message: Message,
     command_type: AdminAction,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
+    tt_connection: TeamTalkConnection | None,  # Injected by parent MW; checked by local MW
 ) -> None:
     _ = translator.gettext
-    if not tt_connection or not tt_connection.instance:
-        # This case should ideally be caught by TeamTalkConnectionCheckMiddleware
-        logger.error(
-            "tt_connection or its instance is None in _show_user_buttons. This should have been caught by middleware."
-        )
-        await message.reply(_("TeamTalk connection is not available. Please try again later."))
-        return
+    # The tt_connection is now guaranteed to be non-None and ready by the TeamTalkConnectionCheckMiddleware.
+    # Also, user is guaranteed to be an admin by AdminCheckMiddleware.
+    # However, tt_connection can still be None if ActiveTeamTalkConnectionMiddleware fails to provide one,
+    # but TeamTalkConnectionCheckMiddleware should then prevent handler execution.
+    # For type safety, we might still check, or rely on middleware guarantees.
+    # Given the middleware setup, tt_connection here should be a valid, ready connection.
 
-    tt_instance = tt_connection.instance
+    tt_instance = tt_connection.instance # type: ignore[union-attr] # Middleware ensures tt_connection is not None
 
-    my_user_id = tt_instance.getMyUserID()
+    my_user_id = tt_instance.getMyUserID() # type: ignore[union-attr]
     if my_user_id is None:
-        logger.error("[%s] Could not get own user ID in _show_user_buttons.", tt_connection.server_info.host)
+        logger.error("[%s] Could not get own user ID in _show_user_buttons.", tt_connection.server_info.host) # type: ignore[union-attr]
         await message.reply(_("An error occurred. Please try again later."))
         return
 
@@ -55,7 +60,7 @@ async def _show_user_buttons(
 
     if not online_users:
         await message.reply(
-            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host)
+            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host) # type: ignore[union-attr]
         )
         return
 
@@ -64,10 +69,10 @@ async def _show_user_buttons(
 
     command_text_map = {
         AdminAction.KICK: _("Select a user to kick from {server_host}:").format(
-            server_host=tt_connection.server_info.host
+            server_host=tt_connection.server_info.host # type: ignore[union-attr]
         ),
         AdminAction.BAN: _("Select a user to ban from {server_host}:").format(
-            server_host=tt_connection.server_info.host
+            server_host=tt_connection.server_info.host # type: ignore[union-attr]
         ),
     }
     reply_text = command_text_map.get(command_type, _("Select a user:"))
