@@ -74,11 +74,12 @@ async def set_user_mute_mode(
         logger.error("set_user_mute_mode: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
         return None
 
-    return await _utils._update_user_mute_mode_in_db(
-        session,
-        services,
-        managed_user_settings,
-        new_mode,
+    return await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=managed_user_settings,
+        field_name="mute_list_mode",
+        new_value=new_mode,
         log_context=" (self)",
     )
 
@@ -97,8 +98,13 @@ async def update_user_language_settings(  # User-initiated
         )
         return None  # Or handle error as appropriate
 
-    updated_settings = await _utils._update_user_language_in_db(
-        session, services, managed_user_settings, new_lang_code, log_context=" (self)"
+    updated_settings = await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=managed_user_settings,
+        field_name="language_code",
+        new_value=new_lang_code,
+        log_context=" (self)",
     )
     # The original function also called update_user_bot_commands.
     # This should be consistent for both user and admin paths if it's a general side effect of language change.

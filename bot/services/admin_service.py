@@ -258,8 +258,13 @@ async def admin_set_user_mute_mode(
         logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    return await _utils._update_user_mute_mode_in_db(
-        session, services, target_user_settings, new_mode, log_context=" by admin"
+    return await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=target_user_settings,
+        field_name="mute_list_mode",
+        new_value=new_mode,
+        log_context=" by admin",
     )
 
 
@@ -376,8 +381,13 @@ async def admin_set_user_language(
         logger.warning("admin_set_user_language: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    updated_settings = await _utils._update_user_language_in_db(
-        session, services, target_user_settings, new_lang_code, log_context=" by admin"
+    updated_settings = await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=target_user_settings,
+        field_name="language_code",
+        new_value=new_lang_code,
+        log_context=" by admin",
     )
 
     if updated_settings:
