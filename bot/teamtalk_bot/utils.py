@@ -117,32 +117,6 @@ def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> 
     return str(username) if username is not None else ""
 
 
-async def get_online_teamtalk_users(
-    tt_instance: TeamTalkInstance,
-) -> list[TeamTalkUser]:
-    """Retrieves a list of online users directly from the provided TeamTalk instance.
-
-    Args:
-        tt_instance: The active TeamTalkInstance.
-
-    Returns:
-        A list of TeamTalkUser objects representing online users.
-        Returns an empty list if the instance is invalid or an error occurs.
-    """
-    if not tt_instance or not hasattr(tt_instance, "server") or not hasattr(tt_instance.server, "get_users"):
-        logger.error("get_online_teamtalk_users: Invalid tt_instance or server object.")
-        return []
-    try:
-        online_users = tt_instance.server.get_users()
-        return list(online_users) if online_users else []
-    except Exception:
-        logger.exception(
-            "Error fetching online users from tt_instance (%s).",
-            tt_instance.server_info.host if tt_instance.server_info else "N/A",
-        )
-        return []
-
-
 # --- End of moved functions ---
 
 

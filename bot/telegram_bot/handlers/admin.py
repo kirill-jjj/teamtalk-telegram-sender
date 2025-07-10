@@ -15,7 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name
+from bot.teamtalk_bot.utils import get_tt_user_display_name  # Removed get_online_teamtalk_users
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
@@ -56,7 +56,15 @@ async def _show_user_buttons(
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    online_users = await get_online_teamtalk_users(tt_instance)
+    # Use the online_users_cache from tt_connection
+    if tt_connection and tt_connection.online_users_cache is not None:
+        online_users = list(tt_connection.online_users_cache.values())
+    else:
+        if not tt_connection: # Should be caught by middleware
+            logger.warning("_show_user_buttons: tt_connection is None. Defaulting to empty list.")
+        elif tt_connection.online_users_cache is None: # Should not happen
+            logger.warning("_show_user_buttons: online_users_cache is None. Defaulting to empty list.")
+        online_users = []
 
     if not online_users:
         await message.reply(

@@ -31,7 +31,7 @@ from bot.constants import (
 from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
-from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name
+from bot.teamtalk_bot.utils import get_tt_user_display_name  # Removed get_online_teamtalk_users
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
@@ -223,16 +223,25 @@ async def who_command_handler(
     tt_instance = tt_connection.instance
     server_host_for_log_and_display = tt_connection.server_info.host
 
-    try:
-        all_users_list = await get_online_teamtalk_users(tt_instance)
-    except Exception as e:
-        # Keep f-string for log_msg as it's constructing a message before logging
-        log_msg = f"Error getting user list for /who on server {server_host_for_log_and_display}: {e}"
-        logger.exception(log_msg)
-        await message.reply(translator.gettext("An error occurred. Please try again later."))
-        return
+    # Use the online_users_cache from tt_connection
+    # The TeamTalkConnectionCheckMiddleware should ensure tt_connection is valid and ready.
+    # If tt_connection or its cache could somehow be None despite middleware, provide a default empty list.
+    if tt_connection and tt_connection.online_users_cache is not None:
+        all_users_list = list(tt_connection.online_users_cache.values())
+    else:
+        # This case should ideally not be reached if middlewares are effective.
+        # Log a warning if tt_connection or cache is unexpectedly None.
+        if not tt_connection:
+            logger.warning("/who: tt_connection is None, despite middleware. Defaulting to empty user list.")
+        elif tt_connection.online_users_cache is None: # Should not happen as it's initialized to {}
+            logger.warning("/who: tt_connection.online_users_cache is None. Defaulting to empty user list.")
+        all_users_list = []
+
+    # The direct network call and its try-except block are removed.
+    # Accessing the cache is not an async IO operation that would throw network errors here.
 
     is_caller_admin = services.cache.is_admin(message.from_user.id)
+    # tt_instance is still needed for getMyUserID()
     bot_user_id = tt_instance.getMyUserID()
 
     if bot_user_id is None:
