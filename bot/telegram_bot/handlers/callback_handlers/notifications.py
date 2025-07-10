@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message  # Added Message
+from aiogram.types import CallbackQuery  # Added Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.enums import NotificationAction, SettingsNavAction
@@ -34,7 +34,7 @@ async def cq_show_notifications_menu(
 ) -> None:
     """Shows the notification settings menu."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator or safe_edit_text will handle.
+    # Callback answering handled by decorator or safe_edit_text.
 
     # Decorator ensures callback_query.message is a Message object.
     notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)

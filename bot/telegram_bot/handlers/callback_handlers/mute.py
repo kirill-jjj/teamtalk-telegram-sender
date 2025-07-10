@@ -128,17 +128,16 @@ async def _display_all_server_accounts_list(
 ) -> None:
     _ = translator.gettext
     # Calling handlers (cq_show_all_accounts_list_action, cq_paginate_all_accounts_list_action)
-    # are now decorated with @ensure_message_context.
-    # This ensures callback_query.message is a valid Message object.
+    # are now decorated with @ensure_message_context, ensuring callback_query.message is valid.
 
     user_accounts_cache = tt_connection.user_accounts_cache
     server_host = tt_connection.server_info.host
-    message_obj: Message = callback_query.message  # type: ignore[assignment] # Should be Message due to decorator
+    # callback_query.message is used directly below, no need for message_obj
 
     if not user_accounts_cache:
         try:
-            # message_obj is callback_query.message, which is confirmed by @ensure_message_context
-            await callback_query.message.edit_text( # type: ignore[union-attr]
+            # callback_query.message is confirmed by @ensure_message_context on calling handlers
+            await callback_query.message.edit_text(  # type: ignore[union-attr]
                 _("Server user accounts are not loaded yet for {server_host}. Please try again in a moment.").format(
                     server_host=server_host
                 )
@@ -295,8 +294,7 @@ async def cq_show_manage_muted_menu(
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator handles answering if message is None.
-                                 # safe_edit_text will also attempt to answer.
+    # Callback answering handled by decorator or safe_edit_text.
     manage_muted_builder = await create_manage_muted_users_keyboard(translator, user_settings)
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
@@ -395,7 +393,7 @@ async def cq_list_internal_users_action(
 ) -> None:
     """Displays the first page of the internal muted/allowed user list."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator or subsequent _display_internal_user_list will handle.
+    # Callback answering handled by decorator or _display_internal_user_list.
     await _display_internal_user_list(
         callback_query,
         translator,
@@ -419,7 +417,7 @@ async def cq_paginate_internal_user_list_action(
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator or subsequent _display_internal_user_list will handle.
+    # Callback answering handled by decorator or _display_internal_user_list.
     await _display_internal_user_list(
         callback_query,
         translator,
@@ -440,11 +438,11 @@ async def cq_show_all_accounts_list_action(
 ) -> None:
     """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator handles or _display_all_server_accounts_list (via display_paginated_list) will.
+    # Callback answering handled by decorator or _display_all_server_accounts_list.
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return
-    # Decorator ensures callback_query.message exists, so _display_all_server_accounts_list will receive a valid message context.
+    # Decorator ensures callback_query.message exists.
     await _display_all_server_accounts_list(callback_query, translator, user_settings, tt_connection, 0)
 
 
@@ -459,7 +457,7 @@ async def cq_paginate_all_accounts_list_action(
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
     _ = translator.gettext
-    # await callback_query.answer()
+    # Callback answering handled by decorator or _display_all_server_accounts_list.
     if not tt_connection:
         await callback_query.answer(_("TeamTalk connection is not available. Please try again later."), show_alert=True)
         return

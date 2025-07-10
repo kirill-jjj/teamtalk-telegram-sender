@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot as AiogramBot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
-from aiogram.types import CallbackQuery, Chat, InlineKeyboardMarkup, Message
+from aiogram.types import Chat, InlineKeyboardMarkup, Message
 import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError

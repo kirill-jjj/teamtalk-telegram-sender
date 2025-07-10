@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message  # Added Message
+from aiogram.types import CallbackQuery  # Added Message
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,7 +43,7 @@ async def cq_show_subscriptions_menu(
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator or safe_edit_text will handle.
+    # Callback answering handled by decorator or safe_edit_text.
 
     # Decorator ensures callback_query.message is a Message object.
     current_notification_setting = user_settings.notification_settings

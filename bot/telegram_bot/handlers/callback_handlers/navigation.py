@@ -4,7 +4,7 @@ import gettext
 import logging
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message  # Added Message
+from aiogram.types import CallbackQuery  # Added Message
 
 from bot.core.enums import SettingsNavAction
 from bot.telegram_bot.callback_data import SettingsCallback
@@ -25,7 +25,7 @@ async def cq_back_to_main_settings_menu(
 ) -> None:
     """Handles navigating back to the main settings menu."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator or safe_edit_text will handle.
+    # Callback answering handled by decorator or safe_edit_text.
 
     main_settings_builder = await create_main_settings_keyboard(translator)
     main_settings_text = _("Settings")

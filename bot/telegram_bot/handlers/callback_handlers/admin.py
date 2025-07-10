@@ -19,6 +19,7 @@ from bot.telegram_bot.callback_data import AdminActionCallback
 
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+
 from ._helpers import ensure_message_context
 
 if TYPE_CHECKING:

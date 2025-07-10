@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING, cast
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession  # This will be SQLAlchemyAsyncSession
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
@@ -34,12 +34,7 @@ async def cq_show_language_menu(
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext
-    # await callback_query.answer() # Decorator handles answering if message is None, otherwise we might answer twice.
-                                 # If message exists, answer is usually done after successful operation or by safe_edit_text.
-                                 # For menu display, an immediate answer is fine if not editing.
-                                 # However, safe_edit_text also tries to answer.
-                                 # Let's rely on safe_edit_text or final answer.
-                                 # The decorator will answer if message is None.
+    # Callback answering is handled by the decorator or subsequent safe_edit_text.
 
     # create_language_selection_keyboard now returns InlineKeyboardMarkup directly
     language_markup = await create_language_selection_keyboard(translator, available_languages=available_languages)
