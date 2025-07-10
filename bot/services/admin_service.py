@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
-from bot.models import UserSettings, MuteListMode, NotificationSetting # Added MuteListMode, NotificationSetting
+from bot.models import MuteListMode, NotificationSetting, UserSettings  # Added MuteListMode, NotificationSetting
 from bot.services import user_service  # For updating bot commands
 
 if TYPE_CHECKING:

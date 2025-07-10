@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "process_setting_update",
     "ensure_message_context",
+    "process_setting_update",
     "safe_edit_text", # Note: safe_edit_text is imported from ui_utils, then re-exported here.
 ]
 

@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, MuteListMode, NotificationSetting, SubscribedUser, UserSettings
+from bot.models import MutedUser, MuteListMode, SubscribedUser, UserSettings
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 if TYPE_CHECKING:

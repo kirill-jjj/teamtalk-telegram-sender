@@ -686,158 +686,35 @@ async def create_manage_tt_account_keyboard(
 
 async def create_view_mute_list_keyboard(
     translator: gettext.GNUTranslations,
-    page_items: list[Any],  # noqa: ARG001 # Added page_items parameter, unused but required by caller
+    page_items: list[Any],  # noqa: ARG001 # Parameter kept for interface consistency
     current_page: int,
     total_pages: int,
-    target_telegram_id: int,  # Subscriber's ID
-    subscriber_context_page: int,  # Page of the main subscriber list (for back button)
+    target_telegram_id: int,
+    subscriber_context_page: int,
 ) -> InlineKeyboardMarkup:
     """Creates the keyboard for viewing a paginated mute list for a specific subscriber."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
-    # Use the generic pagination helper
     if total_pages > 1:
+        # Wrapper to align parameter names for PaginateMuteListCallback,
+        # which expects `mute_list_page` instead of `page`.
+        def mute_list_pagination_factory_adapter(**kwargs: Any) -> PaginateMuteListCallback:
+            page_num = kwargs.pop("page")  # `page` is passed by _add_pagination_controls_generic
+            return PaginateMuteListCallback(mute_list_page=page_num, **kwargs)
+
         _add_pagination_controls_generic(
-            builder,
-            translator,
-            current_page,
-            total_pages,
-            PaginateMuteListCallback,
-            # factory_kwargs for PaginateMuteListCallback
+            builder=builder,
+            translator=translator,
+            current_page=current_page,
+            total_pages=total_pages,
+            pagination_callback_factory=mute_list_pagination_factory_adapter,
+            # Additional fixed arguments for PaginateMuteListCallback:
             target_telegram_id=target_telegram_id,
             subscriber_context_page=subscriber_context_page,
-            # Note: The `page` argument for PaginateMuteListCallback is named `mute_list_page`.
-            # The generic helper passes `page` as the kwarg key.
-            # We need to ensure PaginateMuteListCallback can accept `page` and map it internally,
-            # or the generic helper needs to be adapted to allow specifying the target kwarg name.
-            # For now, assuming PaginateMuteListCallback is defined as:
-            # class PaginateMuteListCallback(CallbackData, prefix="..."):
-            #     target_telegram_id: int
-            #     mute_list_page: int  # This is what we want to control with `page` from generic helper
-            #     subscriber_context_page: int
-            # The generic helper calls: pagination_callback_factory(page=current_page - 1, **factory_kwargs)
-            # So, PaginateMuteListCallback will receive `page` as a kwarg.
-            # If PaginateMuteListCallback expects `mute_list_page`, this won't directly map.
-            #
-            # Let's check PaginateMuteListCallback definition.
-            # Assuming it's: PaginateMuteListCallback(target_telegram_id: int, mute_list_page: int, subscriber_context_page: int)
-            # The generic helper will call:
-            # PaginateMuteListCallback(page=N, target_telegram_id=X, subscriber_context_page=Y)
-            # This will fail if PaginateMuteListCallback doesn't have a 'page' field.
-            #
-            # The _add_pagination_controls_generic needs to be flexible or the CallbackData needs a 'page' field.
-            #
-            # Given the problem description, the user wants to use the generic helper.
-            # The current _add_pagination_controls_generic passes `page` as the argument name for the page number.
-            # So, PaginateMuteListCallback must have a field named `page` for the page number.
-            # Let's assume PaginateMuteListCallback is structured like:
-            # class PaginateMuteListCallback(CallbackData, prefix="pg_ml"):
-            #     target_telegram_id: int
-            #     page: int # Renamed from mute_list_page for compatibility with generic helper
-            #     subscriber_context_page: int
-            # If this assumption is not correct, PaginateMuteListCallback needs to be adapted, or
-            # _add_pagination_controls_generic needs to be made more flexible.
-            #
-            # For this refactoring, I will assume PaginateMuteListCallback has a field `page`
-            # that corresponds to `mute_list_page`. If not, this is a further change needed.
-            # Based on the user's text, `PaginateMuteListCallback(..., mute_list_page=current_page - 1, ...)`
-            # This means the field is indeed `mute_list_page`.
-            #
-            # The generic helper calls: `pagination_callback_factory(page=current_page - 1, **factory_kwargs)`
-            # This means `factory_kwargs` should *not* contain `page` or `mute_list_page`.
-            # The `page` parameter is handled by the generic helper.
-            #
-            # The issue is that `PaginateMuteListCallback` expects `mute_list_page`, but the generic
-            # helper provides `page`.
-            #
-            # Option 1: Modify `_add_pagination_controls_generic` to allow specifying the page kwarg name.
-            # Option 2: Create a small wrapper callback factory.
-            # Option 3: Modify `PaginateMuteListCallback` to accept `page` (possibly as an alias or new field).
-            #
-            # Option 2 is least intrusive for this step.
-            # However, the user's request is to *use* the existing generic helper.
-            # This implies the helper should be usable as-is.
-            #
-            # Let's re-read the generic helper:
-            # callback_data=pagination_callback_factory(page=current_page - 1, **factory_kwargs).pack()
-            #
-            # And the manual way:
-            # callback_data=PaginateMuteListCallback(
-            #     target_telegram_id=target_telegram_id,
-            #     mute_list_page=current_page - 1,  # This is the key difference
-            #     subscriber_context_page=subscriber_context_page,
-            # ).pack(),
-            #
-            # The `factory_kwargs` in the generic helper are for *additional fixed arguments*.
-            # The page number itself is passed as `page`.
-            # So, we need `PaginateMuteListCallback` to accept `page` as the name of its page field.
-            #
-            # If `PaginateMuteListCallback` is defined as:
-            # class PaginateMuteListCallback(CallbackData, prefix="paginate_mute_list"):
-            #   target_telegram_id: int
-            #   mute_list_page: int  <--- This is the field name for the page
-            #   subscriber_context_page: int
-            #
-            # Then a direct call `PaginateMuteListCallback(page=N, ...)` will fail.
-            #
-            # The most straightforward interpretation of the request "use the generic function"
-            # implies that the generic function *can* be used. This might mean there's an implicit
-            # assumption that the callback can be adapted or the generic function is more flexible
-            # than its current signature suggests.
-            #
-            # Given the constraints, I must use `_add_pagination_controls_generic`.
-            # The simplest way to make this work without altering `_add_pagination_controls_generic`
-            # or `PaginateMuteListCallback` definition directly in *this* step is to assume
-            # that `PaginateMuteListCallback` can be instantiated in a way that `page` kwarg is mapped.
-            # This is unlikely for a standard `CallbackData` object unless it has an `__init__`
-            # that does this mapping or `page` is an actual field.
-            #
-            # Let's look at the example of `create_subscriber_list_keyboard` which uses the *new* generic helper:
-            # `pagination_callback_factory=SubscriberListCallback`
-            # `pagination_factory_kwargs = {"action": SubscriberListAction.PAGE}`
-            # `SubscriberListCallback` likely has `action: SubscriberListAction` and `page: int`.
-            #
-            # If `PaginateMuteListCallback` cannot be changed, then `_add_pagination_controls_generic`
-            # is not truly "generic" for this case without modification or a wrapper.
-            #
-            # I will proceed with the assumption that to fulfill the request, I should call
-            # `_add_pagination_controls_generic` and pass `PaginateMuteListCallback`.
-            # The discrepancy in parameter names (`page` vs `mute_list_page`) will be noted.
-            # If this causes an error, the callback or the generic function needs adjustment.
-            # For now, I'll write the code as if `PaginateMuteListCallback` expects `mute_list_page`
-            # and show how the generic function would be ideally called if the names matched.
-            #
-            # The user's problem description for `_add_pagination_controls_generic` shows:
-            # `callback_data=pagination_callback_factory(page=current_page - 1, **factory_kwargs).pack()`
-            #
-            # And for `create_view_mute_list_keyboard` manual implementation:
-            # `PaginateMuteListCallback(..., mute_list_page=current_page - 1, ...)`
-            #
-            # This means `pagination_callback_factory` (which is `PaginateMuteListCallback`) needs to accept `page`
-            # and internally map it to `mute_list_page`, OR `PaginateMuteListCallback` must be defined with `page`.
-            #
-            # I will make a small lambda to bridge this, as it's a common pattern for such mismatches
-            # when a generic utility is used with pre-existing specific components.
-            # This keeps `_add_pagination_controls_generic` and `PaginateMuteListCallback` unchanged.
+        )
 
-            # Wrapper to align parameter names
-            def mute_list_pagination_factory_adapter(**kwargs: Any) -> PaginateMuteListCallback:
-                page_num = kwargs.pop("page") # Extract 'page' passed by generic helper
-                return PaginateMuteListCallback(mute_list_page=page_num, **kwargs)
-
-            _add_pagination_controls_generic(
-                builder=builder,
-                translator=translator,
-                current_page=current_page,
-                total_pages=total_pages,
-                pagination_callback_factory=mute_list_pagination_factory_adapter,
-                # factory_kwargs are the remaining fixed arguments for PaginateMuteListCallback
-                target_telegram_id=target_telegram_id,
-                subscriber_context_page=subscriber_context_page
-            ) # Corrected: Added the missing closing parenthesis here
-
-    # Button to go back to the specific subscriber's action menu
+    # "Back to User Actions" button
     builder.row(
         InlineKeyboardButton(
             text=_("⬅️ Back to User Actions"),

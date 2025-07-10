@@ -13,7 +13,6 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession as SQLAlchemyAsyncSession  # Keep if other functions use it
 from sqlmodel import select
 
 # Import SQLModel's AsyncSession and alias the other one if needed, or just use one consistently.
