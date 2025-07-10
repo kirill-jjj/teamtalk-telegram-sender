@@ -31,7 +31,7 @@ from bot.constants import (
 from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
-from bot.teamtalk_bot.utils import get_tt_user_display_name  # Removed get_online_teamtalk_users
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser

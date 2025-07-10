@@ -38,12 +38,6 @@ class NotificationAction(Enum):
     MANAGE_MUTED = "manage_muted"  # Takes to mute management screen
 
 
-class MuteAllAction(Enum):
-    """Actions related to the global mute_all setting (deprecated but kept for enum structure)."""
-
-    TOGGLE_MUTE_ALL = "toggle_mute_all"
-
-
 class UserListAction(Enum):
     """Actions for displaying different types of user lists."""
 

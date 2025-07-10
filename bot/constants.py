@@ -2,10 +2,6 @@
 
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
 
-MUTE_ACTION_MUTE = "mute"
-MUTE_ACTION_UNMUTE = "unmute"
-
-
 NOTIFICATION_EVENT_JOIN = "join"
 NOTIFICATION_EVENT_LEAVE = "leave"
 
@@ -24,8 +20,6 @@ MUTE_LIST_ITEMS_PER_PAGE = 10  # For paginating subscriber's mute list view
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 
-DB_MAIN_NAME = "main"
-
 
 WHO_CHANNEL_ID_ROOT = 1
 WHO_CHANNEL_ID_SERVER_ROOT_ALT = 0  # Sometimes used for users not in a specific channel
@@ -37,7 +31,6 @@ INVALID_CHANNEL_ID = -1  # Represents an invalid or non-numeric channel ID
 DEEPLINK_TOKEN_LENGTH_BYTES = 16
 
 # --- Timeouts and Delays ---
-TT_CACHE_SYNC_RETRY_DELAY_SECONDS = 60
 
 # --- Callback Prefixes ---
 CB_PREFIX_SETTINGS_NAV = "settings_nav"

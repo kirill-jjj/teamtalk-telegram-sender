@@ -15,7 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_tt_user_display_name  # Removed get_online_teamtalk_users
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
