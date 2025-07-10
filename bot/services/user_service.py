@@ -11,7 +11,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, SubscribedUser, UserSettings
-from bot.telegram_bot.commands import get_admin_commands, get_user_commands
+# get_admin_commands and get_user_commands are now used in _utils.py
+# from bot.telegram_bot.commands import get_admin_commands, get_user_commands
+from . import _utils # Import the new utils module
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -59,54 +61,6 @@ async def delete_full_user_profile(
         return True
 
 
-async def _update_user_mute_mode_in_db(
-    session: AsyncSession,
-    services: "Services",
-    settings_to_update: UserSettings,
-    new_mode: MuteListMode,
-    log_context: str = "",  # For slightly different log messages
-) -> UserSettings | None:
-    """Private helper to update mute mode, commit, refresh, cache, and handle errors."""
-    original_mode = settings_to_update.mute_list_mode
-    if original_mode == new_mode:
-        return settings_to_update  # No change needed
-
-    try:
-        settings_to_update.mute_list_mode = new_mode
-        await session.commit()
-        await session.refresh(settings_to_update)
-        services.cache.update_user_settings(settings_to_update)
-        logger.info(
-            "Successfully set mute list mode to '%s' for user %s%s. DB and cache updated.",
-            new_mode.value,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        # Revert in-memory change before returning or if the object is re-used
-        settings_to_update.mute_list_mode = original_mode
-        logger.exception(
-            "SQLAlchemyError while setting mute list mode to '%s' for user %s%s. Rolled back.",
-            new_mode.value,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-        return None
-    except Exception:  # Catch any other unexpected errors
-        await session.rollback()
-        settings_to_update.mute_list_mode = original_mode
-        logger.exception(
-            "Unexpected error while setting mute list mode to '%s' for user %s%s. Rolled back.",
-            new_mode.value,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-        return None
-    else:
-        return settings_to_update
-
-
 async def set_user_mute_mode(
     session: AsyncSession,
     services: "Services",
@@ -123,57 +77,7 @@ async def set_user_mute_mode(
         logger.error("set_user_mute_mode: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
         return None
 
-    return await _update_user_mute_mode_in_db(session, services, managed_user_settings, new_mode, log_context=" (self)")
-
-
-async def _update_user_language_in_db(
-    session: AsyncSession,
-    services: "Services",
-    settings_to_update: UserSettings,
-    new_lang_code: str,
-    log_context: str = "",
-) -> UserSettings | None:
-    """Private helper to update language_code, commit, refresh, cache, and handle errors."""
-    original_lang_code = settings_to_update.language_code
-    if original_lang_code == new_lang_code:
-        return settings_to_update  # No change needed
-
-    try:
-        settings_to_update.language_code = new_lang_code
-        # The original update_user_language_settings used a helper `update_user_settings_in_db`
-        # which might encapsulate session.commit() and session.refresh().
-        # For consistency with _update_user_mute_mode_in_db, we'll do it explicitly here.
-        await session.commit()
-        await session.refresh(settings_to_update)
-        services.cache.update_user_settings(settings_to_update)
-        logger.info(
-            "Successfully set language to '%s' for user %s%s. DB and cache updated.",
-            new_lang_code,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        settings_to_update.language_code = original_lang_code
-        logger.exception(
-            "SQLAlchemyError while setting language to '%s' for user %s%s. Rolled back.",
-            new_lang_code,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-        return None
-    except Exception:
-        await session.rollback()
-        settings_to_update.language_code = original_lang_code
-        logger.exception(
-            "Unexpected error while setting language to '%s' for user %s%s. Rolled back.",
-            new_lang_code,
-            settings_to_update.telegram_id,
-            log_context,
-        )
-        return None
-    else:
-        return settings_to_update
+    return await _utils._update_user_mute_mode_in_db(session, services, managed_user_settings, new_mode, log_context=" (self)")
 
 
 async def update_user_language_settings(  # User-initiated
@@ -190,13 +94,13 @@ async def update_user_language_settings(  # User-initiated
         )
         return None  # Or handle error as appropriate
 
-    updated_settings = await _update_user_language_in_db(
+    updated_settings = await _utils._update_user_language_in_db(
         session, services, managed_user_settings, new_lang_code, log_context=" (self)"
     )
     # The original function also called update_user_bot_commands.
     # This should be consistent for both user and admin paths if it's a general side effect of language change.
     if updated_settings:
-        commands_updated = await update_user_bot_commands(updated_settings.telegram_id, new_lang_code, services)
+        commands_updated = await _utils.update_user_bot_commands(updated_settings.telegram_id, new_lang_code, services)
         if not commands_updated:
             logger.warning(
                 "Failed to update bot commands for user %s after self-language change to '%s'.",
@@ -322,42 +226,3 @@ async def toggle_mute_status_for_tt_user(
         return False, None
     else:
         return True, resulting_action
-
-
-async def update_user_bot_commands(
-    telegram_id: int,
-    new_lang_code: str,
-    services: "Services",
-) -> bool:
-    """Updates bot commands for a user based on their new language and admin status."""
-    try:
-        new_lang_translator = services.get_translator(new_lang_code)
-        _ = new_lang_translator.gettext
-        is_admin = services.cache.is_admin(telegram_id)
-        commands_to_set = get_admin_commands(_) if is_admin else get_user_commands(_)
-        scope = BotCommandScopeChat(chat_id=telegram_id)
-        active_bot_instance = services.bot_event
-        await active_bot_instance.delete_my_commands(scope=scope)
-        await active_bot_instance.set_my_commands(commands=commands_to_set, scope=scope)
-        logger.info(
-            "Successfully updated Telegram commands for user %s to language '%s'. Admin status: %s",
-            telegram_id,
-            new_lang_code,
-            is_admin,
-        )
-    except TelegramAPIError:
-        logger.exception(
-            "TelegramAPIError updating commands for user %s to language '%s'.",
-            telegram_id,
-            new_lang_code,
-        )
-        return False
-    except Exception:
-        logger.exception(
-            "Unexpected error updating commands for user %s to language '%s'.",
-            telegram_id,
-            new_lang_code,
-        )
-        return False
-    else:
-        return True

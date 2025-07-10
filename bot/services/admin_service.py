@@ -9,7 +9,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, UserSettings  # Added MuteListMode, NotificationSetting
-from bot.services import user_service  # For updating bot commands
+from bot.services import user_service  # Will be partially replaced by _utils
+from . import _utils # Import the new utils module
 
 if TYPE_CHECKING:
     import pytalk
@@ -34,7 +35,7 @@ async def add_admin_full(
             logger.info("Admin %s added to cache.", telegram_id)
 
             if user_settings:  # Should always have user_settings if adding admin
-                commands_updated = await user_service.update_user_bot_commands(
+                commands_updated = await _utils.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services
                 )
                 if commands_updated:
@@ -67,7 +68,7 @@ async def remove_admin_full(
             logger.info("Admin %s removed from cache.", telegram_id)
 
             if user_settings:  # Should always have user_settings
-                commands_updated = await user_service.update_user_bot_commands(
+                commands_updated = await _utils.update_user_bot_commands(
                     telegram_id, user_settings.language_code, services
                 )
                 if commands_updated:
@@ -256,8 +257,7 @@ async def admin_set_user_mute_mode(
         logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    # _update_user_mute_mode_in_db is in user_service, so we need to call it from there.
-    return await user_service._update_user_mute_mode_in_db(
+    return await _utils._update_user_mute_mode_in_db(
         session, services, target_user_settings, new_mode, log_context=" by admin"
     )
 
@@ -375,14 +375,12 @@ async def admin_set_user_language(
         logger.warning("admin_set_user_language: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    # _update_user_language_in_db is in user_service, so we need to call it from there.
-    updated_settings = await user_service._update_user_language_in_db(
+    updated_settings = await _utils._update_user_language_in_db(
         session, services, target_user_settings, new_lang_code, log_context=" by admin"
     )
 
     if updated_settings:
-        # update_user_bot_commands is in user_service, call it from there.
-        commands_updated = await user_service.update_user_bot_commands(target_telegram_id, new_lang_code, services)
+        commands_updated = await _utils.update_user_bot_commands(target_telegram_id, new_lang_code, services)
         if not commands_updated:
             logger.warning(
                 "Failed to update bot commands for user %s after language change by admin to '%s'.",
