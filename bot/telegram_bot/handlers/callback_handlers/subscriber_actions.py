@@ -14,7 +14,7 @@ from sqlmodel import select  # Moved here
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
-from bot.core.enums import SubscriberAction
+from bot.core.enums import SubscriberAction, ManageTTAccountAction # Added ManageTTAccountAction
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings  # Added MutedUser
 from bot.services import admin_service, user_service  # Added admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -27,6 +27,7 @@ from bot.telegram_bot.callback_data import (
     PaginateMuteListCallback,  # New
     SubscriberActionCallback,
     ViewSubscriberCallback,
+    ManageTTAccountCallback,
 )
 from bot.telegram_bot.keyboards import (
     create_admin_subscriber_lang_keyboard,
@@ -547,6 +548,31 @@ async def handle_paginate_mute_list(
         mute_list_page_num=callback_data.mute_list_page,
     )
     await query.answer()  # Acknowledge the callback
+
+
+@subscriber_actions_router.callback_query(
+    ManageTTAccountCallback.filter(F.action == ManageTTAccountAction.LINK_NEW)
+)
+@ensure_message_context
+async def handle_link_new_tt_account_choice(
+    query: CallbackQuery,
+    callback_data: ManageTTAccountCallback,
+    session: AsyncSession,  # noqa: ARG001 - Injected by DbSessionMiddleware
+    translator: gettext.GNUTranslations, # Injected by I18nMiddleware
+    services: "Services",  # noqa: ARG001 - From workflow_data
+    tt_connection: TeamTalkConnection | None, # Injected by ActiveTeamTalkConnectionMiddleware
+    user_settings: UserSettings,  # noqa: ARG001 - Injected by UserSettingsMiddleware
+) -> None:
+    """Handles the 'Link/Change TeamTalk Account' action by showing a list of linkable accounts."""
+    await _display_linkable_tt_accounts_page(
+        query=query,
+        target_telegram_id=callback_data.target_telegram_id,
+        subscriber_context_page=callback_data.page, # This is the page of the subscriber list
+        linkable_accounts_page_to_show=0,  # Show first page of linkable accounts
+        tt_connection=tt_connection,
+        translator=translator,
+    )
+    # display_paginated_list (called by _display_linkable_tt_accounts_page) handles query.answer()
 
 
 async def _display_linkable_tt_accounts_page(
