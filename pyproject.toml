@@ -140,7 +140,8 @@ dev = [
     "pytest-cov",
     "mypy",
     "ruff",
-    "types-toml"
+    "types-toml",
+    "pydantic" # Add pydantic to dev dependencies for mypy plugin
 ]
 
 [tool.mypy]

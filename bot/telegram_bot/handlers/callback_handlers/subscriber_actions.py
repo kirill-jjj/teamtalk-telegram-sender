@@ -449,7 +449,7 @@ async def _handle_admin_view_mute_list_action(
     statement = (
         select(UserSettings)
         .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(UserSettings.muted_users_list))
+        .options(selectinload(getattr(UserSettings, "muted_users_list")))  # Use getattr for clarity
     )
     target_user_settings = await session.scalar(statement)  # Using scalar for one_or_none equivalent
 
@@ -494,9 +494,14 @@ async def _handle_admin_view_mute_list_action(
         pass  # No need to add more to title text here, keyboard and paginator handle items/page.
 
     # 4. Call display_paginated_list
+    if query.bot is None:
+        logger.error("_handle_admin_view_mute_list_action: query.bot is None. Cannot display list.")
+        await query.answer(_("An error occurred while displaying the list. Bot instance not found."), show_alert=True)
+        return
+
     await display_paginated_list(
         target=query,  # Changed to target
-        bot=query.bot,  # Added bot instance
+        bot=query.bot,
         translator=translator,
         items=all_muted_usernames,
         page=page_num,  # page_num is the requested page for the mute list
@@ -593,10 +598,14 @@ async def _display_linkable_tt_accounts_page(
         empty_list_text = _("No TeamTalk server accounts found on {server_host} or unable to fetch.").format(
             server_host=tt_connection.server_info.host
         )
+    if query.bot is None:
+        logger.error("_display_linkable_tt_accounts_page: query.bot is None. Cannot display list.")
+        await query.answer(_("An error occurred while displaying the list. Bot instance not found."), show_alert=True)
+        return
 
     await display_paginated_list(
         target=query,  # Changed to target
-        bot=query.bot,  # Added bot instance
+        bot=query.bot,
         translator=translator,
         items=all_server_accounts,
         page=linkable_accounts_page_to_show,
@@ -655,7 +664,8 @@ async def handle_link_tt_account_chosen(
     )
 
     alert_message = ""
-    current_tt_for_keyboard = tt_username_to_link  # Optimistically assume link will succeed for keyboard
+    # Optimistically assume link will succeed for keyboard, allow None
+    current_tt_for_keyboard: str | None = tt_username_to_link
 
     if status_key == "linked":
         alert_message = _("TeamTalk account {new_tt_username} linked successfully.").format(

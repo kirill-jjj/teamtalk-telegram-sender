@@ -826,6 +826,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "mypy" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -843,6 +844,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "py-talk-ex", specifier = "~=1.6" },
     { name = "pydantic", specifier = "~=2.11" },
+    { name = "pydantic", marker = "extra == 'dev'" },
     { name = "pydantic-settings", specifier = "~=2.9" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
