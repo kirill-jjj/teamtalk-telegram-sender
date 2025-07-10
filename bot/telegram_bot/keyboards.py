@@ -617,8 +617,8 @@ async def create_manage_tt_account_keyboard(
 async def create_view_mute_list_keyboard(
     translator: gettext.GNUTranslations,
     page_items: list[Any],  # noqa: ARG001 # Added page_items parameter, unused but required by caller
-    current_mute_list_page: int,
-    total_mute_list_pages: int,
+    current_page: int,  # Changed from current_mute_list_page
+    total_pages: int,  # Changed from total_mute_list_pages
     target_telegram_id: int,  # Subscriber's ID
     subscriber_context_page: int,  # Page of the main subscriber list (for back button)
 ) -> InlineKeyboardMarkup:
@@ -627,24 +627,24 @@ async def create_view_mute_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     pagination_buttons = []
-    if current_mute_list_page > 0:
+    if current_page > 0:  # Use current_page
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("⬅️ Prev Page"),  # Text for mute list page
                 callback_data=PaginateMuteListCallback(
                     target_telegram_id=target_telegram_id,
-                    mute_list_page=current_mute_list_page - 1,
+                    mute_list_page=current_page - 1,  # Use current_page
                     subscriber_context_page=subscriber_context_page,
                 ).pack(),
             )
         )
-    if current_mute_list_page < total_mute_list_pages - 1:
+    if current_page < total_pages - 1:  # Use current_page and total_pages
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("Next Page ➡️"),  # Text for mute list page
                 callback_data=PaginateMuteListCallback(
                     target_telegram_id=target_telegram_id,
-                    mute_list_page=current_mute_list_page + 1,
+                    mute_list_page=current_page + 1,  # Use current_page
                     subscriber_context_page=subscriber_context_page,
                 ).pack(),
             )
