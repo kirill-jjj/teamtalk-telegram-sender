@@ -76,8 +76,23 @@ async def _get_recipients_for_notification(
         return []
 
     async with session_factory() as session:
+        # Base query
+        stmt = select(UserSettings.telegram_id)
+
+        # LEFT JOIN to MutedUser
+        # isouter=True makes it a LEFT JOIN
+        stmt = stmt.join(
+            MutedUser,
+            and_(
+                UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
+                MutedUser.muted_teamtalk_username == username_to_check
+            ),
+            isouter=True
+        )
+
+        # Base filters
         filters = [
-            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
+            UserSettings.telegram_id.in_(subscriber_ids), # type: ignore[attr-defined] # Keep if still needed
             UserSettings.notification_settings != NotificationSetting.NONE,
         ]
         if event_type == NOTIFICATION_EVENT_JOIN:
@@ -85,22 +100,25 @@ async def _get_recipients_for_notification(
         elif event_type == NOTIFICATION_EVENT_LEAVE:
             filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
-        user_is_in_list_subquery = (
-            select(MutedUser.id)
-            .where(
-                and_(
-                    MutedUser.user_settings_telegram_id == UserSettings.telegram_id,
-                    MutedUser.muted_teamtalk_username == username_to_check,
-                )
-            )
-            .exists()
-        )
+        # Mute logic based on JOIN result
+        # Assuming mute_list_mode stores the string value of the enum (e.g., "blacklist", "whitelist")
+        # This will be verified in the next step.
         mute_logic = or_(
-            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, ~user_is_in_list_subquery),
-            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, user_is_in_list_subquery),
+            # Blacklist: receive notification if NOT in MutedUser (MutedUser.id IS NULL)
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.blacklist.value,
+                MutedUser.id is None  # Translates to IS NULL
+            ),
+            # Whitelist: receive notification if IN MutedUser (MutedUser.id IS NOT NULL)
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.whitelist.value,
+                MutedUser.id is not None  # Translates to IS NOT NULL
+            )
         )
-        filters.append(mute_logic)  # type: ignore[arg-type]
-        stmt = select(UserSettings.telegram_id).where(and_(*filters))
+        filters.append(mute_logic) # type: ignore[arg-type] # Keep if still needed
+
+        stmt = stmt.where(and_(*filters))
+
         result = await session.execute(stmt)
         return cast(list[int], result.scalars().all())
 
