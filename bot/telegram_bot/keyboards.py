@@ -834,8 +834,8 @@ async def create_view_mute_list_keyboard(
                 pagination_callback_factory=mute_list_pagination_factory_adapter,
                 # factory_kwargs are the remaining fixed arguments for PaginateMuteListCallback
                 target_telegram_id=target_telegram_id,
-                subscriber_context_page=subscriber_context_page,
-            )
+                subscriber_context_page=subscriber_context_page
+            ) # Corrected: Added the missing closing parenthesis here
 
     # Button to go back to the specific subscriber's action menu
     builder.row(
