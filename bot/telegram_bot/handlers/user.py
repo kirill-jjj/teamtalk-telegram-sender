@@ -1,7 +1,7 @@
 """Telegram bot command handlers for regular user interactions."""
 
 import asyncio
-import functools  # Moved import functools to the top
+import functools
 import gettext  # For type hinting translator
 from html import escape
 import logging
@@ -31,7 +31,7 @@ from bot.constants import (
 from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
-from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name  # Updated imports
+from bot.teamtalk_bot.utils import get_online_teamtalk_users, get_tt_user_display_name
 from bot.telegram_bot.deeplink import handle_deeplink_payload
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
@@ -59,7 +59,7 @@ async def start_command_handler(
     session: AsyncSession,
     translator: gettext.GNUTranslations,  # gettext function
     user_settings: UserSettings,
-    services: "Services",  # Changed from app: "Application"
+    services: "Services",
 ) -> None:
     """Handles the /start command, processing deeplinks or showing a welcome message."""
     _ = translator.gettext

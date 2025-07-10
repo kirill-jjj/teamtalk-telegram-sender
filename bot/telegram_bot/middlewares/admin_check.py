@@ -1,11 +1,11 @@
 """Middleware to check if a Telegram user is an administrator."""
 
-from collections.abc import Awaitable, Callable  # Added Awaitable
+from collections.abc import Awaitable, Callable
 import gettext  # For translator type hint
 import logging
 
 # For type hinting
-from typing import TYPE_CHECKING, Any  # Ensure Any is imported
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject

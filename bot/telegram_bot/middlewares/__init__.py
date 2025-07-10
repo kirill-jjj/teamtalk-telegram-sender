@@ -4,7 +4,7 @@
 
 from .admin_check import AdminCheckMiddleware
 from .db_session import DbSessionMiddleware
-from .i18n import I18nMiddleware  # Added I18nMiddleware
+from .i18n import I18nMiddleware
 from .subscription_check import SubscriptionCheckMiddleware
 from .teamtalk_connection import (
     ActiveTeamTalkConnectionMiddleware,
@@ -18,7 +18,7 @@ __all__ = [
     "ActiveTeamTalkConnectionMiddleware",
     "AdminCheckMiddleware",
     "DbSessionMiddleware",
-    "I18nMiddleware",  # Added I18nMiddleware
+    "I18nMiddleware",
     "SubscriptionCheckMiddleware",
     "TeamTalkConnectionCheckMiddleware",
     "UserSettingsMiddleware",

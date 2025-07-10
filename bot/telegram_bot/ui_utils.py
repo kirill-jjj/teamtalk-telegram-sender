@@ -5,7 +5,7 @@ import gettext
 import logging
 from typing import Any, TypeVar
 
-from aiogram import Bot  # Added Bot import
+from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
@@ -41,8 +41,8 @@ def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
 
 
 async def display_paginated_list(
-    target: CallbackQuery | Message,  # Changed parameter
-    bot: Bot,  # Added bot parameter
+    target: CallbackQuery | Message,
+    bot: Bot,
     translator: gettext.GNUTranslations,
     items: list[Any],
     page: int,

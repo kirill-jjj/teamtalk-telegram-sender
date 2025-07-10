@@ -1,7 +1,7 @@
 """Initialize the database module and export key components."""
 
 from .crud import (
-    Admin,  # Added Admin here
+    Admin,
     add_admin,
     add_subscriber,
     add_to_ban_list,
@@ -22,7 +22,7 @@ from .crud import (
 from .engine import AsyncSessionFactoryType, create_session_factory
 
 __all__ = [
-    "Admin",  # And here
+    "Admin",
     "AsyncSessionFactoryType",
     "add_admin",
     "add_subscriber",

@@ -1,10 +1,10 @@
 """Converts .env configuration files to a structured TOML format."""
 
 import argparse
-from collections.abc import Callable  # Moved E402
+from collections.abc import Callable
 from pathlib import Path
 import sys
-from typing import Any  # Ensure Any is imported
+from typing import Any
 
 from dotenv import dotenv_values  # For reading .env files
 import toml  # For writing TOML
@@ -55,7 +55,6 @@ ENV_TO_TOML_MAPPING: EnvMappingType = {
     ),
 }
 
-# Added alembic and scripts
 DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"]
 
 
@@ -135,7 +134,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
     try:
         output_toml_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_toml_path.open("w", encoding="utf-8") as f:  # Use Path.open()
+        with output_toml_path.open("w", encoding="utf-8") as f:
             toml.dump(toml_data, f)
         print(f"Successfully converted to '{output_toml_path}'.")
     except OSError as e:

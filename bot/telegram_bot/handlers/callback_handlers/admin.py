@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message  # Added Message
+from aiogram.types import CallbackQuery, Message
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminActionCallback
 
 # Middlewares to apply
@@ -95,7 +95,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
         return False, _(
             "An error occurred while performing the action on server {server_host}. Please try again later."
         ).format(server_host=server_host)
-    except (ValueError, TypeError, AttributeError):  # Removed 'as e_data'
+    except (ValueError, TypeError, AttributeError):
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
         logger.exception(
             "Data error during '%s' on TT user (ID: %s) on server %s.",
@@ -177,10 +177,9 @@ async def process_user_action_selection(
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        message_obj = callback_query.message  # Assign to variable
-        if isinstance(message_obj, Message):  # Check type of the new variable
+        if isinstance(callback_query.message, Message):
             try:
-                await message_obj.edit_text(message_text, reply_markup=None)
+                await callback_query.message.edit_text(message_text, reply_markup=None)
             except TelegramAPIError as e:
                 logger.warning(
                     "Failed to edit message text after user action on %s: %s. Trying to edit reply markup only.",
@@ -188,7 +187,7 @@ async def process_user_action_selection(
                     e,
                 )
                 try:
-                    await message_obj.edit_reply_markup(reply_markup=None)  # Use the typed variable
+                    await callback_query.message.edit_reply_markup(reply_markup=None)
                 except TelegramAPIError:
                     logger.exception(
                         "Failed to even remove reply markup after user action on %s.",

@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from pathlib import Path  # Added for Path operations
+from pathlib import Path
 from typing import TypedDict
 
 logger = logging.getLogger(__name__)
@@ -30,21 +30,20 @@ def discover_languages(locales_path: Path = _LOCALE_DIR) -> list[LanguageInfo]:
 
     discovered_codes = {DEFAULT_LANGUAGE_CODE}
 
-    locales_path_obj = Path(locales_path)  # Convert to Path object
+    locales_path_obj = Path(locales_path)
     if not locales_path_obj.is_dir():
         logger.warning("Locales directory not found at %s. Only English will be available.", locales_path)
         return discovered
 
     # 2. Search for and add all other translated languages.
-    for lang_code_path in locales_path_obj.iterdir():  # Use Path.iterdir()
-        lang_code = lang_code_path.name  # Get the directory name as lang_code
+    for lang_code_path in locales_path_obj.iterdir():
+        lang_code = lang_code_path.name
         if lang_code in discovered_codes:
             continue
 
-        # lang_path is already lang_code_path
-        mo_file_path = lang_code_path / "LC_MESSAGES" / "messages.mo"  # Use / operator
+        mo_file_path = lang_code_path / "LC_MESSAGES" / "messages.mo"
 
-        if lang_code_path.is_dir() and mo_file_path.is_file():  # Use Path methods
+        if lang_code_path.is_dir() and mo_file_path.is_file():
             native_name = lang_code
             try:
                 translator = gettext.translation("messages", localedir=str(locales_path_obj), languages=[lang_code])

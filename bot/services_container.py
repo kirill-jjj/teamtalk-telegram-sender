@@ -26,10 +26,6 @@ if TYPE_CHECKING:
     pass  # Forward reference for selectinload, though might not be needed with plugin
 
 
-# bot/services_container.py
-
-# ... (other imports, ensure 'from pathlib import Path' is present at the start of the file)
-
 # Define the project root directory (parent directory of 'bot', which is parent of 'services_container.py')
 # Path(__file__).resolve() -> .../teamtalk-telegram-sender/bot/services_container.py
 # .parent -> .../teamtalk-telegram-sender/bot/
@@ -76,7 +72,7 @@ class Services:
         self.connections: dict[str, TeamTalkConnection] = {}
         self.subscribed_users_cache: set[int] = set()
         self.admin_ids_cache: set[int] = set()
-        self.user_settings_cache: dict[int, UserSettings] = {}  # Changed Any to UserSettings
+        self.user_settings_cache: dict[int, UserSettings] = {}
 
         self.translator_cache: dict[str, GNUTranslations | NullTranslations] = {}
         self.available_languages: list[LanguageInfo] = []
@@ -94,12 +90,12 @@ class Services:
             language_code = self.config.general.default_lang
 
         if language_code in self.translator_cache:
-            self.logger.debug("Переводчик для '%s' найден в кэше.", language_code)
+            self.logger.debug("Translator for '%s' found in cache.", language_code)
             return self.translator_cache[language_code]
 
-        # Логируем попытку загрузки, включая разрешенный путь к директории locales
+        # Log the loading attempt, including the resolved path to the locales directory
         self.logger.info(
-            "Попытка загрузить переводчик для языка '%s' из директории '%s'.",
+            "Attempting to load translator for language '%s' from directory '%s'.",
             language_code,
             LOCALE_DIR.resolve(),
         )

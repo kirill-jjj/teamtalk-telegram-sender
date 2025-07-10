@@ -12,7 +12,7 @@ if __name__ == "__main__":
         # Add project root to sys.path to allow 'from bot.config import Settings'
         # This simulates how the application might run if 'bot' is in PYTHONPATH
         project_root = Path(__file__).resolve().parent
-        sys.path.insert(0, str(project_root))  # Add project root
+        sys.path.insert(0, str(project_root))
 
         settings = Settings.from_toml(config_path)
         print("Configuration loaded successfully!")  # noqa: T201

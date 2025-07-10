@@ -1,6 +1,6 @@
 """Service layer for handling deeplink actions."""
 
-from collections.abc import Awaitable, Callable  # Moved Awaitable here
+from collections.abc import Awaitable, Callable
 import gettext
 import logging
 from typing import TYPE_CHECKING, TypeGuard
@@ -172,7 +172,7 @@ async def execute_deeplink_action(
                         "Deeplink action %s not explicitly handled in execute_deeplink_action.", action_enum_member
                     )
                     return_message = _("Invalid deeplink action.")
-            except (SQLAlchemyError, ValueError):  # Removed 'as e_handler'
+            except (SQLAlchemyError, ValueError):
                 logger.exception(
                     "Handler error for deeplink action '%s', token %s.",
                     action_enum_member,

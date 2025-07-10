@@ -2,15 +2,15 @@
 
 import gettext
 import logging
-from typing import (  # Added Any, TypeVar
+from typing import (
     TYPE_CHECKING,
     TypeVar,
-    cast,  # Separate import for cast
+    cast,
 )
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message  # Added Message
+from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession as SQLAlchemyAsyncSession  # Keep if other functions use it
@@ -41,7 +41,7 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list  # Ensured both are imported
+from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
 
 from ._helpers import safe_edit_text
 
@@ -101,8 +101,8 @@ async def _display_internal_user_list(
         return
 
     await display_paginated_list(
-        target=callback_query,  # Changed to target
-        bot=callback_query.bot,  # Added bot instance
+        target=callback_query,
+        bot=callback_query.bot,
         translator=translator,
         items=sorted_items,
         page=page,
@@ -150,13 +150,13 @@ async def _display_all_server_accounts_list(
         key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
     )
     await display_paginated_list(
-        target=callback_query,  # Changed to target
-        bot=callback_query.bot,  # Added bot instance
+        target=callback_query,
+        bot=callback_query.bot,
         translator=translator,
         items=sorted_items,
         page=page,
-        title_text=_("All Server Accounts"),  # Renamed parameter
-        empty_list_text=_("No user accounts found on the server."),  # Renamed parameter
+        title_text=_("All Server Accounts"),
+        empty_list_text=_("No user accounts found on the server."),
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_settings": user_settings},
         server_host_for_display=server_host,
@@ -182,7 +182,7 @@ async def _get_username_to_toggle_from_callback(
                 ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()
             ),
         )
-        page_items, _, _ = paginate_list(all_accounts, current_page, USERS_PER_PAGE)  # Use renamed paginate_list
+        page_items, _, _ = paginate_list(all_accounts, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             username_attr = page_items[user_idx].username
             # Assuming ttstr handles bytes and returns str. If username_attr can be None, handle it.
@@ -193,7 +193,7 @@ async def _get_username_to_toggle_from_callback(
         )
         results = await session.execute(statement)
         relevant_usernames = sorted([str(uname) for uname in results.scalars().all()])  # Use .scalars()
-        page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)  # Use renamed paginate_list
+        page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             return page_items[user_idx]  # type: ignore[no-any-return]
     logger.warning(
@@ -380,7 +380,7 @@ async def cq_set_mute_mode_action(
         await safe_edit_text(
             message_to_edit=callback_query.message,
             text=menu_text,
-            reply_markup=updated_keyboard_markup.as_markup(),  # Corrected: use the markup
+            reply_markup=updated_keyboard_markup.as_markup(),
             logger_instance=logger,
             log_context="cq_set_mute_mode_action (after service call)",
         )

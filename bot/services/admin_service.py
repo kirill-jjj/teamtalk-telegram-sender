@@ -1,10 +1,10 @@
 """Service layer for administrator-related operations."""
 
-import gettext  # Added
+import gettext
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy.exc import SQLAlchemyError  # Added
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
@@ -12,10 +12,10 @@ from bot.models import UserSettings
 from bot.services import user_service  # For updating bot commands
 
 if TYPE_CHECKING:
-    import pytalk  # Added
+    import pytalk
 
     from bot.services_container import Services
-    from bot.teamtalk_bot.connection import TeamTalkConnection  # Added
+    from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
 

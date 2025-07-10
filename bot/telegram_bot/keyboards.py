@@ -4,14 +4,13 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
-from collections.abc import Callable  # Moved to top-level import
+from collections.abc import Callable
 import gettext
 import html
-from typing import TYPE_CHECKING, Any, Protocol, cast  # Added Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Removed unused import: from collections.abc import Callable
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk  # For UserAccount type hint
 
@@ -27,13 +26,13 @@ from bot.core.enums import (
     ToggleMuteSpecificAction,
     UserListAction,
 )
-from bot.core.languages import LanguageInfo  # Added
+from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting, UserSettings
-from bot.teamtalk_bot.utils import get_tt_user_display_name  # Updated import
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import (
     AdminActionCallback,
     AdminSetSubscriberLanguageCallback,
-    AdminSetSubscriberMuteModeCallback,  # Added
+    AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     LanguageCallback,
     LinkTTAccountChosenCallback,
@@ -41,7 +40,7 @@ from bot.telegram_bot.callback_data import (
     MenuCallback,
     NotificationActionCallback,
     PaginateLinkableAccountsCallback,
-    PaginateMuteListCallback,  # New
+    PaginateMuteListCallback,
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
@@ -164,7 +163,7 @@ async def create_main_settings_keyboard(
 async def create_language_selection_keyboard(
     translator: gettext.GNUTranslations,
     available_languages: list[LanguageInfo],
-) -> InlineKeyboardMarkup:  # Changed return type
+) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard using the generic helper."""
     _ = translator.gettext  # For default "No languages" or back button text if not overridden
 
@@ -202,7 +201,7 @@ async def create_language_selection_keyboard(
 
 async def create_subscription_settings_keyboard(
     translator: gettext.GNUTranslations, current_setting: NotificationSetting
-) -> InlineKeyboardMarkup:  # Changed return type
+) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
@@ -302,7 +301,7 @@ async def _add_pagination_controls(
     current_page: int,
     total_pages: int,
     list_type: UserListAction,  # This argument might become part of a more generic callback_factory signature
-    callback_factory: type[PaginateUsersCallback],  # Changed to type[PaginateUsersCallback]
+    callback_factory: type[PaginateUsersCallback],
 ) -> None:
     """Adds pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext
@@ -489,11 +488,11 @@ async def create_subscriber_list_keyboard(
 
     return await _create_generic_paginated_list_keyboard(
         translator=translator,
-        page_items=page_items,  # Use the new parameter name
+        page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
         item_button_former=subscriber_button_former,
-        pagination_callback_factory=SubscriberListCallback,  # Pass the class directly
+        pagination_callback_factory=SubscriberListCallback,
         pagination_factory_kwargs=pagination_kwargs,
     )
 
@@ -689,8 +688,8 @@ async def create_manage_tt_account_keyboard(
 async def create_view_mute_list_keyboard(
     translator: gettext.GNUTranslations,
     page_items: list[Any],  # noqa: ARG001 # Added page_items parameter, unused but required by caller
-    current_page: int,  # Changed from current_mute_list_page
-    total_pages: int,  # Changed from total_mute_list_pages
+    current_page: int,
+    total_pages: int,
     target_telegram_id: int,  # Subscriber's ID
     subscriber_context_page: int,  # Page of the main subscriber list (for back button)
 ) -> InlineKeyboardMarkup:

@@ -1,19 +1,19 @@
 """Alembic environment configuration script."""
 
-from collections.abc import Iterable  # Import Iterable
+from collections.abc import Iterable
 from logging.config import fileConfig
-import os  # For path operations
-from pathlib import Path  # Added for Path operations
+import os
+from pathlib import Path
 
 from alembic import context
-from alembic.operations.ops import MigrationScript  # Corrected import for MigrationScript
+from alembic.operations.ops import MigrationScript
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection  # Import Connection
-from sqlalchemy.ext.asyncio import create_async_engine  # Moved here for PLC0415
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
-from bot.config import Settings  # Import the Settings model
+from bot.config import Settings
 
 # Import models here for Alembic 'autogenerate' support
 from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401
@@ -40,8 +40,8 @@ def process_revision_directives(
     # The arguments context and revision are not used in this function,
     # but they are part of the signature required by Alembic.
     # We can mark them as unused if preferred, e.g., by prefixing with an underscore.
-    _ = context  # Mark as unused
-    _ = revision  # Mark as unused
+    _ = context
+    _ = revision
     # Guard against cmd_opts being None and upgrade_ops being None
     if (
         config.cmd_opts is not None

@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
-from aiogram.types import CallbackQuery, Chat  # Added CallbackQuery
+from aiogram.types import CallbackQuery, Chat
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -21,7 +21,7 @@ from bot.database.crud import get_all_subscribers_ids
 from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.models import SubscriberInfo
-from bot.telegram_bot.ui_utils import display_paginated_list  # Added import
+from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 SUBSCRIBERS_PER_PAGE = 10
 
 
-async def _get_all_subscribers_info(  # Renamed function
+async def _get_all_subscribers_info(
     session: AsyncSession, bot: Bot
-) -> list[SubscriberInfo]:  # Corrected return type annotation
+) -> list[SubscriberInfo]:
     """Fetches all subscriber IDs, gets their details, and returns a list of all subscribers.
 
     Returns:

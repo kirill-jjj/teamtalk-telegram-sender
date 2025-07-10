@@ -1,8 +1,8 @@
 """Database engine and session factory setup."""
 
-from collections.abc import Callable  # Import Callable
+from collections.abc import Callable
 import logging
-from pathlib import Path  # Added for Path operations
+from pathlib import Path
 from typing import TypeAlias  # For sessionmaker type hint
 
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -26,7 +26,7 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # The variable `_` is used to prevent linters from complaining about an unused import.
     _ = models
 
-    db_path = Path(config.database.db_file).resolve()  # Use Path.resolve()
+    db_path = Path(config.database.db_file).resolve()
     db_url = f"sqlite+aiosqlite:///{db_path}"
     logger.info("Creating database engine for: %s", db_url)
 

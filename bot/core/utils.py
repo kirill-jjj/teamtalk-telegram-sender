@@ -5,9 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Note: TeamTalk specific utils (get_tt_user_display_name, get_effective_server_name, etc.)
-# were moved to bot.teamtalk_bot.utils.py.
-
 
 def build_help_message(
     translator: gettext.GNUTranslations, platform: str, *, is_telegram_admin: bool, is_teamtalk_admin: bool

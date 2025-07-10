@@ -1,6 +1,6 @@
 """Configuration models for the bot application."""
 
-from pathlib import Path  # Added for Path operations
+from pathlib import Path
 import tomllib  # Requires Python 3.11+
 from typing import Literal
 
@@ -76,11 +76,11 @@ class Settings(BaseSettings):
     operational_parameters: OperationalParameters = Field(default_factory=OperationalParameters)
 
     @classmethod
-    def from_toml(cls, path_str: str) -> "Settings":  # Renamed path to path_str
+    def from_toml(cls, path_str: str) -> "Settings":
         """Loads configuration from a TOML file."""
-        path = Path(path_str)  # Convert to Path object
+        path = Path(path_str)
         try:
-            with path.open("rb") as f:  # Use Path.open()
+            with path.open("rb") as f:
                 data = tomllib.load(f)
         except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns

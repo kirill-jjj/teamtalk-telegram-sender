@@ -9,10 +9,10 @@ from aiogram.types import ErrorEvent
 from aiogram.types import Message as AiogramMessage
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
-from bot.config import Settings  # Added
-from bot.core.languages import DEFAULT_LANGUAGE_CODE  # Added
-from bot.database import crud  # Added
-from bot.telegram_bot.commands import set_telegram_commands  # Added
+from bot.config import Settings
+from bot.core.languages import DEFAULT_LANGUAGE_CODE
+from bot.database import crud
+from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
     subscriber_actions_router,
@@ -20,7 +20,7 @@ from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 
-# Роутеры
+# Routers
 from bot.telegram_bot.handlers.user import user_commands_router
 
 # Middlewares
@@ -28,7 +28,7 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     AdminCheckMiddleware,
     DbSessionMiddleware,
-    I18nMiddleware,  # Added I18nMiddleware
+    I18nMiddleware,
     SubscriptionCheckMiddleware,
     UserSettingsMiddleware,
 )
@@ -99,7 +99,7 @@ async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> Non
             await teamtalk_task
         except asyncio.CancelledError:
             logger.info("Pytalk main event loop task cancelled successfully.")
-        except Exception:  # Corrected indentation
+        except Exception:
             logger.exception("Error awaiting cancelled Pytalk task.")
     elif teamtalk_task:
         logger.info("Pytalk main event loop task was already done.")

@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, cast  # Added cast
+from typing import TYPE_CHECKING, cast
 
 # Removed: from aiogram import Bot as AiogramBot
 from aiogram import Router

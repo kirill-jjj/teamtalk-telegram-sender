@@ -2,10 +2,10 @@
 
 from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any  # Added Dict
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, TelegramObject  # Import TelegramObject
+from aiogram.types import Message, TelegramObject
 from aiogram.types import User as AiogramUser
 
 if TYPE_CHECKING:

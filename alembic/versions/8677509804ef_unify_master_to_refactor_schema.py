@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import column, table  # Removed unused 'text'
+from sqlalchemy.sql import column, table
 
 # revision identifiers, used by Alembic.
 revision: str = "8677509804ef"

@@ -1,8 +1,8 @@
-from collections.abc import Awaitable, Callable  # Added Awaitable
+from collections.abc import Awaitable, Callable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any  # Added Any
+from typing import TYPE_CHECKING, Any
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -19,18 +19,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def process_setting_update(  # Added return type hint
+async def process_setting_update(
     callback_query: CallbackQuery,
     session: AsyncSession,
     user_settings: UserSettings,
-    translator: gettext.GNUTranslations,  # Changed from _: callable
+    translator: gettext.GNUTranslations,
     update_action: Callable[[], None],
     revert_action: Callable[[], None],
     success_toast_text: str,
     new_text: str,
     new_markup: InlineKeyboardMarkup,
     services: "Services",
-) -> None:  # Added return type hint
+) -> None:
     _ = translator.gettext
 
     if not callback_query.from_user:
@@ -110,8 +110,8 @@ async def process_setting_update(  # Added return type hint
 
 
 def ensure_message_context(
-    func: Callable[..., Awaitable[Any | None]],  # Changed signature
-) -> Callable[..., Awaitable[Any | None]]:  # Changed signature
+    func: Callable[..., Awaitable[Any | None]],
+) -> Callable[..., Awaitable[Any | None]]:
     """Decorator to ensure that a callback query handler has a message context.
 
     If query.message is None, it logs an error and attempts to answer the callback query.

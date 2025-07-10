@@ -1,8 +1,8 @@
 """Middlewares for managing and checking TeamTalk connections for Telegram handlers."""
 
 from collections.abc import (
-    Awaitable,  # Added Awaitable
-    Callable,  # Added Coroutine
+    Awaitable,
+    Callable,
 )
 from gettext import GNUTranslations, NullTranslations
 import logging

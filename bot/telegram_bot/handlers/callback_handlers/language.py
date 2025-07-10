@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, cast  # Added cast
+from typing import TYPE_CHECKING, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession  # This will be SQLAlchemyAsyncS
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
 from bot.core.enums import LanguageAction, SettingsNavAction
-from bot.core.languages import LanguageInfo  # Moved here
+from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
@@ -29,7 +29,7 @@ language_router = Router(name="callback_handlers.language")
 async def cq_show_language_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    available_languages: list[LanguageInfo],  # Corrected type hint
+    available_languages: list[LanguageInfo],
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext

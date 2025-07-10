@@ -18,11 +18,6 @@ from .notification_service import (
 )
 from .user_service import (
     delete_full_user_profile,
-    # get_user_settings_from_db_or_default, # Defined in bot.core.user_settings
-    # update_user_settings_in_db, # Defined in bot.core.user_settings
-    # create_or_update_user_from_telegram_data, # Defined in bot.core.user_settings
-    # get_user_language_code, # Defined in bot.core.user_settings
-    # get_user_settings_from_cache_or_db, # Defined in bot.core.user_settings
 )
 
 __all__ = [
@@ -38,9 +33,4 @@ __all__ = [
     "process_subscribe_deeplink",  # Deeplink service functions
     "process_unsubscribe_deeplink",  # Deeplink service functions
     "user_service",
-    # "get_user_settings_from_db_or_default",
-    # "update_user_settings_in_db",
-    # "create_or_update_user_from_telegram_data",
-    # "get_user_language_code",
-    # "get_user_settings_from_cache_or_db",
 ]

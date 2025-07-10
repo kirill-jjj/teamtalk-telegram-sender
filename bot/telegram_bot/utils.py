@@ -5,7 +5,7 @@ from collections.abc import Callable
 import logging
 
 # For type hinting Services
-from typing import TYPE_CHECKING, Any  # Added Any
+from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot as AiogramBot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError

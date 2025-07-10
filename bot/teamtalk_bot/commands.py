@@ -6,7 +6,7 @@ from collections.abc import Callable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any  # Ensure Any is imported
+from typing import TYPE_CHECKING, Any
 
 from aiogram.exceptions import TelegramAPIError
 from pydantic import BaseModel, Field, model_validator
@@ -14,7 +14,7 @@ import pytalk
 from pytalk.exceptions import TeamTalkException
 from pytalk.message import Message as TeamTalkMessage
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
@@ -378,7 +378,7 @@ async def handle_tt_remove_admin_command(
     )
 
 
-async def handle_tt_help_command(  # Added return type hint
+async def handle_tt_help_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     services: Services,
@@ -404,7 +404,7 @@ async def handle_tt_help_command(  # Added return type hint
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
-async def handle_tt_unknown_command(  # Added return type hint
+async def handle_tt_unknown_command(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations | gettext.NullTranslations,
     connection: TeamTalkConnection,

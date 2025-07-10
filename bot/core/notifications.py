@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import gettext
 from html import escape
 import logging
-from typing import TYPE_CHECKING, cast  # Added cast
+from typing import TYPE_CHECKING, cast
 
 import pytalk
 from pytalk.instance import TeamTalkInstance
@@ -17,7 +17,7 @@ from sqlmodel import select
 from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services import notification_service
-from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name  # Updated import
+from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.utils import send_telegram_messages_to_list
 
 # TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import sessionmaker  # For DbSessionFactory alias if used as a type
 
     # Using a more specific alias to avoid conflict if DbSessionFactory is used elsewhere
-    from bot.config import Settings  # Added import for Settings
+    from bot.config import Settings
     from bot.database.engine import AsyncSessionFactoryType as DbEngineSessionFactoryType
     from bot.services_container import Services
 
@@ -58,8 +58,6 @@ def _should_ignore_initial_event(
 
 
 def _is_user_globally_ignored(username: str, app_cfg: "Settings") -> bool:
-    # app_cfg is expected to be an instance of Settings
-    # Accessing teamtalk.global_ignore_usernames which is a list[str]
     global_ignore_list = app_cfg.teamtalk.global_ignore_usernames
     if not global_ignore_list:
         return False
@@ -71,8 +69,6 @@ async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
     session_factory: "DbEngineSessionFactoryType",
-    # The subscribed_users_cache parameter is no longer directly used here.
-    # It's fetched via services.cache.get_all_subscriber_ids()
     services: "Services",
 ) -> list[int]:
     subscriber_ids = list(services.cache.get_all_subscriber_ids())
@@ -116,7 +112,7 @@ def _generate_join_leave_notification_text(
     lang_code: str,
     get_translator_func: Callable[[str | None], gettext.GNUTranslations | gettext.NullTranslations],
 ) -> str:
-    recipient_translator = get_translator_func(lang_code)  # Use passed function
+    recipient_translator = get_translator_func(lang_code)
     # Pass the full translator object to get_tt_user_display_name
     localized_user_nickname = get_tt_user_display_name(tt_user, recipient_translator)
 
@@ -207,7 +203,7 @@ async def send_join_leave_notification_logic(
         recipients=recipients,
         event_user=tt_user,
         tt_instance=tt_instance,
-        online_users_cache=online_users_cache_for_instance,  # Renamed for clarity in service
+        online_users_cache=online_users_cache_for_instance,
         services=services,
     )
 

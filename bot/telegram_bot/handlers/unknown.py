@@ -1,6 +1,6 @@
 """Handler for unknown commands or messages received by the Telegram bot."""
 
-import gettext  # Import gettext
+import gettext
 import logging
 
 from aiogram import Router

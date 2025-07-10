@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommandScopeChat
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession  # Changed to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, MuteListMode, NotificationSetting, SubscribedUser, UserSettings  # Added MuteListMode
+from bot.models import MutedUser, MuteListMode, NotificationSetting, SubscribedUser, UserSettings
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 async def delete_full_user_profile(
     session: AsyncSession,
     telegram_id: int,
-    services: "Services",  # Changed from app: "Application"
+    services: "Services",
 ) -> bool:
     """Orchestrates the full deletion of a user's profile.
 
@@ -164,7 +164,7 @@ async def set_user_mute_mode(
     session: AsyncSession,
     services: "Services",
     user_settings: UserSettings,
-    new_mode: MuteListMode,  # Corrected type hint if MuteListMode is directly usable
+    new_mode: MuteListMode,
 ) -> UserSettings | None:
     """Sets the mute list mode for the user themselves."""
     # Ensure the user_settings object is managed by the current session
@@ -183,7 +183,7 @@ async def admin_set_user_mute_mode(
     session: AsyncSession,
     services: "Services",
     target_telegram_id: int,
-    new_mode: MuteListMode,  # Corrected type hint
+    new_mode: MuteListMode,
 ) -> UserSettings | None:
     """Sets the mute list mode for a target user, managed by an admin."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)
@@ -356,7 +356,7 @@ async def update_user_language_settings(  # User-initiated
     user_settings: UserSettings,
     new_lang_code: str,
     services: "Services",
-) -> UserSettings | None:  # Changed return type to UserSettings | None for consistency
+) -> UserSettings | None:
     """Updates user language for the user themselves."""
     managed_user_settings = await session.merge(user_settings)
     if not managed_user_settings:

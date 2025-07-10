@@ -2,10 +2,10 @@
 
 from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any  # Ensure Any is imported
+from typing import TYPE_CHECKING, Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject  # Added TelegramObject
+from aiogram.types import TelegramObject
 from aiogram.types import User as AiogramUser
 from sqlmodel.ext.asyncio.session import AsyncSession  # Use SQLModel's AsyncSession for type hint
 
@@ -24,8 +24,8 @@ class UserSettingsMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
-        event: TelegramObject,  # Changed to TelegramObject
-        data: dict[str, Any],  # Changed to Dict
+        event: TelegramObject,
+        data: dict[str, Any],
     ) -> Any:  # noqa: ANN401
         """Executes the middleware.
 
