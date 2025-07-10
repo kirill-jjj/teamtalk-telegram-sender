@@ -281,7 +281,7 @@ async def _handle_admin_toggle_noon_action(
     # query.message check is handled by the decorator on the calling handler (handle_subscriber_action)
     # We assume query.message is a Message instance if this helper is reached.
 
-    updated_user_settings = await user_service.admin_toggle_noon_setting(session, services, target_telegram_id)
+    updated_user_settings = await admin_service.admin_toggle_noon_setting(session, services, target_telegram_id)
 
     if updated_user_settings:
         new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
@@ -651,7 +651,7 @@ async def handle_link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    updated_user_settings, status_key = await user_service.admin_link_tt_account(
+    updated_user_settings, status_key = await admin_service.admin_link_tt_account(
         session, services, target_telegram_id, tt_username_to_link
     )
 
@@ -729,7 +729,7 @@ async def handle_admin_set_subscriber_language(
     new_lang_code = callback_data.lang_code
     subscriber_page_context = callback_data.subscriber_page_context
 
-    updated_user_settings = await user_service.admin_set_user_language(
+    updated_user_settings = await admin_service.admin_set_user_language(
         session, services, target_telegram_id, new_lang_code
     )
 
@@ -781,7 +781,7 @@ async def handle_admin_set_subscriber_notification_pref(
         await query.answer(_("Invalid setting value. Please try again."), show_alert=True)
         return
 
-    updated_user_settings = await user_service.admin_set_user_notification_preference(
+    updated_user_settings = await admin_service.admin_set_user_notification_preference(
         session, services, target_telegram_id, new_pref_enum
     )
 
@@ -841,7 +841,7 @@ async def handle_admin_set_subscriber_mute_mode(
     new_mode = callback_data.mode
     subscriber_page_context = callback_data.subscriber_page_context
 
-    updated_user_settings = await user_service.admin_set_user_mute_mode(session, services, target_telegram_id, new_mode)
+    updated_user_settings = await admin_service.admin_set_user_mute_mode(session, services, target_telegram_id, new_mode)
 
     if updated_user_settings:
         mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
