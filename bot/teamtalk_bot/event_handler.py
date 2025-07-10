@@ -1,7 +1,9 @@
 """Handles events received from the Pytalk (TeamTalk) library by routing them to the appropriate TeamTalkConnection."""
 
+from collections.abc import Awaitable, Callable
+import functools
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
@@ -15,7 +17,88 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 if TYPE_CHECKING:
     from bot.services_container import Services
 
+
 logger = logging.getLogger(__name__)
+
+
+# Decorator definition
+def route_event_to_connection(
+    handler_method_on_event_handler_class: Callable[..., Awaitable[None]],
+) -> Callable[..., Awaitable[None]]:
+    """Decorator for TeamTalkEventHandler methods to route events.
+
+    Routes to the appropriate TeamTalkConnection instance.
+    It assumes the decorated method's first arg after 'self' is the primary Pytalk event object.
+    """
+
+    @functools.wraps(handler_method_on_event_handler_class)
+    async def wrapper(
+        self_event_handler: "TeamTalkEventHandler",
+        event_primary_obj: Any,  # noqa: ANN401 # Intentionally Any for generic event object
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
+        """Wrapper function for the decorator to handle event routing."""
+        tt_instance = None
+        # 1. Direct attribute from primary event object
+        tt_instance = getattr(event_primary_obj, "teamtalk_instance", None)
+
+        # 2. Via .server attribute (common for User if instance is on Server)
+        if not tt_instance and hasattr(event_primary_obj, "server"):
+            server_obj = event_primary_obj.server
+            if server_obj:
+                tt_instance = getattr(server_obj, "teamtalk_instance", None)
+
+        # 3. Via .teamtalk attribute (common for Channel)
+        if not tt_instance and hasattr(event_primary_obj, "teamtalk"):
+            tt_instance = getattr(event_primary_obj, "teamtalk", None)
+
+        # Special handling for on_my_connection_lost (SIM102 fix incorporated)
+        if (
+            not tt_instance
+            and handler_method_on_event_handler_class.__name__ == "on_pytalk_my_connection_lost"
+            and isinstance(event_primary_obj, PytalkServer)
+            and event_primary_obj.info
+        ):
+            connection = self_event_handler._get_connection_by_server_info(event_primary_obj.info)
+            if connection:
+                await connection.on_my_connection_lost(event_primary_obj, *args, **kwargs)
+            else:
+                logger.error(
+                    "Decorator: ConnectionLost: No connection by server_info for %s",
+                    f"{event_primary_obj.info.host}:{event_primary_obj.info.tcp_port}",
+                )
+            return
+
+        if not tt_instance:
+            logger.error(
+                "Decorator: Could not determine TeamTalk instance for event_obj type '%s' in handler '%s'.",
+                type(event_primary_obj).__name__,
+                handler_method_on_event_handler_class.__name__,
+            )
+            return
+
+        connection = self_event_handler._get_connection_by_instance(tt_instance)
+        if connection:
+            method_name_on_connection = handler_method_on_event_handler_class.__name__.replace("on_pytalk_", "on_")
+            actual_connection_method = getattr(connection, method_name_on_connection, None)
+
+            if actual_connection_method and callable(actual_connection_method):
+                await actual_connection_method(event_primary_obj, *args, **kwargs)
+            else:
+                logger.error(
+                    "Decorator: Method '%s' not found or not callable on TeamTalkConnection for Pytalk event '%s'.",
+                    method_name_on_connection,
+                    handler_method_on_event_handler_class.__name__,
+                )
+        else:
+            logger.warning(
+                "Decorator: No active TeamTalkConnection found for instance %s in Pytalk event '%s'.",
+                tt_instance,
+                handler_method_on_event_handler_class.__name__,
+            )
+
+    return wrapper
 
 
 class TeamTalkEventHandler:
@@ -91,101 +174,45 @@ class TeamTalkEventHandler:
         else:
             logger.info("TeamTalkConnection for %s initiated.", server_key)
 
+    @route_event_to_connection
     async def on_pytalk_my_login(self, server: PytalkServer) -> None:
-        """Routes the bot's own login event to the appropriate connection."""
-        connection = self._get_connection_by_instance(server.teamtalk_instance)
-        if connection:
-            await connection.on_my_login(server)
-        else:
-            logger.error("MyLogin: No connection for instance %s", server.teamtalk_instance)
+        """Routes the bot's own login event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_my_login
 
+    @route_event_to_connection
     async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
-        """Routes a user join event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or (
-            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
-        )
-        if not tt_instance:
-            logger.error("UserJoin: Cannot determine instance for user %s", user.username)
-            return
-        connection = self._get_connection_by_instance(tt_instance)
-        if connection:
-            await connection.on_user_join(user, channel)
-        else:
-            logger.error("UserJoin: No connection for instance %s", tt_instance)
+        """Routes a user join event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_user_join
 
+    @route_event_to_connection
     async def on_pytalk_my_connection_lost(self, server: PytalkServer) -> None:
-        """Routes a connection lost event for the bot to the appropriate connection."""
-        connection = self._get_connection_by_instance(server.teamtalk_instance)
-        if connection:
-            await connection.on_my_connection_lost(server)
-        else:
-            logger.warning("ConnectionLost: No conn by instance for %s. Trying by server info.", server)
-            if server and server.info:
-                conn_by_info = self._get_connection_by_server_info(server.info)
-                if conn_by_info:
-                    await conn_by_info.on_my_connection_lost(server)
-                else:
-                    logger.error("ConnectionLost: Still no conn for %s:%s", server.info.host, server.info.tcp_port)
-            else:
-                logger.error("ConnectionLost: server or server.info is None.")
+        """Routes a connection lost event for the bot to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_my_connection_lost
 
+    @route_event_to_connection
     async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
-        """Routes a kicked from channel event for the bot to the appropriate connection."""
-        connection = self._get_connection_by_instance(channel_obj.teamtalk)
-        if connection:
-            await connection.on_my_kicked_from_channel(channel_obj)
-        else:
-            logger.error("Kicked: No connection for instance %s", channel_obj.teamtalk)
+        """Routes a kicked from channel event for the bot to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_my_kicked_from_channel
 
+    @route_event_to_connection
     async def on_pytalk_message(self, message: TeamTalkMessage) -> None:
-        """Routes an incoming message event to the appropriate connection."""
-        connection = self._get_connection_by_instance(message.teamtalk_instance)
-        if connection:
-            await connection.on_message(message)
-        else:
-            logger.error("Message: No connection for instance %s", message.teamtalk_instance)
+        """Routes an incoming message event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_message
 
+    @route_event_to_connection
     async def on_pytalk_user_login(self, user: PytalkUser) -> None:
-        """Routes a user login event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or (
-            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
-        )
-        if not tt_instance:
-            logger.error("UserLogin: Cannot determine instance for user %s", user.username)
-            return
-        connection = self._get_connection_by_instance(tt_instance)
-        if connection:
-            await connection.on_user_login(user)
-        else:
-            logger.error("UserLogin: No connection for instance %s", tt_instance)
+        """Routes a user login event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_user_login
 
+    @route_event_to_connection
     async def on_pytalk_user_logout(self, user: PytalkUser) -> None:
-        """Routes a user logout event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or (
-            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
-        )
-        if not tt_instance:
-            logger.error("UserLogout: Cannot determine instance for user %s", user.username)
-            return
-        connection = self._get_connection_by_instance(tt_instance)
-        if connection:
-            await connection.on_user_logout(user)
-        else:
-            logger.error("UserLogout: No connection for instance %s", tt_instance)
+        """Routes a user logout event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_user_logout
 
+    @route_event_to_connection
     async def on_pytalk_user_update(self, user: PytalkUser) -> None:
-        """Routes a user update event to the appropriate connection."""
-        tt_instance = getattr(user, "teamtalk_instance", None) or (
-            hasattr(user, "server") and getattr(user.server, "teamtalk_instance", None)
-        )
-        if not tt_instance:
-            logger.error("UserUpdate: Cannot determine instance for user %s", user.username)
-            return
-        connection = self._get_connection_by_instance(tt_instance)
-        if connection:
-            await connection.on_user_update(user)
-        else:
-            logger.error("UserUpdate: No connection for instance %s", tt_instance)
+        """Routes a user update event to the appropriate connection via decorator."""
+        # Logic moved to decorator and TeamTalkConnection.on_user_update
 
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
         """Routes a new user account event, potentially to all connections."""
@@ -198,7 +225,7 @@ class TeamTalkEventHandler:
                 logger.error("AccountNew: No connection for instance %s", tt_instance)
         else:
             logger.warning("AccountNew: No instance on account. Broadcasting.")
-            for _conn_key, conn_val in self.services.connections.items():
+            for _conn_key, conn_val in self.services.connections.items():  # Use items()
                 await conn_val.on_user_account_new(account)
 
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
@@ -212,5 +239,5 @@ class TeamTalkEventHandler:
                 logger.error("AccountRemove: No connection for instance %s", tt_instance)
         else:
             logger.warning("AccountRemove: No instance on account. Broadcasting.")
-            for _conn_key, conn_val in self.services.connections.items():
+            for _conn_key, conn_val in self.services.connections.items():  # Use items()
                 await conn_val.on_user_account_remove(account)
