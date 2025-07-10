@@ -4,6 +4,7 @@ This module provides functions to generate and manage custom keyboards
 for Telegram interactions using InlineKeyboardBuilder.
 """
 
+from collections.abc import Callable  # Moved to top-level import
 import gettext
 import html
 from typing import TYPE_CHECKING, Any, Protocol, cast  # Added Protocol
@@ -54,7 +55,7 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.models import SubscriberInfo
 
 if TYPE_CHECKING:
-    from collections.abc import Callable  # Moved here
+    pass  # No longer needed here if imported above, or keep for other TYPE_CHECKING imports
 
 ttstr = pytalk.instance.sdk.ttstr
 
