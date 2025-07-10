@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+import functools  # Added functools
 import gettext
 import html
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any  # Added Any
 
+from aiogram.exceptions import TelegramAPIError  # Added
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
+from sqlalchemy.exc import SQLAlchemyError  # Added
 
 from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
@@ -262,3 +265,48 @@ async def forward_tt_message_to_telegram_admin(
         message.reply(_("Message sent to Telegram successfully."))
     else:
         message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram")))
+
+
+# --- Error Handling Decorator ---
+
+
+def handle_common_tt_command_errors(*, reply_to_user_on_error: bool = True) -> Callable: # Added *
+    """Decorator to handle common exceptions (TelegramAPIError, SQLAlchemyError, TeamTalkException).
+
+    for TeamTalk bot command handlers. Logs the error and optionally replies to the user.
+    """
+
+    def decorator(func: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Coroutine[Any, Any, None]]:
+        @functools.wraps(func)
+        async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> None:
+            try:
+                await func(tt_message, *args, **kwargs)
+            except (TelegramAPIError, SQLAlchemyError, pytalk.exceptions.TeamTalkException):
+                # Try to get translator from kwargs for the error message
+                translator = kwargs.get("translator")
+                _ = (
+                    translator.gettext
+                    if isinstance(translator, gettext.GNUTranslations | gettext.NullTranslations) # UP038
+                    else lambda s: s
+                )
+
+                logger.exception(
+                    "Error in TeamTalk command '%s' for user %s.",
+                    func.__name__,
+                    ttstr(tt_message.user.username) if tt_message and tt_message.user else "Unknown TT User",
+                )
+                if reply_to_user_on_error:
+                    try:
+                        # Ensure generic error message is translatable
+                        error_msg_for_user = _("An error occurred. Please try again later.")
+                        tt_message.reply(error_msg_for_user)
+                    except Exception: # Removed reply_exc as it's not used in log for TRY401
+                        logger.exception(
+                            "Failed to send error reply to TT user %s after command '%s' failed.",
+                            ttstr(tt_message.user.username) if tt_message and tt_message.user else "Unknown TT User",
+                            func.__name__,
+                        )
+
+        return wrapper
+
+    return decorator

@@ -112,12 +112,43 @@ async def handle_ban_subscriber(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    # Logic from _handle_ban_subscriber_action
-    _success, ban_messages = await admin_service.ban_and_delete_subscriber(
+    ban_results = await admin_service.ban_and_delete_subscriber(
         session, services, tt_connection, target_telegram_id, translator
     )
-    alert_message = " ".join(ban_messages)
-    await query.answer(alert_message, show_alert=True)
+
+    # Construct user-facing messages based on structured results
+    alert_messages: list[str] = []
+    if ban_results["telegram_ban"]["message"]:
+        alert_messages.append(str(ban_results["telegram_ban"]["message"]))
+    if (
+        ban_results["teamtalk_db_ban"]["message"] and ban_results["teamtalk_db_ban"]["success"]
+    ):  # Only show success or specific failure
+        alert_messages.append(str(ban_results["teamtalk_db_ban"]["message"]))
+
+    # Conceptual server ban message might be too noisy for typical success, only show if relevant and not generic skip
+    tt_server_msg = ban_results["teamtalk_server_ban"]["message"]
+    if (
+        isinstance(tt_server_msg, str)
+        and "skipped" not in tt_server_msg.lower()
+        and "no teamtalk username" not in tt_server_msg.lower()
+    ):
+        if ban_results["teamtalk_server_ban"]["success"]:
+            # Potentially log this but maybe not show to user unless it's an error
+            pass  # logger.info(tt_server_msg)
+        else:  # If it's an actual error message for server interaction
+            alert_messages.append(tt_server_msg)
+
+    if ban_results["profile_deletion"]["message"]:
+        alert_messages.append(str(ban_results["profile_deletion"]["message"]))
+
+    # Determine overall success for UI feedback - e.g., if critical parts failed
+    # For now, we show all messages. A more nuanced approach could be taken.
+
+    final_alert_message = " ".join(filter(None, alert_messages))
+    if not final_alert_message:  # Fallback if all messages were None or empty
+        final_alert_message = _("Processing complete. Check logs for details.")
+
+    await query.answer(final_alert_message, show_alert=True)
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 

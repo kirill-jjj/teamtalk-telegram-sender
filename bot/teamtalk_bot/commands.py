@@ -8,12 +8,9 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, Any
 
-from aiogram.exceptions import TelegramAPIError
 from pydantic import BaseModel, Field, model_validator
 import pytalk
-from pytalk.exceptions import TeamTalkException
 from pytalk.message import Message as TeamTalkMessage
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
@@ -21,7 +18,7 @@ from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.utils import send_long_tt_reply
+from bot.teamtalk_bot.utils import handle_common_tt_command_errors, send_long_tt_reply  # Added decorator
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -196,6 +193,7 @@ async def _manage_admin_ids(
     tt_message.reply(report_message)
 
 
+@handle_common_tt_command_errors()
 async def _generate_and_reply_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
@@ -209,52 +207,22 @@ async def _generate_and_reply_deeplink(
 ) -> None:
     _ = translator.gettext
     sender_tt_username = ttstr(tt_message.user.username)
-    try:
-        token = await create_deeplink(
-            session,
-            action,
-            services.config.operational_parameters.deeplink_ttl_seconds,
-            payload=payload,
-            expected_telegram_id=None,
-        )
-        bot_info = await services.bot_event.get_me()
-        deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
-        logger.info("%s Token: %s, User: %s", success_log_message, token, sender_tt_username)
-        if "{deeplink_url}" in reply_text_source:
-            reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
-        else:
-            reply_text = _(reply_text_source)
-        tt_message.reply(reply_text)
-    except TelegramAPIError:
-        logger.exception(
-            "Telegram API error processing deeplink action %s for TT user %s.",
-            action,
-            sender_tt_username,
-        )
-        try:
-            tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception:
-            logger.exception("Failed to send Telegram API error reply to TT user %s.", sender_tt_username)
-    except SQLAlchemyError:
-        logger.exception(
-            "Database error creating deeplink for action %s for TT user %s.",
-            action,
-            sender_tt_username,
-        )
-        try:
-            tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception:
-            logger.exception("Failed to send DB error reply to TT user %s.", sender_tt_username)
-    except TeamTalkException:
-        logger.exception(
-            "TeamTalk error processing deeplink action %s for TT user %s.",
-            action,
-            sender_tt_username,
-        )
-        try:
-            tt_message.reply(_("An error occurred. Please try again later."))
-        except Exception:
-            logger.exception("Failed to send TT error reply to TT user %s.", sender_tt_username)
+    # Errors handled by the decorator
+    token = await create_deeplink(
+        session,
+        action,
+        services.config.operational_parameters.deeplink_ttl_seconds,
+        payload=payload,
+        expected_telegram_id=None,
+    )
+    bot_info = await services.bot_event.get_me()
+    deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
+    logger.info("%s Token: %s, User: %s", success_log_message, token, sender_tt_username)
+    if "{deeplink_url}" in reply_text_source:
+        reply_text = _(reply_text_source).format(deeplink_url=deeplink_url)
+    else:
+        reply_text = _(reply_text_source)
+    tt_message.reply(reply_text)
 
 
 async def handle_tt_subscribe_command(
