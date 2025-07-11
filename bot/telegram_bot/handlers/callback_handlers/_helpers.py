@@ -16,14 +16,8 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "ensure_message_context",
-    # "process_setting_update", # Removed
     "safe_edit_text",  # Note: safe_edit_text is imported from ui_utils, then re-exported here.
 ]
-
-# process_setting_update function definition removed.
-
-
-# safe_edit_text MOVED to bot/telegram_bot/ui_utils.py
 
 
 def ensure_message_context(

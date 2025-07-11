@@ -131,14 +131,6 @@ async def process_user_action_selection(
     _ = translator.gettext
     # Decorator ensures callback_query.message exists.
 
-    # Note: AdminCheckMiddleware is NOT on this specific callback router (admin_actions_router).
-    # This task focuses on the TT connection check redundancy.
-
-    # TeamTalkConnectionCheckMiddleware (applied to router) ensures tt_connection is valid and ready.
-    # The manual check 'if not tt_connection or not tt_connection.instance:' is removed.
-    # tt_connection is type hinted as TeamTalkConnection | None from ActiveTeamTalkConnectionMiddleware.
-    # TeamTalkConnectionCheckMiddleware should prevent execution if it's None or not ready.
-
     tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None here
     server_host_for_display = tt_connection.server_info.host  # type: ignore[union-attr]
 

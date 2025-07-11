@@ -63,10 +63,6 @@ subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMidd
 subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 
 
-# All old helper functions and the main monolithic handle_subscriber_action are removed.
-# New individual handlers are now responsible for their respective actions.
-
-
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.DELETE))
 @ensure_message_context
 async def handle_delete_subscriber(
@@ -547,36 +543,6 @@ async def handle_view_subscriber(
         translator=translator,
         services=services,
     )
-
-
-# Removed _handle_delete_subscriber_action (logic moved to handle_delete_subscriber)
-
-
-# Removed _handle_ban_subscriber_action (logic moved to handle_ban_subscriber)
-
-
-# Removed _handle_manage_tt_account_action (logic moved to handle_manage_tt_account)
-
-
-# Removed _handle_admin_set_language_action (logic moved to handle_admin_set_language_choice)
-
-
-# Removed _handle_admin_toggle_noon_action (logic moved to handle_admin_toggle_noon)
-
-
-# Removed _handle_admin_set_notif_pref_action (logic moved to handle_admin_set_notif_pref_choice)
-
-
-# Removed _handle_admin_set_mute_mode_action (logic moved to handle_admin_set_mute_mode_choice)
-
-
-# The old monolithic handle_subscriber_action has been removed.
-# Its logic is now distributed among the new individual handlers.
-
-
-# Removed _handle_admin_view_mute_list_action.
-# Its logic is now within _display_subscriber_mute_list_page, called by
-# handle_admin_view_mute_list (for initial view) and handle_paginate_mute_list (for pagination).
 
 
 @subscriber_actions_router.callback_query(PaginateMuteListCallback.filter())
