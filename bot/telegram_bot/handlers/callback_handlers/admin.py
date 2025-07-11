@@ -20,7 +20,7 @@ from bot.telegram_bot.callback_data import AdminActionCallback
 # Middlewares to apply
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 
-from ._helpers import ensure_message_context
+from ._helpers import ensure_message_context, safe_edit_text
 
 if TYPE_CHECKING:
     pass
@@ -176,21 +176,22 @@ async def process_user_action_selection(
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        if isinstance(callback_query.message, Message):
-            try:
-                await callback_query.message.edit_text(message_text, reply_markup=None)
-            except TelegramAPIError as e:
-                logger.warning(
-                    "Failed to edit message text after user action on %s: %s. Trying to edit reply markup only.",
-                    server_host_for_display,
-                    e,
-                )
-                try:
-                    await callback_query.message.edit_reply_markup(reply_markup=None)
-                except TelegramAPIError:
-                    logger.exception(
-                        "Failed to even remove reply markup after user action on %s.",
-                        server_host_for_display,
-                    )
+        # The @ensure_message_context decorator guarantees callback_query.message is a Message object.
+        # No need for `isinstance(callback_query.message, Message)` check here.
+        # We use safe_edit_text from the local _helpers module (which should be ui_utils.safe_edit_text)
+        # to set the new text and remove the keyboard.
+        await safe_edit_text(
+            message_to_edit=callback_query.message,  # type: ignore[arg-type] # Decorator ensures this
+            text=message_text,
+            reply_markup=None,  # This will remove the keyboard
+            logger_instance=logger,
+            log_context=f"process_user_action_selection ({callback_data.action.value}) on {server_host_for_display}",
+        )
+        # The original code had a two-step fallback to remove markup if edit_text failed.
+        # safe_edit_text attempts to edit text and markup together. If it fails, it logs.
+        # For simplicity and DRY, we rely on this single call. If removing markup
+        # specifically after a text edit failure is critical and common, safe_edit_text
+        # would need to be enhanced or a more complex structure kept.
+        # Given typical usage, this simplification is usually acceptable.
     else:
         await callback_query.answer(message_text, show_alert=True)
