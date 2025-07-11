@@ -84,18 +84,20 @@ def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str)
         return None
 
     try:
-        if callable(conversion_rule):
-            return conversion_rule(raw_value)
-        # Should not happen
-        return str(raw_value)
+        # conversion_rule is always a callable (a function like `int`, `str`, `bool`,
+        # or a custom lambda/function) as per ENV_TO_TOML_MAPPING definition.
+        return conversion_rule(raw_value)
     except ValueError as e:
-        conversion_name = conversion_rule.__name__ if callable(conversion_rule) else conversion_rule
+        # Attempt to get a meaningful name for the conversion rule for the warning message.
+        # For built-in types like int, str, bool, __name__ gives the type name.
+        # For functions (including lambdas), __name__ gives the function name.
+        conversion_name = getattr(conversion_rule, "__name__", str(conversion_rule))
         print(
             f"Warning: Could not convert value '{raw_value}' for key '{env_key}' "
             f"using {conversion_name}. Error: {e}. Storing as raw string.",
             file=sys.stderr,
         )
-        return str(raw_value)
+        return str(raw_value)  # Fallback to string if conversion fails
 
 
 def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> bool:

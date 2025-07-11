@@ -123,28 +123,15 @@ async def display_paginated_list(
             logger.exception(
                 "TelegramAPIError sending new paginated list for '%s' to chat %s", title_text, target.chat.id
             )
-    elif isinstance(target, CallbackQuery) and target.message is None:
-        # This case might occur if the original message for a callback was deleted or is otherwise unavailable.
-        # We can try to send a new message to the chat from which the callback originated.
-        # The chat_id should be available from `target.chat_instance` or `target.from_user.id` (if private chat).
-        # However, `target.chat_instance` is for inline messages.
-        # A more robust way for callbacks without a message might be to use `target.from_user.id` as chat_id.
-        # This is an edge case. For now, log and potentially try to answer the callback.
-        logger.warning(
-            "CallbackQuery target for '%s' has no associated message. User: %s. Attempting to answer callback only.",
-            title_text,
-            target.from_user.id,
-        )
-        try:
-            await target.answer(
-                _("Could not display the list as the original message is unavailable. Please try the command again."),
-                show_alert=True,
-            )
-        except TelegramAPIError:
-            logger.exception("Failed to answer callback for missing message scenario for %s", title_text)
+    # The case `isinstance(target, CallbackQuery) and target.message is None` is considered unreachable
+    # because all callback handlers that would call this function are decorated with `@ensure_message_context`,
+    # which prevents execution if `query.message` is None.
     else:
+        # This 'else' now catches cases where target is not a CallbackQuery with a message,
+        # nor a direct Message object. This could be an improperly constructed CallbackQuery
+        # (though unlikely if from Aiogram) or an unexpected type.
         logger.error(
-            "Invalid target type or state for display_paginated_list for '%s'. Target type: %s",
+            "Invalid target type or unexpected state for display_paginated_list for '%s'. Target type: %s",
             title_text,
             type(target).__name__,
         )

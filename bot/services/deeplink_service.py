@@ -164,14 +164,9 @@ async def execute_deeplink_action(
                     return_message = await handler(
                         session, telegram_id, translator, deeplink_obj.payload, user_settings, services
                     )
-                else:
-                    # This case should ideally not be reached if DEEPLINK_ACTION_HANDLERS is exhaustive
-                    # and action_enum_member is a valid DeeplinkAction.
-                    # However, it's good for robustness.
-                    logger.error(
-                        "Deeplink action %s not explicitly handled in execute_deeplink_action.", action_enum_member
-                    )
-                    return_message = _("Invalid deeplink action.")
+                # The above is_unsubscribe_handler and is_subscribe_handler cover all DeeplinkAction enum members.
+                # Therefore, an else case here would be unreachable if action_enum_member is a valid DeeplinkAction,
+                # which is checked at the beginning of the function.
             except (SQLAlchemyError, ValueError):
                 logger.exception(
                     "Handler error for deeplink action '%s', token %s.",

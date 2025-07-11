@@ -52,7 +52,7 @@ async def _show_user_buttons(
     # and tt_connection.online_users_cache are valid and ready.
     # Therefore, tt_connection and tt_connection.instance are not None here.
     tt_instance = tt_connection.instance  # type: ignore[union-attr] # tt_connection is not None
-    my_user_id = tt_instance.getMyUserID() # type: ignore[union-attr] # tt_instance is not None
+    my_user_id = tt_instance.getMyUserID()  # type: ignore[union-attr] # tt_instance is not None
 
     if my_user_id is None:
         logger.error(
