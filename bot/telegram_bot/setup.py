@@ -12,6 +12,7 @@ from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from bot.config import Settings
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
 from bot.database import crud
+from bot.services import admin_service  # Added import
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
@@ -95,8 +96,8 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
                         "User settings obtained for admin %s. Proceeding with add_admin_full.",
                         tg_admin_chat_id,
                     )
-                    # admin_service is available through the services container
-                    added_successfully = await services.admin_service.add_admin_full(
+                    # admin_service module is imported directly
+                    added_successfully = await admin_service.add_admin_full(
                         session=session,
                         telegram_id=tg_admin_chat_id,
                         user_settings=user_settings,

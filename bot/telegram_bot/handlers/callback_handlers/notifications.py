@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  #
 
 from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.models import UserSettings
+from bot.services import user_service  # Added import
 
 # Removed unused: from bot.services import _utils as service_utils
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
@@ -68,11 +69,11 @@ async def cq_toggle_noon_setting_action(
 
     # Call the new service function to handle the logic
     # user_settings is from middleware, session and services are injected.
-    # The services object has user_service attached to it.
-    updated_settings = await services.user_service.toggle_noon_setting(
+    # toggle_noon_setting is imported directly from the user_service module.
+    updated_settings = await user_service.toggle_noon_setting( # Changed here
         session=session,
-        services=services,
-        user_settings=user_settings, # Pass the UserSettings object from middleware
+        services=services, # Pass the main services object
+        user_settings=user_settings,
     )
 
     if not updated_settings:
