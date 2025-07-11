@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine
+from collections.abc import (
+    Awaitable,  # Added Any
+    Callable,
+)
 import functools  # Added functools
 import gettext
 import html
 import logging
-from typing import TYPE_CHECKING, Any  # Added Any
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, Awaitable, Any # Added Any
 
 from aiogram.exceptions import TelegramAPIError  # Added
 import pytalk
@@ -270,15 +273,32 @@ async def forward_tt_message_to_telegram_admin(
 # --- Error Handling Decorator ---
 
 
-def handle_common_tt_command_errors(*, reply_to_user_on_error: bool = True) -> Callable: # Added *
+P = ParamSpec("P") # ParamSpec might not be used with ... but kept for potential future refinement
+R = TypeVar("R") # TypeVar for the return type of the original function (though simplified to Any below)
+
+
+# Type for the original function that will be decorated.
+# Using Awaitable[Any] as the decorator doesn't depend on the specific return type.
+OriginalFunctionType = Callable[..., Awaitable[Any]]
+
+# Type for the wrapped function returned by the decorator.
+WrappedFunctionType = Callable[..., Awaitable[None]]
+
+# Type for the decorator factory itself.
+TTCommandHandlerDecorator = Callable[[OriginalFunctionType], WrappedFunctionType]
+
+
+def handle_common_tt_command_errors(
+    *, reply_to_user_on_error: bool = True
+) -> TTCommandHandlerDecorator:
     """Decorator to handle common exceptions (TelegramAPIError, SQLAlchemyError, TeamTalkException).
 
     for TeamTalk bot command handlers. Logs the error and optionally replies to the user.
     """
 
-    def decorator(func: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Coroutine[Any, Any, None]]:
+    def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
-        async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> None:
+        async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> None: # Use Any for args/kwargs for simplicity here
             try:
                 await func(tt_message, *args, **kwargs)
             except (TelegramAPIError, SQLAlchemyError, pytalk.exceptions.TeamTalkException):
