@@ -11,7 +11,7 @@ import functools  # Added functools
 import gettext
 import html
 import logging
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, Awaitable, Any # Added Any
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from aiogram.exceptions import TelegramAPIError  # Added
 import pytalk
@@ -273,8 +273,8 @@ async def forward_tt_message_to_telegram_admin(
 # --- Error Handling Decorator ---
 
 
-P = ParamSpec("P") # ParamSpec might not be used with ... but kept for potential future refinement
-R = TypeVar("R") # TypeVar for the return type of the original function (though simplified to Any below)
+P = ParamSpec("P")  # ParamSpec might not be used with ... but kept for potential future refinement
+R = TypeVar("R")  # TypeVar for the return type of the original function (though simplified to Any below)
 
 
 # Type for the original function that will be decorated.
@@ -288,9 +288,7 @@ WrappedFunctionType = Callable[..., Awaitable[None]]
 TTCommandHandlerDecorator = Callable[[OriginalFunctionType], WrappedFunctionType]
 
 
-def handle_common_tt_command_errors(
-    *, reply_to_user_on_error: bool = True
-) -> TTCommandHandlerDecorator:
+def handle_common_tt_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHandlerDecorator:
     """Decorator to handle common exceptions (TelegramAPIError, SQLAlchemyError, TeamTalkException).
 
     for TeamTalk bot command handlers. Logs the error and optionally replies to the user.
@@ -298,7 +296,9 @@ def handle_common_tt_command_errors(
 
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
-        async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> None: # Use Any for args/kwargs for simplicity here
+        async def wrapper(
+            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
+        ) -> None:  # Use Any for args/kwargs for simplicity here
             try:
                 await func(tt_message, *args, **kwargs)
             except (TelegramAPIError, SQLAlchemyError, pytalk.exceptions.TeamTalkException):
@@ -306,7 +306,7 @@ def handle_common_tt_command_errors(
                 translator = kwargs.get("translator")
                 _ = (
                     translator.gettext
-                    if isinstance(translator, gettext.GNUTranslations | gettext.NullTranslations) # UP038
+                    if isinstance(translator, gettext.GNUTranslations | gettext.NullTranslations)  # UP038
                     else lambda s: s
                 )
 
@@ -320,7 +320,7 @@ def handle_common_tt_command_errors(
                         # Ensure generic error message is translatable
                         error_msg_for_user = _("An error occurred. Please try again later.")
                         tt_message.reply(error_msg_for_user)
-                    except Exception: # Removed reply_exc as it's not used in log for TRY401
+                    except Exception:  # Removed reply_exc as it's not used in log for TRY401
                         logger.exception(
                             "Failed to send error reply to TT user %s after command '%s' failed.",
                             ttstr(tt_message.user.username) if tt_message and tt_message.user else "Unknown TT User",

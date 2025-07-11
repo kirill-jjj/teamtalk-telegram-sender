@@ -152,6 +152,7 @@ exclude = [
     "alembic/versions/.*\\.py$",
     "\\.venv",
     "bot/core/notifications\\.py$", # Temporarily exclude to bypass stubborn errors
+    "build/", # Exclude the build directory from mypy checking
 ]
 ignore_missing_imports = true
 plugins = [

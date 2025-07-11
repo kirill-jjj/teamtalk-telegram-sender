@@ -278,9 +278,7 @@ async def ban_and_delete_subscriber(  # Simplified complexity
 
     except Exception:  # Covers SQLAlchemyError from helpers or explicit raises
         await session.rollback()
-        logger.exception(
-            "Error during ban and delete process for TG ID %s, triggering rollback.", target_telegram_id
-        )
+        logger.exception("Error during ban and delete process for TG ID %s, triggering rollback.", target_telegram_id)
         # Update results to reflect failure if not already set by a specific step
         if not results["telegram_ban"]["message"] and not results["teamtalk_db_ban"]["message"]:
             # Generic error if no specific part failed before exception

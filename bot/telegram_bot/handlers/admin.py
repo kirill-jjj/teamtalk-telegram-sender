@@ -48,27 +48,28 @@ async def _show_user_buttons(
     # For type safety, we might still check, or rely on middleware guarantees.
     # Given the middleware setup, tt_connection here should be a valid, ready connection.
 
-    tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None
+    # TeamTalkConnectionCheckMiddleware ensures tt_connection, tt_connection.instance,
+    # and tt_connection.online_users_cache are valid and ready.
+    # Therefore, tt_connection and tt_connection.instance are not None here.
+    tt_instance = tt_connection.instance  # type: ignore[union-attr] # tt_connection is not None
+    my_user_id = tt_instance.getMyUserID() # type: ignore[union-attr] # tt_instance is not None
 
-    my_user_id = tt_instance.getMyUserID()  # type: ignore[union-attr]
     if my_user_id is None:
-        logger.error("[%s] Could not get own user ID in _show_user_buttons.", tt_connection.server_info.host)  # type: ignore[union-attr]
+        logger.error(
+            "[%s] Could not get own user ID in _show_user_buttons.",
+            tt_connection.server_info.host,  # type: ignore[union-attr] # tt_connection is not None
+        )
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    # Use the online_users_cache from tt_connection
-    if tt_connection and tt_connection.online_users_cache is not None:
-        online_users = list(tt_connection.online_users_cache.values())
-    else:
-        if not tt_connection:  # Should be caught by middleware
-            logger.warning("_show_user_buttons: tt_connection is None. Defaulting to empty list.")
-        elif tt_connection.online_users_cache is None:  # Should not happen
-            logger.warning("_show_user_buttons: online_users_cache is None. Defaulting to empty list.")
-        online_users = []
+    # online_users_cache is guaranteed by middleware and its own initialization.
+    online_users = list(tt_connection.online_users_cache.values())  # type: ignore[union-attr] # tt_connection is not None
 
     if not online_users:
         await message.reply(
-            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host)  # type: ignore[union-attr]
+            _("No users found online on server {server_host}.").format(
+                server_host=tt_connection.server_info.host  # type: ignore[union-attr]
+            )
         )
         return
 

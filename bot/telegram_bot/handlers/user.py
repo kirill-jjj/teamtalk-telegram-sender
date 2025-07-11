@@ -222,22 +222,9 @@ async def who_command_handler(
     tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None
     server_host_for_log_and_display = tt_connection.server_info.host  # type: ignore[union-attr]
 
-    # Use the online_users_cache from tt_connection
-    # The TeamTalkConnectionCheckMiddleware should ensure tt_connection is valid and ready.
-    # If tt_connection or its cache could somehow be None despite middleware, provide a default empty list.
-    if tt_connection and tt_connection.online_users_cache is not None:
-        all_users_list = list(tt_connection.online_users_cache.values())
-    else:
-        # This case should ideally not be reached if middlewares are effective.
-        # Log a warning if tt_connection or cache is unexpectedly None.
-        if not tt_connection:
-            logger.warning("/who: tt_connection is None, despite middleware. Defaulting to empty user list.")
-        elif tt_connection.online_users_cache is None:  # Should not happen as it's initialized to {}
-            logger.warning("/who: tt_connection.online_users_cache is None. Defaulting to empty user list.")
-        all_users_list = []
-
-    # The direct network call and its try-except block are removed.
-    # Accessing the cache is not an async IO operation that would throw network errors here.
+    # TeamTalkConnectionCheckMiddleware ensures tt_connection and tt_connection.instance are valid and ready.
+    # tt_connection.online_users_cache is initialized as an empty dict and is always available.
+    all_users_list = list(tt_connection.online_users_cache.values())  # type: ignore[union-attr]
 
     is_caller_admin = services.cache.is_admin(message.from_user.id)
     # tt_instance is still needed for getMyUserID()
