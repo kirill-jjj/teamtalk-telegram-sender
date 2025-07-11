@@ -197,7 +197,78 @@ async def _attempt_teamtalk_server_ban(  # Renamed for clarity
         )
 
 
-# ruff: noqa: PLR0912
+async def _orchestrate_user_banning(
+    session: AsyncSession,
+    target_telegram_id: int,
+    tt_username_to_ban: str | None,
+    tt_connection: "TeamTalkConnection | None",
+    translator: gettext.GNUTranslations,
+) -> tuple[dict[str, dict[str, bool | str | None]], bool]:
+    """Orchestrates banning a user's Telegram ID and TeamTalk username.
+
+    Handles banning in the database and conceptually on the TeamTalk server.
+
+    Args:
+        session: The AsyncSession for database operations.
+        target_telegram_id: The Telegram ID of the user to ban.
+        tt_username_to_ban: The TeamTalk username to ban, if available.
+        tt_connection: The TeamTalk connection, if available.
+        translator: The gettext translator.
+
+    Returns:
+        A tuple containing:
+            - A dictionary with results for 'telegram_ban', 'teamtalk_db_ban',
+              and 'teamtalk_server_ban'.
+            - A boolean indicating if a database commit is needed for the performed bans.
+    """
+    _ = translator.gettext
+    ban_results: dict[str, dict[str, bool | str | None]] = {
+        "telegram_ban": {"success": False, "message": None},
+        "teamtalk_db_ban": {"success": False, "message": None},
+        "teamtalk_server_ban": {"success": False, "message": None},
+    }
+    commit_needed_for_bans = False
+
+    # Step 1: Ban Telegram ID
+    tg_ban_success, tg_ban_msg = await _ban_telegram_user(session, target_telegram_id, translator)
+    ban_results["telegram_ban"]["success"] = tg_ban_success
+    ban_results["telegram_ban"]["message"] = tg_ban_msg
+    if not tg_ban_success:
+        # If TG ban fails, we might not proceed or handle it differently.
+        # For now, assume we raise an exception to be caught by the caller.
+        raise Exception(f"Telegram ID ban failed: {tg_ban_msg}")  # noqa: TRY002, TRY003
+    commit_needed_for_bans = True
+
+    # Step 2: Ban TeamTalk username in DB (if exists)
+    if tt_username_to_ban:
+        tt_db_ban_success, tt_db_ban_msg = await _ban_teamtalk_user(
+            session, tt_username_to_ban, target_telegram_id, translator
+        )
+        ban_results["teamtalk_db_ban"]["success"] = tt_db_ban_success
+        ban_results["teamtalk_db_ban"]["message"] = tt_db_ban_msg
+        if not tt_db_ban_success:
+            raise Exception(f"TeamTalk DB ban failed: {tt_db_ban_msg}")  # noqa: TRY002, TRY003
+        commit_needed_for_bans = True
+    else:
+        ban_results["teamtalk_db_ban"]["success"] = True
+        ban_results["teamtalk_db_ban"]["message"] = _("No TeamTalk username linked to ban in DB.")
+
+    # Step 3: Conceptual TeamTalk server ban (if TT username exists)
+    # This step is best-effort.
+    if tt_username_to_ban:
+        tt_server_ban_success, tt_server_ban_msg = await _attempt_teamtalk_server_ban(
+            tt_connection, tt_username_to_ban, target_telegram_id, translator
+        )
+        ban_results["teamtalk_server_ban"]["success"] = tt_server_ban_success
+        ban_results["teamtalk_server_ban"]["message"] = tt_server_ban_msg
+        # Not raising exception on failure here as it's 'conceptual'
+    else:
+        ban_results["teamtalk_server_ban"]["success"] = True
+        ban_results["teamtalk_server_ban"]["message"] = _("No TeamTalk username for server ban attempt.")
+
+    return ban_results, commit_needed_for_bans
+
+
 async def ban_and_delete_subscriber(  # Simplified complexity
     session: AsyncSession,
     services: "Services",
@@ -211,59 +282,30 @@ async def ban_and_delete_subscriber(  # Simplified complexity
     Returns a dictionary with success status and messages for each step.
     """
     _ = translator.gettext
+    # Initialize results with all potential keys
     results: dict[str, dict[str, bool | str | None]] = {
-        "telegram_ban": {"success": False, "message": None},
-        "teamtalk_db_ban": {"success": False, "message": None},
-        "teamtalk_server_ban": {"success": False, "message": None},
-        "profile_deletion": {"success": False, "message": None},
+        "telegram_ban": {"success": False, "message": _("Operation not attempted.")},
+        "teamtalk_db_ban": {"success": False, "message": _("Operation not attempted.")},
+        "teamtalk_server_ban": {"success": False, "message": _("Operation not attempted.")},
+        "profile_deletion": {"success": False, "message": _("Operation not attempted.")},
     }
-    final_commit_needed = False
 
     try:
         user_settings = await session.get(UserSettings, target_telegram_id)
         tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
 
-        # Step 1: Ban Telegram ID
-        tg_ban_success, tg_ban_msg = await _ban_telegram_user(session, target_telegram_id, translator)
-        results["telegram_ban"]["success"] = tg_ban_success
-        results["telegram_ban"]["message"] = tg_ban_msg
-        if not tg_ban_success:
-            raise Exception(f"Telegram ID ban failed: {tg_ban_msg}")  # noqa: TRY002, TRY003, TRY301
-        final_commit_needed = True
+        # Perform banning operations
+        ban_results, commit_needed_for_bans = await _orchestrate_user_banning(
+            session, target_telegram_id, tt_username_to_ban, tt_connection, translator
+        )
+        results.update(ban_results)  # Update main results with ban outcomes
 
-        # Step 2: Ban TeamTalk username in DB (if exists)
-        if tt_username_to_ban:
-            tt_db_ban_success, tt_db_ban_msg = await _ban_teamtalk_user(
-                session, tt_username_to_ban, target_telegram_id, translator
-            )
-            results["teamtalk_db_ban"]["success"] = tt_db_ban_success
-            results["teamtalk_db_ban"]["message"] = tt_db_ban_msg
-            if not tt_db_ban_success:
-                raise Exception(f"TeamTalk DB ban failed: {tt_db_ban_msg}")  # noqa: TRY002, TRY003, TRY301
-            final_commit_needed = True
-        else:
-            results["teamtalk_db_ban"]["success"] = True  # Skipped, considered success for this step
-            results["teamtalk_db_ban"]["message"] = _("No TeamTalk username linked to ban in DB.")
-
-        # Step 3: Conceptual TeamTalk server ban (if TT username exists)
-        # This step is considered best-effort and non-critical for overall success.
-        if tt_username_to_ban:
-            tt_server_ban_success, tt_server_ban_msg = await _attempt_teamtalk_server_ban(
-                tt_connection, tt_username_to_ban, target_telegram_id, translator
-            )
-            results["teamtalk_server_ban"]["success"] = tt_server_ban_success
-            results["teamtalk_server_ban"]["message"] = tt_server_ban_msg
-            # Not raising exception on failure here as it's 'conceptual'
-        else:
-            results["teamtalk_server_ban"]["success"] = True  # Skipped
-            results["teamtalk_server_ban"]["message"] = _("No TeamTalk username for server ban attempt.")
-
-        # Commit ban changes before profile deletion
-        if final_commit_needed:
+        # Commit ban changes before profile deletion if any ban operation was successful and needs commit
+        if commit_needed_for_bans:
             await session.commit()
             logger.debug("Committed ban list changes for user %s before profile deletion.", target_telegram_id)
 
-        # Step 4: Delete user profile
+        # Step 4: Delete user profile (after potential commit of bans)
         # This service function handles its own commits/rollbacks.
         profile_deleted_success = await user_service.delete_full_user_profile(
             session, target_telegram_id, services=services

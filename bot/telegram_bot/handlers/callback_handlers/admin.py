@@ -33,6 +33,36 @@ admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware
 ttstr = pytalk.instance.sdk.ttstr
 
 
+def _handle_pytalk_action_error(
+    exc: Exception,
+    action: AdminAction,
+    user_id_to_log: int | str,
+    server_host: str,
+    translator: gettext.GNUTranslations,
+    *,
+    is_critical: bool = False,
+) -> tuple[bool, str]:
+    """Handles common exceptions for Pytalk actions, logs, and returns a standardized error tuple."""
+    _ = translator.gettext
+    log_message = "Error during '%s' on TT user (ID: %s) on server %s."
+    if is_critical:
+        # For critical errors, logger.critical with exc_info=True is appropriate
+        logger.critical(
+            "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on server %s: %s",
+            action,
+            user_id_to_log,
+            server_host,
+            exc,
+            exc_info=True,
+        )
+    else:
+        logger.exception(log_message, action, user_id_to_log, server_host)
+
+    return False, _(
+        "An error occurred while performing the action on server {server_host}. Please try again later."
+    ).format(server_host=server_host)
+
+
 async def _execute_tt_user_action(  # noqa: PLR0911
     action: AdminAction,
     user_to_act_on: pytalk.user.User,
@@ -77,52 +107,16 @@ async def _execute_tt_user_action(  # noqa: PLR0911
         logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
         return False, _("Unknown action.")
 
-    except PytalkPermissionError:
-        logger.exception(
-            "PermissionError during '%s' on TT user ID %s on server %s.",
-            action,
-            user_to_act_on.id,
-            server_host,
-        )
-        return False, _(
-            "An error occurred while performing the action on server {server_host}. Please try again later."
-        ).format(server_host=server_host)
-    except PytalkException:
-        logger.exception(
-            "TeamTalkException during '%s' on TT user ID %s on server %s.",
-            action,
-            user_to_act_on.id,
-            server_host,
-        )
-        return False, _(
-            "An error occurred while performing the action on server {server_host}. Please try again later."
-        ).format(server_host=server_host)
-    except (ValueError, TypeError, AttributeError):
+    except PytalkPermissionError as e:
+        return _handle_pytalk_action_error(e, action, user_to_act_on.id, server_host, translator)
+    except PytalkException as e:
+        return _handle_pytalk_action_error(e, action, user_to_act_on.id, server_host, translator)
+    except (ValueError, TypeError, AttributeError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        logger.exception(
-            "Data error during '%s' on TT user (ID: %s) on server %s.",
-            action,
-            user_id_log,
-            server_host,
-        )
-        return False, _(
-            "An error occurred while performing the action on server {server_host}. Please try again later."
-        ).format(server_host=server_host)
-    except (TimeoutError, OSError) as e_net:
+        return _handle_pytalk_action_error(e, action, user_id_log, server_host, translator)
+    except (TimeoutError, OSError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        # For critical errors, logger.critical with exc_info=True is appropriate if not using .exception
-        logger.critical(
-            "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on server %s: %s",
-            action,
-            user_id_log,
-            server_host,
-            e_net,
-            # Retaining exc_info for critical, as .exception might not be semantically identical to critical
-            exc_info=True,
-        )
-        return False, _(
-            "An error occurred while performing the action on server {server_host}. Please try again later."
-        ).format(server_host=server_host)
+        return _handle_pytalk_action_error(e, action, user_id_log, server_host, translator, is_critical=True)
 
 
 @admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))

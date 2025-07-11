@@ -7,6 +7,7 @@ Create Date: 2025-07-05 12:00:00.000000
 """
 
 from collections.abc import Sequence
+import logging
 
 from alembic import op
 import sqlalchemy as sa
@@ -120,9 +121,9 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
         )
         op.create_index(op.f("ix_ban_list_telegram_id"), "ban_list", ["telegram_id"], unique=False)
         op.create_index(op.f("ix_ban_list_teamtalk_username"), "ban_list", ["teamtalk_username"], unique=False)
-        print("  - Table 'ban_list' created.")  # noqa: T201 Intentional print for feedback
+        logging.info("Table 'ban_list' created.")
     else:
-        print("  - Table 'ban_list' already exists.")  # noqa: T201 Intentional print for feedback
+        logging.info("Table 'ban_list' already exists.")
 
     # Data Migrations
     if _table_exists("user_settings", conn) and _column_exists("user_settings", "muted_users", conn):

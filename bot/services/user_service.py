@@ -127,9 +127,7 @@ async def toggle_noon_setting(
     # This is important if user_settings comes from middleware and might be detached.
     managed_user_settings = await session.merge(user_settings)
     if not managed_user_settings:  # Should ideally not happen if user_settings is valid
-        logger.error(
-            "toggle_noon_setting: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id
-        )
+        logger.error("toggle_noon_setting: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
         return None
 
     new_noon_enabled_value = not managed_user_settings.not_on_online_enabled
@@ -150,13 +148,11 @@ async def toggle_noon_setting(
 
     # If NOON was enabled and not yet confirmed, attempt to set not_on_online_confirmed to True
     # Use the settings object returned by the first update call
-    if updated_settings_noon_toggle.not_on_online_enabled and \
-       not updated_settings_noon_toggle.not_on_online_confirmed:
-
+    if updated_settings_noon_toggle.not_on_online_enabled and not updated_settings_noon_toggle.not_on_online_confirmed:
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
             services=services,
-            settings_to_update=updated_settings_noon_toggle, # Use the already updated object
+            settings_to_update=updated_settings_noon_toggle,  # Use the already updated object
             field_name="not_on_online_confirmed",
             new_value=True,
             log_context=" (user confirm NOON after self toggle)",

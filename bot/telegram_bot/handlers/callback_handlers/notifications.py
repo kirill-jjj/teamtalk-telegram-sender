@@ -70,9 +70,9 @@ async def cq_toggle_noon_setting_action(
     # Call the new service function to handle the logic
     # user_settings is from middleware, session and services are injected.
     # toggle_noon_setting is imported directly from the user_service module.
-    updated_settings = await user_service.toggle_noon_setting( # Changed here
+    updated_settings = await user_service.toggle_noon_setting(  # Changed here
         session=session,
-        services=services, # Pass the main services object
+        services=services,  # Pass the main services object
         user_settings=user_settings,
     )
 

@@ -67,9 +67,7 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
     tg_admin_chat_id = app_config.telegram.admin_chat_id
     if tg_admin_chat_id:
         if not services.cache.is_admin(tg_admin_chat_id):
-            logger.info(
-                "Admin ID %s from config is not yet an admin. Attempting to add.", tg_admin_chat_id
-            )
+            logger.info("Admin ID %s from config is not yet an admin. Attempting to add.", tg_admin_chat_id)
             async with services.session_factory() as session:
                 # Ensure user settings exist for the admin, as add_admin_full requires them
                 # to update bot commands correctly.
@@ -119,9 +117,7 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
         logger.info("telegram.admin_chat_id is 0 or not configured to be added as main admin.")
 
     logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count())
-    logger.debug(
-        "Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()
-    )
+    logger.debug("Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids())
 
     await set_telegram_commands(services=services)
     logger.info("Telegram bot commands set.")

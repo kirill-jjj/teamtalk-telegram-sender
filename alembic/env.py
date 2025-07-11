@@ -1,6 +1,7 @@
 """Alembic environment configuration script."""
 
 from collections.abc import Iterable
+import logging
 from logging.config import fileConfig
 import os
 from pathlib import Path
@@ -50,7 +51,7 @@ def process_revision_directives(
         and directives[0].upgrade_ops.is_empty()
     ):
         directives[:] = []
-        print("INFO  [alembic.autogenerate.compare] No structural changes detected.")  # noqa: T201
+        logging.info("INFO  [alembic.autogenerate.compare] No structural changes detected.")
 
 
 def get_db_url() -> str:
@@ -65,29 +66,29 @@ def get_db_url() -> str:
     """
     config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
     config_file = Path(config_file_str)
-    print(f"INFO  [alembic.env] Attempting to load configuration from: {config_file}")  # noqa: T201
+    logging.info("Attempting to load configuration from: %s", config_file)
 
     try:
         settings = Settings.from_toml(str(config_file))  # Ensure it's a string for mypy
     except FileNotFoundError:
-        print(f"ERROR [alembic.env] Configuration file '{config_file}' not found.")  # noqa: T201
+        logging.exception("Configuration file '%s' not found.", config_file)
         raise
-    except ValueError as e:  # Covers TOMLDecodeError and other Pydantic validation errors
-        print(f"ERROR [alembic.env] Error loading configuration from '{config_file}': {e}")  # noqa: T201
+    except ValueError:  # Covers TOMLDecodeError and other Pydantic validation errors
+        logging.exception("Error loading configuration from '%s'", config_file)
         raise
 
     db_file_name = settings.database.db_file
 
     if not isinstance(db_file_name, str) or not db_file_name.strip():
         error_message = f"'database.db_file' in '{config_file}' must be a non-empty string. Found: '{db_file_name}'"
-        print(f"ERROR [alembic.env] {error_message}")  # noqa: T201
+        logging.error(error_message)
         raise ValueError(error_message)
 
     db_path_obj = Path(db_file_name)
     db_path = (PROJECT_ROOT / db_file_name).resolve() if not db_path_obj.is_absolute() else db_path_obj.resolve()
 
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    print(f"INFO  [alembic.env] Using database URL: {db_url} (from 'database.db_file' in '{config_file}')")  # noqa: T201
+    db_url = f"sqlite+aiosqlite:///{db_path}"  # f-string for URL construction is fine
+    logging.info("Using database URL: %s (from 'database.db_file' in '%s')", db_url, config_file)
     return db_url
 
 
