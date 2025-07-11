@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  #
 
 from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.models import UserSettings
+
 # Removed unused: from bot.services import _utils as service_utils
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard

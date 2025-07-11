@@ -83,20 +83,18 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
                     user_settings = await services.get_or_create_user_settings(
                         telegram_id=tg_admin_chat_id, session=session
                     )
-                    if not user_settings:
-                        logger.error(
-                            "Failed to get or create user settings for admin %s using services.get_or_create_user_settings. "
-                            "Cannot add as admin fully.",
-                            tg_admin_chat_id,
-                        )
-                    else:
-                        logger.info(
-                            "User settings obtained for admin %s via services.get_or_create_user_settings. "
-                            "Proceeding with add_admin_full.",
-                            tg_admin_chat_id,
-                        )
 
-                if user_settings:
+                # Proceed only if user_settings are available
+                if not user_settings:
+                    logger.error(
+                        "Failed to get/create settings for admin %s. Cannot add fully or update commands.",
+                        tg_admin_chat_id,
+                    )
+                else:
+                    logger.info(
+                        "User settings obtained for admin %s. Proceeding with add_admin_full.",
+                        tg_admin_chat_id,
+                    )
                     # admin_service is available through the services container
                     added_successfully = await services.admin_service.add_admin_full(
                         session=session,
@@ -114,13 +112,6 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
                             "Failed to add admin ID %s from config using admin_service.add_admin_full.",
                             tg_admin_chat_id,
                         )
-                else:
-                    # This case should ideally not be reached if get_or_create_user_settings works.
-                    logger.error(
-                        "User settings still not available for admin %s after attempting get/create. "
-                        "Admin commands might not be updated.",
-                        tg_admin_chat_id
-                    )
         else:
             logger.debug("Admin ID %s from config already in admin cache.", tg_admin_chat_id)
     else:
