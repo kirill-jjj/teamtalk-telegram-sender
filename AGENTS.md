@@ -56,7 +56,7 @@ Located at `bot/services_container.py`, the `Services` class is the single sourc
 
 ### 3.3. Internationalization (i18n)
 *   All user-facing strings **must** be wrapped in a `_()` call for translation.
-*   The workflow is managed by `Babel` via `babel [extract|update|compile]`.
+*   The workflow is managed by `Babel` via `uv run i18n [extract|update|compile]`.
 
 ## 4. Code Quality and Contribution Guidelines
 
@@ -71,7 +71,7 @@ These rules are enforced by the `ruff` configuration in `pyproject.toml` and mus
 ### 4.2. Integrating External Code
 Before integrating any code from external sources (e.g., web snippets, other AI outputs), it **must** be rigorously sanitized. This process involves:
 1.  Stripping all non-essential comments, especially AI-generated artifacts (`# changed here`, `# from my knowledge`).
-2.  Formatting and linting the code against the project's `ruff` configuration (`ruff format .` and `ruff check --fix .`).
+2.  Formatting and linting the code against the project's `ruff` configuration (`uv run ruff format .` and `uv run ruff check --fix .`).
 3.  Thoroughly reviewing the code for logic, security, and adherence to project architecture before integration.
 
 ### 4.3. Commenting
@@ -84,7 +84,7 @@ Before integrating any code from external sources (e.g., web snippets, other AI 
 *   **Dead Code Must Be Removed:** Do not comment out unused imports, functions, or blocks of code. Delete them. Version control is your safety net.
 
 ### 4.5. Linting and Formatting
-All code must be validated against `ruff` before committing. The key commands are `ruff check --fix .` and `ruff format .`. Key enforced rules include:
+All code must be validated against `ruff` before committing. The key commands are `uv run ruff check --fix .` and `uv run ruff format .`. Key enforced rules include:
 *   **`D` (pydocstyle):** All public modules, functions, classes, and methods **must** have a docstring in the Google convention. This is non-negotiable.
 *   **`SIM` (flake8-simplify):** Code must be simplified where possible. `ruff --fix` will handle most of this.
 *   **`T20` (flake8-print):** The use of `print()` is **forbidden** in the application codebase. Use the `logging` module instead. `print()` is only permissible in the `scripts/` directory and the main `sender.py` entrypoint.
@@ -93,24 +93,26 @@ All code must be validated against `ruff` before committing. The key commands ar
 
 ## 5. Development Workflow
 
+Before starting, ensure your environment is set up and all dependencies are installed by running `uv sync --all-extras`.
+
 Follow this workflow for every task.
 
 1.  **Code Implementation:** Write code that adheres to all the principles outlined above.
 2.  **Localization (if new user-facing strings were added):**
     1.  Wrap new strings in `_()`.
-    2.  Run `babel extract` to update the `.pot` template.
-    3.  Run `babel update` to update the `.po` files.
+    2.  Run `uv run i18n extract` to update the `.pot` template.
+    3.  Run `uv run i18n update` to update the `.po` files.
     4.  Add translations to the `.po` files.
-    5.  Run `babel compile` to create the `.mo` files.
+    5.  Run `uv run i18n compile` to create the `.mo` files.
 3.  **Database Migration (if `bot/models.py` was changed):**
-    1.  Run `alembic revision -m "Descriptive message" --autogenerate`.
+    1.  Run `uv run migrate revision -m "Descriptive message" --autogenerate`.
     2.  **CRITICAL: Manually inspect the generated migration script for correctness.**
         *   **Data integrity is the highest priority. Under NO circumstances shall a migration lead to data loss for existing users. Never.**
         *   Pay special attention to column renames or type changes. Alembic's `autogenerate` often detects a rename as a `DROP` of the old column and an `ADD` of the new one. This is **unacceptable** as it deletes all data in that column. You **must** manually edit the script to use `op.alter_column()` instead.
         *   Always question if a destructive change (like dropping a table or column) is truly necessary and plan for it carefully.
 4.  **Validation:**
-    1.  Run `ruff format .` to format the code.
-    2.  Run `ruff check --fix .` to check for and fix issues.
-    3.  Run `mypy .` to validate type hints with mypy.
-    4.  Run `pytest` to execute the test suite.
+    1.  Run `uv run ruff format .` to format the code.
+    2.  Run `uv run ruff check --fix .` to check for and fix issues.
+    3.  Run `uv run mypy .` to validate type hints.
+    4.  Run `uv run pytest` to execute the test suite.
 5.  **Commit:** Write a clear and descriptive commit message following the Conventional Commits specification.
