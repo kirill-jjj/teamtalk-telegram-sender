@@ -4,27 +4,26 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import (
-    Awaitable,  # Added Any
+    Awaitable,
     Callable,
 )
-import functools  # Added functools
+import functools
 import gettext
 import html
 import logging
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
-from aiogram.exceptions import TelegramAPIError  # Added
+from aiogram.exceptions import TelegramAPIError
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.user import User as TeamTalkUser
 from pytalk.user_account import UserAccount as TeamTalkUserAccount
-from sqlalchemy.exc import SQLAlchemyError  # Added
+from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
 
-# Removed: from bot.core.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.utils import send_telegram_message_individual
 
 if TYPE_CHECKING:

@@ -125,7 +125,6 @@ async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    # services: "Services",  # No longer needed after removing manual admin check
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""

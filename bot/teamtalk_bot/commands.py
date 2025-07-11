@@ -18,7 +18,7 @@ from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.utils import handle_common_tt_command_errors, send_long_tt_reply  # Added decorator
+from bot.teamtalk_bot.utils import handle_common_tt_command_errors, send_long_tt_reply
 
 if TYPE_CHECKING:
     from bot.services_container import Services

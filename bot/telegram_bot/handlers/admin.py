@@ -4,7 +4,6 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, cast
 
-# Removed: from aiogram import Bot as AiogramBot
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message

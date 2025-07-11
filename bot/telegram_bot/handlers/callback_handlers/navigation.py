@@ -4,7 +4,7 @@ import gettext
 import logging
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery  # Added Message
+from aiogram.types import CallbackQuery
 
 from bot.core.enums import SettingsNavAction
 from bot.telegram_bot.callback_data import SettingsCallback

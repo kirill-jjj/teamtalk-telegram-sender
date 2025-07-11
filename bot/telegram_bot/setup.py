@@ -12,7 +12,7 @@ from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from bot.config import Settings
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
 from bot.database import crud
-from bot.services import admin_service  # Added import
+from bot.services import admin_service
 from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router

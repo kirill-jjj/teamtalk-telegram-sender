@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import enum
-from typing import Any  # Moved import to top
+from typing import Any
 
 from sqlalchemy import CheckConstraint
 from sqlmodel import Field, Relationship, SQLModel

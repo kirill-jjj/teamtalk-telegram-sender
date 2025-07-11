@@ -7,17 +7,17 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery  # Added Message
+from aiogram.types import CallbackQuery
 from pydantic import BaseModel, Field, ValidationError
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # Changed import
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import SettingsNavAction, SubscriptionAction
 from bot.models import NotificationSetting, UserSettings
-from bot.services import _utils as service_utils  # Added import
+from bot.services import _utils as service_utils
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
-from ._helpers import (  # process_setting_update will be removed later
+from ._helpers import (
     ensure_message_context,
     safe_edit_text,
 )

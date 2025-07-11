@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  #
 from bot.core.enums import LanguageAction, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
-from bot.services import _utils, user_service  # Add _utils
+from bot.services import _utils, user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 

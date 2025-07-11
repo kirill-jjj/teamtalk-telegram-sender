@@ -1,16 +1,15 @@
 """Callback query handlers for displaying and paginating the list of subscribers."""
 
-import gettext  # Added gettext
+import gettext
 import logging
 
 # For type hinting app instance
-from typing import TYPE_CHECKING, cast  # Added cast
+from typing import TYPE_CHECKING, cast
 
 from aiogram import Router
 from aiogram.types import CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession  # Will be SQLAlchemyAsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# Import SQLModel's AsyncSession for casting
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import SubscriberListAction
@@ -34,7 +33,6 @@ async def handle_subscriber_list_actions(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
     session: AsyncSession,
-    # bot: AiogramBot, # Removed
     translator: gettext.GNUTranslations,
     services: "Services",
 ) -> None:

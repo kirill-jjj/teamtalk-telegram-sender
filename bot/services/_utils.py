@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommandScopeChat
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession  # Reverted to SQLModel's AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.models import UserSettings
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
@@ -58,7 +58,7 @@ async def update_user_bot_commands(
 
 
 async def _update_user_setting_field(
-    session: AsyncSession,  # Reverted type hint
+    session: AsyncSession,
     services: "Services",
     settings_to_update: UserSettings,
     field_name: str,

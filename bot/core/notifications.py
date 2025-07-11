@@ -91,7 +91,7 @@ async def _get_recipients_for_notification(
 
         # Base filters
         filters = [
-            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined] # Retaining for now
+            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
             UserSettings.notification_settings != NotificationSetting.NONE,
         ]
         if event_type == NOTIFICATION_EVENT_JOIN:
@@ -108,7 +108,7 @@ async def _get_recipients_for_notification(
             #            there IS a corresponding MutedUser entry for username_to_check (MutedUser.id IS NOT NULL).
             and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
         )
-        filters.append(mute_logic)  # type: ignore[arg-type] # Retaining for now
+        filters.append(mute_logic)  # type: ignore[arg-type]
 
         stmt = stmt.where(and_(*filters))
 

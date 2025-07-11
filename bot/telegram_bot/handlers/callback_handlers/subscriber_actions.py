@@ -2,27 +2,27 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, cast  # Added Optional and cast
+from typing import TYPE_CHECKING, cast
 
-from aiogram import F, Router  # Added F
+from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message  # Added Message back
+from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.orm import selectinload
-from sqlalchemy.orm.attributes import QueryableAttribute  # Added for cast
-from sqlmodel import select  # Moved here
+from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.constants import MUTE_LIST_ITEMS_PER_PAGE  # Moved here
-from bot.core.enums import ManageTTAccountAction, SubscriberAction  # Added ManageTTAccountAction
-from bot.models import (  # Added OperationResult
+from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
+from bot.core.enums import ManageTTAccountAction, SubscriberAction
+from bot.models import (
     MutedUser,
     MuteListMode,
     NotificationSetting,
     OperationResult,
     UserSettings,
 )
-from bot.services import admin_service, user_service  # Added admin_service
+from bot.services import admin_service, user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -31,7 +31,7 @@ from bot.telegram_bot.callback_data import (
     LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
-    PaginateMuteListCallback,  # New
+    PaginateMuteListCallback,
     SubscriberActionCallback,
     ViewSubscriberCallback,
 )
@@ -41,18 +41,18 @@ from bot.telegram_bot.keyboards import (
     create_admin_subscriber_notification_pref_keyboard,
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,
-    create_subscriber_action_menu_keyboard,  # Added back
+    create_subscriber_action_menu_keyboard,
     create_view_mute_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-from bot.telegram_bot.ui_utils import display_paginated_list  # Added import
+from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
 from ._helpers import ensure_message_context
 from .list_utils import (
     SUBSCRIBERS_PER_PAGE,
     _show_subscriber_list_page,
-)  # Added _show_subscriber_list_page
+)
 
 if TYPE_CHECKING:
     from bot.services_container import Services

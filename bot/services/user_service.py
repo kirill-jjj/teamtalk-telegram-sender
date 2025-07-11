@@ -10,7 +10,7 @@ from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, SubscribedUser, UserSettings
 
-from . import _utils  # Import the new utils module
+from . import _utils
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -98,10 +98,6 @@ async def update_user_language_settings(  # User-initiated
         )
         return None  # Or handle error as appropriate
 
-    # The original function also called update_user_bot_commands.
-    # Command updates are now handled by the calling handler.
-    # The _update_user_setting_field was being called twice.
-    # The first assignment to updated_settings was unused.
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -220,8 +216,6 @@ async def process_new_subscription(
             user_settings.telegram_id,
             tt_username,
         )
-        # This return False was for when settings_updated is False
-        # It should be part of the try's normal flow, not here.
     except Exception:
         logger.exception(
             "Error in process_new_subscription for user %s, tt_username %s.", user_settings.telegram_id, tt_username

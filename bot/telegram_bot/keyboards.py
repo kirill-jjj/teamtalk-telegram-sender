@@ -53,7 +53,7 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.models import SubscriberInfo
 
 if TYPE_CHECKING:
-    pass  # No longer needed here if imported above, or keep for other TYPE_CHECKING imports
+    pass
 
 ttstr = pytalk.instance.sdk.ttstr
 

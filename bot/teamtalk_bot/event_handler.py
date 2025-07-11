@@ -236,49 +236,39 @@ class TeamTalkEventHandler:
     @route_event_to_connection
     async def on_pytalk_my_login(self, server: PytalkServer) -> None:
         """Routes the bot's own login event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_my_login
 
     @route_event_to_connection
     async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Routes a user join event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_user_join
 
     @route_event_to_connection
     async def on_pytalk_my_connection_lost(self, server: PytalkServer) -> None:
         """Routes a connection lost event for the bot to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_my_connection_lost
 
     @route_event_to_connection
     async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Routes a kicked from channel event for the bot to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_my_kicked_from_channel
 
     @route_event_to_connection
     async def on_pytalk_message(self, message: TeamTalkMessage) -> None:
         """Routes an incoming message event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_message
 
     @route_event_to_connection
     async def on_pytalk_user_login(self, user: PytalkUser) -> None:
         """Routes a user login event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_user_login
 
     @route_event_to_connection
     async def on_pytalk_user_logout(self, user: PytalkUser) -> None:
         """Routes a user logout event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_user_logout
 
     @route_event_to_connection
     async def on_pytalk_user_update(self, user: PytalkUser) -> None:
         """Routes a user update event to the appropriate connection via decorator."""
-        # Logic moved to decorator and TeamTalkConnection.on_user_update
 
     @route_event_to_connection
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
         """Routes a new user account event. Specific instance or broadcast handled by decorator."""
-        # Logic moved to decorator route_event_to_connection
 
     @route_event_to_connection
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
         """Routes a removed user account event. Specific instance or broadcast handled by decorator."""
-        # Logic moved to decorator route_event_to_connection

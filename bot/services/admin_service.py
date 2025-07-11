@@ -8,10 +8,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
-from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings  # Added OperationResult
-from bot.services import user_service  # Will be partially replaced by _utils
+from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
+from bot.services import user_service
 
-from . import _utils  # Import the new utils module
+from . import _utils
 
 if TYPE_CHECKING:
     import pytalk

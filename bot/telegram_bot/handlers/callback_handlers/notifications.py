@@ -7,18 +7,16 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery  # Added Message
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # Changed import
+from aiogram.types import CallbackQuery
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import NotificationAction, SettingsNavAction
 from bot.models import UserSettings
-from bot.services import user_service  # Added import
-
-# Removed unused: from bot.services import _utils as service_utils
+from bot.services import user_service
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 
-from ._helpers import (  # process_setting_update will be removed later
+from ._helpers import (
     ensure_message_context,
     safe_edit_text,
 )

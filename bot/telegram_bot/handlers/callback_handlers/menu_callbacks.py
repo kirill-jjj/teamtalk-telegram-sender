@@ -4,7 +4,6 @@ import gettext
 import logging
 from typing import TYPE_CHECKING
 
-# Removed: from aiogram import Bot as AiogramBot
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
