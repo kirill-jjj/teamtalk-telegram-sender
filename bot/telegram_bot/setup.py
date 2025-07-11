@@ -65,23 +65,71 @@ async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_con
 
     tg_admin_chat_id = app_config.telegram.admin_chat_id
     if tg_admin_chat_id:
-        # is_admin will also be routed through CacheService if we decide to make reads consistent,
-        # but for now, direct read for check is fine as per CacheService internal comment.
-        # However, for modification consistency, we use the service.
-        if not services.cache.is_admin(tg_admin_chat_id):  # Use CacheService for checking
+        if not services.cache.is_admin(tg_admin_chat_id):
+            logger.info(
+                "Admin ID %s from config is not yet an admin. Attempting to add.", tg_admin_chat_id
+            )
             async with services.session_factory() as session:
-                await crud.add_admin(session, tg_admin_chat_id)
-                services.cache.add_admin(tg_admin_chat_id)  # Use CacheService for adding
-            logger.debug("Admin ID %s from config added to DB and cache via CacheService.", tg_admin_chat_id)
+                # Ensure user settings exist for the admin, as add_admin_full requires them
+                # to update bot commands correctly.
+                user_settings = services.cache.get_user_settings(tg_admin_chat_id)
+                if not user_settings:
+                    logger.info(
+                        "User settings not found in cache for admin %s. Fetching or creating.",
+                        tg_admin_chat_id,
+                    )
+                    # get_or_create_user_settings is a method of the Services container
+                    # and handles session commit and cache update internally.
+                    user_settings = await services.get_or_create_user_settings(
+                        telegram_id=tg_admin_chat_id, session=session
+                    )
+                    if not user_settings:
+                        logger.error(
+                            "Failed to get or create user settings for admin %s using services.get_or_create_user_settings. "
+                            "Cannot add as admin fully.",
+                            tg_admin_chat_id,
+                        )
+                    else:
+                        logger.info(
+                            "User settings obtained for admin %s via services.get_or_create_user_settings. "
+                            "Proceeding with add_admin_full.",
+                            tg_admin_chat_id,
+                        )
+
+                if user_settings:
+                    # admin_service is available through the services container
+                    added_successfully = await services.admin_service.add_admin_full(
+                        session=session,
+                        telegram_id=tg_admin_chat_id,
+                        user_settings=user_settings,
+                        services=services,
+                    )
+                    if added_successfully:
+                        logger.info(
+                            "Admin ID %s from config added successfully via admin_service.add_admin_full.",
+                            tg_admin_chat_id,
+                        )
+                    else:
+                        logger.error(
+                            "Failed to add admin ID %s from config using admin_service.add_admin_full.",
+                            tg_admin_chat_id,
+                        )
+                else:
+                    # This case should ideally not be reached if get_or_create_user_settings works.
+                    logger.error(
+                        "User settings still not available for admin %s after attempting get/create. "
+                        "Admin commands might not be updated.",
+                        tg_admin_chat_id
+                    )
         else:
-            logger.debug("Admin ID %s from config already in admin cache (via CacheService).", tg_admin_chat_id)
+            logger.debug("Admin ID %s from config already in admin cache.", tg_admin_chat_id)
     else:
         logger.info("telegram.admin_chat_id is 0 or not configured to be added as main admin.")
 
-    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count())  # Use CacheService
+    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count())
     logger.debug(
         "Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids()
-    )  # Use CacheService
+    )
 
     await set_telegram_commands(services=services)
     logger.info("Telegram bot commands set.")

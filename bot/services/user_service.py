@@ -112,6 +112,75 @@ async def update_user_language_settings(  # User-initiated
     )
 
 
+async def toggle_noon_setting(
+    session: AsyncSession,
+    services: "Services",
+    user_settings: UserSettings,
+) -> UserSettings | None:
+    """Toggles the NOON (Not On Online Notifications) setting for a user.
+
+    If NOON is enabled, it also ensures that 'not_on_online_confirmed' is set to True.
+    Handles DB session, commit, rollback, and cache update via _update_user_setting_field.
+    Returns the updated UserSettings object or None on failure.
+    """
+    # Ensure the user_settings object is managed by the current session
+    # This is important if user_settings comes from middleware and might be detached.
+    managed_user_settings = await session.merge(user_settings)
+    if not managed_user_settings:  # Should ideally not happen if user_settings is valid
+        logger.error(
+            "toggle_noon_setting: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id
+        )
+        return None
+
+    new_noon_enabled_value = not managed_user_settings.not_on_online_enabled
+
+    # Update the 'not_on_online_enabled' field
+    updated_settings_noon_toggle = await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=managed_user_settings,
+        field_name="not_on_online_enabled",
+        new_value=new_noon_enabled_value,
+        log_context=" (user toggle NOON self)",
+    )
+
+    if not updated_settings_noon_toggle:
+        # Error occurred and was logged by _update_user_setting_field
+        return None
+
+    # If NOON was enabled and not yet confirmed, attempt to set not_on_online_confirmed to True
+    # Use the settings object returned by the first update call
+    if updated_settings_noon_toggle.not_on_online_enabled and \
+       not updated_settings_noon_toggle.not_on_online_confirmed:
+
+        confirmed_settings = await _utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=updated_settings_noon_toggle, # Use the already updated object
+            field_name="not_on_online_confirmed",
+            new_value=True,
+            log_context=" (user confirm NOON after self toggle)",
+        )
+        if not confirmed_settings:
+            # Log a warning if the confirmation step failed
+            logger.warning(
+                "NOON setting was toggled to enabled for user %s, "
+                "but the subsequent confirmation of 'not_on_online_confirmed' failed. "
+                "The 'not_on_online_enabled' field remains updated.",
+                updated_settings_noon_toggle.telegram_id,
+            )
+            # Return the settings from the first successful update, as the primary action succeeded.
+            return updated_settings_noon_toggle
+
+        return confirmed_settings  # Both updates succeeded
+
+    # This path is reached if:
+    # 1. NOON was toggled to False.
+    # 2. NOON was toggled to True, but 'not_on_online_confirmed' was already True.
+    # In these cases, the 'updated_settings_noon_toggle' from the first call is the final state.
+    return updated_settings_noon_toggle
+
+
 async def process_new_subscription(
     session: AsyncSession,
     user_settings: UserSettings,
