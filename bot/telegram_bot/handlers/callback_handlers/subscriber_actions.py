@@ -63,6 +63,52 @@ subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMidd
 subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 
 
+@subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
+@ensure_message_context
+async def on_ban_subscriber_confirm(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    tt_connection: TeamTalkConnection | None,
+) -> None:
+    """Handles banning and deleting a subscriber after admin confirmation."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+    return_page = callback_data.page
+
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
+
+    ban_statuses, commit_needed = await admin_service.ban_user(
+        session, target_telegram_id, tt_username_to_ban, tt_connection
+    )
+
+    profile_deleted_status = False
+    if ban_statuses.get("telegram_ban"):
+        if commit_needed:
+            await session.commit()
+        profile_deleted_status = await user_service.delete_full_user_profile(
+            session, target_telegram_id, services=services
+        )
+    else:
+        await session.rollback()
+
+    short_message, long_message = admin_service.format_ban_delete_result_message(
+        translator=translator,
+        telegram_id=target_telegram_id,
+        tt_username=tt_username_to_ban,
+        tg_banned=ban_statuses.get("telegram_ban", False),
+        tt_db_banned=ban_statuses.get("teamtalk_db_ban", False),
+        tt_server_banned=ban_statuses.get("teamtalk_server_ban", False),
+        profile_deleted=profile_deleted_status,
+    )
+
+    await query.answer(short_message, show_alert=True)
+    await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
+
+
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.DELETE))
 @ensure_message_context
 async def handle_delete_subscriber(

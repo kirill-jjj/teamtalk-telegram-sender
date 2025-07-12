@@ -9,7 +9,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
-from bot.services import user_service
 
 from . import _utils
 
@@ -291,85 +290,25 @@ async def _orchestrate_user_banning(
     return ban_statuses, commit_needed_for_bans
 
 
-async def ban_and_delete_subscriber(
+async def ban_user(
     session: AsyncSession,
-    services: "Services",
-    tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
-    translator: "gettext.GNUTranslations",
-) -> tuple[str, str]:
-    """Orchestrates banning, deleting a subscriber, and returns a formatted status message."""
-    ban_statuses = {
-        "telegram_ban": False,
-        "teamtalk_db_ban": False,
-        "teamtalk_server_ban": False,
-    }
-    profile_deleted_status = False
-    tt_username_to_ban: str | None = None
+    tt_username_to_ban: str | None,
+    tt_connection: "TeamTalkConnection | None",
+) -> tuple[dict[str, bool], bool]:
+    """Bans a user's Telegram ID and TeamTalk username.
 
-    try:
-        user_settings = await session.get(UserSettings, target_telegram_id)
-        if user_settings:
-            tt_username_to_ban = user_settings.teamtalk_username
-        else:
-            logger.warning(
-                "User settings not found for TG ID %s during ban and delete. "
-                "TeamTalk username will be unavailable for banning.",
-                target_telegram_id,
-            )
-
-        current_ban_statuses, commit_needed_for_bans = await _orchestrate_user_banning(
-            session, target_telegram_id, tt_username_to_ban, tt_connection
-        )
-        ban_statuses.update(current_ban_statuses)
-
-        if commit_needed_for_bans:
-            if ban_statuses["telegram_ban"] or (tt_username_to_ban and ban_statuses["teamtalk_db_ban"]):
-                await session.commit()
-                logger.debug("Committed ban list changes for user %s before profile deletion.", target_telegram_id)
-            else:
-                logger.warning(
-                    "Commit for bans skipped for user %s as no core DB ban operation succeeded.", target_telegram_id
-                )
-                await session.rollback()
-                logger.debug("Rolled back session as no core ban succeeded for user %s.", target_telegram_id)
-
-        if ban_statuses["telegram_ban"]:
-            profile_deleted_status = await user_service.delete_full_user_profile(
-                session, target_telegram_id, services=services
-            )
-            if not profile_deleted_status:
-                logger.error("Profile deletion failed for user %s after successful ban(s).", target_telegram_id)
-        else:
-            logger.warning(
-                "Profile deletion skipped for user %s due to Telegram ban failure.", target_telegram_id
-            )
-
-    except SQLAlchemyError:
-        await session.rollback()
-        logger.exception(
-            "Critical SQLAlchemyError during ban and delete process for TG ID %s, triggering rollback.",
-            target_telegram_id,
-        )
-    except Exception:
-        await session.rollback()
-        logger.exception(
-            "Unexpected critical error during ban and delete process for TG ID %s, triggering rollback.",
-            target_telegram_id,
-        )
-
-    return _format_ban_delete_result_message(
-        translator=translator,
-        telegram_id=target_telegram_id,
-        tt_username=tt_username_to_ban,
-        tg_banned=ban_statuses["telegram_ban"],
-        tt_db_banned=ban_statuses["teamtalk_db_ban"],
-        tt_server_banned=ban_statuses["teamtalk_server_ban"],
-        profile_deleted=profile_deleted_status,
+    Handles banning in the database and conceptually on the TeamTalk server.
+    Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
+    """
+    return await _orchestrate_user_banning(
+        session, target_telegram_id, tt_username_to_ban, tt_connection
     )
 
 
-def _format_ban_delete_result_message(  # noqa: PLR0912
+
+
+def format_ban_delete_result_message(  # noqa: PLR0912
     translator: gettext.GNUTranslations,
     telegram_id: int,
     tt_username: str | None,
