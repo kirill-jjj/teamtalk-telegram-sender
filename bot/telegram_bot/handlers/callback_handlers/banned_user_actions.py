@@ -48,11 +48,11 @@ async def handle_unban_subscriber(
 
     result_message = await admin_service.unban_subscriber(session, target_telegram_id, translator)
     await query.answer(result_message, show_alert=True)
-    await _show_banned_list_page(query, session, services, return_page, translator)
+    await _show_banned_list_page(target=query, session=session, services=services, page=return_page, translator=translator)
 
 
 async def _show_banned_list_page(
-    query: CallbackQuery,
+    target: CallbackQuery | Message,
     session: AsyncSession,
     services: "Services",
     page: int,
@@ -82,7 +82,7 @@ async def _show_banned_list_page(
             )
 
     await display_paginated_list(
-        target=query,
+        target=target,
         bot=services.bot_event,
         translator=translator,
         items=subscriber_infos,
@@ -90,6 +90,7 @@ async def _show_banned_list_page(
         title_text=_("Banned Users"),
         empty_list_text=_("The ban list is empty."),
         keyboard_factory=create_banned_user_list_keyboard,
+        keyboard_factory_kwargs={},
         page_size=SUBSCRIBERS_PER_PAGE,
     )
 
@@ -120,4 +121,10 @@ async def handle_ban_subscriber(
     await message.answer(long_report_message)
 
     # After banning and deleting, refresh the subscriber list to show the user is gone.
-    await _show_subscriber_list_page(query, session, services, return_page, translator)
+    await _show_subscriber_list_page(
+        target=query,
+        session=session,
+        bot=services.bot_event,
+        translator=translator,
+        page=return_page,
+    )

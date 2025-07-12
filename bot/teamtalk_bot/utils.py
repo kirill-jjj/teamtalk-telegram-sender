@@ -295,8 +295,8 @@ def handle_common_tt_command_errors(*, reply_to_user_on_error: bool = True) -> T
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
         async def wrapper(
-            tt_message: TeamTalkMessage, *args: ..., **kwargs: ...
-        ) -> None:  # Use Any for args/kwargs for simplicity here
+            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
+        ) -> None:
             try:
                 await func(tt_message, *args, **kwargs)
             except (TelegramAPIError, SQLAlchemyError, pytalk.exceptions.TeamTalkException):

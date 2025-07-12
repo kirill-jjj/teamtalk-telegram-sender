@@ -131,7 +131,7 @@ async def unban_command_handler(
 ) -> None:
     """Handles the /unban command for administrators."""
     await _show_banned_list_page(
-        query=message,
+        target=message,
         session=cast(SQLModelAsyncSession, session),
         services=services,
         page=0,

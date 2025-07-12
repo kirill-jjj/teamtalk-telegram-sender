@@ -257,7 +257,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
     dp.include_router(callback_router)
-    dp.include_router(subscriber_actions_router)
     dp.include_router(catch_all_router)
 
     # Register lifecycle hooks and error handler using new local functions
