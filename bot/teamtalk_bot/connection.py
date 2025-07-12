@@ -23,14 +23,7 @@ from bot.constants import (
 )
 from bot.core.notifications import send_join_leave_notification_logic
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.commands import (
-    handle_tt_add_admin_command,
-    handle_tt_help_command,
-    handle_tt_remove_admin_command,
-    handle_tt_subscribe_command,
-    handle_tt_unknown_command,
-    handle_tt_unsubscribe_command,
-)
+from bot.teamtalk_bot.message_handler import MessageHandler
 from bot.teamtalk_bot.utils import (
     forward_tt_message_to_telegram_admin,
 )
@@ -62,6 +55,7 @@ class TeamTalkConnection:
         self._populate_accounts_task: asyncio.Task[Any] | None = None
         self._is_finalized = False
         self.ttstr = pytalk.instance.sdk.ttstr
+        self.message_handler = MessageHandler(services, self)
 
     async def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
@@ -451,58 +445,7 @@ class TeamTalkConnection:
 
     async def on_message(self, message: TeamTalkMessage) -> None:
         """Handles an incoming message on this server connection."""
-        if (
-            not self.instance
-            or message.from_id == self.instance.getMyUserID()
-            or message.type != TEAMTALK_PRIVATE_MESSAGE_TYPE
-        ):
-            return
-
-        sender = self.ttstr(message.user.username)
-        content = message.content.strip()
-        logger.debug("[%s] Private msg from %s: '%s'", self.server_info.host, sender, content[:50])
-
-        admin_cfg = self.services.config.telegram.admin_chat_id
-        reply_lang = self.services.config.general.default_lang
-        if admin_cfg:
-            admin_settings = self.services.cache.get_user_settings(admin_cfg)
-            if admin_settings and admin_settings.language_code:
-                reply_lang = admin_settings.language_code
-        translator = self.services.get_translator(reply_lang)
-
-        parts = content.split(maxsplit=1)
-        cmd = parts[0].lower()
-        args = parts[1] if len(parts) > 1 else None
-
-        handlers = {
-            tt_cmds.TT_CMD_SUBSCRIBE: handle_tt_subscribe_command,
-            tt_cmds.TT_CMD_UNSUBSCRIBE: handle_tt_unsubscribe_command,
-            tt_cmds.TT_CMD_ADD_ADMIN: handle_tt_add_admin_command,
-            tt_cmds.TT_CMD_REMOVE_ADMIN: handle_tt_remove_admin_command,
-            tt_cmds.TT_CMD_HELP: handle_tt_help_command,
-        }
-        handler = handlers.get(cmd)
-
-        async with self.services.session_factory() as session:
-            if handler:
-                kwargs = {
-                    "tt_message": message,
-                    "translator": translator,
-                    "services": self.services,
-                    "_connection": self,  # Changed key to _connection
-                }
-                if cmd in [tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN]:
-                    kwargs["args_str"] = args
-                # All current commands in handlers dict require session except /help
-                if cmd != tt_cmds.TT_CMD_HELP:
-                    kwargs["session"] = session
-                await handler(**kwargs)  # type: ignore[operator]
-            elif content.startswith("/"):
-                await handle_tt_unknown_command(message, translator, connection=self)
-            else:
-                await forward_tt_message_to_telegram_admin(
-                    message=message, services=self.services, translator=translator
-                )
+        await self.message_handler.handle_message(message)
 
     async def on_user_login(self, user: PytalkUser) -> None:
         """Handles another user logging into this server connection."""
