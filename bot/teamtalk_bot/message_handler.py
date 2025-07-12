@@ -10,10 +10,7 @@ import pytalk
 
 from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
 from bot.teamtalk_bot.command_router import CommandRouter
-
-
 from bot.teamtalk_bot.utils import forward_tt_message_to_telegram_admin
-
 
 if TYPE_CHECKING:
     from pytalk.message import Message as TeamTalkMessage
@@ -79,7 +76,4 @@ class MessageHandler:
         if tt_message.from_id == my_user_id:
             return False  # Ignore messages from self
 
-        if tt_message.type != TEAMTALK_PRIVATE_MESSAGE_TYPE:
-            return False  # Only process private messages
-
-        return True
+        return tt_message.type == TEAMTALK_PRIVATE_MESSAGE_TYPE

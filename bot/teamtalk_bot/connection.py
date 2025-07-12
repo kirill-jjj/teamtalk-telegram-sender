@@ -19,14 +19,9 @@ from bot.constants import (
     INVALID_CHANNEL_ID,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
-    TEAMTALK_PRIVATE_MESSAGE_TYPE,
 )
 from bot.core.notifications import send_join_leave_notification_logic
-from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.teamtalk_bot.utils import (
-    forward_tt_message_to_telegram_admin,
-)
 
 if TYPE_CHECKING:
     from bot.services_container import Services

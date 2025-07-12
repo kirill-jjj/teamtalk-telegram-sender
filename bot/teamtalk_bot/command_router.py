@@ -15,7 +15,6 @@ from bot.teamtalk_bot.commands import (
     handle_tt_unsubscribe_command,
 )
 
-
 if TYPE_CHECKING:
     from gettext import GNUTranslations
 

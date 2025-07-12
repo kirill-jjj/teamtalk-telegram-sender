@@ -607,7 +607,7 @@ async def admin_link_tt_account(
 
 async def unban_subscriber(
     session: AsyncSession,
-    services: "Services",
+    _services: "Services",
     tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
     translator: "gettext.GNUTranslations",
