@@ -9,14 +9,13 @@ from aiogram.types import CallbackQuery, Message
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import SubscriberAction
+from bot.database import crud
 from bot.services import admin_service
 from bot.telegram_bot.callback_data import SubscriberActionCallback
 from bot.telegram_bot.keyboards import create_banned_user_list_keyboard
-from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.database import crud
 from bot.telegram_bot.models import SubscriberInfo
+from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import format_telegram_user_display_name
-
 
 from ._helpers import ensure_message_context
 from .list_utils import (

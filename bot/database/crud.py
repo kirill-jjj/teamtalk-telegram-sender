@@ -375,8 +375,9 @@ async def remove_ban_entries_for_telegram_id(session: AsyncSession, telegram_id:
 
         await session.commit()
         logger.info("Successfully removed all ban entries for Telegram ID %s.", telegram_id)
-        return True
     except SQLAlchemyError:
         await session.rollback()
         logger.exception("Failed to remove ban entries for Telegram ID %s.", telegram_id)
         return False
+    else:
+        return True
