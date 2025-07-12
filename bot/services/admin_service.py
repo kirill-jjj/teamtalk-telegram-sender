@@ -185,6 +185,53 @@ async def _ban_teamtalk_user_on_server(
         return True # Skipped is not an error for this conceptual ban
 
 
+async def _unban_teamtalk_user_on_server(
+    tt_connection: "TeamTalkConnection | None",
+    tt_username: str,
+    target_telegram_id: int,
+) -> bool:
+    """Attempts a conceptual unban on the TeamTalk server. Currently logs only."""
+    if not tt_username:
+        logger.debug("No TeamTalk username provided to _unban_teamtalk_user_on_server for TG ID %s.", target_telegram_id)
+        return True
+
+    if tt_connection and tt_connection.instance and tt_connection.is_ready:
+        try:
+            logger.info(
+                "Conceptual TT server unban attempt for username '%s' (linked to TG ID %s) on server %s. "
+                "Actual server-side unban by username not yet supported by SDK.",
+                tt_username,
+                target_telegram_id,
+                tt_connection.server_info.host,
+            )
+        except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
+            logger.exception(
+                "Error during conceptual TeamTalk server unban for username '%s' (TG ID %s) on %s.",
+                tt_username,
+                target_telegram_id,
+                tt_connection.server_info.host,
+            )
+            return False
+        except Exception:
+            logger.exception(
+                "Unexpected error during conceptual TeamTalk server unban for username '%s' (TG ID %s) on %s.",
+                tt_username,
+                target_telegram_id,
+                tt_connection.server_info.host,
+            )
+            return False
+        else:
+            return True
+    else:
+        logger.warning(
+            "Skipping conceptual TeamTalk server unban for username '%s' (TG ID %s) as tt_connection "
+            "or instance is None/invalid/not ready.",
+            tt_username,
+            target_telegram_id,
+        )
+        return True
+
+
 async def _orchestrate_user_banning(
     session: AsyncSession,
     target_telegram_id: int,
@@ -558,18 +605,30 @@ async def admin_link_tt_account(
 
 async def unban_subscriber(
     session: AsyncSession,
+    services: "Services",
+    tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
     translator: "gettext.GNUTranslations",
 ) -> str:
     """Unbans a subscriber by removing all their ban entries."""
     _ = translator.gettext
     try:
-        success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
-        if success:
+        user_settings = await session.get(UserSettings, target_telegram_id)
+        tt_username = user_settings.teamtalk_username if user_settings else None
+
+        db_unban_success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
+        tt_unban_success = True
+        if tt_username:
+            tt_unban_success = await _unban_teamtalk_user_on_server(
+                tt_connection, tt_username, target_telegram_id
+            )
+
+        if db_unban_success and tt_unban_success:
             logger.info("Successfully unbanned user %s.", target_telegram_id)
             return _("User {telegram_id} has been unbanned.").format(telegram_id=target_telegram_id)
-        logger.error("Failed to unban user %s in DB.", target_telegram_id)
-        return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
+        else:
+            logger.error("Failed to unban user %s.", target_telegram_id)
+            return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
     except Exception:
         logger.exception("An unexpected error occurred while unbanning user %s.", target_telegram_id)
         return _("An unexpected error occurred while unbanning user {telegram_id}.").format(

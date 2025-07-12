@@ -40,13 +40,16 @@ async def handle_unban_subscriber(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
+    tt_connection: "TeamTalkConnection | None",
 ) -> None:
     """Handles unbanning a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    result_message = await admin_service.unban_subscriber(session, target_telegram_id, translator)
+    result_message = await admin_service.unban_subscriber(
+        session, services, tt_connection, target_telegram_id, translator
+    )
     await query.answer(result_message, show_alert=True)
     await _show_banned_list_page(target=query, session=session, services=services, page=return_page, translator=translator)
 
