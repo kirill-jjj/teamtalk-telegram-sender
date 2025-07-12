@@ -88,73 +88,68 @@ async def remove_admin_full(
         return False  # This path is reached if crud.remove_admin_db returns False
 
 
-async def _ban_telegram_user(
-    session: AsyncSession, target_telegram_id: int, translator: gettext.GNUTranslations
-) -> tuple[bool, str | None]:
-    """Bans a Telegram ID and returns success status and a message part."""
-    _ = translator.gettext
+async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> bool:
+    """Bans a Telegram ID. Returns True on success or if already banned, False on error."""
     try:
         banned_tg = await crud.add_to_ban_list(
             session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu"
         )
-        if banned_tg:
-            return True, _("Telegram ID {telegram_id} banned.").format(telegram_id=target_telegram_id)
-        # If already banned or other non-exception failure from crud
-        logger.info("Telegram ID %s might already be banned or DB issue prevented ban.", target_telegram_id)
-        return True, _("Telegram ID {telegram_id} already banned or could not be re-banned.").format(
-            telegram_id=target_telegram_id
-        )  # Consider it a success if already banned
+        if not banned_tg:
+            # If not banned_tg, it means already banned or some other non-exception failure from crud
+            logger.info("Telegram ID %s might already be banned or DB issue prevented re-ban.", target_telegram_id)
     except SQLAlchemyError:
-        # session.rollback() will be handled by the main orchestrating function
         logger.exception("SQLAlchemyError while banning Telegram ID %s.", target_telegram_id)
-        return False, _("Database error banning Telegram ID {telegram_id}.").format(telegram_id=target_telegram_id)
+        return False
     except Exception:
         logger.exception("Unexpected error while banning Telegram ID %s.", target_telegram_id)
-        return False, _("Unexpected error banning Telegram ID {telegram_id}.").format(telegram_id=target_telegram_id)
+        return False
+    else:
+        return True
 
 
-async def _ban_teamtalk_user(
-    session: AsyncSession, tt_username: str, target_telegram_id: int, translator: gettext.GNUTranslations
-) -> tuple[bool, str | None]:
-    """Bans a TeamTalk username and returns success status and a message part."""
-    _ = translator.gettext
-    if not tt_username:  # Should be pre-checked by caller
-        return True, None  # No username to ban, not an error for this specific function
+async def _ban_teamtalk_user_in_db(session: AsyncSession, tt_username: str, target_telegram_id: int) -> bool:
+    """Bans a TeamTalk username in the database.
+
+    Returns True on success or if already banned, False on error.
+    """
+    if not tt_username:
+        logger.debug("No TeamTalk username provided to _ban_teamtalk_user_in_db for TG ID %s.", target_telegram_id)
+        return True  # No username to ban, not an error for this specific function
+
     try:
         banned_tt = await crud.add_to_ban_list(
             session,
             teamtalk_username=tt_username,
             reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
         )
-        if banned_tt:
-            return True, _("TeamTalk username {tt_username} banned.").format(tt_username=tt_username)
-        logger.info("TeamTalk username %s might already be banned or DB issue prevented ban.", tt_username)
-        return True, _("TeamTalk username {tt_username} already banned or could not be re-banned.").format(
-            tt_username=tt_username
-        )  # Consider it a success if already banned
+        if not banned_tt:
+            logger.info("TeamTalk username %s might already be banned or DB issue prevented re-ban.", tt_username)
     except SQLAlchemyError:
-        logger.exception("SQLAlchemyError while banning TeamTalk username %s.", tt_username)
-        return False, _("Database error banning TeamTalk username {tt_username}.").format(tt_username=tt_username)
+        logger.exception("SQLAlchemyError while banning TeamTalk username %s in DB.", tt_username)
+        return False
     except Exception:
-        logger.exception("Unexpected error while banning TeamTalk username %s.", tt_username)
-        return False, _("Unexpected error banning TeamTalk username {tt_username}.").format(tt_username=tt_username)
+        logger.exception("Unexpected error while banning TeamTalk username %s in DB.", tt_username)
+        return False
+    else:
+        return True
 
 
-async def _attempt_teamtalk_server_ban(  # Renamed for clarity
+async def _ban_teamtalk_user_on_server(
     tt_connection: "TeamTalkConnection | None",
     tt_username: str,
     target_telegram_id: int,  # For logging context
-    translator: gettext.GNUTranslations,
-) -> tuple[bool, str | None]:
-    """Attempts a conceptual ban on the TeamTalk server. Currently logs only."""
-    _ = translator.gettext
-    if not tt_username:  # Should be pre-checked by caller
-        return True, None  # No username, nothing to do on server
+) -> bool:
+    """Attempts a conceptual ban on the TeamTalk server. Currently logs only.
+
+    Returns True if successful (or skipped), False on error.
+    """
+    if not tt_username:
+        logger.debug("No TeamTalk username provided to _ban_teamtalk_user_on_server for TG ID %s.", target_telegram_id)
+        return True  # No username, nothing to do on server
 
     if tt_connection and tt_connection.instance and tt_connection.is_ready:
         try:
-            # Placeholder for actual ban logic if/when implemented in pytalk SDK for banning by username
-            # For now, this is a conceptual step.
+            # Placeholder for actual ban logic
             logger.info(
                 "Conceptual TT server ban attempt for username '%s' (linked to TG ID %s) on server %s. "
                 "Actual server-side ban by username not yet supported by SDK.",
@@ -162,9 +157,6 @@ async def _attempt_teamtalk_server_ban(  # Renamed for clarity
                 target_telegram_id,
                 tt_connection.server_info.host,
             )
-            # Assuming conceptual success as there's no real operation to fail yet.
-            # If actual SDK call is added, success/failure will be based on its result.
-            return True, _("Conceptual TeamTalk server ban logged for {tt_username}.").format(tt_username=tt_username)
         except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
             logger.exception(
                 "Error during conceptual TeamTalk server ban for username '%s' (TG ID %s) on %s.",
@@ -172,9 +164,7 @@ async def _attempt_teamtalk_server_ban(  # Renamed for clarity
                 target_telegram_id,
                 tt_connection.server_info.host,
             )
-            return False, _("Error during TeamTalk server interaction for {tt_username}.").format(
-                tt_username=tt_username
-            )
+            return False
         except Exception:  # pylint: disable=broad-except
             logger.exception(
                 "Unexpected error during conceptual TeamTalk server ban for username '%s' (TG ID %s) on %s.",
@@ -182,9 +172,9 @@ async def _attempt_teamtalk_server_ban(  # Renamed for clarity
                 target_telegram_id,
                 tt_connection.server_info.host,
             )
-            return False, _("Unexpected error during TeamTalk server interaction for {tt_username}.").format(
-                tt_username=tt_username
-            )
+            return False
+        else:
+            return True
     else:
         logger.warning(
             "Skipping conceptual TeamTalk server ban for username '%s' (TG ID %s) as tt_connection "
@@ -192,9 +182,7 @@ async def _attempt_teamtalk_server_ban(  # Renamed for clarity
             tt_username,
             target_telegram_id,
         )
-        return True, _("TeamTalk server interaction skipped for {tt_username} (connection not ready).").format(
-            tt_username=tt_username
-        )
+        return True # Skipped is not an error for this conceptual ban
 
 
 async def _orchestrate_user_banning(
@@ -202,134 +190,214 @@ async def _orchestrate_user_banning(
     target_telegram_id: int,
     tt_username_to_ban: str | None,
     tt_connection: "TeamTalkConnection | None",
-    translator: gettext.GNUTranslations,
-) -> tuple[dict[str, dict[str, bool | str | None]], bool]:
+) -> tuple[dict[str, bool], bool]:
     """Orchestrates banning a user's Telegram ID and TeamTalk username.
 
     Handles banning in the database and conceptually on the TeamTalk server.
-
-    Args:
-        session: The AsyncSession for database operations.
-        target_telegram_id: The Telegram ID of the user to ban.
-        tt_username_to_ban: The TeamTalk username to ban, if available.
-        tt_connection: The TeamTalk connection, if available.
-        translator: The gettext translator.
-
-    Returns:
-        A tuple containing:
-            - A dictionary with results for 'telegram_ban', 'teamtalk_db_ban',
-              and 'teamtalk_server_ban'.
-            - A boolean indicating if a database commit is needed for the performed bans.
+    Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
     """
-    _ = translator.gettext
-    ban_results: dict[str, dict[str, bool | str | None]] = {
-        "telegram_ban": {"success": False, "message": None},
-        "teamtalk_db_ban": {"success": False, "message": None},
-        "teamtalk_server_ban": {"success": False, "message": None},
+    ban_statuses: dict[str, bool] = {
+        "telegram_ban": False,
+        "teamtalk_db_ban": False,
+        "teamtalk_server_ban": False,
     }
     commit_needed_for_bans = False
 
     # Step 1: Ban Telegram ID
-    tg_ban_success, tg_ban_msg = await _ban_telegram_user(session, target_telegram_id, translator)
-    ban_results["telegram_ban"]["success"] = tg_ban_success
-    ban_results["telegram_ban"]["message"] = tg_ban_msg
+    tg_ban_success = await _ban_telegram_user(session, target_telegram_id)
+    ban_statuses["telegram_ban"] = tg_ban_success
     if not tg_ban_success:
-        # If TG ban fails, we might not proceed or handle it differently.
-        # For now, assume we raise an exception to be caught by the caller.
-        raise Exception(f"Telegram ID ban failed: {tg_ban_msg}")  # noqa: TRY002, TRY003
-    commit_needed_for_bans = True
+        logger.error("Telegram ID ban failed for %s.", target_telegram_id)
+    else:
+        commit_needed_for_bans = True
 
     # Step 2: Ban TeamTalk username in DB (if exists)
     if tt_username_to_ban:
-        tt_db_ban_success, tt_db_ban_msg = await _ban_teamtalk_user(
-            session, tt_username_to_ban, target_telegram_id, translator
+        tt_db_ban_success = await _ban_teamtalk_user_in_db(
+            session, tt_username_to_ban, target_telegram_id
         )
-        ban_results["teamtalk_db_ban"]["success"] = tt_db_ban_success
-        ban_results["teamtalk_db_ban"]["message"] = tt_db_ban_msg
+        ban_statuses["teamtalk_db_ban"] = tt_db_ban_success
         if not tt_db_ban_success:
-            raise Exception(f"TeamTalk DB ban failed: {tt_db_ban_msg}")  # noqa: TRY002, TRY003
-        commit_needed_for_bans = True
+            logger.error("TeamTalk DB ban failed for username %s (TG ID %s).", tt_username_to_ban, target_telegram_id)
+        else:
+            commit_needed_for_bans = True
     else:
-        ban_results["teamtalk_db_ban"]["success"] = True
-        ban_results["teamtalk_db_ban"]["message"] = _("No TeamTalk username linked to ban in DB.")
+        ban_statuses["teamtalk_db_ban"] = True
 
     # Step 3: Conceptual TeamTalk server ban (if TT username exists)
-    # This step is best-effort.
     if tt_username_to_ban:
-        tt_server_ban_success, tt_server_ban_msg = await _attempt_teamtalk_server_ban(
-            tt_connection, tt_username_to_ban, target_telegram_id, translator
+        tt_server_ban_success = await _ban_teamtalk_user_on_server(
+            tt_connection, tt_username_to_ban, target_telegram_id
         )
-        ban_results["teamtalk_server_ban"]["success"] = tt_server_ban_success
-        ban_results["teamtalk_server_ban"]["message"] = tt_server_ban_msg
-        # Not raising exception on failure here as it's 'conceptual'
+        ban_statuses["teamtalk_server_ban"] = tt_server_ban_success
+        if not tt_server_ban_success:
+            logger.warning(
+                "Conceptual TeamTalk server ban failed or was skipped for username %s (TG ID %s).",
+                 tt_username_to_ban,
+                 target_telegram_id
+            )
     else:
-        ban_results["teamtalk_server_ban"]["success"] = True
-        ban_results["teamtalk_server_ban"]["message"] = _("No TeamTalk username for server ban attempt.")
+        ban_statuses["teamtalk_server_ban"] = True
 
-    return ban_results, commit_needed_for_bans
+    return ban_statuses, commit_needed_for_bans
 
 
-async def ban_and_delete_subscriber(  # Simplified complexity
+async def ban_and_delete_subscriber(
     session: AsyncSession,
     services: "Services",
     tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
     translator: "gettext.GNUTranslations",
-) -> dict[str, dict[str, bool | str | None]]:
-    """Orchestrates banning a subscriber (TG ID, TT username in DB, conceptual TT server ban).
-
-    and deleting their profile.
-    Returns a dictionary with success status and messages for each step.
-    """
-    _ = translator.gettext
-    # Initialize results with all potential keys
-    results: dict[str, dict[str, bool | str | None]] = {
-        "telegram_ban": {"success": False, "message": _("Operation not attempted.")},
-        "teamtalk_db_ban": {"success": False, "message": _("Operation not attempted.")},
-        "teamtalk_server_ban": {"success": False, "message": _("Operation not attempted.")},
-        "profile_deletion": {"success": False, "message": _("Operation not attempted.")},
+) -> str:
+    """Orchestrates banning, deleting a subscriber, and returns a formatted status message."""
+    ban_statuses = {
+        "telegram_ban": False,
+        "teamtalk_db_ban": False,
+        "teamtalk_server_ban": False,
     }
+    profile_deleted_status = False
+    tt_username_to_ban: str | None = None
 
     try:
         user_settings = await session.get(UserSettings, target_telegram_id)
-        tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
-
-        # Perform banning operations
-        ban_results, commit_needed_for_bans = await _orchestrate_user_banning(
-            session, target_telegram_id, tt_username_to_ban, tt_connection, translator
-        )
-        results.update(ban_results)  # Update main results with ban outcomes
-
-        # Commit ban changes before profile deletion if any ban operation was successful and needs commit
-        if commit_needed_for_bans:
-            await session.commit()
-            logger.debug("Committed ban list changes for user %s before profile deletion.", target_telegram_id)
-
-        # Step 4: Delete user profile (after potential commit of bans)
-        # This service function handles its own commits/rollbacks.
-        profile_deleted_success = await user_service.delete_full_user_profile(
-            session, target_telegram_id, services=services
-        )
-        results["profile_deletion"]["success"] = profile_deleted_success
-        if profile_deleted_success:
-            results["profile_deletion"]["message"] = _("Subscriber data also deleted.")
+        if user_settings:
+            tt_username_to_ban = user_settings.teamtalk_username
         else:
-            results["profile_deletion"]["message"] = _("Error deleting subscriber data.")
-            # This is a significant failure, but previous bans might have succeeded.
-            # The overall success will be determined by the handler based on these results.
+            logger.warning(
+                "User settings not found for TG ID %s during ban and delete. "
+                "TeamTalk username will be unavailable for banning.",
+                target_telegram_id,
+            )
 
-    except Exception:  # Covers SQLAlchemyError from helpers or explicit raises
+        current_ban_statuses, commit_needed_for_bans = await _orchestrate_user_banning(
+            session, target_telegram_id, tt_username_to_ban, tt_connection
+        )
+        ban_statuses.update(current_ban_statuses)
+
+        if commit_needed_for_bans:
+            if ban_statuses["telegram_ban"] or (tt_username_to_ban and ban_statuses["teamtalk_db_ban"]):
+                await session.commit()
+                logger.debug("Committed ban list changes for user %s before profile deletion.", target_telegram_id)
+            else:
+                logger.warning(
+                    "Commit for bans skipped for user %s as no core DB ban operation succeeded.", target_telegram_id
+                )
+                await session.rollback()
+                logger.debug("Rolled back session as no core ban succeeded for user %s.", target_telegram_id)
+
+        if ban_statuses["telegram_ban"]:
+            profile_deleted_status = await user_service.delete_full_user_profile(
+                session, target_telegram_id, services=services
+            )
+            if not profile_deleted_status:
+                logger.error("Profile deletion failed for user %s after successful ban(s).", target_telegram_id)
+        else:
+            logger.warning(
+                "Profile deletion skipped for user %s due to Telegram ban failure.", target_telegram_id
+            )
+
+    except SQLAlchemyError:
         await session.rollback()
-        logger.exception("Error during ban and delete process for TG ID %s, triggering rollback.", target_telegram_id)
-        # Update results to reflect failure if not already set by a specific step
-        if not results["telegram_ban"]["message"] and not results["teamtalk_db_ban"]["message"]:
-            # Generic error if no specific part failed before exception
-            error_msg = _("Operation failed due to an internal error.")
-            for key in results:  # noqa: PLC0206
-                if results[key]["message"] is None:  # Don't overwrite specific error messages
-                    results[key]["success"] = False
-                    results[key]["message"] = error_msg
-    return results
+        logger.exception(
+            "Critical SQLAlchemyError during ban and delete process for TG ID %s, triggering rollback.",
+            target_telegram_id,
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception(
+            "Unexpected critical error during ban and delete process for TG ID %s, triggering rollback.",
+            target_telegram_id,
+        )
+
+    return _format_ban_delete_result_message(
+        translator=translator,
+        telegram_id=target_telegram_id,
+        tt_username=tt_username_to_ban,
+        tg_banned=ban_statuses["telegram_ban"],
+        tt_db_banned=ban_statuses["teamtalk_db_ban"],
+        tt_server_banned=ban_statuses["teamtalk_server_ban"],
+        profile_deleted=profile_deleted_status,
+    )
+
+
+def _format_ban_delete_result_message(  # noqa: PLR0912
+    translator: gettext.GNUTranslations,
+    telegram_id: int,
+    tt_username: str | None,
+    *,
+    tg_banned: bool,
+    tt_db_banned: bool,
+    tt_server_banned: bool,
+    profile_deleted: bool,
+) -> str:
+    """Formats a consolidated message based on the outcomes of ban and delete operations."""
+    _ = translator.gettext
+    parts = []
+
+    if tg_banned:
+        parts.append(_("Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id))
+    else:
+        parts.append(_("Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id))
+
+    if tt_username:
+        if tt_db_banned:
+            parts.append(
+                _("TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
+            )
+        else:
+            parts.append(
+                _("Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
+            )
+
+        if tt_server_banned:
+            parts.append(
+                _("Conceptual TeamTalk server ban for {tt_username} was processed.").format(
+                    tt_username=tt_username
+                )
+            )
+        else:
+            parts.append(
+                _("Conceptual TeamTalk server ban for {tt_username} encountered an issue.").format(
+                    tt_username=tt_username
+                )
+            )
+    else:
+        parts.append(_("No TeamTalk username was linked; TeamTalk ban steps skipped."))
+
+    if tg_banned:
+        if profile_deleted:
+            parts.append(_("User profile and data have been deleted."))
+        else:
+            parts.append(_("Failed to delete user profile and data after banning."))
+    else:
+        parts.append(_("User profile deletion was skipped due to Telegram ban failure."))
+
+    if tg_banned:
+        fully_successful = True
+        if tt_username and not tt_db_banned:
+            fully_successful = False
+        if not profile_deleted:
+            fully_successful = False
+
+        if fully_successful:
+            final_message = _("User {telegram_id} fully banned and data deleted.").format(
+                telegram_id=telegram_id
+            )
+            if tt_username:
+                final_message += _(" (TeamTalk: {tt_username})").format(tt_username=tt_username)
+            final_message += "\n\n" + "\n".join(parts)
+        else:
+            final_message = _(
+                "User {telegram_id} processing completed with partial success:"
+            ).format(telegram_id=telegram_id)
+            final_message += "\n\n" + "\n".join(parts)
+    else:
+        final_message = _(
+            "CRITICAL: Failed to ban Telegram ID {telegram_id}. Dependent operations skipped or failed."
+        ).format(telegram_id=telegram_id)
+        final_message += "\n\n" + "\n".join(parts)
+
+    return final_message
 
 
 async def admin_toggle_noon_setting(
@@ -347,10 +415,8 @@ async def admin_toggle_noon_setting(
         logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
         return None
 
-    # Determine the new value for not_on_online_enabled
     new_noon_enabled_value = not target_user_settings.not_on_online_enabled
 
-    # Update the 'not_on_online_enabled' field
     updated_settings = await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -361,10 +427,8 @@ async def admin_toggle_noon_setting(
     )
 
     if not updated_settings:
-        # Error occurred and was logged by _update_user_setting_field
         return None
 
-    # If NOON was enabled and not yet confirmed, attempt to set not_on_online_confirmed to True
     if updated_settings.not_on_online_enabled and (updated_settings.not_on_online_confirmed is not True):
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
@@ -375,19 +439,14 @@ async def admin_toggle_noon_setting(
             log_context=f" by admin for user {target_telegram_id} (confirm NOON after toggle)",
         )
         if not confirmed_settings:
-            # Log a warning if the confirmation step failed
             logger.warning(
                 "NOON setting was toggled to enabled for user %s, "
                 "but the subsequent confirmation of 'not_on_online_confirmed' failed. "
                 "The 'not_on_online_enabled' field remains updated.",
                 target_telegram_id,
             )
-            return updated_settings  # Return the settings from the first successful update
-        return confirmed_settings  # Both updates succeeded
-    # Conditions for this path:
-    # 1. NOON was toggled to False.
-    # 2. NOON was toggled to True, but 'not_on_online_confirmed' was already True.
-    # In these cases, the 'updated_settings' from the first call is the final state.
+            return updated_settings
+        return confirmed_settings
     return updated_settings
 
 
@@ -462,7 +521,6 @@ async def admin_link_tt_account(
 
     original_tt_username = target_user_settings.teamtalk_username
 
-    # Update teamtalk_username
     updated_settings_tt_link = await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -473,41 +531,35 @@ async def admin_link_tt_account(
     )
 
     if not updated_settings_tt_link:
-        # Error already logged by helper _update_user_setting_field
         return OperationResult(success=False, message_key="link_tt_account_error_generic")
 
-    # Determine message key based on whether it was a new link or a re-link
     is_relink = bool(original_tt_username and original_tt_username != tt_username_to_link)
     link_type_message_key_suffix = "relinked" if is_relink else "linked"
     success_message_key = f"link_tt_account_success_{link_type_message_key_suffix}"
 
     message_args = {
         "new_tt_username": tt_username_to_link,
-        "original_tt_username": original_tt_username or "",  # Ensure not None for formatting
+        "original_tt_username": original_tt_username or "",
     }
 
     final_settings = updated_settings_tt_link
-    # Ensure not_on_online_confirmed is set to True
     if updated_settings_tt_link.not_on_online_confirmed is not True:
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
             services=services,
-            settings_to_update=updated_settings_tt_link,  # Use the already updated settings object
+            settings_to_update=updated_settings_tt_link,
             field_name="not_on_online_confirmed",
             new_value=True,
             log_context=f" by admin for user {target_telegram_id} (confirm NOON for TT link)",
         )
         if not confirmed_settings:
-            # Log a warning if the confirmation step failed, but the primary link operation was successful.
-            # The overall operation is still considered a success regarding the link.
             logger.warning(
                 "TT username '%s' linked for user %s, but failed to set not_on_online_confirmed to True.",
                 tt_username_to_link,
                 target_telegram_id,
             )
-            # final_settings remains updated_settings_tt_link from the first successful update
         else:
-            final_settings = confirmed_settings  # Both updates were successful
+            final_settings = confirmed_settings
 
     return OperationResult(
         success=True, message_key=success_message_key, message_args=message_args, user_settings=final_settings

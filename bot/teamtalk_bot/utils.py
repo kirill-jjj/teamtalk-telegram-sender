@@ -23,7 +23,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
-
 from bot.telegram_bot.utils import send_telegram_message_individual
 
 if TYPE_CHECKING:
