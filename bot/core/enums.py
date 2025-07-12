@@ -77,6 +77,7 @@ class SubscriberAction(str, Enum):
 
     DELETE = "delete"
     BAN = "ban"
+    UNBAN = "unban"
     MANAGE_TT_ACCOUNT = "manage_tt"
     ADMIN_SET_LANGUAGE = "admin_set_language"
     ADMIN_TOGGLE_NOON = "admin_toggle_noon"

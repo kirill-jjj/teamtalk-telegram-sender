@@ -19,6 +19,7 @@ from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
 
+from .callback_handlers.banned_user_actions import _show_banned_list_page
 from .callback_handlers.list_utils import _show_subscriber_list_page
 
 if TYPE_CHECKING:
@@ -118,4 +119,21 @@ async def subscribers_command_handler(
     """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(
         message, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=0
+    )
+
+
+@admin_router.message(Command("unban"))
+async def unban_command_handler(
+    message: Message,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+) -> None:
+    """Handles the /unban command for administrators."""
+    await _show_banned_list_page(
+        query=message,
+        session=cast(SQLModelAsyncSession, session),
+        services=services,
+        page=0,
+        translator=translator,
     )

@@ -8,6 +8,8 @@ from .callback_handlers.menu_callbacks import admin_menu_callback_router, menu_c
 from .callback_handlers.mute import mute_router
 from .callback_handlers.navigation import navigation_router
 from .callback_handlers.notifications import notifications_router
+from .callback_handlers.banned_user_actions import banned_user_actions_router
+from .callback_handlers.subscriber_actions import subscriber_actions_router
 from .callback_handlers.subscriber_list import subscriber_list_router
 from .callback_handlers.subscription import subscription_router
 
@@ -22,3 +24,5 @@ callback_router.include_router(notifications_router)
 callback_router.include_router(mute_router)
 callback_router.include_router(navigation_router)
 callback_router.include_router(subscriber_list_router)
+callback_router.include_router(subscriber_actions_router)
+callback_router.include_router(banned_user_actions_router)

@@ -26,6 +26,7 @@ __all__ = [
     "db_remove_generic",
     "delete_deeplink_by_token",
     "get_all_admins_ids",
+    "get_all_banned_users",
     "get_all_subscribers_ids",
     "get_ban_entries_for_teamtalk_username",
     "get_ban_entries_for_telegram_id",
@@ -33,6 +34,7 @@ __all__ = [
     "is_teamtalk_username_banned",
     "is_telegram_id_banned",
     "remove_admin_db",
+    "remove_ban_entries_for_telegram_id",
     "remove_from_ban_list_by_id",
 ]
 
@@ -336,3 +338,45 @@ async def get_ban_entries_for_teamtalk_username(session: AsyncSession, teamtalk_
     statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
     result = await session.exec(statement)
     return list(result.all())
+
+
+async def get_all_banned_users(session: AsyncSession) -> list[BanList]:
+    """Retrieves all entries from the ban list."""
+    statement = select(BanList)
+    result = await session.exec(statement)
+    return list(result.all())
+
+
+async def remove_ban_entries_for_telegram_id(session: AsyncSession, telegram_id: int) -> bool:
+    """Removes all ban entries for a given Telegram ID and associated TeamTalk usernames."""
+    try:
+        # First, find all entries for the given telegram_id to identify associated tt_usernames
+        user_settings = await session.get(UserSettings, telegram_id)
+        tt_username = user_settings.teamtalk_username if user_settings else None
+
+        # Collect all entries to be deleted
+        entries_to_delete = []
+
+        # Get bans by telegram_id
+        tg_ban_entries = await get_ban_entries_for_telegram_id(session, telegram_id)
+        entries_to_delete.extend(tg_ban_entries)
+
+        # Get bans by associated tt_username
+        if tt_username:
+            tt_ban_entries = await get_ban_entries_for_teamtalk_username(session, tt_username)
+            entries_to_delete.extend(tt_ban_entries)
+
+        if not entries_to_delete:
+            logger.info("No ban entries found for Telegram ID %s to remove.", telegram_id)
+            return True # No entries to delete is considered a success
+
+        for entry in set(entries_to_delete): # Use set to avoid duplicates
+            await session.delete(entry)
+
+        await session.commit()
+        logger.info("Successfully removed all ban entries for Telegram ID %s.", telegram_id)
+        return True
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.exception("Failed to remove ban entries for Telegram ID %s.", telegram_id)
+        return False

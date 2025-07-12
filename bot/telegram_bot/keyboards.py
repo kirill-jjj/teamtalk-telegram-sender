@@ -461,6 +461,50 @@ async def _create_generic_paginated_list_keyboard(
 # --- END NEW GENERIC PAGINATION HELPERS ---
 
 
+async def create_banned_user_list_keyboard(
+    translator: gettext.GNUTranslations,
+    page_items: list[SubscriberInfo],
+    current_page: int,
+    total_pages: int,
+) -> InlineKeyboardMarkup:
+    """Creates the keyboard for managing the banned user list."""
+    _ = translator.gettext
+
+    def banned_user_button_former(
+        user: SubscriberInfo, page_num: int, _translate: "Callable[[str], str]"
+    ) -> list[InlineKeyboardButton]:
+        user_info_parts = [user.display_name]
+        if user.teamtalk_username:
+            user_info_parts.append(f"TT: {html.escape(user.teamtalk_username)}")
+
+        button_text = ", ".join(user_info_parts)
+
+        return [
+            InlineKeyboardButton(
+                text=button_text,
+                callback_data=ViewSubscriberCallback(telegram_id=user.telegram_id, page=page_num).pack(),
+            ),
+            InlineKeyboardButton(
+                text=_("✅ Unban"),
+                callback_data=SubscriberActionCallback(
+                    action=SubscriberAction.UNBAN, target_telegram_id=user.telegram_id, page=page_num
+                ).pack(),
+            ),
+        ]
+
+    pagination_kwargs = {"action": SubscriberListAction.PAGE}
+
+    return await _create_generic_paginated_list_keyboard(
+        translator=translator,
+        page_items=page_items,
+        current_page=current_page,
+        total_pages=total_pages,
+        item_button_former=banned_user_button_former,
+        pagination_callback_factory=SubscriberListCallback,
+        pagination_factory_kwargs=pagination_kwargs,
+    )
+
+
 async def create_subscriber_list_keyboard(
     translator: gettext.GNUTranslations,
     page_items: list[SubscriberInfo],
@@ -526,6 +570,7 @@ async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_a
     if is_admin:
         builder.button(text=_("👢 Kick User"), callback_data=MenuCallback(command="kick").pack())
         builder.button(text=_("🚫 Ban User"), callback_data=MenuCallback(command="ban").pack())
+        builder.button(text=_("✅ Unban User"), callback_data=MenuCallback(command="unban").pack())
         builder.button(text=_("👥 Subscribers"), callback_data=MenuCallback(command="subscribers").pack())
     builder.adjust(1)
     return builder

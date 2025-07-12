@@ -556,6 +556,26 @@ async def admin_link_tt_account(
     )
 
 
+async def unban_subscriber(
+    session: AsyncSession,
+    target_telegram_id: int,
+    translator: "gettext.GNUTranslations",
+) -> str:
+    """Unbans a subscriber by removing all their ban entries."""
+    _ = translator.gettext
+    try:
+        success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
+        if success:
+            logger.info("Successfully unbanned user %s.", target_telegram_id)
+            return _("User {telegram_id} has been unbanned.").format(telegram_id=target_telegram_id)
+        else:
+            logger.error("Failed to unban user %s in DB.", target_telegram_id)
+            return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
+    except Exception:
+        logger.exception("An unexpected error occurred while unbanning user %s.", target_telegram_id)
+        return _("An unexpected error occurred while unbanning user {telegram_id}.").format(telegram_id=target_telegram_id)
+
+
 async def admin_set_user_language(
     session: AsyncSession,
     services: "Services",
