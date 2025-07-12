@@ -1,12 +1,13 @@
 """Provides a container for managing application-wide services and dependencies."""
 
+import asyncio
 import gettext
 from gettext import GNUTranslations, NullTranslations
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiogram import Bot
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 import pytalk
@@ -17,10 +18,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.core.languages import LanguageInfo, discover_languages
+from bot.database import crud
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
+from bot.services import admin_service
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.telegram_bot.commands import set_telegram_commands as set_telegram_commands_for_bot
 
 if TYPE_CHECKING:
     pass  # Forward reference for selectinload, though might not be needed with plugin
@@ -195,3 +199,66 @@ class Services:
             self.logger.info(
                 "Available languages loaded into services: %s", [lang["code"] for lang in self.available_languages]
             )
+
+    async def init_teamtalk(self, dispatcher: Dispatcher) -> None:
+        """Initializes and starts the TeamTalk bot main event loop."""
+        self.logger.info("Initializing TeamTalk components...")
+        teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
+        if teamtalk_task is None or teamtalk_task.done():
+            await self.tt_bot._async_setup_hook()
+            task_name = "teamtalk_bot_task_dispatcher"
+            teamtalk_task = asyncio.create_task(self.tt_bot._start(), name=task_name)
+            dispatcher.workflow_data["teamtalk_task"] = teamtalk_task
+            self.logger.info("Pytalk main event loop task started as '%s'.", task_name)
+        else:
+            self.logger.info("Pytalk main event loop task is already running.")
+
+    async def load_all_caches(self) -> None:
+        """Loads admins, subscribers, and user settings from DB into cache."""
+        self.logger.info("Loading all caches from database...")
+        async with self.session_factory() as session:
+            # Load admins
+            db_admin_ids = await crud.get_all_admins_ids(session)
+            self.cache.load_admins_from_db(db_admin_ids)
+            # Load subscribers
+            db_subscriber_ids = await crud.get_all_subscribers_ids(session)
+            self.cache.load_subscribers_from_db(db_subscriber_ids)
+        # Load user settings
+        await self.load_user_settings_to_app_cache()
+        self.logger.info("All caches have been loaded.")
+
+    async def ensure_main_admin(self) -> None:
+        """Ensures the admin from config is present in the database and cache."""
+        tg_admin_chat_id = self.config.telegram.admin_chat_id
+        if not tg_admin_chat_id:
+            self.logger.info("No main admin configured, skipping.")
+            return
+
+        if self.cache.is_admin(tg_admin_chat_id):
+            self.logger.debug("Main admin %s already in cache.", tg_admin_chat_id)
+            return
+
+        self.logger.info("Configured admin %s not found in cache, ensuring presence.", tg_admin_chat_id)
+        async with self.session_factory() as session:
+            user_settings = await self.get_or_create_user_settings(tg_admin_chat_id, session)
+            if not user_settings:
+                self.logger.error("Failed to get/create settings for admin %s.", tg_admin_chat_id)
+                return
+
+            # Assuming admin_service.add_admin_full handles all logic including cache update
+            added = await admin_service.add_admin_full(
+                session=session,
+                telegram_id=tg_admin_chat_id,
+                user_settings=user_settings,
+                services=self,
+            )
+            if added:
+                self.logger.info("Main admin %s added successfully.", tg_admin_chat_id)
+            else:
+                self.logger.error("Failed to add main admin %s.", tg_admin_chat_id)
+
+    async def set_telegram_commands(self) -> None:
+        """Sets the bot commands in Telegram."""
+        self.logger.info("Setting Telegram bot commands...")
+        await set_telegram_commands_for_bot(services=self)
+        self.logger.info("Telegram bot commands set.")

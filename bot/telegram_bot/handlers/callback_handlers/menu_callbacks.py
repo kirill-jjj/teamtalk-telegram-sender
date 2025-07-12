@@ -153,8 +153,8 @@ async def menu_unban_handler(
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
-        target=query.message,
-        session=session,
+        target=query.message,  # type: ignore[arg-type]
+        session=session,  # type: ignore[arg-type]
         services=services,
         page=0,
         translator=translator,

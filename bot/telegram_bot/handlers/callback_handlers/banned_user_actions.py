@@ -51,7 +51,9 @@ async def handle_unban_subscriber(
         session, services, tt_connection, target_telegram_id, translator
     )
     await query.answer(result_message, show_alert=True)
-    await _show_banned_list_page(target=query, session=session, services=services, page=return_page, translator=translator)
+    await _show_banned_list_page(
+        target=query, session=session, services=services, page=return_page, translator=translator
+    )
 
 
 async def _show_banned_list_page(

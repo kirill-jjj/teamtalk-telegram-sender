@@ -11,9 +11,6 @@ from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 
 from bot.config import Settings
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
-from bot.database import crud
-from bot.services import admin_service
-from bot.telegram_bot.commands import set_telegram_commands
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
 from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
@@ -40,87 +37,25 @@ if TYPE_CHECKING:
 
 
 # --- Application Lifecycle and Error Handling Functions ---
-async def on_startup_logic(dispatcher: Dispatcher, services: "Services", app_config: "Settings") -> None:
-    """Internal logic for startup."""
+async def on_startup_logic(dispatcher: Dispatcher, services: "Services") -> None:
+    """Orchestrates the application's startup sequence."""
     logger = services.logger
-    logger.info("Application startup: Initializing TeamTalk components...")
+    logger.info("Application startup...")
 
-    teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
-    if teamtalk_task is None or teamtalk_task.done():
-        await services.tt_bot._async_setup_hook()  # Pytalk's internal setup
-        teamtalk_task = asyncio.create_task(services.tt_bot._start(), name="teamtalk_bot_task_dispatcher")
-        dispatcher.workflow_data["teamtalk_task"] = teamtalk_task
-        logger.info("Pytalk main event loop task started.")
-    else:
-        logger.info("Pytalk main event loop task already running.")
+    # Initialize TeamTalk bot connection
+    await services.init_teamtalk(dispatcher)
 
-    async with services.session_factory() as session:
-        db_admin_ids = await crud.get_all_admins_ids(session)
-        services.cache.load_admins_from_db(db_admin_ids)  # Use CacheService
+    # Load all necessary data from the database into the cache
+    await services.load_all_caches()
 
-        db_subscriber_ids = await crud.get_all_subscribers_ids(session)
-        services.cache.load_subscribers_from_db(db_subscriber_ids)  # Use CacheService
+    # Ensure the main admin from the config is set up
+    await services.ensure_main_admin()
 
-    # load_user_settings_to_app_cache will be modified in services_container.py to use CacheService
-    await services.load_user_settings_to_app_cache()
+    # Set the bot's commands in Telegram
+    await services.set_telegram_commands()
 
-    tg_admin_chat_id = app_config.telegram.admin_chat_id
-    if tg_admin_chat_id:
-        if not services.cache.is_admin(tg_admin_chat_id):
-            logger.info("Admin ID %s from config is not yet an admin. Attempting to add.", tg_admin_chat_id)
-            async with services.session_factory() as session:
-                # Ensure user settings exist for the admin, as add_admin_full requires them
-                # to update bot commands correctly.
-                user_settings = services.cache.get_user_settings(tg_admin_chat_id)
-                if not user_settings:
-                    logger.info(
-                        "User settings not found in cache for admin %s. Fetching or creating.",
-                        tg_admin_chat_id,
-                    )
-                    # get_or_create_user_settings is a method of the Services container
-                    # and handles session commit and cache update internally.
-                    user_settings = await services.get_or_create_user_settings(
-                        telegram_id=tg_admin_chat_id, session=session
-                    )
-
-                # Proceed only if user_settings are available
-                if not user_settings:
-                    logger.error(
-                        "Failed to get/create settings for admin %s. Cannot add fully or update commands.",
-                        tg_admin_chat_id,
-                    )
-                else:
-                    logger.info(
-                        "User settings obtained for admin %s. Proceeding with add_admin_full.",
-                        tg_admin_chat_id,
-                    )
-                    # admin_service module is imported directly
-                    added_successfully = await admin_service.add_admin_full(
-                        session=session,
-                        telegram_id=tg_admin_chat_id,
-                        user_settings=user_settings,
-                        services=services,
-                    )
-                    if added_successfully:
-                        logger.info(
-                            "Admin ID %s from config added successfully via admin_service.add_admin_full.",
-                            tg_admin_chat_id,
-                        )
-                    else:
-                        logger.error(
-                            "Failed to add admin ID %s from config using admin_service.add_admin_full.",
-                            tg_admin_chat_id,
-                        )
-        else:
-            logger.debug("Admin ID %s from config already in admin cache.", tg_admin_chat_id)
-    else:
-        logger.info("telegram.admin_chat_id is 0 or not configured to be added as main admin.")
-
-    logger.info("Final admin_ids_cache count after startup: %s.", services.cache.get_admin_count())
-    logger.debug("Final admin_ids_cache state after startup: %s", services.cache.get_all_admin_ids())
-
-    await set_telegram_commands(services=services)
-    logger.info("Telegram bot commands set.")
+    logger.info("Final admin count after startup: %s", services.cache.get_admin_count())
+    logger.info("Application startup sequence complete.")
 
 
 async def on_shutdown_logic(dispatcher: Dispatcher, services: "Services") -> None:
@@ -262,7 +197,7 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     # Register lifecycle hooks and error handler using new local functions
     # services.config is passed as app_config
     app_config = services.config
-    dp.startup.register(partial(on_startup_logic, services=services, app_config=app_config))
+    dp.startup.register(partial(on_startup_logic, services=services))
     dp.shutdown.register(partial(on_shutdown_logic, services=services))
     dp.errors.register(partial(global_error_handler, services=services, app_config=app_config))
 

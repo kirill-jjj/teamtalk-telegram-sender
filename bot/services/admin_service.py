@@ -192,7 +192,9 @@ async def _unban_teamtalk_user_on_server(
 ) -> bool:
     """Attempts a conceptual unban on the TeamTalk server. Currently logs only."""
     if not tt_username:
-        logger.debug("No TeamTalk username provided to _unban_teamtalk_user_on_server for TG ID %s.", target_telegram_id)
+        logger.debug(
+            "No TeamTalk username for _unban_teamtalk_user_on_server, TG ID %s.", target_telegram_id
+        )
         return True
 
     if tt_connection and tt_connection.instance and tt_connection.is_ready:
@@ -626,9 +628,8 @@ async def unban_subscriber(
         if db_unban_success and tt_unban_success:
             logger.info("Successfully unbanned user %s.", target_telegram_id)
             return _("User {telegram_id} has been unbanned.").format(telegram_id=target_telegram_id)
-        else:
-            logger.error("Failed to unban user %s.", target_telegram_id)
-            return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
+        logger.error("Failed to unban user %s.", target_telegram_id)
+        return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
     except Exception:
         logger.exception("An unexpected error occurred while unbanning user %s.", target_telegram_id)
         return _("An unexpected error occurred while unbanning user {telegram_id}.").format(
