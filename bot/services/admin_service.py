@@ -248,7 +248,7 @@ async def ban_and_delete_subscriber(
     tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
     translator: "gettext.GNUTranslations",
-) -> str:
+) -> tuple[str, str]:
     """Orchestrates banning, deleting a subscriber, and returns a formatted status message."""
     ban_statuses = {
         "telegram_ban": False,
@@ -329,75 +329,65 @@ def _format_ban_delete_result_message(  # noqa: PLR0912
     tt_db_banned: bool,
     tt_server_banned: bool,
     profile_deleted: bool,
-) -> str:
+) -> tuple[str, str]:
     """Formats a consolidated message based on the outcomes of ban and delete operations."""
     _ = translator.gettext
     parts = []
+    short_message = ""
 
     if tg_banned:
-        parts.append(_("Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id))
+        parts.append(_("✅ Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id))
     else:
-        parts.append(_("Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id))
+        parts.append(_("❌ Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id))
 
     if tt_username:
         if tt_db_banned:
             parts.append(
-                _("TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
+                _("✅ TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
             )
         else:
             parts.append(
-                _("Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
+                _("❌ Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
             )
 
         if tt_server_banned:
             parts.append(
-                _("Conceptual TeamTalk server ban for {tt_username} was processed.").format(
+                _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(
                     tt_username=tt_username
                 )
             )
         else:
             parts.append(
-                _("Conceptual TeamTalk server ban for {tt_username} encountered an issue.").format(
+                _("⚠️ Conceptual TeamTalk server ban for {tt_username} encountered an issue.").format(
                     tt_username=tt_username
                 )
             )
     else:
-        parts.append(_("No TeamTalk username was linked; TeamTalk ban steps skipped."))
+        parts.append(_("ℹ️ No TeamTalk username was linked; TeamTalk ban steps skipped."))
 
     if tg_banned:
         if profile_deleted:
-            parts.append(_("User profile and data have been deleted."))
+            parts.append(_("✅ User profile and data have been deleted."))
         else:
-            parts.append(_("Failed to delete user profile and data after banning."))
+            parts.append(_("❌ Failed to delete user profile and data after banning."))
     else:
-        parts.append(_("User profile deletion was skipped due to Telegram ban failure."))
+        parts.append(_("ℹ️ User profile deletion was skipped due to Telegram ban failure."))
 
-    if tg_banned:
-        fully_successful = True
-        if tt_username and not tt_db_banned:
-            fully_successful = False
-        if not profile_deleted:
-            fully_successful = False
+    fully_successful = tg_banned and (tt_db_banned if tt_username else True) and profile_deleted
 
-        if fully_successful:
-            final_message = _("User {telegram_id} fully banned and data deleted.").format(
-                telegram_id=telegram_id
-            )
-            if tt_username:
-                final_message += _(" (TeamTalk: {tt_username})").format(tt_username=tt_username)
-            final_message += "\n\n" + "\n".join(parts)
-        else:
-            final_message = _(
-                "User {telegram_id} processing completed with partial success:"
-            ).format(telegram_id=telegram_id)
-            final_message += "\n\n" + "\n".join(parts)
+    if fully_successful:
+        short_message = _("User {telegram_id} banned successfully.").format(telegram_id=telegram_id)
+        if tt_username:
+            short_message += _(" TT: {tt_username}").format(tt_username=tt_username)
+    elif tg_banned:
+        short_message = _("Partial success banning user {telegram_id}. Check details.").format(telegram_id=telegram_id)
     else:
-        final_message = _(
-            "CRITICAL: Failed to ban Telegram ID {telegram_id}. Dependent operations skipped or failed."
-        ).format(telegram_id=telegram_id)
-        final_message += "\n\n" + "\n".join(parts)
+        short_message = _("CRITICAL: Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id)
 
-    return final_message
+    long_message_header = _("Banning process report for user {telegram_id}:").format(telegram_id=telegram_id)
+    long_message = f"{long_message_header}\n\n" + "\n".join(parts)
+
+    return short_message, long_message
 
 
 async def admin_toggle_noon_setting(

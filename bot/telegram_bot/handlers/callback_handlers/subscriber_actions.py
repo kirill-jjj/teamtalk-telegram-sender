@@ -104,19 +104,20 @@ async def handle_ban_subscriber(
     tt_connection: TeamTalkConnection | None,
 ) -> None:
     """Handles banning a subscriber."""
-    _ = translator.gettext
+    # The ensure_message_context decorator guarantees query.message is not None.
+    message = cast(Message, query.message)
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    # The service function now returns a single, pre-formatted, translated string.
-    final_alert_message = await admin_service.ban_and_delete_subscriber(
+    short_alert_message, long_report_message = await admin_service.ban_and_delete_subscriber(
         session, services, tt_connection, target_telegram_id, translator
     )
 
-    # The returned message is comprehensive, so we can show it directly.
-    # It might be long for a toast notification, but for a critical action like ban,
-    # show_alert=True is appropriate.
-    await query.answer(final_alert_message, show_alert=True)
+    # Show a concise message in the alert popup.
+    await query.answer(short_alert_message, show_alert=True)
+
+    # Post the detailed report as a new message in the chat for the admin to review.
+    await message.answer(long_report_message)
 
     # After banning and deleting, refresh the subscriber list to show the user is gone.
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
