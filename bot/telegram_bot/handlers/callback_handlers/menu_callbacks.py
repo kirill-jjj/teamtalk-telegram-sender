@@ -20,6 +20,7 @@ from ...middlewares.admin_check import AdminCheckMiddleware
 from ..admin import _show_user_buttons
 from ..user import help_command_handler, settings_command_handler, who_command_handler
 from ._helpers import ensure_message_context
+from .banned_user_actions import _show_banned_list_page
 from .list_utils import _show_subscriber_list_page
 
 if TYPE_CHECKING:
@@ -138,4 +139,24 @@ async def menu_subscribers_handler(
     """Handles the 'Subscribers' admin menu button click."""
     # Ensure query.message exists
     await _show_subscriber_list_page(query.message, session, services.bot_event, translator, page=0)  # type: ignore
+    await query.answer()
+
+
+@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "unban"))
+@ensure_message_context
+async def menu_unban_handler(
+    query: CallbackQuery,
+    callback_data: MenuCallback,
+    session: AsyncSession,
+    translator: "gettext.GNUTranslations",
+    services: "Services",
+) -> None:
+    """Handles the 'Unban User' admin menu button click."""
+    await _show_banned_list_page(
+        target=query.message,
+        session=session,
+        services=services,
+        page=0,
+        translator=translator,
+    )
     await query.answer()

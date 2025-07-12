@@ -368,9 +368,10 @@ async def remove_ban_entries_for_telegram_id(session: AsyncSession, telegram_id:
 
         if not entries_to_delete:
             logger.info("No ban entries found for Telegram ID %s to remove.", telegram_id)
-            return True # No entries to delete is considered a success
+            return True  # No entries to delete is considered a success
 
-        for entry in set(entries_to_delete): # Use set to avoid duplicates
+        unique_entries = {entry.id: entry for entry in entries_to_delete}.values()
+        for entry in unique_entries:
             await session.delete(entry)
 
         await session.commit()
