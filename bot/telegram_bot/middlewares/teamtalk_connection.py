@@ -130,7 +130,8 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
         if not tt_connection:
             error_message_text = _("TeamTalk service is currently unavailable. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
-            user_id_info = data.get("event_from_user", {}).get("id", "Unknown User")
+            user = data.get("event_from_user")
+            user_id_info = user.id if user else "Unknown User"
             logger.warning(
                 "TeamTalkConnectionCheckMiddleware: Blocked access for user %s due to no "
                 "TeamTalkConnection object in context. Event type: %s",
@@ -142,7 +143,8 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
         if not tt_connection.is_ready or not tt_connection.is_finalized:
             error_message_text = _("TeamTalk bot is not connected or not fully initialized. Please try again later.")
             await _send_error_response(event, error_message_text, show_alert_for_callback=True)
-            user_id_info = data.get("event_from_user", {}).get("id", "Unknown User")
+            user = data.get("event_from_user")
+            user_id_info = user.id if user else "Unknown User"
             logger.warning(
                 "TeamTalkConnectionCheckMiddleware: Blocked access for user %s for server %s "
                 "due to TeamTalk not being ready (connected: %s, logged_in: %s, finalized: %s). Event type: %s",
