@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Chat
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -30,61 +31,50 @@ SUBSCRIBERS_PER_PAGE = 10
 
 
 async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[SubscriberInfo]:
-    """Fetches all subscriber IDs, gets their details, and returns a list of all subscribers.
-
-    Returns:
-        A list of SubscriberInfo objects for all subscribers, sorted by display name.
-    """
+    """Fetches subscriber details using TaskGroup for robust concurrent fetching."""
     all_subscriber_ids = await get_all_subscribers_ids(session)
     if not all_subscriber_ids:
-        return []  # Returns empty list, matching the type hint
+        return []
 
-    # Fetch all chat info and user settings in batches
-    # For UserSettings
     user_settings_list = (
         await session.exec(select(UserSettings).where(UserSettings.telegram_id.in_(all_subscriber_ids)))  # type: ignore[attr-defined]
     ).all()
     user_settings_map = {us.telegram_id: us for us in user_settings_list}
 
-    # For Chat info (Telegram display names)
-    # Consider doing this in chunks if all_subscriber_ids can be very large,
-    # to avoid hitting API limits or creating too many concurrent tasks.
-    # For now, let's assume the number of subscribers is manageable for asyncio.gather.
-    chat_info_tasks = [bot.get_chat(tg_id) for tg_id in all_subscriber_ids]
-    chat_results = await asyncio.gather(*chat_info_tasks, return_exceptions=True)
+    chat_info_map: dict[int, asyncio.Task[Chat]] = {}
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for tg_id in all_subscriber_ids:
+                task = tg.create_task(bot.get_chat(tg_id))
+                chat_info_map[tg_id] = task
+    except* TelegramAPIError as eg:
+        for error in eg.exceptions:
+            logger.exception("Could not fetch chat info for a user: %s", error)
 
     all_subscribers_info = []
-    for i, telegram_id in enumerate(all_subscriber_ids):
-        display_name = str(telegram_id)  # Default display name
+    for telegram_id in all_subscriber_ids:
+        display_name = str(telegram_id)
+        chat_task: asyncio.Task[Chat] | None = chat_info_map.get(telegram_id)
 
-        chat_result = chat_results[i]
-        if isinstance(chat_result, Exception):
-            logger.error("Could not fetch chat info for Telegram ID %s: %s", telegram_id, chat_result)
-        # Make sure chat_result is indeed a Chat object
-        elif isinstance(chat_result, Chat):
-            display_name = format_telegram_user_display_name(chat_result)
-        else:
-            logger.error("Unexpected type for chat_result for ID %s: %s", telegram_id, type(chat_result))
-
-        tt_username: str | None = None
-        user_setting = user_settings_map.get(telegram_id)
-        if user_setting:
-            tt_username = user_setting.teamtalk_username
-        else:
-            # This case might occur if a user unsubscribed between get_all_subscribers_ids and here,
-            # or if there's a data consistency issue.
-            logger.warning(
-                "Could not find user settings in batch for Telegram ID %s during subscriber list generation.",
-                telegram_id,
+        if chat_task and chat_task.done() and not chat_task.cancelled() and not chat_task.exception():
+            chat_result = chat_task.result()
+            if isinstance(chat_result, Chat):
+                display_name = format_telegram_user_display_name(chat_result)
+        elif chat_task and chat_task.exception():
+            logger.error(
+                "Failed to get chat info for TG ID %s due to an exception: %s", telegram_id, chat_task.exception()
             )
 
+        tt_username = user_settings_map.get(telegram_id)
         all_subscribers_info.append(
-            SubscriberInfo(telegram_id=telegram_id, display_name=display_name, teamtalk_username=tt_username)
+            SubscriberInfo(
+                telegram_id=telegram_id,
+                display_name=display_name,
+                teamtalk_username=tt_username.teamtalk_username if tt_username else None,
+            )
         )
 
-    # Sorting by display name (case-insensitive)
     all_subscribers_info.sort(key=lambda sub: sub.display_name.lower())
-
     return all_subscribers_info
 
 

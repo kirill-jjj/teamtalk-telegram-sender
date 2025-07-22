@@ -146,47 +146,44 @@ async def send_telegram_messages_to_list(
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None] | None = None,
 ) -> None:
-    """Sends localized messages to a list of recipients with their language codes.
-
-    Args:
-        bot_instance_to_use: The Aiogram Bot instance for sending messages.
-        recipients_with_lang: A list of tuples, each containing (chat_id, language_code).
-        text_generator: A callable that takes a language code and returns the message text.
-        services: The application's services container.
-        online_users_cache_for_instance: Optional cache of online TeamTalk users for NOON check.
-        reply_markup_generator: Optional callable that takes lang_code and chat_id
-                                and returns an InlineKeyboardMarkup.
-    """
+    """Sends localized messages to a list of recipients using a TaskGroup for robustness."""
     if not bot_instance_to_use:
         logger.error("No Telegram bot instance provided to send_telegram_messages_to_list.")
         return
 
-    tasks_list = []
-    for chat_id, lang_code in recipients_with_lang:
-        language_code = lang_code or DEFAULT_LANGUAGE
-        text = text_generator(language_code)
-        current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for chat_id, lang_code in recipients_with_lang:
+                language_code = lang_code or DEFAULT_LANGUAGE
+                text = text_generator(language_code)
+                current_reply_markup = (
+                    reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
+                )
 
-        # This part still needs the user_settings for the teamtalk_username
-        user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
-        individual_tt_user_is_online = False
-        if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
-            for tt_user_obj in online_users_cache_for_instance.values():
-                if ttstr(tt_user_obj.username) == user_settings.teamtalk_username:
-                    individual_tt_user_is_online = True
-                    break
+                user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
+                individual_tt_user_is_online = False
+                if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
+                    individual_tt_user_is_online = any(
+                        ttstr(tt_user_obj.username) == user_settings.teamtalk_username
+                        for tt_user_obj in online_users_cache_for_instance.values()
+                    )
 
-        tasks_list.append(
-            send_telegram_message_individual(
-                bot_instance=bot_instance_to_use,
-                chat_id=chat_id,
-                reply_markup=current_reply_markup,
-                tt_user_is_online=individual_tt_user_is_online,
-                services=services,
-                text=text,
-            )
-        )
-    await asyncio.gather(*tasks_list)
+                tg.create_task(
+                    send_telegram_message_individual(
+                        bot_instance=bot_instance_to_use,
+                        chat_id=chat_id,
+                        reply_markup=current_reply_markup,
+                        tt_user_is_online=individual_tt_user_is_online,
+                        services=services,
+                        text=text,
+                    )
+                )
+    except* TelegramAPIError as eg:
+        logger.warning("Some messages failed to send. Total errors: %d", len(eg.exceptions))
+        for error in eg.exceptions:
+            # The individual error handler is already called inside send_telegram_message_individual
+            # So we just log the summary here.
+            logger.debug("Failed to send a message (handled individually): %s", error)
 
 
 def format_telegram_user_display_name(chat: Chat | None) -> str:
