@@ -188,10 +188,8 @@ async def handle_manage_tt_account(
 async def handle_admin_set_language_choice(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
-    session: AsyncSession,  # Unused in this handler
     translator: gettext.GNUTranslations,
     services: "Services",
-    tt_connection: TeamTalkConnection | None,  # Unused in this handler
 ) -> None:
     """Shows language selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -271,8 +269,6 @@ async def handle_admin_set_notif_pref_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # Unused in this handler
-    tt_connection: TeamTalkConnection | None,  # Unused in this handler
 ) -> None:
     """Shows notification preference selection menu for a subscriber to an admin."""
     _ = translator.gettext
@@ -307,8 +303,6 @@ async def handle_admin_set_mute_mode_choice(
     callback_data: SubscriberActionCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # Unused in this handler
-    tt_connection: TeamTalkConnection | None,  # Unused in this handler
 ) -> None:
     """Shows mute mode selection menu for a subscriber to an admin."""
     _ = translator.gettext
