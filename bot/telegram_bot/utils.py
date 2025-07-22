@@ -27,10 +27,8 @@ ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(  # noqa: PLR0912
-    error: TelegramAPIError, chat_id: int, services: "Services"
-) -> None:
-    """Handles specific Telegram API errors."""
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, services: "Services") -> None:
+    """Handles specific Telegram API errors using structural pattern matching."""
     if not services:
         logger.error(
             "Telegram API error for chat_id %s but services context was missing for full cleanup: %s",
@@ -39,8 +37,10 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
         )
         return
 
-    if isinstance(error, TelegramForbiddenError):
-        if "bot was blocked by the user" in str(error).lower() or "user is deactivated" in str(error).lower():
+    logger.debug("Handling Telegram API error '%s' for chat_id %d", type(error).__name__, chat_id)
+
+    match error:
+        case TelegramForbiddenError() if "bot was blocked" in str(error) or "user is deactivated" in str(error):
             logger.warning("User %s blocked the bot or is deactivated. Deleting all user data...", chat_id)
             try:
                 async with services.session_factory() as session:
@@ -53,16 +53,9 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
                     )
             except SQLAlchemyError:
                 logger.exception("Failed to delete data for blocked/deactivated user %s from DB.", chat_id)
-        else:
-            logger.error("Telegram API Forbidden error for chat_id %s: %s", chat_id, error)
 
-    elif isinstance(error, TelegramBadRequest):
-        if "chat not found" in str(error).lower():
-            logger.warning(
-                "Chat not found for TG ID %s. Assuming user is gone. Deleting all user data. Error: %s",
-                chat_id,
-                error,
-            )
+        case TelegramBadRequest() if "chat not found" in str(error):
+            logger.warning("Chat not found for TG ID %s. Deleting all user data. Error: %s", chat_id, error)
             try:
                 async with services.session_factory() as session:
                     delete_success = await user_service.delete_full_user_profile(session, chat_id, services=services)
@@ -71,15 +64,13 @@ async def _handle_telegram_api_error(  # noqa: PLR0912
                 else:
                     logger.error("Failed to delete all data for TG ID %s after chat not found.", chat_id)
             except SQLAlchemyError:
-                logger.exception(
-                    "Exception during full data cleanup for TG ID %s (chat not found).",
-                    chat_id,
-                )
-        else:
-            logger.error("Telegram API BadRequest (non 'chat not found') for chat_id %s: %s", chat_id, error)
+                logger.exception("Exception during full data cleanup for TG ID %s (chat not found).", chat_id)
 
-    elif isinstance(error, TelegramAPIError):
-        logger.error("Unhandled Telegram API error for chat_id %s: %s", chat_id, error)
+        case TelegramForbiddenError() | TelegramBadRequest():
+            logger.error("Unhandled Telegram Forbidden/Bad Request error for chat_id %s: %s", chat_id, error)
+
+        case TelegramAPIError():
+            logger.error("Unhandled Telegram API error for chat_id %s: %s", chat_id, error)
 
 
 def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "Services") -> bool:
