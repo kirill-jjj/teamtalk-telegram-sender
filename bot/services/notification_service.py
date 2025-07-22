@@ -38,50 +38,37 @@ async def is_linked_user_online(
 
 
 async def filter_recipients_for_noon(
-    recipients: list[int],
+    recipients_data: list[tuple[int, bool, bool]],
     event_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,
     online_users_cache: dict[int, TeamTalkUser],
     services: "Services",
 ) -> list[int]:
-    """Filters recipients based on Not on Online (NOON) logic."""
+    """Filters recipients based on Not on Online (NOON) logic using pre-fetched data."""
     final_recipients = []
     event_user_username = ttstr(event_user.username)
 
-    for tg_user_id in recipients:
-        user_settings = services.cache.get_user_settings(tg_user_id)
-
-        if not is_user_subject_to_noon_check(user_settings):
+    for tg_user_id, noon_enabled, noon_confirmed in recipients_data:
+        # The check is now done with the data passed directly, not from cache
+        if not (noon_enabled and noon_confirmed):
             final_recipients.append(tg_user_id)
             continue
 
-        # User has NOON enabled, now check if their linked TT user is online
-        # This check was previously part of _should_send_silently but is more comprehensive here
-        # when deciding *not* to send a notification.
-        # _should_send_silently is about making a message silent if user is online.
-        # This filtering is about *not sending at all* under certain NOON conditions.
-
-        # If the event user is the bot itself, NOON logic for "only one user online" doesn't apply.
+        # The rest of the NOON logic remains the same
         if event_user.id == tt_instance.getMyUserID():
             final_recipients.append(tg_user_id)
             continue
 
-        # Check if the event user is the configured admin_username (exempt from "only one online" rule for others)
         is_event_user_tt_admin = (
             services.config.general.admin_username and event_user_username == services.config.general.admin_username
         )
 
         if not is_event_user_tt_admin:
-            # Check if the event_user is the *only* other user online (besides the bot itself)
-            # in the instance where the event occurred.
-            # If so, and the recipient has NOON enabled, they might not want a notification.
-            other_users_online_in_instance_count = 0
-            for online_user_id_in_instance in online_users_cache:
-                if online_user_id_in_instance != tt_instance.getMyUserID():
-                    other_users_online_in_instance_count += 1
+            other_users_online_in_instance_count = sum(
+                1 for user_id in online_users_cache if user_id != tt_instance.getMyUserID()
+            )
 
-            # If the event user is the only one online (excluding the bot)
-            if other_users_online_in_instance_count == 1 and online_users_cache.get(event_user.id):
+            if other_users_online_in_instance_count == 1 and event_user.id in online_users_cache:
                 logger.debug(
                     "NOON: Event user %s is the only one online (besides bot) for TG user %s "
                     "on server %s. Skipping notification for this recipient.",

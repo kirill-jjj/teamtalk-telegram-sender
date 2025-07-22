@@ -76,20 +76,24 @@ async def _get_recipients_for_notification(
         return []
 
     async with session_factory() as session:
-        # Base query
-        stmt = select(UserSettings.telegram_id)
+        # Base query now includes NOON flags for initial filtering
+        stmt = select(
+            UserSettings.telegram_id,
+            UserSettings.not_on_online_enabled,
+            UserSettings.not_on_online_confirmed,
+        )
 
-        # LEFT JOIN to MutedUser, incorporating username_to_check in the ON clause
+        # LEFT JOIN to MutedUser for mute list checks
         stmt = stmt.join(
             MutedUser,
             and_(
                 UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
                 MutedUser.muted_teamtalk_username == username_to_check,
             ),
-            isouter=True,  # Ensures it's a LEFT JOIN
+            isouter=True,
         )
 
-        # Base filters
+        # Core filters for subscription and notification settings
         filters = [
             UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
             UserSettings.notification_settings != NotificationSetting.NONE,
@@ -99,13 +103,9 @@ async def _get_recipients_for_notification(
         elif event_type == NOTIFICATION_EVENT_LEAVE:
             filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
-        # Mute logic based on JOIN result
+        # Mute logic based on the JOIN result
         mute_logic = or_(
-            # Blacklist: User gets notification if their mode is blacklist AND
-            #            there's NO corresponding MutedUser entry for username_to_check (MutedUser.id IS NULL).
             and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
-            # Whitelist: User gets notification if their mode is whitelist AND
-            #            there IS a corresponding MutedUser entry for username_to_check (MutedUser.id IS NOT NULL).
             and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
         )
         filters.append(mute_logic)  # type: ignore[arg-type]
@@ -113,7 +113,18 @@ async def _get_recipients_for_notification(
         stmt = stmt.where(and_(*filters))
 
         result = await session.execute(stmt)
-        return cast(list[int], result.scalars().all())
+        recipients_data = cast(list[tuple[int, bool, bool]], result.all())
+
+    # After fetching, filter for NOON logic in Python
+    # This separation keeps the SQL query cleaner and delegates the final check
+    # to a dedicated Python-side filtering function.
+    return await notification_service.filter_recipients_for_noon(
+        recipients_data=recipients_data,
+        event_user=services.tt_user,  # type: ignore # This needs to be passed in
+        tt_instance=services.tt_instance,  # type: ignore # This needs to be passed in
+        online_users_cache=services.online_users_cache,  # type: ignore # This needs to be passed in
+        services=services,
+    )
 
 
 def _generate_join_leave_notification_text(
@@ -185,42 +196,21 @@ async def send_join_leave_notification_logic(
         )
         return
 
-    recipients = await _get_recipients_for_notification(
+    # Pass all necessary context for NOON filtering down to the core recipient getter
+    services.tt_user = tt_user
+    services.tt_instance = tt_instance
+    services.online_users_cache = online_users_cache_for_instance
+
+    final_recipients = await _get_recipients_for_notification(
         username_to_check=user_username,
         event_type=event_type,
         session_factory=services.session_factory,
         services=services,
     )
 
-    if not recipients:
-        logger.debug(
-            "No recipients found for %s event for user %s on server %s.",
-            event_type,
-            user_username,
-            tt_instance.server_info.host,
-        )
-        return
-
-    logger.info(
-        "Notifications for %s of %s on server %s will be sent to %s initial recipients.",
-        event_type,
-        user_username,
-        tt_instance.server_info.host,
-        len(recipients),
-    )
-    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
-
-    final_recipients = await notification_service.filter_recipients_for_noon(
-        recipients=recipients,
-        event_user=tt_user,
-        tt_instance=tt_instance,
-        online_users_cache=online_users_cache_for_instance,
-        services=services,
-    )
-
     if not final_recipients:
-        logger.info(
-            "No recipients left after NOON filtering (via notification_service) for %s of %s on server %s.",
+        logger.debug(
+            "No recipients found for %s event for user %s on server %s after all filtering.",
             event_type,
             user_username,
             tt_instance.server_info.host,
@@ -235,6 +225,7 @@ async def send_join_leave_notification_logic(
         len(final_recipients),
     )
 
+    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
     await send_telegram_messages_to_list(
         bot_instance_to_use=services.bot_event,
         chat_ids=final_recipients,
