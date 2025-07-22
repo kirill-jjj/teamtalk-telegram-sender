@@ -116,7 +116,7 @@ async def handle_ban_subscriber(
     return_page = callback_data.page
 
     short_alert_message, long_report_message = await admin_service.ban_and_delete_subscriber(
-        session, services, tt_connection, target_telegram_id, translator
+        session, services, target_telegram_id, tt_connection
     )
 
     # Show a concise message in the alert popup.

@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
 
-from . import _utils
+from . import _utils, user_service
 
 if TYPE_CHECKING:
     import pytalk
@@ -306,10 +306,56 @@ async def ban_user(
     )
 
 
+async def ban_and_delete_subscriber(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    tt_connection: "TeamTalkConnection | None",
+) -> tuple[str, str]:
+    """Orchestrates the entire process of banning and deleting a subscriber.
+
+    This function will:
+    1. Fetch the user's TeamTalk username.
+    2. Call the ban_user service function.
+    3. If the Telegram ban is successful, commit the transaction.
+    4. Call the user_service to delete the user's profile.
+    5. Format and return the result messages.
+    """
+    user_settings = await session.get(UserSettings, target_telegram_id)
+    tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
+
+    ban_statuses, commit_needed = await ban_user(
+        session, target_telegram_id, tt_username_to_ban, tt_connection
+    )
+
+    profile_deleted_status = False
+    if ban_statuses.get("telegram_ban"):
+        if commit_needed:
+            await session.commit()
+        profile_deleted_status = await user_service.delete_full_user_profile(
+            session, target_telegram_id, services=services
+        )
+    else:
+        await session.rollback()
+
+    translator = services.get_translator()
+    if not isinstance(translator, gettext.GNUTranslations):
+        # Fallback to a default translator if a specific one isn't found
+        translator = services.get_translator(services.config.general.default_lang)
+
+    return format_ban_delete_result_message(
+        translator=translator,
+        telegram_id=target_telegram_id,
+        tt_username=tt_username_to_ban,
+        tg_banned=ban_statuses.get("telegram_ban", False),
+        tt_db_banned=ban_statuses.get("teamtalk_db_ban", False),
+        tt_server_banned=ban_statuses.get("teamtalk_server_ban", False),
+        profile_deleted=profile_deleted_status,
+    )
 
 
 def format_ban_delete_result_message(  # noqa: PLR0912
-    translator: gettext.GNUTranslations,
+    translator: gettext.GNUTranslations | gettext.NullTranslations,
     telegram_id: int,
     tt_username: str | None,
     *,

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
@@ -48,12 +50,16 @@ class CommandRouter:
         cmd: str,
         args: str | None,
         tt_message: TeamTalkMessage,
-        translator: GNUTranslations,
+        translator: GNUTranslations | gettext.NullTranslations,
         session: AsyncSession,
     ) -> None:
         """Routes a command to the appropriate handler."""
         handler = self.handlers.get(cmd)
         if handler:
+            # Define a type for the handler function for clarity and type checking
+            handler_type = Callable[..., Awaitable[None]]
+            typed_handler = cast(handler_type, handler)
+
             kwargs = {
                 "tt_message": tt_message,
                 "translator": translator,
@@ -64,6 +70,6 @@ class CommandRouter:
                 kwargs["args_str"] = args
             if cmd != tt_cmds.TT_CMD_HELP:
                 kwargs["session"] = session
-            await handler(**kwargs)
+            await typed_handler(**kwargs)
         else:
             await handle_tt_unknown_command(tt_message, translator, connection=self.connection)

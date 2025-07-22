@@ -56,7 +56,7 @@ class MessageHandler:
                     message=tt_message, services=self.services, translator=translator
                 )
 
-    def _get_translator(self) -> gettext.GNUTranslations:
+    def _get_translator(self) -> gettext.GNUTranslations | gettext.NullTranslations:
         """Determines the language for the reply and returns a translator."""
         admin_cfg = self.services.config.telegram.admin_chat_id
         reply_lang = self.services.config.general.default_lang
@@ -76,4 +76,4 @@ class MessageHandler:
         if tt_message.from_id == my_user_id:
             return False  # Ignore messages from self
 
-        return tt_message.type == TEAMTALK_PRIVATE_MESSAGE_TYPE
+        return tt_message.type is not None and tt_message.type == TEAMTALK_PRIVATE_MESSAGE_TYPE

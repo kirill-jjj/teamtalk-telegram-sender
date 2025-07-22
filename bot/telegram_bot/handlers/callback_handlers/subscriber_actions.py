@@ -45,7 +45,7 @@ from bot.telegram_bot.keyboards import (
     create_view_mute_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-from bot.telegram_bot.ui_utils import display_paginated_list
+from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
 from ._helpers import ensure_message_context
@@ -55,12 +55,37 @@ from .list_utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from aiogram.types import InlineKeyboardMarkup
+
     from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
 subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+
+
+async def _present_subscriber_setting_choice(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    message_text: str,
+    keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]",
+    keyboard_factory_kwargs: dict[str, object],
+) -> None:
+    """A generic helper to present a settings choice menu to an admin for a subscriber.
+
+    :param query: The CallbackQuery from the user's action.
+    :param callback_data: The parsed callback data.
+    :param message_text: The text to display in the message.
+    :param keyboard_factory: An async function that creates the keyboard markup.
+    :param keyboard_factory_kwargs: A dictionary of arguments for the keyboard factory.
+    """
+    keyboard = await keyboard_factory(**keyboard_factory_kwargs)
+    # @ensure_message_context guarantees query.message is a Message
+    await cast(Message, query.message).edit_text(message_text, reply_markup=keyboard)
+    await query.answer()
 
 
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
@@ -74,38 +99,16 @@ async def on_ban_subscriber_confirm(
     tt_connection: TeamTalkConnection | None,
 ) -> None:
     """Handles banning and deleting a subscriber after admin confirmation."""
-    _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    user_settings = await session.get(UserSettings, target_telegram_id)
-    tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
-
-    ban_statuses, commit_needed = await admin_service.ban_user(
-        session, target_telegram_id, tt_username_to_ban, tt_connection
-    )
-
-    profile_deleted_status = False
-    if ban_statuses.get("telegram_ban"):
-        if commit_needed:
-            await session.commit()
-        profile_deleted_status = await user_service.delete_full_user_profile(
-            session, target_telegram_id, services=services
-        )
-    else:
-        await session.rollback()
-
-    short_message, long_message = admin_service.format_ban_delete_result_message(
-        translator=translator,
-        telegram_id=target_telegram_id,
-        tt_username=tt_username_to_ban,
-        tg_banned=ban_statuses.get("telegram_ban", False),
-        tt_db_banned=ban_statuses.get("teamtalk_db_ban", False),
-        tt_server_banned=ban_statuses.get("teamtalk_server_ban", False),
-        profile_deleted=profile_deleted_status,
+    short_message, long_message = await admin_service.ban_and_delete_subscriber(
+        session, services, target_telegram_id, tt_connection
     )
 
     await query.answer(short_message, show_alert=True)
+    # The long_message can be sent as a follow-up if needed, for now we just log it.
+    logger.info("Ban/delete report for %s:\n%s", target_telegram_id, long_message)
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 
@@ -170,7 +173,11 @@ async def handle_manage_tt_account(
     )
 
     # @ensure_message_context guarantees query.message is a Message
-    await query.message.edit_text(message_text, reply_markup=keyboard)  # type: ignore
+    await safe_edit_text(
+        message_to_edit=cast(Message, query.message),
+        text=message_text,
+        reply_markup=keyboard,
+    )
     await query.answer()
 
 
@@ -189,34 +196,28 @@ async def handle_admin_set_language_choice(
     """Shows language selection menu for a subscriber to an admin."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page  # This is the subscriber list page
+    return_page = callback_data.page
 
-    # Logic from _handle_admin_set_language_action
-    if not services:  # Should not happen if services are correctly injected
-        logger.error("Services not available in handle_admin_set_language_choice for user %s.", query.from_user.id)
-        await query.answer(_("Service error. Please try again later."), show_alert=True)
-        return
-
-    available_languages = services.available_languages
-    if not available_languages:
+    if not services or not services.available_languages:
         logger.error(
-            "No available languages found in services for ADMIN_SET_LANGUAGE action by user %s.",
+            "Services or available_languages not available in handle_admin_set_language_choice for user %s.",
             query.from_user.id,
         )
-        await query.answer(_("Could not retrieve language list. Service misconfiguration."), show_alert=True)
+        await query.answer(_("Service error: Could not retrieve language list."), show_alert=True)
         return
 
-    lang_keyboard = await create_admin_subscriber_lang_keyboard(
-        translator=translator,
-        available_languages=available_languages,
-        target_telegram_id=target_telegram_id,
-        subscriber_page_context=return_page,
+    await _present_subscriber_setting_choice(
+        query=query,
+        callback_data=callback_data,
+        message_text=_("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+        keyboard_factory=create_admin_subscriber_lang_keyboard,
+        keyboard_factory_kwargs={
+            "translator": translator,
+            "available_languages": services.available_languages,
+            "target_telegram_id": target_telegram_id,
+            "subscriber_page_context": return_page,
+        },
     )
-    message_text = _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-
-    # @ensure_message_context guarantees query.message is a Message
-    await query.message.edit_text(message_text, reply_markup=lang_keyboard)  # type: ignore
-    await query.answer()
 
 
 @subscriber_actions_router.callback_query(
@@ -278,24 +279,23 @@ async def handle_admin_set_notif_pref_choice(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    # Logic from _handle_admin_set_notif_pref_action
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
 
-    current_notif_setting = target_user_settings.notification_settings
-    notif_pref_keyboard = await create_admin_subscriber_notification_pref_keyboard(
-        translator=translator,
-        current_setting=current_notif_setting,
-        target_telegram_id=target_telegram_id,
-        subscriber_page_context=return_page,
+    await _present_subscriber_setting_choice(
+        query=query,
+        callback_data=callback_data,
+        message_text=_("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+        keyboard_factory=create_admin_subscriber_notification_pref_keyboard,
+        keyboard_factory_kwargs={
+            "translator": translator,
+            "current_setting": target_user_settings.notification_settings,
+            "target_telegram_id": target_telegram_id,
+            "subscriber_page_context": return_page,
+        },
     )
-    message_text = _("Select notification preference for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-
-    # @ensure_message_context guarantees query.message is a Message
-    await query.message.edit_text(message_text, reply_markup=notif_pref_keyboard)  # type: ignore
-    await query.answer()
 
 
 @subscriber_actions_router.callback_query(
@@ -315,24 +315,23 @@ async def handle_admin_set_mute_mode_choice(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    # Logic from _handle_admin_set_mute_mode_action
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
 
-    current_mute_mode = target_user_settings.mute_list_mode
-    mute_mode_keyboard = await create_admin_subscriber_mute_mode_keyboard(
-        translator=translator,
-        current_mode=current_mute_mode,
-        target_telegram_id=target_telegram_id,
-        subscriber_page_context=return_page,
+    await _present_subscriber_setting_choice(
+        query=query,
+        callback_data=callback_data,
+        message_text=_("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+        keyboard_factory=create_admin_subscriber_mute_mode_keyboard,
+        keyboard_factory_kwargs={
+            "translator": translator,
+            "current_mode": target_user_settings.mute_list_mode,
+            "target_telegram_id": target_telegram_id,
+            "subscriber_page_context": return_page,
+        },
     )
-    message_text = _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id)
-
-    # @ensure_message_context guarantees query.message is a Message
-    await query.message.edit_text(message_text, reply_markup=mute_mode_keyboard)  # type: ignore
-    await query.answer()
 
 
 @subscriber_actions_router.callback_query(

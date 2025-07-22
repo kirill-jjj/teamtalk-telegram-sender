@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.user_settings import update_user_settings_in_db
 from bot.database import crud
-from bot.models import MutedUser, MuteListMode, SubscribedUser, UserSettings
+from bot.models import MutedUser, MuteListMode, UserSettings
 
 from . import _utils
 
@@ -181,49 +180,61 @@ async def process_new_subscription(
 ) -> bool:
     """Handles all DB and cache operations for a new subscription via deeplink."""
     try:
+        # Ensure user is in the 'subscribed_users' table
         was_newly_added = await crud.add_subscriber(session, user_settings.telegram_id)
-        subscribed_user_record = await session.get(SubscribedUser, user_settings.telegram_id)
-        if not subscribed_user_record:
-            logger.error("Failed to ensure user %s is a subscriber in DB after add attempt.", user_settings.telegram_id)
-            return False
         if was_newly_added:
             logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
         else:
-            logger.info(
-                "User %s re-confirmed subscription via deeplink (was already subscribed).",
-                user_settings.telegram_id,
-            )
+            logger.info("User %s re-confirmed subscription via deeplink.", user_settings.telegram_id)
+        # Ensure user is in the subscriber cache
         if not services.cache.is_subscribed(user_settings.telegram_id):
             services.cache.add_subscriber(user_settings.telegram_id)
-            logger.info("Added user %s to subscriber cache.", user_settings.telegram_id)
 
-        original_tt_username = user_settings.teamtalk_username
-        user_settings.teamtalk_username = tt_username
-        user_settings.not_on_online_confirmed = True
-        settings_updated = await update_user_settings_in_db(session, user_settings)
-
-        if settings_updated:
-            logger.info(
-                "User settings updated for %s with TT username '%s' (was '%s').",
-                user_settings.telegram_id,
-                tt_username,
-                original_tt_username,
+        # Use the generic helper to update the TeamTalk username
+        settings_after_tt_update = await _utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=user_settings,
+            field_name="teamtalk_username",
+            new_value=tt_username,
+            log_context=" (new subscription)",
+        )
+        if not settings_after_tt_update:
+            logger.error(
+                "Failed to update teamtalk_username for user %s during new subscription.", user_settings.telegram_id
             )
-            services.cache.update_user_settings(user_settings)
-            return True
-        logger.error(
-            "Failed to update user settings in DB for user %s with TT username '%s'.",
+            # The transaction is already rolled back by the helper.
+            return False
+
+        # Use the generic helper again to confirm the NOON setting
+        settings_after_noon_confirm = await _utils._update_user_setting_field(
+            session=session,
+            services=services,
+            settings_to_update=settings_after_tt_update,
+            field_name="not_on_online_confirmed",
+            new_value=True,
+            log_context=" (new subscription)",
+        )
+        if not settings_after_noon_confirm:
+            logger.error(
+                "Failed to update not_on_online_confirmed for user %s during new subscription.",
+                user_settings.telegram_id,
+            )
+            # The transaction is already rolled back by the helper.
+            return False
+
+        # If both updates succeeded
+
+    except Exception:
+        logger.exception(
+            "Unhandled error in process_new_subscription for user %s, tt_username %s.",
             user_settings.telegram_id,
             tt_username,
         )
-    except Exception:
-        logger.exception(
-            "Error in process_new_subscription for user %s, tt_username %s.", user_settings.telegram_id, tt_username
-        )
+        await session.rollback()
         return False
-    else:  # Corresponds to the main try block
-        # This path is reached if settings_updated is False, and no exception occurred
-        return False
+    else:
+        return True
 
 
 async def toggle_mute_status_for_tt_user(
