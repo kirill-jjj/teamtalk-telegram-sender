@@ -70,20 +70,21 @@ async def _get_recipients_for_notification(
     event_type: str,
     session_factory: "DbEngineSessionFactoryType",
     services: "Services",
-) -> list[int]:
+) -> list[tuple[int, str | None]]:
     subscriber_ids = list(services.cache.get_all_subscriber_ids())
     if not subscriber_ids:
         return []
 
     async with session_factory() as session:
-        # Base query now includes NOON flags for initial filtering
+        # Now selecting telegram_id and language_code along with NOON flags
         stmt = select(
             UserSettings.telegram_id,
             UserSettings.not_on_online_enabled,
             UserSettings.not_on_online_confirmed,
+            UserSettings.language_code,
         )
 
-        # LEFT JOIN to MutedUser for mute list checks
+        # The rest of the query remains the same
         stmt = stmt.join(
             MutedUser,
             and_(
@@ -93,7 +94,6 @@ async def _get_recipients_for_notification(
             isouter=True,
         )
 
-        # Core filters for subscription and notification settings
         filters = [
             UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
             UserSettings.notification_settings != NotificationSetting.NONE,
@@ -103,7 +103,6 @@ async def _get_recipients_for_notification(
         elif event_type == NOTIFICATION_EVENT_LEAVE:
             filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
 
-        # Mute logic based on the JOIN result
         mute_logic = or_(
             and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
             and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
@@ -113,16 +112,15 @@ async def _get_recipients_for_notification(
         stmt = stmt.where(and_(*filters))
 
         result = await session.execute(stmt)
-        recipients_data = cast(list[tuple[int, bool, bool]], result.all())
+        # The result now includes the language code
+        recipients_data = cast(list[tuple[int, bool, bool, str | None]], result.all())
 
-    # After fetching, filter for NOON logic in Python
-    # This separation keeps the SQL query cleaner and delegates the final check
-    # to a dedicated Python-side filtering function.
+    # NOON filtering is now a separate step before returning
     return await notification_service.filter_recipients_for_noon(
         recipients_data=recipients_data,
-        event_user=services.tt_user,  # type: ignore # This needs to be passed in
-        tt_instance=services.tt_instance,  # type: ignore # This needs to be passed in
-        online_users_cache=services.online_users_cache,  # type: ignore # This needs to be passed in
+        event_user=services.tt_user,  # type: ignore
+        tt_instance=services.tt_instance,  # type: ignore
+        online_users_cache=services.online_users_cache,  # type: ignore
         services=services,
     )
 
@@ -226,9 +224,10 @@ async def send_join_leave_notification_logic(
     )
 
     server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
+    # The list of recipients now includes language codes, so we pass it directly
     await send_telegram_messages_to_list(
         bot_instance_to_use=services.bot_event,
-        chat_ids=final_recipients,
+        recipients_with_lang=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code, get_translator_func=services.get_translator
         ),

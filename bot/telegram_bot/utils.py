@@ -140,17 +140,17 @@ async def send_telegram_message_individual(
 
 async def send_telegram_messages_to_list(
     bot_instance_to_use: AiogramBot,
-    chat_ids: list[int],
-    text_generator: Callable[[str], str],
+    recipients_with_lang: list[tuple[int, str | None]],
+    text_generator: Callable[[str | None], str],
     services: "Services",
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
-    reply_markup_generator: Callable[[str, int], InlineKeyboardMarkup | None] | None = None,
+    reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None] | None = None,
 ) -> None:
-    """Sends localized messages to a list of Telegram chat IDs.
+    """Sends localized messages to a list of recipients with their language codes.
 
     Args:
         bot_instance_to_use: The Aiogram Bot instance for sending messages.
-        chat_ids: A list of Telegram chat IDs to send messages to.
+        recipients_with_lang: A list of tuples, each containing (chat_id, language_code).
         text_generator: A callable that takes a language code and returns the message text.
         services: The application's services container.
         online_users_cache_for_instance: Optional cache of online TeamTalk users for NOON check.
@@ -162,12 +162,13 @@ async def send_telegram_messages_to_list(
         return
 
     tasks_list = []
-    for chat_id in chat_ids:
-        user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
-        language_code = user_settings.language_code if user_settings else DEFAULT_LANGUAGE
+    for chat_id, lang_code in recipients_with_lang:
+        language_code = lang_code or DEFAULT_LANGUAGE
         text = text_generator(language_code)
         current_reply_markup = reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
 
+        # This part still needs the user_settings for the teamtalk_username
+        user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
         individual_tt_user_is_online = False
         if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
             for tt_user_obj in online_users_cache_for_instance.values():

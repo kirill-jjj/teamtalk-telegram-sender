@@ -38,25 +38,26 @@ async def is_linked_user_online(
 
 
 async def filter_recipients_for_noon(
-    recipients_data: list[tuple[int, bool, bool]],
+    recipients_data: list[tuple[int, bool, bool, str | None]],
     event_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,
     online_users_cache: dict[int, TeamTalkUser],
     services: "Services",
-) -> list[int]:
-    """Filters recipients based on Not on Online (NOON) logic using pre-fetched data."""
+) -> list[tuple[int, str | None]]:
+    """Filters recipients based on NOON logic and returns them with their language code."""
     final_recipients = []
     event_user_username = ttstr(event_user.username)
 
-    for tg_user_id, noon_enabled, noon_confirmed in recipients_data:
-        # The check is now done with the data passed directly, not from cache
+    for tg_user_id, noon_enabled, noon_confirmed, lang_code in recipients_data:
+        # Pass through the language code with the user ID
+        recipient_tuple = (tg_user_id, lang_code)
+
         if not (noon_enabled and noon_confirmed):
-            final_recipients.append(tg_user_id)
+            final_recipients.append(recipient_tuple)
             continue
 
-        # The rest of the NOON logic remains the same
         if event_user.id == tt_instance.getMyUserID():
-            final_recipients.append(tg_user_id)
+            final_recipients.append(recipient_tuple)
             continue
 
         is_event_user_tt_admin = (
@@ -70,14 +71,13 @@ async def filter_recipients_for_noon(
 
             if other_users_online_in_instance_count == 1 and event_user.id in online_users_cache:
                 logger.debug(
-                    "NOON: Event user %s is the only one online (besides bot) for TG user %s "
-                    "on server %s. Skipping notification for this recipient.",
+                    "NOON: Event user %s is the only one online for TG user %s on server %s. Skipping.",
                     event_user_username,
                     tg_user_id,
                     tt_instance.server_info.host,
                 )
                 continue
 
-        final_recipients.append(tg_user_id)
+        final_recipients.append(recipient_tuple)
 
     return final_recipients
