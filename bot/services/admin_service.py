@@ -87,52 +87,6 @@ async def remove_admin_full(
         return False  # This path is reached if crud.remove_admin_db returns False
 
 
-async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> bool:
-    """Bans a Telegram ID. Returns True on success or if already banned, False on error."""
-    try:
-        banned_tg = await crud.add_to_ban_list(
-            session, telegram_id=target_telegram_id, reason="Banned by admin via subscriber menu"
-        )
-        if not banned_tg:
-            # If not banned_tg, it means already banned or some other non-exception failure from crud
-            logger.info("Telegram ID %s might already be banned or DB issue prevented re-ban.", target_telegram_id)
-    except SQLAlchemyError:
-        logger.exception("SQLAlchemyError while banning Telegram ID %s.", target_telegram_id)
-        return False
-    except Exception:
-        logger.exception("Unexpected error while banning Telegram ID %s.", target_telegram_id)
-        return False
-    else:
-        return True
-
-
-async def _ban_teamtalk_user_in_db(session: AsyncSession, tt_username: str, target_telegram_id: int) -> bool:
-    """Bans a TeamTalk username in the database.
-
-    Returns True on success or if already banned, False on error.
-    """
-    if not tt_username:
-        logger.debug("No TeamTalk username provided to _ban_teamtalk_user_in_db for TG ID %s.", target_telegram_id)
-        return True  # No username to ban, not an error for this specific function
-
-    try:
-        banned_tt = await crud.add_to_ban_list(
-            session,
-            teamtalk_username=tt_username,
-            reason=f"Banned by admin (linked to TG ID: {target_telegram_id})",
-        )
-        if not banned_tt:
-            logger.info("TeamTalk username %s might already be banned or DB issue prevented re-ban.", tt_username)
-    except SQLAlchemyError:
-        logger.exception("SQLAlchemyError while banning TeamTalk username %s in DB.", tt_username)
-        return False
-    except Exception:
-        logger.exception("Unexpected error while banning TeamTalk username %s in DB.", tt_username)
-        return False
-    else:
-        return True
-
-
 async def _ban_teamtalk_user_on_server(
     tt_connection: "TeamTalkConnection | None",
     tt_username: str,
@@ -239,40 +193,48 @@ async def _orchestrate_user_banning(
     tt_username_to_ban: str | None,
     tt_connection: "TeamTalkConnection | None",
 ) -> tuple[dict[str, bool], bool]:
-    """Orchestrates banning a user's Telegram ID and TeamTalk username.
+    """Orchestrates banning a user's Telegram ID and/or TeamTalk username.
 
-    Handles banning in the database and conceptually on the TeamTalk server.
+    Handles banning in the database with a single entry and conceptually on the TeamTalk server.
     Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
     """
     ban_statuses: dict[str, bool] = {
-        "telegram_ban": False,
-        "teamtalk_db_ban": False,
+        "db_ban": False,
         "teamtalk_server_ban": False,
     }
     commit_needed_for_bans = False
 
-    # Step 1: Ban Telegram ID
-    tg_ban_success = await _ban_telegram_user(session, target_telegram_id)
-    ban_statuses["telegram_ban"] = tg_ban_success
-    if not tg_ban_success:
-        logger.error("Telegram ID ban failed for %s.", target_telegram_id)
-    else:
-        commit_needed_for_bans = True
-
-    # Step 2: Ban TeamTalk username in DB (if exists)
-    if tt_username_to_ban:
-        tt_db_ban_success = await _ban_teamtalk_user_in_db(
-            session, tt_username_to_ban, target_telegram_id
+    # Step 1: Ban user in the database
+    try:
+        db_ban_success = await crud.add_to_ban_list(
+            session,
+            telegram_id=target_telegram_id,
+            teamtalk_username=tt_username_to_ban,
+            reason="Banned by admin",
         )
-        ban_statuses["teamtalk_db_ban"] = tt_db_ban_success
-        if not tt_db_ban_success:
-            logger.error("TeamTalk DB ban failed for username %s (TG ID %s).", tt_username_to_ban, target_telegram_id)
-        else:
+        ban_statuses["db_ban"] = db_ban_success
+        if db_ban_success:
+            logger.info(
+                "Successfully added ban entry for TG ID %s and TT username %s.",
+                target_telegram_id,
+                tt_username_to_ban,
+            )
             commit_needed_for_bans = True
-    else:
-        ban_statuses["teamtalk_db_ban"] = True
+        else:
+            logger.error(
+                "Failed to add ban entry for TG ID %s and TT username %s.",
+                target_telegram_id,
+                tt_username_to_ban,
+            )
+    except SQLAlchemyError:
+        logger.exception(
+            "SQLAlchemyError during ban for TG ID %s, TT username %s.",
+            target_telegram_id,
+            tt_username_to_ban,
+        )
+        ban_statuses["db_ban"] = False
 
-    # Step 3: Conceptual TeamTalk server ban (if TT username exists)
+    # Step 2: Conceptual TeamTalk server ban (if TT username exists)
     if tt_username_to_ban:
         tt_server_ban_success = await _ban_teamtalk_user_on_server(
             tt_connection, tt_username_to_ban, target_telegram_id
@@ -281,11 +243,11 @@ async def _orchestrate_user_banning(
         if not tt_server_ban_success:
             logger.warning(
                 "Conceptual TeamTalk server ban failed or was skipped for username %s (TG ID %s).",
-                 tt_username_to_ban,
-                 target_telegram_id
+                tt_username_to_ban,
+                target_telegram_id,
             )
     else:
-        ban_statuses["teamtalk_server_ban"] = True
+        ban_statuses["teamtalk_server_ban"] = True  # Not applicable, so considered successful
 
     return ban_statuses, commit_needed_for_bans
 
@@ -329,7 +291,7 @@ async def ban_and_delete_subscriber(
     )
 
     profile_deleted_status = False
-    if ban_statuses.get("telegram_ban"):
+    if ban_statuses.get("db_ban"):
         if commit_needed:
             await session.commit()
         profile_deleted_status = await user_service.delete_full_user_profile(
@@ -340,15 +302,13 @@ async def ban_and_delete_subscriber(
 
     translator = services.get_translator()
     if not isinstance(translator, gettext.GNUTranslations):
-        # Fallback to a default translator if a specific one isn't found
         translator = services.get_translator(services.config.general.default_lang)
 
     return format_ban_delete_result_message(
         translator=translator,
         telegram_id=target_telegram_id,
         tt_username=tt_username_to_ban,
-        tg_banned=ban_statuses.get("telegram_ban", False),
-        tt_db_banned=ban_statuses.get("teamtalk_db_ban", False),
+        db_banned=ban_statuses.get("db_ban", False),
         tt_server_banned=ban_statuses.get("teamtalk_server_ban", False),
         profile_deleted=profile_deleted_status,
     )
@@ -359,8 +319,7 @@ def format_ban_delete_result_message(  # noqa: PLR0912
     telegram_id: int,
     tt_username: str | None,
     *,
-    tg_banned: bool,
-    tt_db_banned: bool,
+    db_banned: bool,
     tt_server_banned: bool,
     profile_deleted: bool,
 ) -> tuple[str, str]:
@@ -369,21 +328,18 @@ def format_ban_delete_result_message(  # noqa: PLR0912
     parts = []
     short_message = ""
 
-    if tg_banned:
-        parts.append(_("✅ Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id))
-    else:
-        parts.append(_("❌ Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id))
-
-    if tt_username:
-        if tt_db_banned:
-            parts.append(
-                _("✅ TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
+    if db_banned:
+        if tt_username:
+            message = _("✅ TG ID {telegram_id} and TT username {tt_username} banned in DB.").format(
+                telegram_id=telegram_id, tt_username=tt_username
             )
         else:
-            parts.append(
-                _("❌ Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
-            )
+            message = _("✅ Telegram ID {telegram_id} has been banned in the database.").format(telegram_id=telegram_id)
+        parts.append(message)
+    else:
+        parts.append(_("❌ Failed to ban user in the database.").format(telegram_id=telegram_id))
 
+    if tt_username:
         if tt_server_banned:
             parts.append(
                 _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(
@@ -397,26 +353,26 @@ def format_ban_delete_result_message(  # noqa: PLR0912
                 )
             )
     else:
-        parts.append(_("ℹ️ No TeamTalk username was linked; TeamTalk ban steps skipped."))
+        parts.append(_("ℹ️ No TeamTalk username was linked; server-side ban skipped."))
 
-    if tg_banned:
+    if db_banned:
         if profile_deleted:
             parts.append(_("✅ User profile and data have been deleted."))
         else:
             parts.append(_("❌ Failed to delete user profile and data after banning."))
     else:
-        parts.append(_("ℹ️ User profile deletion was skipped due to Telegram ban failure."))
+        parts.append(_("ℹ️ Profile deletion was skipped due to database ban failure."))
 
-    fully_successful = tg_banned and (tt_db_banned if tt_username else True) and profile_deleted
+    fully_successful = db_banned and profile_deleted
 
     if fully_successful:
         short_message = _("User {telegram_id} banned successfully.").format(telegram_id=telegram_id)
         if tt_username:
             short_message += _(" TT: {tt_username}").format(tt_username=tt_username)
-    elif tg_banned:
+    elif db_banned:
         short_message = _("Partial success banning user {telegram_id}. Check details.").format(telegram_id=telegram_id)
     else:
-        short_message = _("CRITICAL: Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id)
+        short_message = _("CRITICAL: Failed to ban user {telegram_id}.").format(telegram_id=telegram_id)
 
     long_message_header = _("Banning process report for user {telegram_id}:").format(telegram_id=telegram_id)
     long_message = f"{long_message_header}\n\n" + "\n".join(parts)
@@ -593,27 +549,25 @@ async def admin_link_tt_account(
 async def unban_subscriber(
     session: AsyncSession,
     _services: "Services",
-    tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
     translator: "gettext.GNUTranslations",
 ) -> str:
-    """Unbans a subscriber by removing all their ban entries."""
+    """Unbans a subscriber by removing all their ban entries from the database.
+
+    Note: This function does not perform a conceptual server-side unban for the
+    TeamTalk user, as the username is not readily available after the profile
+    is deleted during the ban process. The primary action is to clean the database.
+    """
     _ = translator.gettext
     try:
-        user_settings = await session.get(UserSettings, target_telegram_id)
-        tt_username = user_settings.teamtalk_username if user_settings else None
-
         db_unban_success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
-        tt_unban_success = True
-        if tt_username:
-            tt_unban_success = await _unban_teamtalk_user_on_server(
-                tt_connection, tt_username, target_telegram_id
-            )
 
-        if db_unban_success and tt_unban_success:
-            logger.info("Successfully unbanned user %s.", target_telegram_id)
+        if db_unban_success:
+            logger.info("Successfully unbanned user %s from the database.", target_telegram_id)
+            # The conceptual server unban is omitted as we no longer fetch the tt_username.
+            # This is acceptable because the server-side ban was only conceptual to begin with.
             return _("User {telegram_id} has been unbanned.").format(telegram_id=target_telegram_id)
-        logger.error("Failed to unban user %s.", target_telegram_id)
+        logger.error("Failed to unban user %s in the database.", target_telegram_id)
         return _("Failed to unban user {telegram_id}.").format(telegram_id=target_telegram_id)
     except Exception:
         logger.exception("An unexpected error occurred while unbanning user %s.", target_telegram_id)
