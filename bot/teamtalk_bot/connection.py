@@ -419,24 +419,24 @@ class TeamTalkConnection:
             else:
                 logger.info("[%s] Bot re-joined chan %s (finalized).", self.server_info.host, self.ttstr(channel.name))
 
-    async def on_my_connection_lost(self, server: PytalkServer) -> None:
-        """Handles disconnection from the server for this connection."""
-        # The 'server' argument is part of Pytalk's event signature but not used here.
-        _ = server  # Mark as unused
-        logger.warning("[%s] Connection lost. Reconnecting...", self.server_info.host)
+    async def _handle_disconnection_and_reconnect(self, reason: str) -> None:
+        """Handles the common logic for resetting state and initiating a reconnect."""
+        logger.warning("[%s] %s. Reconnecting...", self.server_info.host, reason)
         self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.stop_background_tasks()
         await self._initiate_reconnect()
 
+    async def on_my_connection_lost(self, server: PytalkServer) -> None:
+        """Handles disconnection from the server for this connection."""
+        # The 'server' argument is part of Pytalk's event signature but not used here.
+        _ = server  # Mark as unused
+        await self._handle_disconnection_and_reconnect(reason="Connection lost")
+
     async def on_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Handles being kicked from a channel on this server connection."""
         ch_name = self.ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown"
-        logger.warning("[%s] Kicked from chan '%s'. Reconnecting...", self.server_info.host, ch_name)
-        self.mark_finalized(status=False)
-        self.login_complete_time = None
-        await self.stop_background_tasks()
-        await self._initiate_reconnect()
+        await self._handle_disconnection_and_reconnect(reason=f"Kicked from chan '{ch_name}'")
 
     async def on_message(self, message: TeamTalkMessage) -> None:
         """Handles an incoming message on this server connection."""

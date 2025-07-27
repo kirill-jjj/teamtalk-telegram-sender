@@ -40,7 +40,10 @@ from bot.telegram_bot.keyboards import (
     create_paginated_user_list_keyboard,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
+from bot.telegram_bot.ui_utils import (
+    display_paginated_list,
+    paginate_list,
+)
 
 from ._helpers import ensure_message_context, safe_edit_text
 
@@ -195,7 +198,6 @@ async def _get_username_to_toggle_from_callback(
         page_items, _, _ = paginate_list(all_accounts, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
             username_attr = page_items[user_idx].username
-            # Assuming ttstr handles bytes and returns str. If username_attr can be None, handle it.
             return cast(str, ttstr(username_attr)) if username_attr is not None else None
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         statement = select(MutedUser.muted_teamtalk_username).where(
@@ -206,7 +208,7 @@ async def _get_username_to_toggle_from_callback(
         relevant_usernames = sorted([str(uname) for uname in results.all()])
         page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)
         if 0 <= user_idx < len(page_items):
-            return page_items[user_idx]  # type: ignore[no-any-return]
+            return page_items[user_idx]  # type: ignore
     logger.warning(
         "Could not find username for toggle. Idx: %s, List: %s, Page: %s",
         user_idx,

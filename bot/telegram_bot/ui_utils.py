@@ -40,6 +40,16 @@ def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
     return page_slice, total_pages, current_page_idx
 
 
+def get_item_from_paginated_list(
+    full_list: list[T], page: int, index: int, page_size: int = USERS_PER_PAGE
+) -> T | None:
+    """Paginates a list and returns the item at a specific index on a given page."""
+    page_items, _, _ = paginate_list(full_list, page, page_size)
+    if 0 <= index < len(page_items):
+        return page_items[index]
+    return None
+
+
 async def display_paginated_list(
     target: CallbackQuery | Message,
     bot: Bot,

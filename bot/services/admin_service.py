@@ -1,8 +1,10 @@
 """Service layer for administrator-related operations."""
 
+from collections.abc import Awaitable, Callable
+from functools import wraps
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -380,23 +382,32 @@ def format_ban_delete_result_message(  # noqa: PLR0912
     return short_message, long_message
 
 
+F = TypeVar('F', bound=Callable[..., Any])
+
+def with_target_user_settings(func: F) -> Callable[..., Awaitable[UserSettings | None]]:
+    """Decorator to fetch UserSettings for a target user and handle not found cases."""
+    @wraps(func)
+    async def wrapper(
+        session: AsyncSession, services: "Services", target_telegram_id: int, *args: ..., **kwargs: ...
+    ) -> UserSettings | None:
+        target_user_settings = await session.get(UserSettings, target_telegram_id)
+        if not target_user_settings:
+            logger.warning("%s: UserSettings not found for %s", func.__name__, target_telegram_id)
+            return None
+        result = await func(session, services, target_telegram_id, target_user_settings, *args, **kwargs)
+        return cast(UserSettings | None, result)
+    return wrapper
+
+
+@with_target_user_settings
 async def admin_toggle_noon_setting(
     session: AsyncSession,
     services: "Services",
     target_telegram_id: int,
+    target_user_settings: UserSettings,
 ) -> UserSettings | None:
-    """Toggles the NOON (Not On Online Notifications) setting for a target user.
-
-    Handles DB session, commit, rollback, and cache update.
-    Returns the updated UserSettings object or None on failure.
-    """
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
-        return None
-
+    """Toggles the NOON (Not On Online Notifications) setting for a target user."""
     new_noon_enabled_value = not target_user_settings.not_on_online_enabled
-
     updated_settings = await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -405,12 +416,10 @@ async def admin_toggle_noon_setting(
         new_value=new_noon_enabled_value,
         log_context=f" by admin for user {target_telegram_id} (toggle NOON)",
     )
-
     if not updated_settings:
         return None
-
-    if updated_settings.not_on_online_enabled and (updated_settings.not_on_online_confirmed is not True):
-        confirmed_settings = await _utils._update_user_setting_field(
+    if updated_settings.not_on_online_enabled and not updated_settings.not_on_online_confirmed:
+        return await _utils._update_user_setting_field(
             session=session,
             services=services,
             settings_to_update=updated_settings,
@@ -418,30 +427,18 @@ async def admin_toggle_noon_setting(
             new_value=True,
             log_context=f" by admin for user {target_telegram_id} (confirm NOON after toggle)",
         )
-        if not confirmed_settings:
-            logger.warning(
-                "NOON setting was toggled to enabled for user %s, "
-                "but the subsequent confirmation of 'not_on_online_confirmed' failed. "
-                "The 'not_on_online_enabled' field remains updated.",
-                target_telegram_id,
-            )
-            return updated_settings
-        return confirmed_settings
     return updated_settings
 
 
+@with_target_user_settings
 async def admin_set_user_mute_mode(
     session: AsyncSession,
     services: "Services",
-    target_telegram_id: int,
+    target_telegram_id: int,  # noqa: ARG001
+    target_user_settings: UserSettings,
     new_mode: "MuteListMode",
 ) -> UserSettings | None:
     """Sets the mute list mode for a target user, managed by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
-        return None
-
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -452,18 +449,15 @@ async def admin_set_user_mute_mode(
     )
 
 
+@with_target_user_settings
 async def admin_set_user_notification_preference(
     session: AsyncSession,
     services: "Services",
     target_telegram_id: int,
+    target_user_settings: UserSettings,
     new_pref_enum: "NotificationSetting",
 ) -> UserSettings | None:
     """Sets the notification preference for a target user, managed by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_set_user_notification_preference: UserSettings not found for %s.", target_telegram_id)
-        return None
-
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
