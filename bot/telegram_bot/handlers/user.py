@@ -9,9 +9,9 @@ from typing import (
     cast,
 )
 
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.filters import Command, CommandObject
+from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,28 +40,32 @@ user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(defau
 user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
-@user_commands_router.message(Command("start"))
+@user_commands_router.message(CommandStart(deep_link=False))
 async def start_command_handler(
     message: Message,
-    command: CommandObject,
+    translator: gettext.GNUTranslations,
+) -> None:
+    """Handles the /start command without a deeplink."""
+    _ = translator.gettext
+    await message.reply(_("Hello! Use /help to see available commands."))
+
+
+@user_commands_router.message(CommandStart(deep_link=True, magic=F.args.as_("token")))
+async def start_with_payload_handler(
+    message: Message,
+    token: str,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,  # gettext function
+    translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     services: "Services",
 ) -> None:
-    """Handles the /start command, processing deeplinks or showing a welcome message."""
-    _ = translator.gettext
+    """Handles the /start command with a deeplink, extracting the token via a magic filter."""
     if not message.from_user:
         return
 
-    token = command.args
-    if token:
-        # TODO: Call to handle_deeplink_payload might need review if its own dependencies change.
-        await handle_deeplink_payload(
-            message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services
-        )
-    else:
-        await message.reply(_("Hello! Use /help to see available commands."))
+    await handle_deeplink_payload(
+        message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services
+    )
 
 
 @user_commands_router.message(Command("who"))
