@@ -9,8 +9,6 @@ from aiogram.types import TelegramObject
 from aiogram.types import User as AiogramUser
 from sqlmodel.ext.asyncio.session import AsyncSession  # Use SQLModel's AsyncSession for type hint
 
-from bot.telegram_bot.types.workflow_data import WorkflowData
-
 from .utils import _send_error_response  # Import from local utils
 
 if TYPE_CHECKING:

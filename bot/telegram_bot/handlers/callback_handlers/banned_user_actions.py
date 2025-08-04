@@ -21,7 +21,7 @@ from bot.telegram_bot.handlers.callback_handlers.list_utils import (
 from bot.telegram_bot.keyboards import create_banned_user_list_keyboard
 from bot.telegram_bot.ui_utils import display_paginated_list
 
-from ._helpers import ensure_message_context
+from ._helpers import action_and_refresh_view, ensure_message_context
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -32,8 +32,27 @@ logger = logging.getLogger(__name__)
 banned_user_actions_router = Router(name="banned_user_actions_router")
 
 
+async def refresh_banned_list_view(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    **kwargs: object,
+) -> None:
+    """Refresher function for the banned user list view."""
+    await _show_banned_list_page(
+        target=query,
+        session=session,
+        services=services,
+        page=callback_data.page,
+        translator=translator,
+    )
+
+
 @banned_user_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.UNBAN))
 @ensure_message_context
+@action_and_refresh_view(refresh_banned_list_view)
 async def handle_unban_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -41,18 +60,14 @@ async def handle_unban_subscriber(
     translator: gettext.GNUTranslations,
     services: "Services",
     tt_connection: "TeamTalkConnection | None",
-) -> None:
+) -> tuple[bool, str]:
     """Handles unbanning a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page
 
     result = await admin_service.unban_subscriber(session, services, tt_connection, target_telegram_id)
     message = _(result.message_key).format(**(result.message_args or {}))
-    await query.answer(message, show_alert=True)
-    await _show_banned_list_page(
-        target=query, session=session, services=services, page=return_page, translator=translator
-    )
+    return result.success, message
 
 
 async def _show_banned_list_page(

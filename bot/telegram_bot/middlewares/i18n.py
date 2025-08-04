@@ -8,7 +8,6 @@ from aiogram.types import TelegramObject
 
 from bot.models import UserSettings
 from bot.services_container import Services
-from bot.telegram_bot.types.workflow_data import WorkflowData
 
 
 class I18nMiddleware(BaseMiddleware):

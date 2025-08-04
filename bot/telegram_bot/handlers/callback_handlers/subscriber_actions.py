@@ -47,9 +47,10 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 
 from ._helpers import (
     _display_subscriber_view,
-    action_and_refresh_subscriber_view,
+    action_and_refresh_view,
     create_setting_change_handler,
     ensure_message_context,
+    refresh_subscriber_view,
 )
 from .list_utils import (
     SUBSCRIBERS_PER_PAGE,
@@ -123,8 +124,27 @@ async def on_ban_subscriber_confirm(
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 
+async def refresh_subscriber_list_view(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    **kwargs: object,
+) -> None:
+    """Refresher function for the main subscriber list view."""
+    await _refresh_and_display_subscriber_list(
+        query=query,
+        session=session,
+        services=services,
+        return_page=callback_data.page,
+        translator=translator,
+    )
+
+
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.DELETE))
 @ensure_message_context
+@action_and_refresh_view(refresh_subscriber_list_view)
 async def handle_delete_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -132,25 +152,19 @@ async def handle_delete_subscriber(
     translator: gettext.GNUTranslations,
     services: "Services",
     tt_connection: TeamTalkConnection | None,  # Injected by middleware, unused
-) -> None:
+) -> tuple[bool, str]:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page
 
-    # Logic from _handle_delete_subscriber_action
     success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
+
     if success:
-        await query.answer(
-            _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id),
-            show_alert=True,
-        )
-        # _tt_connection was unused in the original helper, so passing tt_connection here is fine.
-        await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
+        message = _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id)
     else:
-        await query.answer(
-            _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
-        )
+        message = _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id)
+
+    return success, message
 
 
 @subscriber_actions_router.callback_query(
@@ -276,7 +290,7 @@ async def handle_admin_set_setting_choice(
     SubscriberActionCallback.filter(F.action == SubscriberAction.ADMIN_TOGGLE_NOON)
 )
 @ensure_message_context
-@action_and_refresh_subscriber_view
+@action_and_refresh_view(refresh_subscriber_view)
 async def handle_admin_toggle_noon(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -654,7 +668,7 @@ async def handle_link_tt_account_chosen(
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 @ensure_message_context
-@action_and_refresh_subscriber_view
+@action_and_refresh_view(refresh_subscriber_view)
 async def handle_admin_set_subscriber_language(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberLanguageCallback,
@@ -673,7 +687,7 @@ async def handle_admin_set_subscriber_language(
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 @ensure_message_context
-@action_and_refresh_subscriber_view
+@action_and_refresh_view(refresh_subscriber_view)
 async def handle_admin_set_subscriber_notification_pref(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberNotificationPrefCallback,
@@ -720,7 +734,7 @@ async def handle_admin_set_subscriber_notification_pref(
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
-@action_and_refresh_subscriber_view
+@action_and_refresh_view(refresh_subscriber_view)
 async def handle_admin_set_subscriber_mute_mode(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberMuteModeCallback,
