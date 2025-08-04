@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-04 20:08+0000\n"
+"POT-Creation-Date: 2025-08-04 20:29+0000\n"
 "PO-Revision-Date: 2025-07-08 17:09+0500\n"
 "Last-Translator: \n"
 "Language: ru\n"
@@ -179,14 +179,6 @@ msgstr ""
 "Это имя пользователя TeamTalk ({tt_username}) забанено и не может быть "
 "привязано."
 
-#: bot/services/deeplink_service.py:70
-msgid ""
-"An error occurred during the subscription process. Please try again later"
-" or contact support."
-msgstr ""
-"Произошла ошибка во время подписки. Пожалуйста, попробуйте еще раз позже "
-"или свяжитесь с поддержкой."
-
 #: bot/services/deeplink_service.py:87
 msgid "You have successfully subscribed to notifications."
 msgstr "Вы успешно подписались на уведомления."
@@ -257,15 +249,15 @@ msgstr " и "
 msgid "Error: No active TeamTalk connection."
 msgstr "Ошибка: Нет активного подключения к TeamTalk."
 
-#: bot/teamtalk_bot/commands.py:81
+#: bot/teamtalk_bot/commands.py:82
 msgid "You are not authorized to perform this action."
 msgstr "У вас недостаточно прав для выполнения этого действия."
 
-#: bot/teamtalk_bot/commands.py:115
+#: bot/teamtalk_bot/commands.py:116
 msgid "No action was performed. Please check the IDs provided."
 msgstr "Никаких действий не выполнено. Пожалуйста, проверьте предоставленные ID."
 
-#: bot/teamtalk_bot/commands.py:176
+#: bot/teamtalk_bot/commands.py:177
 #, python-brace-format
 msgid "Successfully added {count} admin."
 msgid_plural "Successfully added {count} admins."
@@ -273,7 +265,7 @@ msgstr[0] "Успешно добавлен {count} администратор."
 msgstr[1] "Успешно добавлено {count} администратора."
 msgstr[2] "Успешно добавлено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:180
+#: bot/teamtalk_bot/commands.py:181
 #, python-brace-format
 msgid "Successfully removed {count} admin."
 msgid_plural "Successfully removed {count} admins."
@@ -281,7 +273,7 @@ msgstr[0] "Успешно удален {count} администратор."
 msgstr[1] "Успешно удалено {count} администратора."
 msgstr[2] "Успешно удалено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:249
+#: bot/teamtalk_bot/commands.py:250
 #, python-brace-format
 msgid ""
 "Click this link to subscribe to notifications (link valid for 5 minutes):"
@@ -292,13 +284,7 @@ msgstr ""
 "действительна 5 минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:251 bot/teamtalk_bot/commands.py:278
-msgid "An error occurred processing your request. Please try again later."
-msgstr ""
-"Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте еще"
-" раз позже."
-
-#: bot/teamtalk_bot/commands.py:276
+#: bot/teamtalk_bot/commands.py:277
 #, python-brace-format
 msgid ""
 "Click this link to unsubscribe from notifications (link valid for 5 "
@@ -309,7 +295,7 @@ msgstr ""
 "действительна 5 минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:305
+#: bot/teamtalk_bot/commands.py:306
 #, python-brace-format
 msgid ""
 "Please provide Telegram IDs after the command. Example: {add_admin_cmd} "
@@ -318,23 +304,23 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: {add_admin_cmd} "
 "12345678 98765432"
 
-#: bot/teamtalk_bot/commands.py:308
+#: bot/teamtalk_bot/commands.py:309
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
 "Пользователь с ID {telegram_id} уже является администратором или не "
 "удалось его добавить."
 
-#: bot/teamtalk_bot/commands.py:310 bot/teamtalk_bot/commands.py:343
+#: bot/teamtalk_bot/commands.py:311 bot/teamtalk_bot/commands.py:344
 #, python-brace-format
 msgid "'{telegram_id_str}' is not a valid numeric Telegram ID."
 msgstr "'{telegram_id_str}' не является допустимым числовым ID Telegram."
 
-#: bot/teamtalk_bot/commands.py:311 bot/teamtalk_bot/commands.py:344
+#: bot/teamtalk_bot/commands.py:312 bot/teamtalk_bot/commands.py:345
 msgid "Action Results:"
 msgstr "Результаты действия:"
 
-#: bot/teamtalk_bot/commands.py:338
+#: bot/teamtalk_bot/commands.py:339
 #, python-brace-format
 msgid ""
 "Please provide Telegram IDs after the command. Example: "
@@ -343,12 +329,12 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: {remove_admin_cmd}"
 " 12345678 98765432"
 
-#: bot/teamtalk_bot/commands.py:341
+#: bot/teamtalk_bot/commands.py:342
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found or failed to remove."
 msgstr "Администратор с ID {telegram_id} не найден или не удалось его удалить."
 
-#: bot/teamtalk_bot/commands.py:391
+#: bot/teamtalk_bot/commands.py:392
 #, python-brace-format
 msgid "Unknown command. Available commands: {commands}."
 msgstr "Неизвестная команда. Доступные команды: {commands}."
@@ -364,14 +350,14 @@ msgid "unknown user"
 msgstr "неизвестный пользователь"
 
 #: bot/teamtalk_bot/utils.py:252
-#, python-brace-format
-msgid "Message from server <b>{server_name}</b>"
+#, fuzzy, python-brace-format
+#| msgid "Message from server <b>{server_name}</b>"
+msgid "Message from server "
 msgstr "Сообщение от сервера <b>{server_name}</b>"
 
 #: bot/teamtalk_bot/utils.py:255
-#, python-brace-format
-msgid "From <b>{sender_name}</b>"
-msgstr "От <b>{sender_name}</b>"
+msgid "From "
+msgstr ""
 
 #: bot/teamtalk_bot/utils.py:269
 msgid "Message sent to Telegram successfully."
@@ -974,10 +960,6 @@ msgstr "Список блокировок пуст."
 msgid "An error occurred: Bot instance not found."
 msgstr "Произошла ошибка: экземпляр бота не найден."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:431
-msgid "An internal error occurred. Please try again later."
-msgstr "Произошла внутренняя ошибка. Пожалуйста, попробуйте еще раз позже."
-
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:535
 msgid ""
 "TeamTalk server accounts are currently unavailable. Please try again "
@@ -1061,3 +1043,24 @@ msgid ""
 msgstr ""
 "Бот TeamTalk не подключен или не полностью инициализирован. Пожалуйста, "
 "попробуйте позже."
+
+#~ msgid ""
+#~ "An error occurred during the "
+#~ "subscription process. Please try again "
+#~ "later or contact support."
+#~ msgstr ""
+#~ "Произошла ошибка во время подписки. "
+#~ "Пожалуйста, попробуйте еще раз позже или"
+#~ " свяжитесь с поддержкой."
+
+#~ msgid "An error occurred processing your request. Please try again later."
+#~ msgstr ""
+#~ "Произошла ошибка при обработке вашего "
+#~ "запроса. Пожалуйста, попробуйте еще раз "
+#~ "позже."
+
+#~ msgid "From <b>{sender_name}</b>"
+#~ msgstr "От <b>{sender_name}</b>"
+
+#~ msgid "An internal error occurred. Please try again later."
+#~ msgstr "Произошла внутренняя ошибка. Пожалуйста, попробуйте еще раз позже."

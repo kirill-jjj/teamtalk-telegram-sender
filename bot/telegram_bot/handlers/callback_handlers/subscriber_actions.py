@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
 from bot.core.enums import ManageTTAccountAction, SubscriberAction
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import (
     MutedUser,
     MuteListMode,
@@ -428,7 +429,7 @@ async def _refresh_and_display_subscriber_list(
     # Ensure services.bot_event is available, as _show_subscriber_list_page needs it.
     if not services.bot_event:
         logger.error("_refresh_and_display_subscriber_list: services.bot_event is not available.")
-        await query.answer(_("An internal error occurred. Please try again later."), show_alert=True)
+        await query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     # _show_subscriber_list_page now expects a CallbackQuery and handles the message editing.

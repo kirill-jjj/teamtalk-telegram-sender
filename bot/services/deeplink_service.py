@@ -67,7 +67,7 @@ async def process_subscribe_deeplink(
         )
         # The user_service.process_new_subscription should log specifics.
         # Provide a generic error to the user.
-        return _("An error occurred during the subscription process. Please try again later or contact support.")
+        return _(MSG_KEY_GENERIC_ERROR)
 
     # If user is also an admin, ensure admin cache is updated.
     # This check is done after successful subscription processing.

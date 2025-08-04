@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import handle_common_tt_command_errors, send_long_tt_reply
@@ -248,7 +249,7 @@ async def handle_tt_subscribe_command(
         reply_text_source=_(
             "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
-        _error_reply_source=_("An error occurred processing your request. Please try again later."),
+        _error_reply_source=MSG_KEY_GENERIC_ERROR,
         services=services,
     )
 
@@ -275,7 +276,7 @@ async def handle_tt_unsubscribe_command(
         reply_text_source=_(
             "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
-        _error_reply_source=_("An error occurred processing your request. Please try again later."),
+        _error_reply_source=MSG_KEY_GENERIC_ERROR,
         services=services,
     )
 
