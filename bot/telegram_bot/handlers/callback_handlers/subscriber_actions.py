@@ -45,8 +45,11 @@ from bot.telegram_bot.keyboards import (
 from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
-from ._helpers import action_and_refresh_subscriber_view, ensure_message_context
-from ._view_rendering import _display_subscriber_view
+from ._helpers import (
+    _display_subscriber_view,
+    action_and_refresh_subscriber_view,
+    ensure_message_context,
+)
 from .list_utils import (
     SUBSCRIBERS_PER_PAGE,
     _show_subscriber_list_page,
