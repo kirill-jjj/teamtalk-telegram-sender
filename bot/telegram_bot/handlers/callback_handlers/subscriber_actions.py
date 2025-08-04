@@ -72,6 +72,7 @@ class SettingChoiceConfig(TypedDict):
     keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]"
     keyboard_factory_kwargs: dict[str, object]
 
+
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
 # Middlewares are now applied in the parent router in callbacks.py
@@ -113,9 +114,7 @@ async def on_ban_subscriber_confirm(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    result = await admin_service.ban_and_delete_subscriber(
-        session, services, target_telegram_id, tt_connection
-    )
+    result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
     await query.answer(short_message, show_alert=True)
@@ -192,11 +191,15 @@ async def handle_manage_tt_account(
 
 
 @subscriber_actions_router.callback_query(
-    SubscriberActionCallback.filter(F.action.in_([
-        SubscriberAction.ADMIN_SET_LANGUAGE,
-        SubscriberAction.ADMIN_SET_NOTIF_PREF,
-        SubscriberAction.ADMIN_SET_MUTE_MODE,
-    ]))
+    SubscriberActionCallback.filter(
+        F.action.in_(
+            [
+                SubscriberAction.ADMIN_SET_LANGUAGE,
+                SubscriberAction.ADMIN_SET_NOTIF_PREF,
+                SubscriberAction.ADMIN_SET_MUTE_MODE,
+            ]
+        )
+    )
 )
 @ensure_message_context
 async def handle_admin_set_setting_choice(

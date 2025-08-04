@@ -16,8 +16,8 @@ from bot.core.enums import AdminAction
 from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
+from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
-from bot.telegram_bot.middlewares.admin_check import AdminCheckMiddleware
 from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
 
 from .callback_handlers.banned_user_actions import _show_banned_list_page
@@ -29,9 +29,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-admin_router.message.middleware(AdminCheckMiddleware())
 # ActiveTeamTalkConnectionMiddleware is assumed to be on a parent router.
 # TeamTalkConnectionCheckMiddleware will check the tt_connection provided.
+# Admin checks are now done via the IsAdmin filter on each handler.
 admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
@@ -90,7 +90,7 @@ async def _show_user_buttons(
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
 
-@admin_router.message(Command("kick"))
+@admin_router.message(Command("kick"), IsAdmin())
 async def kick_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
@@ -100,7 +100,7 @@ async def kick_command_handler(
     await _show_user_buttons(message, AdminAction.KICK, translator, tt_connection)
 
 
-@admin_router.message(Command("ban"))
+@admin_router.message(Command("ban"), IsAdmin())
 async def ban_command_handler(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
@@ -110,7 +110,7 @@ async def ban_command_handler(
     await _show_user_buttons(message, AdminAction.BAN, translator, tt_connection)
 
 
-@admin_router.message(Command("subscribers"))
+@admin_router.message(Command("subscribers"), IsAdmin())
 async def subscribers_command_handler(
     message: Message,
     session: AsyncSession,  # Injected by DbSessionMiddleware
@@ -123,7 +123,7 @@ async def subscribers_command_handler(
     )
 
 
-@admin_router.message(Command("unban"))
+@admin_router.message(Command("unban"), IsAdmin())
 async def unban_command_handler(
     message: Message,
     session: AsyncSession,

@@ -80,9 +80,7 @@ async def _show_banned_list_page(
     # Filter out entries with no telegram_id before passing to the preparer
     statement = statement.where(BanList.telegram_id.isnot(None))  # type: ignore[union-attr]
 
-    subscriber_infos = await _prepare_user_list(
-        session, services.bot_event, statement, extractor
-    )
+    subscriber_infos = await _prepare_user_list(session, services.bot_event, statement, extractor)
 
     await display_paginated_list(
         target=target,

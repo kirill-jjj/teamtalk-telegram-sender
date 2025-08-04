@@ -9,11 +9,11 @@ from collections.abc import (
 )
 import functools
 import gettext
-import html
 import logging
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from aiogram.exceptions import TelegramAPIError
+from aiogram.utils.formatting import Bold, Text
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
@@ -247,19 +247,22 @@ async def forward_tt_message_to_telegram_admin(
     sender_display = get_tt_user_display_name(message.user, translator)  # Now local
     message_content = message.content
 
-    template_text_parts = _(
-        "Message from server <b>{server_name}</b>\nFrom <b>{sender_name}</b>:\n\n{message_content}"
-    ).format(
-        server_name=html.escape(server_name_to_display),
-        sender_name=html.escape(sender_display),
-        message_content=html.escape(message_content),
+    # Using aiogram.utils.formatting for safe, declarative text construction
+    content = Text(
+        _("Message from server "),
+        Bold(server_name_to_display),
+        "\n",
+        _("From "),
+        Bold(sender_display),
+        ":\n\n",
+        message_content,  # No need to escape, Text handles it.
     )
 
     was_sent: bool = await send_telegram_message_individual(
         bot_instance=services.bot_message,
         chat_id=admin_chat_id,
         services=services,
-        text=template_text_parts,
+        **content.as_kwargs(),
     )
 
     if was_sent:

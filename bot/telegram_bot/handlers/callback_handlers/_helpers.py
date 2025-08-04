@@ -42,7 +42,7 @@ RefreshableViewCallback: TypeAlias = (
 
 
 def action_and_refresh_subscriber_view(
-    func: Callable[..., Awaitable[tuple[bool, str]]]
+    func: Callable[..., Awaitable[tuple[bool, str]]],
 ) -> Callable[..., Awaitable[None]]:
     """Decorator for admin actions on a subscriber that results in refreshing the subscriber view.
 

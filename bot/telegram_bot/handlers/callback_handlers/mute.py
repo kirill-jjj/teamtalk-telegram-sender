@@ -164,9 +164,7 @@ async def _display_all_server_accounts_list(
                 )
             )
         except TelegramAPIError:
-            logger.exception(
-                "Error informing user about empty accounts_cache for %s.", tt_connection.server_info.host
-            )
+            logger.exception("Error informing user about empty accounts_cache for %s.", tt_connection.server_info.host)
         return
 
     async def fetcher() -> list[pytalk.UserAccount]:
@@ -504,9 +502,7 @@ async def cq_toggle_specific_user_mute_action(
         await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
         return
 
-    result = await user_service.toggle_mute_status_for_tt_user(
-        session, user_settings, username_to_toggle, services
-    )
+    result = await user_service.toggle_mute_status_for_tt_user(session, user_settings, username_to_toggle, services)
 
     toast_message = _(result.message_key).format(**(result.message_args or {}))
     await callback_query.answer(toast_message, show_alert=not result.success)

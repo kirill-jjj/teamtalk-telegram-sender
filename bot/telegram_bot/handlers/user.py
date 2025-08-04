@@ -9,10 +9,11 @@ from typing import (
     cast,
 )
 
-from aiogram import Router
+from aiogram import Bot, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import SQLModel's AsyncSession for casting
@@ -69,18 +70,21 @@ async def who_command_handler(
     translator: "gettext.GNUTranslations",
     services: "Services",
     tt_connection: TeamTalkConnection,  # Middleware ensures tt_connection is not None
+    bot: Bot,
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     if not message.from_user:
         return
 
-    is_admin = services.cache.is_admin(message.from_user.id)
+    # Use ChatActionSender to show "typing..." status
+    async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
+        is_admin = services.cache.is_admin(message.from_user.id)
 
-    report_text = await user_service.get_online_users_report(
-        tt_connection=tt_connection, is_caller_admin=is_admin, translator=translator
-    )
+        report_text = await user_service.get_online_users_report(
+            tt_connection=tt_connection, is_caller_admin=is_admin, translator=translator
+        )
 
-    await message.reply(report_text)
+        await message.reply(report_text)
 
 
 @user_commands_router.message(Command("help"))
