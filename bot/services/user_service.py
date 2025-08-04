@@ -15,6 +15,7 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.database import crud
+from bot.locales import keys
 from bot.models import MutedUser, MuteListMode, OperationResult, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
@@ -358,22 +359,22 @@ async def toggle_mute_status_for_tt_user(
     log_context = f" while toggling mute for '{tt_username_to_toggle}' for user {user_settings.telegram_id}"
     resulting_action = "unmuted" if existing_entry else "muted"
 
-    async with managed_db_transaction(session, logger, log_context) as transaction_success:
-        if not transaction_success:
-            return OperationResult(success=False, message_key="mute_toggle_error_generic")
-
-        if existing_entry:
-            user_settings.muted_users_list.remove(existing_entry)
-            await session.delete(existing_entry)
-            logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
-        else:
-            new_entry = MutedUser(
-                user_settings_telegram_id=user_settings.telegram_id,
-                muted_teamtalk_username=tt_username_to_toggle,
-            )
-            user_settings.muted_users_list.append(new_entry)
-            session.add(new_entry)
-            logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+    try:
+        async with managed_db_transaction(session, logger, log_context):
+            if existing_entry:
+                user_settings.muted_users_list.remove(existing_entry)
+                await session.delete(existing_entry)
+                logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+            else:
+                new_entry = MutedUser(
+                    user_settings_telegram_id=user_settings.telegram_id,
+                    muted_teamtalk_username=tt_username_to_toggle,
+                )
+                user_settings.muted_users_list.append(new_entry)
+                session.add(new_entry)
+                logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+    except Exception:
+        return OperationResult(success=False, message_key=keys.MUTE_TOGGLE_ERROR_GENERIC)
 
     # This block executes only if the transaction was successful
     await session.refresh(user_settings, attribute_names=["muted_users_list"])

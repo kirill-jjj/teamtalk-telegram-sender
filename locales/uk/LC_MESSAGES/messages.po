@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-04 20:49+0000\n"
+"POT-Creation-Date: 2025-08-04 21:20+0000\n"
 "PO-Revision-Date: 2025-07-08 17:08+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -197,37 +197,37 @@ msgstr "Ви не були підписані на сповіщення."
 msgid "Invalid deeplink action."
 msgstr "Недійсна дія за deeplink-посиланням."
 
-#: bot/services/user_service.py:68
+#: bot/services/user_service.py:69
 #, python-brace-format
 msgid "in {channel_name}"
 msgstr "в {channel_name}"
 
-#: bot/services/user_service.py:70 bot/services/user_service.py:77
+#: bot/services/user_service.py:71 bot/services/user_service.py:78
 msgid "under server"
 msgstr "на сервері"
 
-#: bot/services/user_service.py:72
+#: bot/services/user_service.py:73
 msgid "in root channel"
 msgstr "в кореневому каналі"
 
-#: bot/services/user_service.py:79
+#: bot/services/user_service.py:80
 msgid "in unknown location"
 msgstr "в невідомому місці"
 
-#: bot/services/user_service.py:122
+#: bot/services/user_service.py:123
 msgid "No users found online"
 msgstr "Користувачів онлайн не знайдено"
 
-#: bot/services/user_service.py:124 bot/telegram_bot/handlers/admin.py:71
+#: bot/services/user_service.py:125 bot/telegram_bot/handlers/admin.py:71
 #, python-brace-format
 msgid "No users found online on server {server_host}."
 msgstr "На сервері {server_host} не знайдено користувачів онлайн."
 
-#: bot/services/user_service.py:126
+#: bot/services/user_service.py:127
 msgid "No users found online."
 msgstr "Користувачів онлайн не знайдено."
 
-#: bot/services/user_service.py:133
+#: bot/services/user_service.py:134
 #, python-brace-format
 msgid "There is {user_count} user on the server {server_host}:\n"
 msgid_plural "There are {user_count} users on the server {server_host}:\n"
@@ -235,7 +235,7 @@ msgstr[0] "На сервері {server_host} {user_count} користувач:\
 msgstr[1] "На сервері {server_host} {user_count} користувачі:\n"
 msgstr[2] "На сервері {server_host} {user_count} користувачів:\n"
 
-#: bot/services/user_service.py:140
+#: bot/services/user_service.py:141
 #, python-brace-format
 msgid "There is {user_count} user on the server:\n"
 msgid_plural "There are {user_count} users on the server:\n"
@@ -243,11 +243,11 @@ msgstr[0] "На сервері {user_count} користувач:\n"
 msgstr[1] "На сервері {user_count} користувачі:\n"
 msgstr[2] "На сервері {user_count} користувачів:\n"
 
-#: bot/services/user_service.py:150
+#: bot/services/user_service.py:151
 msgid " and "
 msgstr " та "
 
-#: bot/services/user_service.py:167
+#: bot/services/user_service.py:168
 msgid "Error: No active TeamTalk connection."
 msgstr "Помилка: Немає активного підключення до TeamTalk."
 
@@ -1020,3 +1020,8 @@ msgstr ""
 "Бот TeamTalk не підключений або не повністю ініціалізований. Будь ласка, "
 "спробуйте ще раз пізніше."
 
+#: bot/locales/keys.py:4
+msgid "An error occurred while changing the mute status. Please try again."
+msgstr ""
+"Виникла помилка під час зміни статусу ігнорування. Будь ласка, спробуйте "
+"ще раз."
