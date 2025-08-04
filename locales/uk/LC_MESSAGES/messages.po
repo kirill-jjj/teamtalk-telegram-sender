@@ -1,9 +1,3 @@
-# Ukrainian translations for teamtalk-telegram-sender.
-# Copyright (C) 2025 kirill-jjj
-# This file is distributed under the same license as the
-# teamtalk-telegram-sender project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
@@ -1062,14 +1056,3 @@ msgid ""
 msgstr ""
 "Бот TeamTalk не підключений або не повністю ініціалізований. Будь ласка, "
 "спробуйте ще раз пізніше."
-
-#~ msgid "An error occurred while changing the mute status. Please try again."
-#~ msgstr ""
-#~ "Виникла помилка під час зміни статусу"
-#~ " ігнорування. Будь ласка, спробуйте ще "
-#~ "раз."
-
-#~ msgid "An error occurred while displaying the list. Bot instance not found."
-#~ msgstr ""
-#~ "Сталася помилка під час відображення "
-#~ "списку. Екземпляр бота не знайдено."
