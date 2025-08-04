@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-04 23:10+0000\n"
+"POT-Creation-Date: 2025-08-04 23:16+0000\n"
 "PO-Revision-Date: 2025-07-08 17:09+0500\n"
 "Last-Translator: \n"
 "Language: ru\n"
@@ -200,6 +200,7 @@ msgstr ""
 "привязано."
 
 #: bot/services/deeplink_service.py:69 bot/services/deeplink_service.py:162
+#: bot/teamtalk_bot/commands.py:251 bot/teamtalk_bot/commands.py:278
 #: bot/teamtalk_bot/utils.py:320
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:394
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:431
@@ -292,15 +293,15 @@ msgstr "Пользователь {username} был успешно замьюче
 msgid "mute_toggle_success_unmuted"
 msgstr "Пользователь {username} был успешно размьючен."
 
-#: bot/teamtalk_bot/commands.py:82
+#: bot/teamtalk_bot/commands.py:81
 msgid "You are not authorized to perform this action."
 msgstr "У вас недостаточно прав для выполнения этого действия."
 
-#: bot/teamtalk_bot/commands.py:116
+#: bot/teamtalk_bot/commands.py:115
 msgid "No action was performed. Please check the IDs provided."
 msgstr "Никаких действий не выполнено. Пожалуйста, проверьте предоставленные ID."
 
-#: bot/teamtalk_bot/commands.py:177
+#: bot/teamtalk_bot/commands.py:176
 #, python-brace-format
 msgid "Successfully added {count} admin."
 msgid_plural "Successfully added {count} admins."
@@ -308,7 +309,7 @@ msgstr[0] "Успешно добавлен {count} администратор."
 msgstr[1] "Успешно добавлено {count} администратора."
 msgstr[2] "Успешно добавлено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:181
+#: bot/teamtalk_bot/commands.py:180
 #, python-brace-format
 msgid "Successfully removed {count} admin."
 msgid_plural "Successfully removed {count} admins."
@@ -316,7 +317,7 @@ msgstr[0] "Успешно удален {count} администратор."
 msgstr[1] "Успешно удалено {count} администратора."
 msgstr[2] "Успешно удалено {count} администраторов."
 
-#: bot/teamtalk_bot/commands.py:250
+#: bot/teamtalk_bot/commands.py:249
 #, python-brace-format
 msgid ""
 "Click this link to subscribe to notifications (link valid for 5 minutes):"
@@ -327,7 +328,7 @@ msgstr ""
 "действительна 5 минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:277
+#: bot/teamtalk_bot/commands.py:276
 #, python-brace-format
 msgid ""
 "Click this link to unsubscribe from notifications (link valid for 5 "
@@ -338,7 +339,7 @@ msgstr ""
 "действительна 5 минут):\n"
 "{deeplink_url}"
 
-#: bot/teamtalk_bot/commands.py:306
+#: bot/teamtalk_bot/commands.py:305
 #, python-brace-format
 msgid ""
 "Please provide Telegram IDs after the command. Example: {add_admin_cmd} "
@@ -347,23 +348,23 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: {add_admin_cmd} "
 "12345678 98765432"
 
-#: bot/teamtalk_bot/commands.py:309
+#: bot/teamtalk_bot/commands.py:308
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
 "Пользователь с ID {telegram_id} уже является администратором или не "
 "удалось его добавить."
 
-#: bot/teamtalk_bot/commands.py:311 bot/teamtalk_bot/commands.py:344
+#: bot/teamtalk_bot/commands.py:310 bot/teamtalk_bot/commands.py:343
 #, python-brace-format
 msgid "'{telegram_id_str}' is not a valid numeric Telegram ID."
 msgstr "'{telegram_id_str}' не является допустимым числовым ID Telegram."
 
-#: bot/teamtalk_bot/commands.py:312 bot/teamtalk_bot/commands.py:345
+#: bot/teamtalk_bot/commands.py:311 bot/teamtalk_bot/commands.py:344
 msgid "Action Results:"
 msgstr "Результаты действия:"
 
-#: bot/teamtalk_bot/commands.py:339
+#: bot/teamtalk_bot/commands.py:338
 #, python-brace-format
 msgid ""
 "Please provide Telegram IDs after the command. Example: "
@@ -372,12 +373,12 @@ msgstr ""
 "Пожалуйста, укажите ID Telegram после команды. Пример: {remove_admin_cmd}"
 " 12345678 98765432"
 
-#: bot/teamtalk_bot/commands.py:342
+#: bot/teamtalk_bot/commands.py:341
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found or failed to remove."
 msgstr "Администратор с ID {telegram_id} не найден или не удалось его удалить."
 
-#: bot/teamtalk_bot/commands.py:392
+#: bot/teamtalk_bot/commands.py:391
 #, python-brace-format
 msgid "Unknown command. Available commands: {commands}."
 msgstr "Неизвестная команда. Доступные команды: {commands}."
