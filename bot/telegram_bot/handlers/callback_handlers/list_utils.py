@@ -4,12 +4,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot
 from aiogram.types import CallbackQuery
+from sqlalchemy.sql.selectable import Select
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -28,32 +30,56 @@ logger = logging.getLogger(__name__)
 SUBSCRIBERS_PER_PAGE = 10
 
 
+async def _prepare_user_list(
+    session: AsyncSession,
+    bot: Bot,
+    statement: Select[Any],
+    extractor: Callable[[Any], tuple[int, str | None] | None],
+) -> list[SubscriberInfo]:
+    """A generic helper to fetch entities from the DB, get their display names, and sort them.
+
+    :param session: The database session.
+    :param bot: The bot instance for fetching user names.
+    :param statement: The SQLAlchemy select statement to execute.
+    :param extractor: A function that takes a DB entity and returns a tuple of
+                      (telegram_id, teamtalk_username) or None.
+    :return: A sorted list of SubscriberInfo objects.
+    """
+    db_results = (await session.exec(statement)).all()  # type: ignore[call-overload]
+    if not db_results:
+        return []
+
+    extracted_data = [extractor(item) for item in db_results]
+    valid_data = [data for data in extracted_data if data is not None]
+
+    telegram_ids = [data[0] for data in valid_data]
+    display_names = await get_display_names_for_ids(bot, telegram_ids)
+
+    user_info_list = [
+        SubscriberInfo(
+            telegram_id=data[0],
+            display_name=display_names.get(data[0], str(data[0])),
+            teamtalk_username=data[1],
+        )
+        for data in valid_data
+    ]
+
+    user_info_list.sort(key=lambda user: user.display_name.lower())
+    return user_info_list
+
+
 async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[SubscriberInfo]:
-    """Fetches subscriber details using the centralized get_display_names_for_ids."""
+    """Fetches all subscriber details using the generic _prepare_user_list helper."""
     all_subscriber_ids = await get_all_subscribers_ids(session)
     if not all_subscriber_ids:
         return []
 
-    user_settings_list = (
-        await session.exec(select(UserSettings).where(UserSettings.telegram_id.in_(all_subscriber_ids)))  # type: ignore[attr-defined]
-    ).all()
-    user_settings_map = {us.telegram_id: us for us in user_settings_list}
+    statement = select(UserSettings).where(UserSettings.telegram_id.in_(all_subscriber_ids))  # type: ignore[attr-defined]
 
-    display_names = await get_display_names_for_ids(bot, all_subscriber_ids)
+    def extractor(user_settings: UserSettings) -> tuple[int, str | None]:
+        return user_settings.telegram_id, user_settings.teamtalk_username
 
-    all_subscribers_info = [
-        SubscriberInfo(
-            telegram_id=telegram_id,
-            display_name=display_names.get(telegram_id, str(telegram_id)),
-            teamtalk_username=(
-                user_settings_map[telegram_id].teamtalk_username if telegram_id in user_settings_map else None
-            ),
-        )
-        for telegram_id in all_subscriber_ids
-    ]
-
-    all_subscribers_info.sort(key=lambda sub: sub.display_name.lower())
-    return all_subscribers_info
+    return await _prepare_user_list(session, bot, statement, extractor)
 
 
 async def _show_subscriber_list_page(

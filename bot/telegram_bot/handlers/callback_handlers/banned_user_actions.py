@@ -6,22 +6,22 @@ from typing import TYPE_CHECKING, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import SubscriberAction
-from bot.database import crud
+from bot.models import BanList
 from bot.services import admin_service
 from bot.telegram_bot.callback_data import SubscriberActionCallback
-from bot.telegram_bot.keyboards import create_banned_user_list_keyboard
-from bot.telegram_bot.models import SubscriberInfo
-from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.telegram_bot.utils import get_display_names_for_ids
-
-from ._helpers import ensure_message_context
-from .list_utils import (
+from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     SUBSCRIBERS_PER_PAGE,
+    _prepare_user_list,
     _show_subscriber_list_page,
 )
+from bot.telegram_bot.keyboards import create_banned_user_list_keyboard
+from bot.telegram_bot.ui_utils import display_paginated_list
+
+from ._helpers import ensure_message_context
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -63,22 +63,27 @@ async def _show_banned_list_page(
     page: int,
     translator: gettext.GNUTranslations,
 ) -> None:
-    """Shows a paginated list of banned users."""
+    """Shows a paginated list of banned users using the generic list helper."""
     _ = translator.gettext
-    banned_users = await crud.get_all_banned_users(session)
-    banned_user_ids = [bu.telegram_id for bu in banned_users if bu.telegram_id]
 
-    display_names = await get_display_names_for_ids(services.bot_event, banned_user_ids)
+    statement = select(BanList)
 
-    subscriber_infos = [
-        SubscriberInfo(
-            telegram_id=bu.telegram_id,
-            display_name=display_names.get(bu.telegram_id, str(bu.telegram_id)),
-            teamtalk_username=bu.teamtalk_username,
-        )
-        for bu in banned_users
-        if bu.telegram_id
-    ]
+    def extractor(ban_entry: BanList) -> tuple[int, str | None] | None:
+        # We must ensure telegram_id is not None, as the list is of users.
+        # This should be guaranteed by how bans are created.
+        if ban_entry.telegram_id is None:
+            # This case should ideally not happen if data is consistent.
+            # Log an error and skip the entry.
+            logger.error("BanList entry with id %s has null telegram_id.", ban_entry.id)
+            return None  # Returning None to be filtered out later
+        return ban_entry.telegram_id, ban_entry.teamtalk_username
+
+    # Filter out entries with no telegram_id before passing to the preparer
+    statement = statement.where(BanList.telegram_id.isnot(None))  # type: ignore[union-attr]
+
+    subscriber_infos = await _prepare_user_list(
+        session, services.bot_event, statement, extractor
+    )
 
     await display_paginated_list(
         target=target,
