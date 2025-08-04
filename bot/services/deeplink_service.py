@@ -9,7 +9,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
 from bot.database import crud
-from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import Deeplink as DeeplinkModel  # Renamed to avoid conflict
 from bot.models import UserSettings
 from bot.services import user_service
@@ -67,7 +66,7 @@ async def process_subscribe_deeplink(
         )
         # The user_service.process_new_subscription should log specifics.
         # Provide a generic error to the user.
-        return _(MSG_KEY_GENERIC_ERROR)
+        return _("An error occurred. Please try again later.")
 
     # If user is also an admin, ensure admin cache is updated.
     # This check is done after successful subscription processing.
@@ -160,7 +159,7 @@ async def execute_deeplink_action(
         else:
             async with managed_db_transaction(session, logger) as transaction_success:
                 if not transaction_success:
-                    return _(MSG_KEY_GENERIC_ERROR)
+                    return _("An error occurred. Please try again later.")
 
                 if is_unsubscribe_handler(handler, action_enum_member):
                     return_message = await handler(session, telegram_id, translator, services)
