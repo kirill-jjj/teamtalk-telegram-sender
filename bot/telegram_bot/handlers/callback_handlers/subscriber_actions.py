@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
