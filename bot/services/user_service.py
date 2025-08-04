@@ -17,11 +17,12 @@ from bot.constants import (
 )
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, UserSettings
-from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
+from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
 from . import _utils
+from ._utils import managed_db_transaction
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -382,58 +383,44 @@ async def toggle_mute_status_for_tt_user(
     tt_username_to_toggle: str,
     services: "Services",
 ) -> tuple[bool, str | None]:
-    """Toggles the mute status of a TeamTalk user."""
+    """Toggles the mute status of a TeamTalk user using a managed transaction."""
     resulting_action: str | None = None
-    existing_entry: MutedUser | None = None
     if user_settings.muted_users_list is None:
         user_settings.muted_users_list = []
-    for muted_user_entry in user_settings.muted_users_list:
-        if muted_user_entry.muted_teamtalk_username == tt_username_to_toggle:
-            existing_entry = muted_user_entry
-            break
+
+    existing_entry = next(
+        (entry for entry in user_settings.muted_users_list if entry.muted_teamtalk_username == tt_username_to_toggle),
+        None,
+    )
+
+    log_context = f" while toggling mute for '{tt_username_to_toggle}' for user {user_settings.telegram_id}"
     try:
-        if existing_entry:
-            user_settings.muted_users_list.remove(existing_entry)
-            await session.delete(existing_entry)
-            resulting_action = "unmuted"
-            logger.info(
-                "User %s unmuted TeamTalk user '%s'. Pending commit.", user_settings.telegram_id, tt_username_to_toggle
-            )
-        else:
-            new_entry = MutedUser(
-                user_settings_telegram_id=user_settings.telegram_id,
-                muted_teamtalk_username=tt_username_to_toggle,
-            )
-            user_settings.muted_users_list.append(new_entry)
-            session.add(new_entry)
-            resulting_action = "muted"
-            logger.info(
-                "User %s muted TeamTalk user '%s'. Pending commit.", user_settings.telegram_id, tt_username_to_toggle
-            )
-        await session.commit()
+        async with managed_db_transaction(session, logger, log_context):
+            if existing_entry:
+                user_settings.muted_users_list.remove(existing_entry)
+                await session.delete(existing_entry)
+                resulting_action = "unmuted"
+                logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+            else:
+                new_entry = MutedUser(
+                    user_settings_telegram_id=user_settings.telegram_id,
+                    muted_teamtalk_username=tt_username_to_toggle,
+                )
+                user_settings.muted_users_list.append(new_entry)
+                session.add(new_entry)
+                resulting_action = "muted"
+                logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+    except (SQLAlchemyError, Exception):
+        # The context manager has already logged the exception and rolled back.
+        return False, None
+    else:
+        # This block executes only if the transaction was successful
         await session.refresh(user_settings, attribute_names=["muted_users_list"])
         services.cache.update_user_settings(user_settings)
         logger.info(
-            "Successfully toggled mute for '%s' for user %s to '%s'. DB and cache updated.",
+            "Successfully toggled mute for '%s' for user %s to '%s'. Cache updated.",
             tt_username_to_toggle,
             user_settings.telegram_id,
             resulting_action,
         )
-    except SQLAlchemyError:
-        await session.rollback()
-        logger.exception(
-            "SQLAlchemyError while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
-            tt_username_to_toggle,
-            user_settings.telegram_id,
-        )
-        return False, None
-    except Exception:
-        await session.rollback()
-        logger.exception(
-            "Unexpected error while toggling mute status for TT user '%s' for TG user %s. Rolled back.",
-            tt_username_to_toggle,
-            user_settings.telegram_id,
-        )
-        return False, None
-    else:
         return True, resulting_action

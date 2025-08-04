@@ -5,7 +5,6 @@ import logging
 from typing import TYPE_CHECKING, cast
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlalchemy.orm import selectinload
@@ -41,13 +40,13 @@ from bot.telegram_bot.keyboards import (
     create_admin_subscriber_notification_pref_keyboard,
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,
-    create_subscriber_action_menu_keyboard,
     create_view_mute_list_keyboard,
 )
 from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
-from ._helpers import ensure_message_context
+from ._helpers import action_and_refresh_subscriber_view, ensure_message_context
+from ._view_rendering import _display_subscriber_view
 from .list_utils import (
     SUBSCRIBERS_PER_PAGE,
     _show_subscriber_list_page,
@@ -218,6 +217,7 @@ async def handle_admin_set_language_choice(
     SubscriberActionCallback.filter(F.action == SubscriberAction.ADMIN_TOGGLE_NOON)
 )
 @ensure_message_context
+@action_and_refresh_subscriber_view
 async def handle_admin_toggle_noon(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -225,35 +225,21 @@ async def handle_admin_toggle_noon(
     translator: gettext.GNUTranslations,
     services: "Services",
     tt_connection: TeamTalkConnection | None,  # Unused in this handler
-) -> None:
+) -> tuple[bool, str]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page
 
-    # Logic from _handle_admin_toggle_noon_action
     updated_user_settings = await admin_service.admin_toggle_noon_setting(session, services, target_telegram_id)
 
     if updated_user_settings:
         new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
-        await query.answer(
-            _("NOON status for subscriber {tg_id} set to: {status}").format(
-                tg_id=target_telegram_id, status=new_status_text
-            ),
-            show_alert=False,
+        message = _("NOON status for subscriber {tg_id} set to: {status}").format(
+            tg_id=target_telegram_id, status=new_status_text
         )
-    else:
-        await query.answer(_("Failed to toggle NOON status. Please try again."), show_alert=True)
-
-    # Refresh the view for the subscriber
-    await _display_subscriber_view(
-        query=query,
-        target_telegram_id=target_telegram_id,
-        page_context=return_page,
-        session=session,
-        translator=translator,
-        services=services,
-    )
+        return True, message
+    message = _("Failed to toggle NOON status. Please try again.")
+    return False, message
 
 
 @subscriber_actions_router.callback_query(
@@ -449,62 +435,6 @@ async def _refresh_and_display_subscriber_list(
         translator=translator,
         page=return_page,  # The page to return to in the subscriber list
     )
-
-
-async def _display_subscriber_view(
-    query: CallbackQuery,
-    target_telegram_id: int,
-    page_context: int,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-) -> None:
-    """Helper function to display the subscriber details view."""
-    _ = translator.gettext
-
-    keyboard = await create_subscriber_action_menu_keyboard(
-        translator, target_telegram_id=target_telegram_id, page=page_context
-    )
-    user_to_view = await session.get(UserSettings, target_telegram_id)
-    display_name = str(target_telegram_id)
-
-    active_bot = services.bot_event
-    if user_to_view and user_to_view.telegram_id:
-        try:
-            chat_info = await active_bot.get_chat(user_to_view.telegram_id)
-            display_name = format_telegram_user_display_name(chat_info)
-        except TelegramAPIError:
-            logger.exception("Could not fetch chat info for %s via Telegram API.", user_to_view.telegram_id)
-        except Exception:
-            logger.exception("Unexpected error fetching chat info for %s.", user_to_view.telegram_id)
-
-    details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
-    if user_to_view:
-        details_parts.append(
-            _("Linked TT Account: {tt_username}").format(tt_username=user_to_view.teamtalk_username or _("None"))
-        )
-        details_parts.append(_("Language: {lang}").format(lang=user_to_view.language_code))
-        noon_status = _("Enabled") if user_to_view.not_on_online_enabled else _("Disabled")
-        details_parts.append(_("NOON (Not on Online): {status}").format(status=noon_status))
-        notif_setting_map = {
-            NotificationSetting.ALL.value: _("All (Join & Leave)"),
-            NotificationSetting.LEAVE_OFF.value: _("Join Only"),
-            NotificationSetting.JOIN_OFF.value: _("Leave Only"),
-            NotificationSetting.NONE.value: _("None"),
-        }
-        notif_setting_str = user_to_view.notification_settings.value
-        details_parts.append(
-            _("Notifications: {setting}").format(setting=notif_setting_map.get(notif_setting_str, notif_setting_str))
-        )
-        mute_mode_str = _("Blacklist") if user_to_view.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
-        details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
-    else:
-        details_parts.append(_("Subscriber settings not found."))
-
-    text = "\n".join(details_parts)
-    # @ensure_message_context guarantees query.message is a Message
-    await cast(Message, query.message).edit_text(text, reply_markup=keyboard, parse_mode="HTML")
-    await query.answer()
 
 
 @subscriber_actions_router.callback_query(ViewSubscriberCallback.filter())
@@ -733,64 +663,46 @@ async def handle_link_tt_account_chosen(
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 @ensure_message_context
+@action_and_refresh_subscriber_view
 async def handle_admin_set_subscriber_language(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberLanguageCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-) -> None:
+) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's language."""
     _ = translator.gettext
-    # The ensure_message_context decorator handles the query.message check.
     target_telegram_id = callback_data.target_telegram_id
     new_lang_code = callback_data.lang_code
-    subscriber_page_context = callback_data.subscriber_page_context
 
     updated_user_settings = await admin_service.admin_set_user_language(
         session, services, target_telegram_id, new_lang_code
     )
 
     if updated_user_settings:
-        await query.answer(
-            _("Language for subscriber {tg_id} changed to {lang_code}.").format(
-                tg_id=target_telegram_id, lang_code=new_lang_code
-            ),
-            show_alert=True,
+        message = _("Language for subscriber {tg_id} changed to {lang_code}.").format(
+            tg_id=target_telegram_id, lang_code=new_lang_code
         )
-    else:
-        # Check if the user was not found initially by the service, or if another error occurred.
-        # The service logs details. Here, we provide generic feedback.
-        # We could add a step to check if user_settings exists before calling service if we want different messages.
-        await query.answer(
-            _("Failed to change language. Subscriber settings might be missing or an error occurred."), show_alert=True
-        )
-
-    # query.message is guaranteed to exist here due to the @ensure_message_context decorator.
-    await handle_view_subscriber(
-        query=query,
-        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
-        session=session,
-        translator=translator,
-        services=services,
-    )
+        return True, message
+    message = _("Failed to change language. Subscriber settings might be missing or an error occurred.")
+    return False, message
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 @ensure_message_context
+@action_and_refresh_subscriber_view
 async def handle_admin_set_subscriber_notification_pref(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberNotificationPrefCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-) -> None:
+) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's notification preference using the service layer."""
     _ = translator.gettext
-    # The ensure_message_context decorator handles the query.message check.
     target_telegram_id = callback_data.target_telegram_id
     new_pref_str = callback_data.setting_value
-    subscriber_page_context = callback_data.subscriber_page_context
 
     try:
         new_pref_enum = NotificationSetting(new_pref_str)
@@ -798,8 +710,7 @@ async def handle_admin_set_subscriber_notification_pref(
         logger.exception(
             "Invalid notification setting value received: %s for user %s", new_pref_str, target_telegram_id
         )
-        await query.answer(_("Invalid setting value. Please try again."), show_alert=True)
-        return
+        return False, _("Invalid setting value. Please try again.")
 
     updated_user_settings = await admin_service.admin_set_user_notification_preference(
         session, services, target_telegram_id, new_pref_enum
@@ -812,50 +723,33 @@ async def handle_admin_set_subscriber_notification_pref(
             NotificationSetting.JOIN_OFF.value: _("Leave Only"),
             NotificationSetting.NONE.value: _("None"),
         }
-        # Use the value from the updated_user_settings which is confirmed from DB
         new_pref_display_name = notif_setting_map.get(
             updated_user_settings.notification_settings.value, updated_user_settings.notification_settings.value
         )
-        await query.answer(
-            _("Notification preference for subscriber {tg_id} set to: {pref}").format(
-                tg_id=target_telegram_id, pref=new_pref_display_name
-            ),
-            show_alert=False,
+        message = _("Notification preference for subscriber {tg_id} set to: {pref}").format(
+            tg_id=target_telegram_id, pref=new_pref_display_name
         )
-    else:
-        # Service function handles logging of specific error (e.g., user not found, DB error)
-        msg = _(
-            "Failed to change notification preference for subscriber {tg_id}. Please check logs or try again."
-        ).format(tg_id=target_telegram_id)
-        await query.answer(msg, show_alert=True)
-
-    # Refresh the main subscriber view to show updated details
-    # query.message is guaranteed to exist here due to @ensure_message_context.
-    await handle_view_subscriber(
-        query=query,
-        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
-        session=session,
-        translator=translator,
-        services=services,
-    )
-    # No explicit return needed as it's the end of the function
+        return True, message
+    message = _(
+        "Failed to change notification preference for subscriber {tg_id}. Please check logs or try again."
+    ).format(tg_id=target_telegram_id)
+    return False, message
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
+@action_and_refresh_subscriber_view
 async def handle_admin_set_subscriber_mute_mode(
     query: CallbackQuery,
     callback_data: AdminSetSubscriberMuteModeCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
-) -> None:
+) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's mute list mode."""
     _ = translator.gettext
-    # The ensure_message_context decorator handles the query.message check.
     target_telegram_id = callback_data.target_telegram_id
     new_mode = callback_data.mode
-    subscriber_page_context = callback_data.subscriber_page_context
 
     updated_user_settings = await admin_service.admin_set_user_mute_mode(
         session, services, target_telegram_id, new_mode
@@ -863,20 +757,9 @@ async def handle_admin_set_subscriber_mute_mode(
 
     if updated_user_settings:
         mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
-        await query.answer(
-            _("Mute list mode for subscriber {tg_id} set to: {mode}").format(tg_id=target_telegram_id, mode=mode_text),
-            show_alert=False,
+        message = _("Mute list mode for subscriber {tg_id} set to: {mode}").format(
+            tg_id=target_telegram_id, mode=mode_text
         )
-    else:
-        await query.answer(
-            _("Failed to change mute mode. Subscriber settings might be missing or an error occurred."), show_alert=True
-        )
-
-    # query.message is guaranteed to exist here.
-    await handle_view_subscriber(
-        query=query,
-        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context),
-        session=session,
-        translator=translator,
-        services=services,
-    )
+        return True, message
+    message = _("Failed to change mute mode. Subscriber settings might be missing or an error occurred.")
+    return False, message

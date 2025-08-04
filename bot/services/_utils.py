@@ -1,6 +1,8 @@
 # This module will contain shared utility functions for different services.
 # It helps to avoid circular dependencies and improve code organization.
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -15,7 +17,10 @@ from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 if TYPE_CHECKING:
     from bot.services_container import Services
 
+
 logger = logging.getLogger(__name__)
+
+__all__ = ["managed_db_transaction", "update_user_bot_commands"]
 
 
 async def update_user_bot_commands(
@@ -55,6 +60,21 @@ async def update_user_bot_commands(
         return False
     else:
         return True
+
+
+@asynccontextmanager
+async def managed_db_transaction(
+    session: AsyncSession, logger: logging.Logger, log_context: str = ""
+) -> AsyncGenerator[None, None]:
+    """A context manager for managed database transactions."""
+    try:
+        yield
+        await session.commit()
+        logger.info("DB transaction successful%s.", log_context)
+    except (SQLAlchemyError, Exception):
+        await session.rollback()
+        logger.exception("Error in transaction%s. Rolled back.", log_context)
+        raise
 
 
 async def _update_user_setting_field(
