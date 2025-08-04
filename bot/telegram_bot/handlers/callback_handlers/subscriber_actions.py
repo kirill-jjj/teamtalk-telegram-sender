@@ -48,6 +48,7 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 from ._helpers import (
     _display_subscriber_view,
     action_and_refresh_subscriber_view,
+    create_setting_change_handler,
     ensure_message_context,
 )
 from .list_utils import (
@@ -675,21 +676,12 @@ async def handle_admin_set_subscriber_language(
     services: "Services",
 ) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's language."""
-    _ = translator.gettext
-    target_telegram_id = callback_data.target_telegram_id
-    new_lang_code = callback_data.lang_code
-
-    updated_user_settings = await admin_service.admin_set_user_language(
-        session, services, target_telegram_id, new_lang_code
-    )
-
-    if updated_user_settings:
-        message = _("Language for subscriber {tg_id} changed to {lang_code}.").format(
-            tg_id=target_telegram_id, lang_code=new_lang_code
-        )
-        return True, message
-    message = _("Failed to change language. Subscriber settings might be missing or an error occurred.")
-    return False, message
+    return await create_setting_change_handler(
+        service_func=admin_service.admin_set_user_language,
+        value_extractor=lambda cb: cb.lang_code,
+        success_msg_formatter="Language for subscriber {tg_id} changed to {value}.",
+        failure_msg="Failed to change language. Subscriber settings might be missing or an error occurred.",
+    )(query, callback_data, session, translator, services)
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
@@ -729,7 +721,7 @@ async def handle_admin_set_subscriber_notification_pref(
         new_pref_display_name = notif_setting_map.get(
             updated_user_settings.notification_settings.value, updated_user_settings.notification_settings.value
         )
-        message = _("Notification preference for subscriber {tg_id} set to: {pref}").format(
+        message = _("Notification preference for subscriber {tg_id} set to: {pref}.").format(
             tg_id=target_telegram_id, pref=new_pref_display_name
         )
         return True, message
@@ -750,19 +742,9 @@ async def handle_admin_set_subscriber_mute_mode(
     services: "Services",
 ) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's mute list mode."""
-    _ = translator.gettext
-    target_telegram_id = callback_data.target_telegram_id
-    new_mode = callback_data.mode
-
-    updated_user_settings = await admin_service.admin_set_user_mute_mode(
-        session, services, target_telegram_id, new_mode
-    )
-
-    if updated_user_settings:
-        mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
-        message = _("Mute list mode for subscriber {tg_id} set to: {mode}").format(
-            tg_id=target_telegram_id, mode=mode_text
-        )
-        return True, message
-    message = _("Failed to change mute mode. Subscriber settings might be missing or an error occurred.")
-    return False, message
+    return await create_setting_change_handler(
+        service_func=admin_service.admin_set_user_mute_mode,
+        value_extractor=lambda cb: cb.mode,
+        success_msg_formatter="Mute list mode for subscriber {tg_id} set to: {value}.",
+        failure_msg="Failed to change mute mode. Subscriber settings might be missing or an error occurred.",
+    )(query, callback_data, session, translator, services)
