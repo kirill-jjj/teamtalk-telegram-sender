@@ -12,9 +12,6 @@ from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 
-# Middlewares to apply
-from ...middlewares.admin_check import AdminCheckMiddleware
-
 # Import business logic directly, not through other handlers
 from ..admin import _show_user_buttons
 from ..user import help_command_handler, settings_command_handler, who_command_handler
@@ -30,7 +27,6 @@ menu_callback_router = Router(name="menu_callback_router")
 # Middlewares are now applied in the parent router in callbacks.py
 
 admin_menu_callback_router = Router(name="admin_menu_callback_router")
-admin_menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
 # The other middlewares are applied in the parent router in callbacks.py
 
 

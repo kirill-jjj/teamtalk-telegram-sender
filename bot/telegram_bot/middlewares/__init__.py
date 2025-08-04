@@ -2,7 +2,6 @@
 # Order of imports can matter if middlewares depend on each other's injected data,
 # though for simple imports like these, it's mostly for organization.
 
-from .admin_check import AdminCheckMiddleware
 from .db_session import DbSessionMiddleware
 from .i18n import I18nMiddleware
 from .subscription_check import SubscriptionCheckMiddleware
@@ -16,7 +15,6 @@ from .user_settings import UserSettingsMiddleware
 # when `from .middlewares import *` is used, though explicit imports are better.
 __all__ = [
     "ActiveTeamTalkConnectionMiddleware",
-    "AdminCheckMiddleware",
     "DbSessionMiddleware",
     "I18nMiddleware",
     "SubscriptionCheckMiddleware",

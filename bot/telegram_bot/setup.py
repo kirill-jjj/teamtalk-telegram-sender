@@ -12,10 +12,6 @@ from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from bot.config import Settings
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
 from bot.telegram_bot.handlers.admin import admin_router
-from bot.telegram_bot.handlers.callback_handlers.admin import admin_actions_router
-from bot.telegram_bot.handlers.callback_handlers.subscriber_actions import (
-    subscriber_actions_router,
-)
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 
@@ -25,7 +21,6 @@ from bot.telegram_bot.handlers.user import user_commands_router
 # Middlewares
 from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
-    AdminCheckMiddleware,
     DbSessionMiddleware,
     I18nMiddleware,
     SubscriptionCheckMiddleware,
@@ -188,11 +183,6 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
 
     # Specific middleware for callback queries only
     dp.callback_query.middleware(CallbackAnswerMiddleware())
-
-    admin_router.message.middleware(AdminCheckMiddleware())
-    # admin_actions_router is imported at the top-level now.
-    admin_actions_router.callback_query.middleware(AdminCheckMiddleware())
-    subscriber_actions_router.callback_query.middleware(AdminCheckMiddleware())
 
     dp.include_router(user_commands_router)
     dp.include_router(admin_router)
