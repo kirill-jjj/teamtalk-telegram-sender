@@ -1,18 +1,19 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
+from collections.abc import Awaitable, Callable
 import gettext
 import logging
 from typing import (
     TYPE_CHECKING,
+    Any,
     TypeVar,
     cast,
 )
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 import pytalk
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 
 # Import SQLModel's AsyncSession and alias the other one if needed, or just use one consistently.
@@ -57,10 +58,47 @@ ttstr = pytalk.instance.sdk.ttstr
 T = TypeVar("T")
 
 
-# _paginate_list_util MOVED to ui_utils.py and renamed to paginate_list
+async def _display_user_list_generic(
+    callback_query: CallbackQuery,
+    translator: gettext.GNUTranslations,
+    user_settings: UserSettings,
+    page: int,
+    data_fetcher: Callable[[], Awaitable[list[Any]]],
+    sort_key_extractor: Callable[[Any], str],
+    title_text: str,
+    empty_list_text: str,
+    keyboard_factory: Callable[..., Awaitable[Any]],
+    keyboard_factory_kwargs: dict[str, Any],
+    server_host_for_display: str | None = None,
+) -> None:
+    _ = translator.gettext
+    try:
+        items = await data_fetcher()
+        sorted_items = sorted(items, key=sort_key_extractor)
+    except Exception:
+        logger.exception("Failed to fetch or sort user list.")
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
+        return
 
+    if callback_query.bot is None:
+        logger.error("_display_user_list_generic: callback_query.bot is None. Cannot display list.")
+        await callback_query.answer(
+            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
+        )
+        return
 
-# _display_paginated_list_ui MOVED to ui_utils.py and renamed to display_paginated_list
+    await display_paginated_list(
+        target=callback_query,
+        bot=callback_query.bot,
+        translator=translator,
+        items=sorted_items,
+        page=page,
+        title_text=title_text,
+        empty_list_text=empty_list_text,
+        keyboard_factory=keyboard_factory,
+        keyboard_factory_kwargs=keyboard_factory_kwargs,
+        server_host_for_display=server_host_for_display,
+    )
 
 
 async def _display_internal_user_list(
@@ -69,24 +107,20 @@ async def _display_internal_user_list(
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
-    session: SQLModelAsyncSession | None = None,  # Expect SQLModel session
+    session: SQLModelAsyncSession | None = None,
 ) -> None:
     _ = translator.gettext
     if not session:
         logger.error("Session not provided to _display_internal_user_list")
         await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
-    try:
+
+    async def fetcher() -> list[str]:
         statement = select(MutedUser.muted_teamtalk_username).where(
             MutedUser.user_settings_telegram_id == user_settings.telegram_id
         )
-        results = await session.exec(statement)  # Now compatible
-        users_to_process = [str(username) for username in results.all()]
-        sorted_items = sorted(users_to_process)
-    except SQLAlchemyError:
-        logger.exception("DB error fetching internal user list for user %s.", user_settings.telegram_id)
-        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
-        return
+        results = await session.exec(statement)
+        return [str(username) for username in results.all()]
 
     header_text_str, empty_list_text_str = "", ""
     if user_settings.mute_list_mode == MuteListMode.blacklist:
@@ -100,19 +134,13 @@ async def _display_internal_user_list(
         await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
-    if callback_query.bot is None:
-        logger.error("_display_internal_user_list: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(
-            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
-        )
-        return
-
-    await display_paginated_list(
-        target=callback_query,
-        bot=callback_query.bot,  # Now known to be non-None
+    await _display_user_list_generic(
+        callback_query=callback_query,
         translator=translator,
-        items=sorted_items,
+        user_settings=user_settings,
         page=page,
+        data_fetcher=fetcher,
+        sort_key_extractor=lambda x: x.lower(),
         title_text=header_text_str,
         empty_list_text=empty_list_text_str,
         keyboard_factory=create_paginated_user_list_keyboard,
@@ -128,49 +156,36 @@ async def _display_all_server_accounts_list(
     page: int = 0,
 ) -> None:
     _ = translator.gettext
-    # Calling handlers (cq_show_all_accounts_list_action, cq_paginate_all_accounts_list_action)
-    # are now decorated with @ensure_message_context, ensuring callback_query.message is valid.
-
-    user_accounts_cache = tt_connection.user_accounts_cache
-    server_host = tt_connection.server_info.host
-    # callback_query.message is used directly below, no need for message_obj
-
-    if not user_accounts_cache:
+    if not tt_connection.user_accounts_cache:
         try:
-            # callback_query.message is confirmed by @ensure_message_context on calling handlers
-            await callback_query.message.edit_text(  # type: ignore[union-attr]
+            await cast(Message, callback_query.message).edit_text(
                 _("Server user accounts are not loaded yet for {server_host}. Please try again in a moment.").format(
-                    server_host=server_host
+                    server_host=tt_connection.server_info.host
                 )
             )
         except TelegramAPIError:
-            logger.exception("Error informing user about empty accounts_cache for %s.", server_host)
+            logger.exception(
+                "Error informing user about empty accounts_cache for %s.", tt_connection.server_info.host
+            )
         return
 
-    all_accounts_tt = list(user_accounts_cache.values())
-    sorted_items = sorted(
-        all_accounts_tt,
-        key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
-    )
+    async def fetcher() -> list[pytalk.UserAccount]:
+        return list(tt_connection.user_accounts_cache.values())
 
-    if callback_query.bot is None:
-        logger.error("_display_all_server_accounts_list: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(
-            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
-        )
-        return
-
-    await display_paginated_list(
-        target=callback_query,
-        bot=callback_query.bot,  # Now known to be non-None
+    await _display_user_list_generic(
+        callback_query=callback_query,
         translator=translator,
-        items=sorted_items,
+        user_settings=user_settings,
         page=page,
+        data_fetcher=fetcher,
+        sort_key_extractor=lambda acc: (
+            ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()
+        ),
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
         keyboard_factory=create_account_list_keyboard,
         keyboard_factory_kwargs={"user_settings": user_settings},
-        server_host_for_display=server_host,
+        server_host_for_display=tt_connection.server_info.host,
     )
 
 

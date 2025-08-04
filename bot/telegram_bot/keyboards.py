@@ -61,6 +61,12 @@ ttstr = pytalk.instance.sdk.ttstr
 # --- Helper Functions ---
 
 
+def _create_back_button_text(translator: gettext.GNUTranslations, destination_key: str) -> str:
+    """Creates a standardized 'Back to...' button text."""
+    _ = translator.gettext
+    return f"⬅️ {_('Back to')} {_(destination_key)}"
+
+
 def _is_username_effectively_muted(username: str, user_settings: UserSettings, muted_usernames_set: set[str]) -> bool:
     """Determines if a username is effectively muted based on user settings.
 
@@ -175,7 +181,7 @@ async def create_language_selection_keyboard(
         builder.button(text=_("No languages available"), callback_data="noop_lang_sel")  # More specific noop
         builder.row(
             InlineKeyboardButton(
-                text=_("⬅️ Back to Settings"),
+                text=_create_back_button_text(translator, "Settings"),
                 callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack(),
             )
         )
@@ -193,7 +199,7 @@ async def create_language_selection_keyboard(
         current_value=current_lang_code,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="⬅️ Back to Settings",
+        back_button_text_key=_create_back_button_text(translator, "Settings"),
         buttons_per_row=1,
     )
 
@@ -224,7 +230,7 @@ async def create_subscription_settings_keyboard(
         current_value=current_setting.value,  # current_setting is NotificationSetting enum, .value gives the string
         callback_data_factory=sub_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="⬅️ Back to Settings",
+        back_button_text_key=_create_back_button_text(translator, "Settings"),
         buttons_per_row=1,
     )
 
@@ -248,7 +254,8 @@ async def create_notification_settings_keyboard(
         callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
     )
     builder.button(
-        text=_("⬅️ Back to Settings"), callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack()
+        text=_create_back_button_text(translator, "Settings"),
+        callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack(),
     )
     builder.adjust(1)
     return builder
@@ -284,7 +291,7 @@ async def create_manage_muted_users_keyboard(
         callback_data=UserListCallback(action=UserListAction.LIST_ALL_ACCOUNTS).pack(),
     )
     builder.button(
-        text=_("⬅️ Back to Notification Settings"),
+        text=_create_back_button_text(translator, "Notification Settings"),
         callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack(),
     )
     builder.adjust(1)
@@ -348,7 +355,7 @@ async def create_paginated_user_list_keyboard(
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
         back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
-        back_button_text_key="⬅️ Back to Mute Management",
+        back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )
 
 
@@ -378,7 +385,7 @@ async def create_account_list_keyboard(
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
         back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
-        back_button_text_key="⬅️ Back to Mute Management",
+        back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )
 
 
@@ -632,7 +639,7 @@ async def create_subscriber_action_menu_keyboard(
         ).pack(),
     )
     builder.button(
-        text=_("⬅️ Back to Subscribers List"),
+        text=_create_back_button_text(translator, "Subscribers List"),
         callback_data=SubscriberListCallback(action=SubscriberListAction.PAGE, page=page).pack(),
     )
     builder.adjust(1)  # Adjust to 1 column for settings, then back button
@@ -719,7 +726,7 @@ async def create_manage_tt_account_keyboard(
         ).pack(),
     )
     builder.button(
-        text=_("⬅️ Back to User Actions"),
+        text=_create_back_button_text(translator, "User Actions"),
         callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=page).pack(),
     )
     builder.adjust(1)
@@ -762,7 +769,7 @@ async def create_view_mute_list_keyboard(
     # "Back to User Actions" button
     builder.row(
         InlineKeyboardButton(
-            text=_("⬅️ Back to User Actions"),
+            text=_create_back_button_text(translator, "User Actions"),
             callback_data=ViewSubscriberCallback(
                 telegram_id=target_telegram_id,
                 page=subscriber_context_page,
@@ -804,7 +811,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
         current_value=current_mode.value,  # Pass the string value of the current enum
         callback_data_factory=mute_mode_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="⬅️ Back to User Actions",
+        back_button_text_key=_create_back_button_text(translator, "User Actions"),
         buttons_per_row=1,  # Original had 1 button per option row (after adjust(1))
     )
 
@@ -842,7 +849,7 @@ async def create_linkable_tt_account_list_keyboard(
     # Define the "Back to Manage Account" button
     # This will be a list of lists for additional_buttons_bottom
     back_button = InlineKeyboardButton(
-        text=_("⬅️ Back to Manage Account"),
+        text=_create_back_button_text(translator, "Manage Account"),
         callback_data=SubscriberActionCallback(
             action=SubscriberAction.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
@@ -920,7 +927,7 @@ async def create_admin_subscriber_lang_keyboard(
         builder.button(text=_("No languages available"), callback_data="noop_admin_lang_sel")
         builder.row(
             InlineKeyboardButton(
-                text=_("⬅️ Back to User Actions"),  # Default back button text
+                text=_create_back_button_text(translator, "User Actions"),
                 callback_data=ViewSubscriberCallback(
                     telegram_id=target_telegram_id, page=subscriber_page_context
                 ).pack(),
@@ -979,6 +986,6 @@ async def create_admin_subscriber_notification_pref_keyboard(
         current_value=current_setting.value,  # Pass the string value of the current enum
         callback_data_factory=notif_pref_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="⬅️ Back to User Actions",
+        back_button_text_key=_create_back_button_text(translator, "User Actions"),
         buttons_per_row=1,
     )
