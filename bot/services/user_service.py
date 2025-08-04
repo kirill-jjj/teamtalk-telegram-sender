@@ -15,7 +15,6 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.database import crud
-from bot.locales import keys
 from bot.models import MutedUser, MuteListMode, OperationResult, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
@@ -346,8 +345,10 @@ async def toggle_mute_status_for_tt_user(
     user_settings: UserSettings,
     tt_username_to_toggle: str,
     services: "Services",
+    translator: "gettext.GNUTranslations",
 ) -> OperationResult:
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
+    _ = translator.gettext
     if user_settings.muted_users_list is None:
         user_settings.muted_users_list = []
 
@@ -374,7 +375,9 @@ async def toggle_mute_status_for_tt_user(
                 session.add(new_entry)
                 logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
     except Exception:
-        return OperationResult(success=False, message_key=keys.MUTE_TOGGLE_ERROR_GENERIC)
+        return OperationResult(
+            success=False, message_key=_("An error occurred while changing the mute status. Please try again.")
+        )
 
     # This block executes only if the transaction was successful
     await session.refresh(user_settings, attribute_names=["muted_users_list"])
@@ -385,9 +388,10 @@ async def toggle_mute_status_for_tt_user(
         user_settings.telegram_id,
         resulting_action,
     )
+    message_key = _("mute_toggle_success_muted") if resulting_action == "muted" else _("mute_toggle_success_unmuted")
     return OperationResult(
         success=True,
-        message_key=f"mute_toggle_success_{resulting_action}",
+        message_key=message_key,
         message_args={"username": tt_username_to_toggle},
         user_settings=user_settings,
     )

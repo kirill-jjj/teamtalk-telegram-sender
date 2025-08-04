@@ -500,9 +500,11 @@ async def cq_toggle_specific_user_mute_action(
         await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
         return
 
-    result = await user_service.toggle_mute_status_for_tt_user(session, user_settings, username_to_toggle, services)
+    result = await user_service.toggle_mute_status_for_tt_user(
+        session, user_settings, username_to_toggle, services, translator
+    )
 
-    toast_message = _(result.message_key).format(**(result.message_args or {}))
+    toast_message = translator.gettext(result.message_key).format(**(result.message_args or {}))
     await callback_query.answer(toast_message, show_alert=not result.success)
 
     if result.success and result.user_settings:

@@ -14,7 +14,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
 from bot.core.enums import ManageTTAccountAction, SubscriberAction
-from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import (
     MutedUser,
     MuteListMode,
@@ -392,7 +391,7 @@ async def _display_subscriber_mute_list_page(
     # 4. Call display_paginated_list
     if query.bot is None:  # Should be guaranteed by @ensure_message_context for query.message
         logger.error("handle_admin_view_mute_list: query.bot is None. Cannot display list.")
-        await query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     await display_paginated_list(
@@ -429,7 +428,7 @@ async def _refresh_and_display_subscriber_list(
     # Ensure services.bot_event is available, as _show_subscriber_list_page needs it.
     if not services.bot_event:
         logger.error("_refresh_and_display_subscriber_list: services.bot_event is not available.")
-        await query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     # _show_subscriber_list_page now expects a CallbackQuery and handles the message editing.
@@ -568,7 +567,7 @@ async def _display_linkable_tt_accounts_page(
         )
     if query.bot is None:
         logger.error("_display_linkable_tt_accounts_page: query.bot is None. Cannot display list.")
-        await query.answer(_("An error occurred while displaying the list. Bot instance not found."), show_alert=True)
+        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     await display_paginated_list(
@@ -628,7 +627,7 @@ async def handle_link_tt_account_chosen(
     return_page = callback_data.page
 
     operation_result: OperationResult = await admin_service.admin_link_tt_account(
-        session, services, target_telegram_id, tt_username_to_link
+        session, services, target_telegram_id, tt_username_to_link, translator
     )
 
     alert_message_args = operation_result.message_args or {}

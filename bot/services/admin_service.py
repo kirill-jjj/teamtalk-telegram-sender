@@ -458,11 +458,13 @@ async def admin_link_tt_account(
     services: "Services",
     target_telegram_id: int,
     tt_username_to_link: str,
+    translator: "gettext.GNUTranslations",
 ) -> OperationResult:
     """Links a TeamTalk account to a subscriber, managed by an admin.
 
     Returns an OperationResult indicating success/failure and relevant details.
     """
+    _ = translator.gettext
     if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
         logger.warning(
             "Attempt to link banned TeamTalk username '%s' to user %s.",
@@ -470,13 +472,15 @@ async def admin_link_tt_account(
             target_telegram_id,
         )
         return OperationResult(
-            success=False, message_key="link_tt_account_error_banned", message_args={"tt_username": tt_username_to_link}
+            success=False,
+            message_key=_("link_tt_account_error_banned"),
+            message_args={"tt_username": tt_username_to_link},
         )
 
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
         logger.warning("admin_link_tt_account: UserSettings not found for %s.", target_telegram_id)
-        return OperationResult(success=False, message_key="link_tt_account_error_not_found")
+        return OperationResult(success=False, message_key=_("link_tt_account_error_not_found"))
 
     original_tt_username = target_user_settings.teamtalk_username
 
@@ -490,12 +494,10 @@ async def admin_link_tt_account(
     )
 
     if not updated_settings_tt_link:
-        return OperationResult(success=False, message_key="link_tt_account_error_generic")
+        return OperationResult(success=False, message_key=_("link_tt_account_error_generic"))
 
     is_relink = bool(original_tt_username and original_tt_username != tt_username_to_link)
-    link_type_message_key_suffix = "relinked" if is_relink else "linked"
-    success_message_key = f"link_tt_account_success_{link_type_message_key_suffix}"
-
+    success_message_key = _("link_tt_account_success_relinked") if is_relink else _("link_tt_account_success_linked")
     message_args = {
         "new_tt_username": tt_username_to_link,
         "original_tt_username": original_tt_username or "",

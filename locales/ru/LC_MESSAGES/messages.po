@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-04 21:20+0000\n"
+"POT-Creation-Date: 2025-08-04 22:54+0000\n"
 "PO-Revision-Date: 2025-07-08 17:09+0500\n"
 "Last-Translator: \n"
 "Language: ru\n"
@@ -160,6 +160,27 @@ msgstr ""
 msgid "Banning process report for user {telegram_id}:"
 msgstr "Отчет о процессе бана для пользователя {telegram_id}:"
 
+#: bot/services/admin_service.py:475
+#, python-brace-format
+msgid "link_tt_account_error_banned"
+msgstr "Этот аккаунт TeamTalk забанен и не может быть привязан."
+
+#: bot/services/admin_service.py:481
+msgid "link_tt_account_error_not_found"
+msgstr "Настройки подписчика не найдены."
+
+#: bot/services/admin_service.py:495
+msgid "link_tt_account_error_generic"
+msgstr "Произошла ошибка при привязке аккаунта TeamTalk."
+
+#: bot/services/admin_service.py:499
+msgid "link_tt_account_success_relinked"
+msgstr "Аккаунт TeamTalk успешно перепривязан."
+
+#: bot/services/admin_service.py:499
+msgid "link_tt_account_success_linked"
+msgstr "Аккаунт TeamTalk успешно привязан."
+
 #: bot/services/deeplink_service.py:36
 msgid "Your Telegram account is banned from using this service."
 msgstr "Ваш Telegram аккаунт заблокирован и не может использовать этот сервис."
@@ -195,37 +216,37 @@ msgstr "Вы не были подписаны на уведомления."
 msgid "Invalid deeplink action."
 msgstr "Неверное действие deeplink."
 
-#: bot/services/user_service.py:69
+#: bot/services/user_service.py:68
 #, python-brace-format
 msgid "in {channel_name}"
 msgstr "в {channel_name}"
 
-#: bot/services/user_service.py:71 bot/services/user_service.py:78
+#: bot/services/user_service.py:70 bot/services/user_service.py:77
 msgid "under server"
 msgstr "под сервером"
 
-#: bot/services/user_service.py:73
+#: bot/services/user_service.py:72
 msgid "in root channel"
 msgstr "в корневом канале"
 
-#: bot/services/user_service.py:80
+#: bot/services/user_service.py:79
 msgid "in unknown location"
 msgstr "в неизвестном месте"
 
-#: bot/services/user_service.py:123
+#: bot/services/user_service.py:122
 msgid "No users found online"
 msgstr "Пользователей онлайн не найдено"
 
-#: bot/services/user_service.py:125 bot/telegram_bot/handlers/admin.py:71
+#: bot/services/user_service.py:124 bot/telegram_bot/handlers/admin.py:71
 #, python-brace-format
 msgid "No users found online on server {server_host}."
 msgstr "На сервере {server_host} нет пользователей онлайн."
 
-#: bot/services/user_service.py:127
+#: bot/services/user_service.py:126
 msgid "No users found online."
 msgstr "Пользователей онлайн не найдено."
 
-#: bot/services/user_service.py:134
+#: bot/services/user_service.py:133
 #, python-brace-format
 msgid "There is {user_count} user on the server {server_host}:\n"
 msgid_plural "There are {user_count} users on the server {server_host}:\n"
@@ -233,7 +254,7 @@ msgstr[0] "На сервере {server_host} сейчас {user_count} поль�
 msgstr[1] "На сервере {server_host} сейчас {user_count} пользователя:\n"
 msgstr[2] "На сервере {server_host} сейчас {user_count} пользователей:\n"
 
-#: bot/services/user_service.py:141
+#: bot/services/user_service.py:140
 #, python-brace-format
 msgid "There is {user_count} user on the server:\n"
 msgid_plural "There are {user_count} users on the server:\n"
@@ -241,13 +262,25 @@ msgstr[0] "На сервере сейчас {user_count} пользовател�
 msgstr[1] "На сервере сейчас {user_count} пользователя:\n"
 msgstr[2] "На сервере сейчас {user_count} пользователей:\n"
 
-#: bot/services/user_service.py:151
+#: bot/services/user_service.py:150
 msgid " and "
 msgstr " и "
 
-#: bot/services/user_service.py:168
+#: bot/services/user_service.py:167
 msgid "Error: No active TeamTalk connection."
 msgstr "Ошибка: Нет активного подключения к TeamTalk."
+
+#: bot/services/user_service.py:378
+msgid "An error occurred while changing the mute status. Please try again."
+msgstr "Произошла ошибка при изменении статуса мьюта. Пожалуйста, попробуйте еще раз."
+
+#: bot/services/user_service.py:390
+msgid "mute_toggle_success_muted"
+msgstr "Пользователь {username} был успешно замьючен."
+
+#: bot/services/user_service.py:390
+msgid "mute_toggle_success_unmuted"
+msgstr "Пользователь {username} был успешно размьючен."
 
 #: bot/teamtalk_bot/commands.py:82
 msgid "You are not authorized to perform this action."
@@ -1018,8 +1051,7 @@ msgstr ""
 "Бот TeamTalk не подключен или не полностью инициализирован. Пожалуйста, "
 "попробуйте позже."
 
-#: bot/locales/keys.py:4
-msgid "An error occurred while changing the mute status. Please try again."
-msgstr ""
-"Произошла ошибка при изменении статуса игнорирования. Пожалуйста, "
-"попробуйте еще раз."
+#~ msgid "An error occurred while changing the mute status. Please try again."
+#~ msgstr ""
+#~ "Произошла ошибка при изменении статуса "
+#~ "игнорирования. Пожалуйста, попробуйте еще раз."
