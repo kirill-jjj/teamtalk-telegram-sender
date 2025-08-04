@@ -98,8 +98,10 @@ msgid ""
 "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
 "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."
 msgstr ""
-"/add_admin <Telegram ID> [<Telegram ID>...] - Додати адміністратора бота.\n"
-"/remove_admin <Telegram ID> [<Telegram ID>...] - Видалити адміністратора бота."
+"/add_admin <Telegram ID> [<Telegram ID>...] - Додати адміністратора бота."
+"\n"
+"/remove_admin <Telegram ID> [<Telegram ID>...] - Видалити адміністратора "
+"бота."
 
 #: bot/services/admin_service.py:326
 #, python-brace-format
@@ -119,7 +121,9 @@ msgstr "✅ Ім'я користувача TeamTalk {tt_username} було за�
 #: bot/services/admin_service.py:337
 #, python-brace-format
 msgid "❌ Failed to ban TeamTalk username {tt_username} in the database."
-msgstr "❌ Не вдалося забанити ім'я користувача TeamTalk {tt_username} в базі даних."
+msgstr ""
+"❌ Не вдалося забанити ім'я користувача TeamTalk {tt_username} в базі "
+"даних."
 
 #: bot/services/admin_service.py:342
 #, python-brace-format
@@ -129,11 +133,15 @@ msgstr "✅ Концептуальний бан на сервері TeamTalk д�
 #: bot/services/admin_service.py:346
 #, python-brace-format
 msgid "⚠️ Conceptual TeamTalk server ban for {tt_username} encountered an issue."
-msgstr "⚠️ Під час концептуального бану на сервері TeamTalk для {tt_username} виникла проблема."
+msgstr ""
+"⚠️ Під час концептуального бану на сервері TeamTalk для {tt_username} "
+"виникла проблема."
 
 #: bot/services/admin_service.py:351
 msgid "ℹ️ No TeamTalk username was linked; TeamTalk ban steps skipped."
-msgstr "ℹ️ Ім'я користувача TeamTalk не було прив'язане; кроки бану в TeamTalk пропущено."
+msgstr ""
+"ℹ️ Ім'я користувача TeamTalk не було прив'язане; кроки бану в TeamTalk "
+"пропущено."
 
 #: bot/services/admin_service.py:355
 msgid "✅ User profile and data have been deleted."
@@ -145,7 +153,9 @@ msgstr "❌ Не вдалося видалити профіль користув
 
 #: bot/services/admin_service.py:359
 msgid "ℹ️ User profile deletion was skipped due to Telegram ban failure."
-msgstr "ℹ️ Видалення профілю користувача було пропущено через збій бану в Telegram."
+msgstr ""
+"ℹ️ Видалення профілю користувача було пропущено через збій бану в "
+"Telegram."
 
 #: bot/services/admin_service.py:364
 #, python-brace-format
@@ -202,7 +212,9 @@ msgstr ""
 #: bot/services/deeplink_service.py:53
 #, python-brace-format
 msgid "The TeamTalk username '{tt_username}' is banned and cannot be linked."
-msgstr "Ім'я користувача TeamTalk '{tt_username}' забанено і не може бути прив'язане."
+msgstr ""
+"Ім'я користувача TeamTalk '{tt_username}' забанено і не може бути "
+"прив'язане."
 
 #: bot/services/deeplink_service.py:70
 msgid ""
@@ -320,7 +332,9 @@ msgstr ""
 
 #: bot/teamtalk_bot/commands.py:251 bot/teamtalk_bot/commands.py:278
 msgid "An error occurred processing your request. Please try again later."
-msgstr "Сталася помилка під час обробки вашого запиту. Будь ласка, спробуйте ще раз пізніше."
+msgstr ""
+"Сталася помилка під час обробки вашого запиту. Будь ласка, спробуйте ще "
+"раз пізніше."
 
 #: bot/teamtalk_bot/commands.py:276
 #, python-brace-format
@@ -368,7 +382,9 @@ msgstr ""
 #: bot/teamtalk_bot/commands.py:341
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found or failed to remove."
-msgstr "Адміністратор з ID {telegram_id} не знайдений або не вдалося його видалити."
+msgstr ""
+"Адміністратор з ID {telegram_id} не знайдений або не вдалося його "
+"видалити."
 
 #: bot/teamtalk_bot/commands.py:391
 #, python-brace-format
@@ -637,8 +653,8 @@ msgid ""
 "An unexpected error occurred. The administrator has been notified. Please"
 " try again later."
 msgstr ""
-"Сталася непередбачена помилка. Адміністратора було сповіщено. Будь ласка, "
-"спробуйте ще раз пізніше."
+"Сталася непередбачена помилка. Адміністратора було сповіщено. Будь ласка,"
+" спробуйте ще раз пізніше."
 
 #: bot/telegram_bot/ui_utils.py:80
 #, python-brace-format
@@ -775,7 +791,9 @@ msgstr "Користувача {user_nickname} було виключено з с
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:101
 #, python-brace-format
 msgid "User {user_nickname} banned and kicked from server {server_host}."
-msgstr "Користувача {user_nickname} було забанено та виключено з сервера {server_host}."
+msgstr ""
+"Користувача {user_nickname} було забанено та виключено з сервера "
+"{server_host}."
 
 #: bot/telegram_bot/handlers/callback_handlers/admin.py:105
 msgid "Unknown action."
@@ -819,8 +837,8 @@ msgid ""
 "An error occurred while updating language settings. Please try again "
 "later."
 msgstr ""
-"Сталася помилка під час оновлення налаштувань мови. Будь ласка, "
-"спробуйте ще раз пізніше."
+"Сталася помилка під час оновлення налаштувань мови. Будь ласка, спробуйте"
+" ще раз пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/language.py:123
 #, python-brace-format
@@ -874,8 +892,8 @@ msgid ""
 "Server user accounts are not loaded yet for {server_host}. Please try "
 "again in a moment."
 msgstr ""
-"Облікові записи користувачів сервера для {server_host} ще не завантажені. "
-"Будь ласка, спробуйте через мить."
+"Облікові записи користувачів сервера для {server_host} ще не завантажені."
+" Будь ласка, спробуйте через мить."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:184
 msgid "All Server Accounts"
@@ -931,11 +949,15 @@ msgstr "Режим списку ігнорування встановлено н
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:511
 msgid "Error determining user to mute/unmute. Try again."
-msgstr "Помилка визначення користувача для ігнорування/скасування ігнорування. Спробуйте ще раз."
+msgstr ""
+"Помилка визначення користувача для ігнорування/скасування ігнорування. "
+"Спробуйте ще раз."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:527
 msgid "Error updating mute status. Try again later."
-msgstr "Помилка оновлення статусу ігнорування. Будь ласка, спробуйте ще раз пізніше."
+msgstr ""
+"Помилка оновлення статусу ігнорування. Будь ласка, спробуйте ще раз "
+"пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:544
 msgid "Mute status updated."
@@ -1014,8 +1036,8 @@ msgid ""
 "TeamTalk server accounts are currently unavailable. Please try again "
 "later."
 msgstr ""
-"Облікові записи сервера TeamTalk наразі недоступні. Будь ласка, спробуйте "
-"ще раз пізніше."
+"Облікові записи сервера TeamTalk наразі недоступні. Будь ласка, спробуйте"
+" ще раз пізніше."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:539
 #, python-brace-format
@@ -1023,8 +1045,8 @@ msgid ""
 "Select a TeamTalk account from {server_host} to link to subscriber "
 "{telegram_id}:"
 msgstr ""
-"Виберіть обліковий запис TeamTalk з сервера {server_host} для прив'язки до "
-"підписника {telegram_id}:"
+"Виберіть обліковий запис TeamTalk з сервера {server_host} для прив'язки "
+"до підписника {telegram_id}:"
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:542
 #, python-brace-format
@@ -1053,8 +1075,8 @@ msgid ""
 "Failed to change notification preference for subscriber {tg_id}. Please "
 "check logs or try again."
 msgstr ""
-"Не вдалося змінити налаштування сповіщень для підписника {tg_id}. "
-"Будь ласка, перевірте логи або спробуйте ще раз."
+"Не вдалося змінити налаштування сповіщень для підписника {tg_id}. Будь "
+"ласка, перевірте логи або спробуйте ще раз."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:45
 msgid "Error: No Telegram ID specified for deletion."
@@ -1083,7 +1105,8 @@ msgstr "Налаштування підписки оновлено до: {settin
 
 #: bot/telegram_bot/middlewares/teamtalk_connection.py:131
 msgid "TeamTalk service is currently unavailable. Please try again later."
-msgstr "Сервіс TeamTalk наразі недоступний. Будь ласка, спробуйте ще раз пізніше."
+msgstr ""
+"Сервіс TeamTalk наразі недоступний. Будь ласка, спробуйте ще раз пізніше."
 
 #: bot/telegram_bot/middlewares/teamtalk_connection.py:144
 msgid ""
