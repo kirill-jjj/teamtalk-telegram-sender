@@ -351,7 +351,7 @@ msgstr "неизвестный пользователь"
 
 #: bot/teamtalk_bot/utils.py:252
 msgid "Message from server "
-msgstr "Сообщение от сервера "
+msgstr "Сообщение с сервера "
 
 #: bot/teamtalk_bot/utils.py:255
 msgid "From "
