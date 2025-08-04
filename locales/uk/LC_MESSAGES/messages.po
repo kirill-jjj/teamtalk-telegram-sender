@@ -351,11 +351,9 @@ msgstr "Невідомий сервер"
 msgid "unknown user"
 msgstr "невідомий користувач"
 
-# | msgid "Message from server <b>{server_name}</b>"
 #: bot/teamtalk_bot/utils.py:252
-#, fuzzy
 msgid "Message from server "
-msgstr "Повідомлення з сервера <b>{server_name}</b>"
+msgstr "Повідомлення з сервера "
 
 #: bot/teamtalk_bot/utils.py:255
 msgid "From "
