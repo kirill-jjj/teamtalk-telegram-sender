@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import pytalk
 from pytalk.user import User as TeamTalkUser
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import (
@@ -16,7 +15,7 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.database import crud
-from bot.models import MutedUser, MuteListMode, UserSettings
+from bot.models import MutedUser, MuteListMode, OperationResult, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
@@ -188,33 +187,21 @@ async def delete_full_user_profile(
     This includes database records and cache entries via the services container.
     """
     logger.info("Attempting to delete full user profile for Telegram ID: %s", telegram_id)
-    try:
+    async with managed_db_transaction(session, logger) as transaction_success:
+        if not transaction_success:
+            return False
+
         user_settings_deleted, subscribed_user_deleted = await crud._delete_user_data_from_db(session, telegram_id)
 
         if not user_settings_deleted and not subscribed_user_deleted:
             logger.info("No DB data found for Telegram ID %s to delete.", telegram_id)
-        else:
-            await session.commit()
-            logger.debug("Committed DB deletions for %s.", telegram_id)
 
         services.cache.remove_full_user_profile(telegram_id)
-        # Logging for this is now handled within CacheService.remove_full_user_profile
-
         logger.info(
             "Full user profile deletion process completed for Telegram ID: %s. "
             "DB changes (if any) committed. Caches cleared via CacheService.",
             telegram_id,
         )
-
-    except SQLAlchemyError:
-        await session.rollback()
-        logger.exception("SQLAlchemyError during full data deletion for %s. Rolling back.", telegram_id)
-        return False
-    except Exception:
-        await session.rollback()
-        logger.exception("Unexpected error during full data deletion for %s. Rolling back.", telegram_id)
-        return False
-    else:
         return True
 
 
@@ -319,18 +306,18 @@ async def process_new_subscription(
     services: "Services",
 ) -> bool:
     """Handles all DB and cache operations for a new subscription via deeplink."""
-    try:
-        # Ensure user is in the 'subscribed_users' table
+    async with managed_db_transaction(session, logger) as transaction_success:
+        if not transaction_success:
+            return False
+
         was_newly_added = await crud.add_subscriber(session, user_settings.telegram_id)
         if was_newly_added:
             logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
         else:
             logger.info("User %s re-confirmed subscription via deeplink.", user_settings.telegram_id)
-        # Ensure user is in the subscriber cache
         if not services.cache.is_subscribed(user_settings.telegram_id):
             services.cache.add_subscriber(user_settings.telegram_id)
 
-        # Use the generic helper to update the TeamTalk username
         settings_after_tt_update = await _utils._update_user_setting_field(
             session=session,
             services=services,
@@ -340,13 +327,8 @@ async def process_new_subscription(
             log_context=" (new subscription)",
         )
         if not settings_after_tt_update:
-            logger.error(
-                "Failed to update teamtalk_username for user %s during new subscription.", user_settings.telegram_id
-            )
-            # The transaction is already rolled back by the helper.
             return False
 
-        # Use the generic helper again to confirm the NOON setting
         settings_after_noon_confirm = await _utils._update_user_setting_field(
             session=session,
             services=services,
@@ -355,26 +337,7 @@ async def process_new_subscription(
             new_value=True,
             log_context=" (new subscription)",
         )
-        if not settings_after_noon_confirm:
-            logger.error(
-                "Failed to update not_on_online_confirmed for user %s during new subscription.",
-                user_settings.telegram_id,
-            )
-            # The transaction is already rolled back by the helper.
-            return False
-
-        # If both updates succeeded
-
-    except Exception:
-        logger.exception(
-            "Unhandled error in process_new_subscription for user %s, tt_username %s.",
-            user_settings.telegram_id,
-            tt_username,
-        )
-        await session.rollback()
-        return False
-    else:
-        return True
+        return bool(settings_after_noon_confirm)
 
 
 async def toggle_mute_status_for_tt_user(
@@ -382,9 +345,8 @@ async def toggle_mute_status_for_tt_user(
     user_settings: UserSettings,
     tt_username_to_toggle: str,
     services: "Services",
-) -> tuple[bool, str | None]:
+) -> OperationResult:
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
-    resulting_action: str | None = None
     if user_settings.muted_users_list is None:
         user_settings.muted_users_list = []
 
@@ -394,33 +356,37 @@ async def toggle_mute_status_for_tt_user(
     )
 
     log_context = f" while toggling mute for '{tt_username_to_toggle}' for user {user_settings.telegram_id}"
-    try:
-        async with managed_db_transaction(session, logger, log_context):
-            if existing_entry:
-                user_settings.muted_users_list.remove(existing_entry)
-                await session.delete(existing_entry)
-                resulting_action = "unmuted"
-                logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
-            else:
-                new_entry = MutedUser(
-                    user_settings_telegram_id=user_settings.telegram_id,
-                    muted_teamtalk_username=tt_username_to_toggle,
-                )
-                user_settings.muted_users_list.append(new_entry)
-                session.add(new_entry)
-                resulting_action = "muted"
-                logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
-    except (SQLAlchemyError, Exception):
-        # The context manager has already logged the exception and rolled back.
-        return False, None
-    else:
-        # This block executes only if the transaction was successful
-        await session.refresh(user_settings, attribute_names=["muted_users_list"])
-        services.cache.update_user_settings(user_settings)
-        logger.info(
-            "Successfully toggled mute for '%s' for user %s to '%s'. Cache updated.",
-            tt_username_to_toggle,
-            user_settings.telegram_id,
-            resulting_action,
-        )
-        return True, resulting_action
+    resulting_action = "unmuted" if existing_entry else "muted"
+
+    async with managed_db_transaction(session, logger, log_context) as transaction_success:
+        if not transaction_success:
+            return OperationResult(success=False, message_key="mute_toggle_error_generic")
+
+        if existing_entry:
+            user_settings.muted_users_list.remove(existing_entry)
+            await session.delete(existing_entry)
+            logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+        else:
+            new_entry = MutedUser(
+                user_settings_telegram_id=user_settings.telegram_id,
+                muted_teamtalk_username=tt_username_to_toggle,
+            )
+            user_settings.muted_users_list.append(new_entry)
+            session.add(new_entry)
+            logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+
+    # This block executes only if the transaction was successful
+    await session.refresh(user_settings, attribute_names=["muted_users_list"])
+    services.cache.update_user_settings(user_settings)
+    logger.info(
+        "Successfully toggled mute for '%s' for user %s to '%s'. Cache updated.",
+        tt_username_to_toggle,
+        user_settings.telegram_id,
+        resulting_action,
+    )
+    return OperationResult(
+        success=True,
+        message_key=f"mute_toggle_success_{resulting_action}",
+        message_args={"username": tt_username_to_toggle},
+        user_settings=user_settings,
+    )

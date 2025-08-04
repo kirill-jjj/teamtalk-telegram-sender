@@ -109,16 +109,18 @@ async def on_ban_subscriber_confirm(
     tt_connection: TeamTalkConnection | None,
 ) -> None:
     """Handles banning and deleting a subscriber after admin confirmation."""
+    _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    short_message, long_message = await admin_service.ban_and_delete_subscriber(
+    result = await admin_service.ban_and_delete_subscriber(
         session, services, target_telegram_id, tt_connection
     )
 
+    short_message = _(result.message_key).format(**(result.message_args or {}))
     await query.answer(short_message, show_alert=True)
-    # The long_message can be sent as a follow-up if needed, for now we just log it.
-    logger.info("Ban/delete report for %s:\n%s", target_telegram_id, long_message)
+    if result.long_message:
+        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
     await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
 
 

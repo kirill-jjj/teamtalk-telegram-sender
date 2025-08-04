@@ -5,7 +5,6 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, TypeGuard
 
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
@@ -14,6 +13,7 @@ from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import Deeplink as DeeplinkModel  # Renamed to avoid conflict
 from bot.models import UserSettings
 from bot.services import user_service
+from bot.services._utils import managed_db_transaction
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -158,28 +158,14 @@ async def execute_deeplink_action(
             logger.warning("No handler for deeplink action: %s", action_enum_member)
             return_message = _("Invalid deeplink action.")
         else:
-            try:
+            async with managed_db_transaction(session, logger) as transaction_success:
+                if not transaction_success:
+                    return _(MSG_KEY_GENERIC_ERROR)
+
                 if is_unsubscribe_handler(handler, action_enum_member):
                     return_message = await handler(session, telegram_id, translator, services)
                 elif is_subscribe_handler(handler, action_enum_member):
                     return_message = await handler(
                         session, telegram_id, translator, deeplink_obj.payload, user_settings, services
                     )
-                # The above is_unsubscribe_handler and is_subscribe_handler cover all DeeplinkAction enum members.
-                # Therefore, an else case here would be unreachable if action_enum_member is a valid DeeplinkAction,
-                # which is checked at the beginning of the function.
-            except (SQLAlchemyError, ValueError):
-                logger.exception(
-                    "Handler error for deeplink action '%s', token %s.",
-                    action_enum_member,
-                    deeplink_obj.token,  # Assuming DeeplinkModel has a token attribute
-                )
-                return_message = _(MSG_KEY_GENERIC_ERROR)
-            except Exception:
-                logger.exception(
-                    "Unexpected generic error for deeplink action '%s', token %s.",
-                    action_enum_member,
-                    deeplink_obj.token,
-                )
-                return_message = _(MSG_KEY_GENERIC_ERROR)
     return return_message

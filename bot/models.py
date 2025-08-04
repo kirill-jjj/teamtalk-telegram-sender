@@ -118,3 +118,4 @@ class OperationResult(SQLModel):
     message_key: str  # For localization key, e.g., "link_tt_account_success_linked"
     message_args: dict[str, Any] | None = Field(default=None)  # For formatting the localized string
     user_settings: UserSettings | None = Field(default=None)  # Optional UserSettings object
+    long_message: str | None = Field(default=None)  # For detailed reports

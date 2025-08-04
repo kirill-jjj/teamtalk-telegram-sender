@@ -47,10 +47,9 @@ async def handle_unban_subscriber(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    result_message = await admin_service.unban_subscriber(
-        session, services, tt_connection, target_telegram_id, translator
-    )
-    await query.answer(result_message, show_alert=True)
+    result = await admin_service.unban_subscriber(session, services, tt_connection, target_telegram_id)
+    message = _(result.message_key).format(**(result.message_args or {}))
+    await query.answer(message, show_alert=True)
     await _show_banned_list_page(
         target=query, session=session, services=services, page=return_page, translator=translator
     )
@@ -110,22 +109,19 @@ async def handle_ban_subscriber(
     tt_connection: "TeamTalkConnection | None",
 ) -> None:
     """Handles banning a subscriber."""
-    # The ensure_message_context decorator guarantees query.message is not None.
+    _ = translator.gettext
     message = cast(Message, query.message)
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    short_alert_message, long_report_message = await admin_service.ban_and_delete_subscriber(
-        session, services, target_telegram_id, tt_connection
-    )
+    result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
 
-    # Show a concise message in the alert popup.
+    short_alert_message = _(result.message_key).format(**(result.message_args or {}))
     await query.answer(short_alert_message, show_alert=True)
 
-    # Post the detailed report as a new message in the chat for the admin to review.
-    await message.answer(long_report_message)
+    if result.long_message:
+        await message.answer(result.long_message)
 
-    # After banning and deleting, refresh the subscriber list to show the user is gone.
     await _show_subscriber_list_page(
         target=query,
         session=session,
