@@ -11,7 +11,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  #
 
 from bot.core.enums import LanguageAction, SettingsNavAction
 from bot.core.languages import LanguageInfo
-from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import UserSettings
 from bot.services import _utils, user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
@@ -72,7 +71,7 @@ async def cq_set_language(
         logger.warning("cq_set_language: callback_query.from_user is None. Callback data: %s", callback_query.data)
         # Though from_user is usually present in CallbackQuery, good to be safe.
         # The decorator doesn't cover this.
-        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
 
     # user_settings is provided by UserSettingsMiddleware and should be session-managed or merged by the service.
@@ -106,7 +105,7 @@ async def cq_set_language(
     if not settings_updated_successfully:
         # Language update in DB/cache failed. Service layer logs details.
         # UI should reflect that language was NOT changed.
-        toast_message = _(MSG_KEY_GENERIC_ERROR)
+        toast_message = _("An error occurred. Please try again later.")
         toast_show_alert = True
         # UI will be updated with the original language settings at the end.
         # No need to revert user_settings.language_code here, as it wasn't committed.
