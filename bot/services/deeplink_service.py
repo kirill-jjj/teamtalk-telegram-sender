@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
 from bot.database import crud
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import Deeplink as DeeplinkModel  # Renamed to avoid conflict
 from bot.models import UserSettings
 from bot.services import user_service
@@ -173,12 +174,12 @@ async def execute_deeplink_action(
                     action_enum_member,
                     deeplink_obj.token,  # Assuming DeeplinkModel has a token attribute
                 )
-                return_message = _("An error occurred. Please try again later.")
+                return_message = _(MSG_KEY_GENERIC_ERROR)
             except Exception:
                 logger.exception(
                     "Unexpected generic error for deeplink action '%s', token %s.",
                     action_enum_member,
                     deeplink_obj.token,
                 )
-                return_message = _("An error occurred. Please try again later.")
+                return_message = _(MSG_KEY_GENERIC_ERROR)
     return return_message

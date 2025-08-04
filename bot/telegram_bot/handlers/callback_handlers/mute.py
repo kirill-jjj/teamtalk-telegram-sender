@@ -24,6 +24,7 @@ from bot.core.enums import (
     ToggleMuteSpecificAction,
     UserListAction,
 )
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import MutedUser, MuteListMode, UserSettings
 from bot.services import user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -73,7 +74,7 @@ async def _display_internal_user_list(
     _ = translator.gettext
     if not session:
         logger.error("Session not provided to _display_internal_user_list")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
     try:
         statement = select(MutedUser.muted_teamtalk_username).where(
@@ -84,7 +85,7 @@ async def _display_internal_user_list(
         sorted_items = sorted(users_to_process)
     except SQLAlchemyError:
         logger.exception("DB error fetching internal user list for user %s.", user_settings.telegram_id)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     header_text_str, empty_list_text_str = "", ""
@@ -96,7 +97,7 @@ async def _display_internal_user_list(
         empty_list_text_str = _("Your whitelist is empty.")
     else:
         logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     if callback_query.bot is None:
@@ -259,7 +260,7 @@ async def _refresh_mute_related_ui(
         logger.debug("Refreshed muted_users_list for user %s before UI refresh.", user_settings.telegram_id)
     except Exception:
         logger.exception("Failed to refresh user_settings relations for %s.", user_settings.telegram_id)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
@@ -339,9 +340,7 @@ async def cq_set_mute_mode_action(
         # Service function handles logging and rollback.
         # Inform user of failure. The user_settings object might be in its original state
         # or state before the failed commit attempt if service function restored it.
-        await callback_query.answer(
-            _("An error occurred while updating mute mode. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         # We might need to refresh the UI to reflect the (potentially) unchanged state.
         # For now, just answering. If the settings object was mutated then rolled back,
         # the keyboard might be built with this transient state if not careful.

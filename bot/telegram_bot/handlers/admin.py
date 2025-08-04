@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminAction
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
@@ -59,7 +60,7 @@ async def _show_user_buttons(
             "[%s] Could not get own user ID in _show_user_buttons.",
             tt_connection.server_info.host,  # type: ignore[union-attr] # tt_connection is not None
         )
-        await message.reply(_("An error occurred. Please try again later."))
+        await message.reply(_(MSG_KEY_GENERIC_ERROR))
         return
 
     # online_users_cache is guaranteed by middleware and its own initialization.

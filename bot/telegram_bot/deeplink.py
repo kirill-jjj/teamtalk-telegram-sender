@@ -11,6 +11,7 @@ from bot.database.crud import (
     delete_deeplink_by_token,
 )
 from bot.database.crud import get_deeplink as db_get_deeplink
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
 from bot.services import deeplink_service
@@ -83,7 +84,7 @@ async def handle_deeplink_payload(
     _ = translator.gettext
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
-        await message.reply(_("An error occurred. Please try again later."))
+        await message.reply(_(MSG_KEY_GENERIC_ERROR))
         return
 
     message_from_user_id = message.from_user.id
