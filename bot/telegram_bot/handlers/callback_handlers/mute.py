@@ -82,9 +82,7 @@ async def _display_user_list_generic(
 
     if callback_query.bot is None:
         logger.error("_display_user_list_generic: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(
-            _("An error occurred while displaying the list. Bot instance not found."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     await display_paginated_list(

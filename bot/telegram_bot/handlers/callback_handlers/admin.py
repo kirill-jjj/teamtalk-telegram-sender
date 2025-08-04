@@ -13,6 +13,7 @@ from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
 from bot.core.enums import AdminAction
+from bot.locales.keys import MSG_KEY_GENERIC_ERROR
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminActionCallback
@@ -55,9 +56,7 @@ def _handle_pytalk_action_error(
     else:
         logger.exception(log_message, action, user_id_to_log, server_host)
 
-    return False, _(
-        "An error occurred while performing the action on server {server_host}. Please try again later."
-    ).format(server_host=server_host)
+    return False, _(MSG_KEY_GENERIC_ERROR)
 
 
 async def _execute_tt_user_action(  # noqa: PLR0911

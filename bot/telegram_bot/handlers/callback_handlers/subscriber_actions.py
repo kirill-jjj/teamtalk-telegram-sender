@@ -392,7 +392,7 @@ async def _display_subscriber_mute_list_page(
     # 4. Call display_paginated_list
     if query.bot is None:  # Should be guaranteed by @ensure_message_context for query.message
         logger.error("handle_admin_view_mute_list: query.bot is None. Cannot display list.")
-        await query.answer(_("An error occurred: Bot instance not found."), show_alert=True)
+        await query.answer(_(MSG_KEY_GENERIC_ERROR), show_alert=True)
         return
 
     await display_paginated_list(
