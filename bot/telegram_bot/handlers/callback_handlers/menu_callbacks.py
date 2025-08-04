@@ -13,7 +13,6 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 
 # Middlewares to apply
-from ...middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 from ...middlewares.admin_check import AdminCheckMiddleware
 
 # Import business logic directly, not through other handlers
@@ -28,13 +27,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
-menu_callback_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+# Middlewares are now applied in the parent router in callbacks.py
 
 admin_menu_callback_router = Router(name="admin_menu_callback_router")
 admin_menu_callback_router.callback_query.middleware(AdminCheckMiddleware())
-admin_menu_callback_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-admin_menu_callback_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+# The other middlewares are applied in the parent router in callbacks.py
 
 
 # --- User Handlers ---

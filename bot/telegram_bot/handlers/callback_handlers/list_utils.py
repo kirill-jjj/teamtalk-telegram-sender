@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import gettext
 import logging
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Chat
+from aiogram.types import CallbackQuery
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +21,7 @@ from bot.models import UserSettings
 from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
 from bot.telegram_bot.models import SubscriberInfo
 from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.telegram_bot.utils import format_telegram_user_display_name
+from bot.telegram_bot.utils import get_display_names_for_ids
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ SUBSCRIBERS_PER_PAGE = 10
 
 
 async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[SubscriberInfo]:
-    """Fetches subscriber details using TaskGroup for robust concurrent fetching."""
+    """Fetches subscriber details using the centralized get_display_names_for_ids."""
     all_subscriber_ids = await get_all_subscribers_ids(session)
     if not all_subscriber_ids:
         return []
@@ -41,38 +39,18 @@ async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[Sub
     ).all()
     user_settings_map = {us.telegram_id: us for us in user_settings_list}
 
-    chat_info_map: dict[int, asyncio.Task[Chat]] = {}
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for tg_id in all_subscriber_ids:
-                task = tg.create_task(bot.get_chat(tg_id))
-                chat_info_map[tg_id] = task
-    except* TelegramAPIError as eg:
-        for error in eg.exceptions:
-            logger.exception("Could not fetch chat info for a user: %s", error)
+    display_names = await get_display_names_for_ids(bot, all_subscriber_ids)
 
-    all_subscribers_info = []
-    for telegram_id in all_subscriber_ids:
-        display_name = str(telegram_id)
-        chat_task: asyncio.Task[Chat] | None = chat_info_map.get(telegram_id)
-
-        if chat_task and chat_task.done() and not chat_task.cancelled() and not chat_task.exception():
-            chat_result = chat_task.result()
-            if isinstance(chat_result, Chat):
-                display_name = format_telegram_user_display_name(chat_result)
-        elif chat_task and chat_task.exception():
-            logger.error(
-                "Failed to get chat info for TG ID %s due to an exception: %s", telegram_id, chat_task.exception()
-            )
-
-        tt_username = user_settings_map.get(telegram_id)
-        all_subscribers_info.append(
-            SubscriberInfo(
-                telegram_id=telegram_id,
-                display_name=display_name,
-                teamtalk_username=tt_username.teamtalk_username if tt_username else None,
-            )
+    all_subscribers_info = [
+        SubscriberInfo(
+            telegram_id=telegram_id,
+            display_name=display_names.get(telegram_id, str(telegram_id)),
+            teamtalk_username=(
+                user_settings_map[telegram_id].teamtalk_username if telegram_id in user_settings_map else None
+            ),
         )
+        for telegram_id in all_subscriber_ids
+    ]
 
     all_subscribers_info.sort(key=lambda sub: sub.display_name.lower())
     return all_subscribers_info

@@ -4,7 +4,7 @@ import asyncio
 from functools import partial
 from typing import TYPE_CHECKING
 
-from aiogram import Dispatcher, html
+from aiogram import BaseMiddleware, Dispatcher, html
 from aiogram.types import ErrorEvent
 from aiogram.types import Message as AiogramMessage
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
@@ -174,14 +174,19 @@ def setup_telegram_dispatcher(dp: Dispatcher, services: "Services") -> None:
     dp["available_languages"] = services.available_languages
 
     dp.update.outer_middleware.register(DbSessionMiddleware(services.session_factory))
-    dp.message.middleware(SubscriptionCheckMiddleware())
-    dp.callback_query.middleware(SubscriptionCheckMiddleware())
-    dp.message.middleware(UserSettingsMiddleware())
-    dp.callback_query.middleware(UserSettingsMiddleware())
-    dp.message.middleware(I18nMiddleware())
-    dp.callback_query.middleware(I18nMiddleware())
-    dp.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-    dp.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+
+    # Register middlewares on all update types to avoid repetition
+    # These will be executed for all incoming updates before they reach handlers
+    common_middlewares: list[BaseMiddleware] = [
+        SubscriptionCheckMiddleware(),
+        UserSettingsMiddleware(),
+        I18nMiddleware(),
+        ActiveTeamTalkConnectionMiddleware(default_server_key=None),
+    ]
+    for middleware in common_middlewares:
+        dp.update.middleware.register(middleware)
+
+    # Specific middleware for callback queries only
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
     admin_router.message.middleware(AdminCheckMiddleware())

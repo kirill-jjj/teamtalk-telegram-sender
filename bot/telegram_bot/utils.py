@@ -129,6 +129,41 @@ async def send_telegram_message_individual(
         return True
 
 
+async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int, str]:
+    """Fetches display names for a list of Telegram IDs concurrently.
+
+    Returns a dictionary mapping each ID to its display name.
+    If an ID cannot be fetched, it will be mapped to its string representation.
+    """
+    if not ids:
+        return {}
+
+    chat_info_tasks: dict[int, asyncio.Task[Chat]] = {}
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for user_id in ids:
+                task: asyncio.Task[Chat] = tg.create_task(bot.get_chat(user_id))
+                chat_info_tasks[user_id] = task
+    except* TelegramAPIError as eg:
+        for error in eg.exceptions:
+            # The specific user ID isn't easily available from the exception group,
+            # so we log a general warning. The logic below will handle individual failures.
+            logger.warning("Could not fetch chat info for at least one user: %s", error)
+
+    display_names: dict[int, str] = {}
+    for user_id, task in chat_info_tasks.items():
+        if task.done() and not task.cancelled() and not task.exception():
+            chat_result = task.result()
+            display_names[user_id] = format_telegram_user_display_name(chat_result)
+        else:
+            if task.exception():
+                logger.error("Failed to get chat info for TG ID %s due to an exception: %s", user_id, task.exception())
+            # Fallback to the ID itself if fetching failed for any reason
+            display_names[user_id] = str(user_id)
+
+    return display_names
+
+
 async def send_telegram_messages_to_list(
     bot_instance_to_use: AiogramBot,
     recipients_with_lang: list[tuple[int, str | None]],

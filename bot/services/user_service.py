@@ -64,19 +64,10 @@ async def set_user_mute_mode(
     new_mode: MuteListMode,
 ) -> UserSettings | None:
     """Sets the mute list mode for the user themselves."""
-    # Ensure the user_settings object is managed by the current session
-    managed_user_settings = await session.merge(user_settings)
-    # It's possible merge itself could fail or return an unexpected type if not handled carefully,
-    # but typically it returns the managed instance or raises an error.
-    # Assuming merge is successful and returns a UserSettings instance.
-    if not managed_user_settings:  # Should ideally not happen if user_settings is valid
-        logger.error("set_user_mute_mode: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
-        return None
-
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
-        settings_to_update=managed_user_settings,
+        settings_to_update=user_settings,
         field_name="mute_list_mode",
         new_value=new_mode,
         log_context=" (self)",
@@ -90,17 +81,10 @@ async def update_user_language_settings(  # User-initiated
     services: "Services",
 ) -> UserSettings | None:
     """Updates user language for the user themselves."""
-    managed_user_settings = await session.merge(user_settings)
-    if not managed_user_settings:
-        logger.error(
-            "update_user_language_settings: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id
-        )
-        return None  # Or handle error as appropriate
-
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
-        settings_to_update=managed_user_settings,
+        settings_to_update=user_settings,
         field_name="language_code",
         new_value=new_lang_code,
         log_context=" (self)",
@@ -118,20 +102,15 @@ async def toggle_noon_setting(
     Handles DB session, commit, rollback, and cache update via _update_user_setting_field.
     Returns the updated UserSettings object or None on failure.
     """
-    # Ensure the user_settings object is managed by the current session
-    # This is important if user_settings comes from middleware and might be detached.
-    managed_user_settings = await session.merge(user_settings)
-    if not managed_user_settings:  # Should ideally not happen if user_settings is valid
-        logger.error("toggle_noon_setting: Failed to merge user_settings for TG ID %s.", user_settings.telegram_id)
-        return None
-
-    new_noon_enabled_value = not managed_user_settings.not_on_online_enabled
+    # The session merge is now handled by _update_user_setting_field.
+    # We need to get the current value from the passed `user_settings` object before updating.
+    new_noon_enabled_value = not user_settings.not_on_online_enabled
 
     # Update the 'not_on_online_enabled' field
     updated_settings_noon_toggle = await _utils._update_user_setting_field(
         session=session,
         services=services,
-        settings_to_update=managed_user_settings,
+        settings_to_update=user_settings,
         field_name="not_on_online_enabled",
         new_value=new_noon_enabled_value,
         log_context=" (user toggle NOON self)",

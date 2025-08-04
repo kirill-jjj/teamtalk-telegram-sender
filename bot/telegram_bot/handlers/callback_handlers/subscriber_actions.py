@@ -44,7 +44,6 @@ from bot.telegram_bot.keyboards import (
     create_subscriber_action_menu_keyboard,
     create_view_mute_list_keyboard,
 )
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
 from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
@@ -63,8 +62,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 subscriber_actions_router = Router(name="subscriber_actions_router")
-subscriber_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-subscriber_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+# Middlewares are now applied in the parent router in callbacks.py
 
 
 async def _present_subscriber_setting_choice(
@@ -140,8 +138,6 @@ async def handle_delete_subscriber(
         await query.answer(
             _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id), show_alert=True
         )
-
-
 
 
 @subscriber_actions_router.callback_query(

@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -133,81 +133,35 @@ async def _ban_teamtalk_user_in_db(session: AsyncSession, tt_username: str, targ
         return True
 
 
-async def _ban_teamtalk_user_on_server(
-    tt_connection: "TeamTalkConnection | None",
-    tt_username: str,
-    target_telegram_id: int,  # For logging context
-) -> bool:
-    """Attempts a conceptual ban on the TeamTalk server. Currently logs only.
-
-    Returns True if successful (or skipped), False on error.
-    """
-    if not tt_username:
-        logger.debug("No TeamTalk username provided to _ban_teamtalk_user_on_server for TG ID %s.", target_telegram_id)
-        return True  # No username, nothing to do on server
-
-    if tt_connection and tt_connection.instance and tt_connection.is_ready:
-        try:
-            # Placeholder for actual ban logic
-            logger.info(
-                "Conceptual TT server ban attempt for username '%s' (linked to TG ID %s) on server %s. "
-                "Actual server-side ban by username not yet supported by SDK.",
-                tt_username,
-                target_telegram_id,
-                tt_connection.server_info.host,
-            )
-        except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
-            logger.exception(
-                "Error during conceptual TeamTalk server ban for username '%s' (TG ID %s) on %s.",
-                tt_username,
-                target_telegram_id,
-                tt_connection.server_info.host,
-            )
-            return False
-        except Exception:  # pylint: disable=broad-except
-            logger.exception(
-                "Unexpected error during conceptual TeamTalk server ban for username '%s' (TG ID %s) on %s.",
-                tt_username,
-                target_telegram_id,
-                tt_connection.server_info.host,
-            )
-            return False
-        else:
-            return True
-    else:
-        logger.warning(
-            "Skipping conceptual TeamTalk server ban for username '%s' (TG ID %s) as tt_connection "
-            "or instance is None/invalid/not ready.",
-            tt_username,
-            target_telegram_id,
-        )
-        return True # Skipped is not an error for this conceptual ban
-
-
-async def _unban_teamtalk_user_on_server(
+async def _manage_teamtalk_user_on_server(
+    action: Literal["ban", "unban"],
     tt_connection: "TeamTalkConnection | None",
     tt_username: str,
     target_telegram_id: int,
 ) -> bool:
-    """Attempts a conceptual unban on the TeamTalk server. Currently logs only."""
+    """Handles conceptual ban/unban on the TeamTalk server. Currently logs only."""
     if not tt_username:
         logger.debug(
-            "No TeamTalk username for _unban_teamtalk_user_on_server, TG ID %s.", target_telegram_id
+            "No TeamTalk username for _manage_teamtalk_user_on_server(action=%s), TG ID %s.",
+            action,
+            target_telegram_id,
         )
         return True
 
     if tt_connection and tt_connection.instance and tt_connection.is_ready:
         try:
             logger.info(
-                "Conceptual TT server unban attempt for username '%s' (linked to TG ID %s) on server %s. "
-                "Actual server-side unban by username not yet supported by SDK.",
+                "Conceptual TT server %s attempt for username '%s' (linked to TG ID %s) on server %s. "
+                "Actual server-side action by username not yet supported by SDK.",
+                action,
                 tt_username,
                 target_telegram_id,
                 tt_connection.server_info.host,
             )
         except (pytalk.exceptions.TeamTalkException, TimeoutError, OSError):
             logger.exception(
-                "Error during conceptual TeamTalk server unban for username '%s' (TG ID %s) on %s.",
+                "Error during conceptual TeamTalk server %s for username '%s' (TG ID %s) on %s.",
+                action,
                 tt_username,
                 target_telegram_id,
                 tt_connection.server_info.host,
@@ -215,7 +169,8 @@ async def _unban_teamtalk_user_on_server(
             return False
         except Exception:
             logger.exception(
-                "Unexpected error during conceptual TeamTalk server unban for username '%s' (TG ID %s) on %s.",
+                "Unexpected error during conceptual TeamTalk server %s for username '%s' (TG ID %s) on %s.",
+                action,
                 tt_username,
                 target_telegram_id,
                 tt_connection.server_info.host,
@@ -225,8 +180,9 @@ async def _unban_teamtalk_user_on_server(
             return True
     else:
         logger.warning(
-            "Skipping conceptual TeamTalk server unban for username '%s' (TG ID %s) as tt_connection "
+            "Skipping conceptual TeamTalk server %s for username '%s' (TG ID %s) as tt_connection "
             "or instance is None/invalid/not ready.",
+            action,
             tt_username,
             target_telegram_id,
         )
@@ -261,9 +217,7 @@ async def _orchestrate_user_banning(
 
     # Step 2: Ban TeamTalk username in DB (if exists)
     if tt_username_to_ban:
-        tt_db_ban_success = await _ban_teamtalk_user_in_db(
-            session, tt_username_to_ban, target_telegram_id
-        )
+        tt_db_ban_success = await _ban_teamtalk_user_in_db(session, tt_username_to_ban, target_telegram_id)
         ban_statuses["teamtalk_db_ban"] = tt_db_ban_success
         if not tt_db_ban_success:
             logger.error("TeamTalk DB ban failed for username %s (TG ID %s).", tt_username_to_ban, target_telegram_id)
@@ -274,15 +228,18 @@ async def _orchestrate_user_banning(
 
     # Step 3: Conceptual TeamTalk server ban (if TT username exists)
     if tt_username_to_ban:
-        tt_server_ban_success = await _ban_teamtalk_user_on_server(
-            tt_connection, tt_username_to_ban, target_telegram_id
+        tt_server_ban_success = await _manage_teamtalk_user_on_server(
+            action="ban",
+            tt_connection=tt_connection,
+            tt_username=tt_username_to_ban,
+            target_telegram_id=target_telegram_id,
         )
         ban_statuses["teamtalk_server_ban"] = tt_server_ban_success
         if not tt_server_ban_success:
             logger.warning(
                 "Conceptual TeamTalk server ban failed or was skipped for username %s (TG ID %s).",
-                 tt_username_to_ban,
-                 target_telegram_id
+                tt_username_to_ban,
+                target_telegram_id,
             )
     else:
         ban_statuses["teamtalk_server_ban"] = True
@@ -301,9 +258,7 @@ async def ban_user(
     Handles banning in the database and conceptually on the TeamTalk server.
     Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
     """
-    return await _orchestrate_user_banning(
-        session, target_telegram_id, tt_username_to_ban, tt_connection
-    )
+    return await _orchestrate_user_banning(session, target_telegram_id, tt_username_to_ban, tt_connection)
 
 
 async def ban_and_delete_subscriber(
@@ -324,9 +279,7 @@ async def ban_and_delete_subscriber(
     user_settings = await session.get(UserSettings, target_telegram_id)
     tt_username_to_ban = user_settings.teamtalk_username if user_settings else None
 
-    ban_statuses, commit_needed = await ban_user(
-        session, target_telegram_id, tt_username_to_ban, tt_connection
-    )
+    ban_statuses, commit_needed = await ban_user(session, target_telegram_id, tt_username_to_ban, tt_connection)
 
     profile_deleted_status = False
     if ban_statuses.get("telegram_ban"):
@@ -386,9 +339,7 @@ def format_ban_delete_result_message(  # noqa: PLR0912
 
         if tt_server_banned:
             parts.append(
-                _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(
-                    tt_username=tt_username
-                )
+                _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(tt_username=tt_username)
             )
         else:
             parts.append(
@@ -606,8 +557,11 @@ async def unban_subscriber(
         db_unban_success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
         tt_unban_success = True
         if tt_username:
-            tt_unban_success = await _unban_teamtalk_user_on_server(
-                tt_connection, tt_username, target_telegram_id
+            tt_unban_success = await _manage_teamtalk_user_on_server(
+                action="unban",
+                tt_connection=tt_connection,
+                tt_username=tt_username,
+                target_telegram_id=target_telegram_id,
             )
 
         if db_unban_success and tt_unban_success:

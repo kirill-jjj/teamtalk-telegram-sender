@@ -41,9 +41,7 @@ class MessageHandler:
         translator = self._get_translator()
         sender = ttstr(tt_message.user.username)
         content = tt_message.content.strip()
-        logger.debug(
-            "[%s] Private msg from %s: '%s'", self.connection.server_info.host, sender, content[:50]
-        )
+        logger.debug("[%s] Private msg from %s: '%s'", self.connection.server_info.host, sender, content[:50])
 
         async with self.services.session_factory() as session:
             if content.startswith("/"):

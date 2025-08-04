@@ -17,9 +17,7 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminActionCallback
 
-# Middlewares to apply
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
-
+# Middlewares are now applied in the parent router in callbacks.py
 from ._helpers import ensure_message_context, safe_edit_text
 
 if TYPE_CHECKING:
@@ -27,8 +25,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
-admin_actions_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-admin_actions_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
+# Middlewares are now applied in the parent router in callbacks.py
 
 ttstr = pytalk.instance.sdk.ttstr
 

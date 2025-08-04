@@ -15,7 +15,7 @@ from bot.telegram_bot.callback_data import SubscriberActionCallback
 from bot.telegram_bot.keyboards import create_banned_user_list_keyboard
 from bot.telegram_bot.models import SubscriberInfo
 from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.telegram_bot.utils import format_telegram_user_display_name
+from bot.telegram_bot.utils import get_display_names_for_ids
 
 from ._helpers import ensure_message_context
 from .list_utils import (
@@ -66,25 +66,19 @@ async def _show_banned_list_page(
     """Shows a paginated list of banned users."""
     _ = translator.gettext
     banned_users = await crud.get_all_banned_users(session)
+    banned_user_ids = [bu.telegram_id for bu in banned_users if bu.telegram_id]
 
-    subscriber_infos = []
-    for bu in banned_users:
-        if bu.telegram_id:
-            display_name = str(bu.telegram_id)
-            try:
-                chat_info = await services.bot_event.get_chat(bu.telegram_id)
-                if chat_info:
-                    display_name = format_telegram_user_display_name(chat_info)
-            except Exception:
-                logger.warning("Could not fetch display name for %s in banned list", bu.telegram_id, exc_info=True)
+    display_names = await get_display_names_for_ids(services.bot_event, banned_user_ids)
 
-            subscriber_infos.append(
-                SubscriberInfo(
-                    telegram_id=bu.telegram_id,
-                    display_name=display_name,
-                    teamtalk_username=bu.teamtalk_username,
-                )
-            )
+    subscriber_infos = [
+        SubscriberInfo(
+            telegram_id=bu.telegram_id,
+            display_name=display_names.get(bu.telegram_id, str(bu.telegram_id)),
+            teamtalk_username=bu.teamtalk_username,
+        )
+        for bu in banned_users
+        if bu.telegram_id
+    ]
 
     await display_paginated_list(
         target=target,
@@ -98,6 +92,7 @@ async def _show_banned_list_page(
         keyboard_factory_kwargs={},
         page_size=SUBSCRIBERS_PER_PAGE,
     )
+
 
 @banned_user_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
 @ensure_message_context

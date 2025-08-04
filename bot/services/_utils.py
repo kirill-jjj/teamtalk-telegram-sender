@@ -66,14 +66,27 @@ async def _update_user_setting_field(
     log_context: str = "",
 ) -> UserSettings | None:
     """Generic helper to update a field in UserSettings, commit, refresh, cache, and handle errors."""
+    try:
+        # Ensure the object is in the session, merging if it's not.
+        # This removes boilerplate from calling service functions.
+        if settings_to_update not in session:
+            managed_settings = await session.merge(settings_to_update)
+            if not managed_settings:
+                logger.error(
+                    "Failed to merge user_settings for TG ID %s in _update_user_setting_field.",
+                    settings_to_update.telegram_id,
+                )
+                return None
+            settings_to_update = managed_settings
+    except Exception:
+        logger.exception(
+            "Unexpected error during session.merge for user %s in _update_user_setting_field.",
+            settings_to_update.telegram_id,
+        )
+        return None
+
     original_value = getattr(settings_to_update, field_name)
     if original_value == new_value:
-        # For MuteListMode, new_value would be an enum member, original_value also.
-        # Their .value might be different if comparing enum member directly with a string.
-        # However, Pydantic models usually store the enum member itself if the type hint is the enum.
-        # Let's assume direct comparison works for now. If not, this check might need adjustment
-        # or specific handling for enum types if new_value is passed as raw value.
-        # Given the current functions pass MuteListMode or str, direct comparison should be fine.
         logger.debug(
             "Skipping update for field '%s' for user %s as new value is same as old value%s.",
             field_name,
@@ -86,11 +99,9 @@ async def _update_user_setting_field(
         setattr(settings_to_update, field_name, new_value)
         await session.commit()
         await session.refresh(settings_to_update)
-        services.cache.update_user_settings(settings_to_update)  # Update cache with the modified UserSettings
+        services.cache.update_user_settings(settings_to_update)
 
-        # For logging, display .value for enums if new_value is an enum (like MuteListMode)
         display_value = new_value.value if hasattr(new_value, "value") else new_value
-
         logger.info(
             "Successfully set field '%s' to '%s' for user %s%s. DB and cache updated.",
             field_name,
@@ -100,7 +111,7 @@ async def _update_user_setting_field(
         )
     except SQLAlchemyError:
         await session.rollback()
-        setattr(settings_to_update, field_name, original_value)  # Revert in-memory change
+        setattr(settings_to_update, field_name, original_value)
 
         display_value_err = new_value.value if hasattr(new_value, "value") else new_value
         logger.exception(
@@ -111,9 +122,9 @@ async def _update_user_setting_field(
             log_context,
         )
         return None
-    except Exception:  # Catch any other unexpected errors
+    except Exception:
         await session.rollback()
-        setattr(settings_to_update, field_name, original_value)  # Revert in-memory change
+        setattr(settings_to_update, field_name, original_value)
 
         display_value_err = new_value.value if hasattr(new_value, "value") else new_value
         logger.exception(
