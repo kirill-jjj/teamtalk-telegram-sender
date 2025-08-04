@@ -27,12 +27,12 @@ msgstr "Русский"
 #: bot/core/notifications.py:141
 #, python-brace-format
 msgid "User {user_nickname} joined server {server_name}"
-msgstr "{user_nickname} присоединился к серверу {server_name}"
+msgstr "👤 {user_nickname} присоединился к серверу {server_name}"
 
 #: bot/core/notifications.py:143
 #, python-brace-format
 msgid "User {user_nickname} left server {server_name}"
-msgstr "{user_nickname} покинул сервер {server_name}"
+msgstr "👤 {user_nickname} покинул сервер {server_name}"
 
 #: bot/core/utils.py:26
 msgid "<b>Available Commands:</b>"
@@ -357,7 +357,7 @@ msgstr "Сообщение от сервера <b>{server_name}</b>"
 
 #: bot/teamtalk_bot/utils.py:255
 msgid "From "
-msgstr ""
+msgstr "От "
 
 #: bot/teamtalk_bot/utils.py:269
 msgid "Message sent to Telegram successfully."
@@ -459,7 +459,7 @@ msgstr "NOON (Не в сети): {status}"
 
 #: bot/telegram_bot/keyboards.py:253
 msgid "Manage Mute List"
-msgstr "Управление списком блокировок"
+msgstr "Управление списком игнорирования"
 
 #: bot/telegram_bot/keyboards.py:276
 #, python-brace-format
@@ -481,7 +481,7 @@ msgstr "Управлять белым списком"
 
 #: bot/telegram_bot/keyboards.py:290
 msgid "Mute/Unmute from Server List"
-msgstr "Блокировать/Разблокировать из списка сервера"
+msgstr "Добавить/убрать из списка игнорирования"
 
 #: bot/telegram_bot/keyboards.py:318 bot/telegram_bot/keyboards.py:410
 msgid "⬅️ Prev"
@@ -549,21 +549,21 @@ msgstr "🔔 Установить настройки уведомлений"
 
 #: bot/telegram_bot/keyboards.py:630
 msgid "🔇 Set Mute Mode"
-msgstr "🔇 Установить режим тишины"
+msgstr "🔇 Установить режим игнорирования"
 
 #: bot/telegram_bot/keyboards.py:636
 msgid "📜 View Mute List"
-msgstr "📜 Просмотреть список блокировок"
+msgstr "📜 Просмотреть список игнорирования"
 
 #: bot/telegram_bot/keyboards.py:677
 #, python-brace-format
 msgid "{item_display_name} (Status: Muted)"
-msgstr "{item_display_name} (Статус: Заблокирован)"
+msgstr "{item_display_name} (Статус: в списке игнорирования)"
 
 #: bot/telegram_bot/keyboards.py:681
 #, python-brace-format
 msgid "{item_display_name} (Status: Not Muted)"
-msgstr "{item_display_name} (Статус: не Заблокирован)"
+msgstr "{item_display_name} (Статус: не в списке игнорирования)"
 
 #: bot/telegram_bot/keyboards.py:716
 #, python-brace-format
@@ -641,7 +641,7 @@ msgstr "Привет! Используйте /help для просмотра д�
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:31
 #: bot/telegram_bot/handlers/user.py:123
 msgid "Settings"
-msgstr "Настройки"
+msgstr "⚙️ Настройки"
 
 #: bot/telegram_bot/handlers/user.py:144
 msgid "Main Menu:"
@@ -711,7 +711,7 @@ msgstr "Белый список"
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:384
 #, python-brace-format
 msgid "Mute Mode: {mode}"
-msgstr "Режим тишины: {mode}"
+msgstr "Режим игнорирования: {mode}"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:299
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:239
@@ -815,7 +815,7 @@ msgstr "Произошла ошибка при отображении списк
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:127
 msgid "Blacklisted Users (Block List)"
-msgstr "Заблокированные пользователи (Чёрный список)"
+msgstr "Список игнорируемых (черный список)"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:128
 msgid "Your blacklist is empty."
@@ -823,7 +823,7 @@ msgstr "Ваш чёрный список пуст."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:130
 msgid "Whitelisted Users (Allow List)"
-msgstr "Разрешённые пользователи (Белый список)"
+msgstr "Список отслеживаемых (белый список)"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:131
 msgid "Your whitelist is empty."
@@ -881,19 +881,19 @@ msgid ""
 "\n"
 "{current_mode_description}"
 msgstr ""
-"Управление списком блокировок\n"
+"Управление списком игнорирования\n"
 "\n"
 "{current_mode_description}"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:369
 #, python-brace-format
 msgid "Mute list mode set to {mode}."
-msgstr "Режим списка блокировок изменен на {mode}."
+msgstr "Режим списка игнорирования изменен на {mode}."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:502
 msgid "Error determining user to mute/unmute. Try again."
 msgstr ""
-"Ошибка определения пользователя для блокировки/разблокировки. Попробуйте "
+"Ошибка определения пользователя для добавления/удаления из списка игнорирования. Попробуйте "
 "еще раз."
 
 #: bot/telegram_bot/handlers/callback_handlers/notifications.py:78
@@ -950,11 +950,11 @@ msgstr "Не удалось переключить статус NOON. Пожал
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:381
 #, python-brace-format
 msgid "Mute list for subscriber: {subscriber_name} (ID: {subscriber_id})"
-msgstr "Список блокировок для подписчика: {subscriber_name} (ID: {subscriber_id})"
+msgstr "Список игнорирования для подписчика: {subscriber_name} (ID: {subscriber_id})"
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:389
 msgid "The mute list is currently empty."
-msgstr "Список блокировок пуст."
+msgstr "Список игнорирования пуст."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_actions.py:394
 msgid "An error occurred: Bot instance not found."

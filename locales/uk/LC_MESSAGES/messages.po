@@ -27,12 +27,12 @@ msgstr "Українська"
 #: bot/core/notifications.py:141
 #, python-brace-format
 msgid "User {user_nickname} joined server {server_name}"
-msgstr "Користувач {user_nickname} приєднався до сервера {server_name}"
+msgstr "👤 Користувач {user_nickname} приєднався до сервера {server_name}"
 
 #: bot/core/notifications.py:143
 #, python-brace-format
 msgid "User {user_nickname} left server {server_name}"
-msgstr "Користувач {user_nickname} покинув сервер {server_name}"
+msgstr "👤 Користувач {user_nickname} покинув сервер {server_name}"
 
 #: bot/core/utils.py:26
 msgid "<b>Available Commands:</b>"
@@ -359,7 +359,7 @@ msgstr "Повідомлення з сервера <b>{server_name}</b>"
 
 #: bot/teamtalk_bot/utils.py:255
 msgid "From "
-msgstr ""
+msgstr "Від "
 
 #: bot/teamtalk_bot/utils.py:269
 msgid "Message sent to Telegram successfully."
@@ -483,15 +483,15 @@ msgstr "Керувати білим списком"
 
 #: bot/telegram_bot/keyboards.py:290
 msgid "Mute/Unmute from Server List"
-msgstr "Ігнорувати/скасувати ігнорування зі списку сервера"
+msgstr "Додати/скасувати ігнорування зі списку сервера"
 
 #: bot/telegram_bot/keyboards.py:318 bot/telegram_bot/keyboards.py:410
 msgid "⬅️ Prev"
-msgstr "⬅️ Попер."
+msgstr "⬅️ Попередня"
 
 #: bot/telegram_bot/keyboards.py:324 bot/telegram_bot/keyboards.py:417
 msgid "Next ➡️"
-msgstr "Наст. ➡️"
+msgstr "Наступна ➡️"
 
 #: bot/telegram_bot/keyboards.py:495
 msgid "✅ Unban"
@@ -643,7 +643,7 @@ msgstr "Вітаю! Використовуйте /help для перегляду
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:31
 #: bot/telegram_bot/handlers/user.py:123
 msgid "Settings"
-msgstr "Налаштування"
+msgstr "⚙️ Налаштування"
 
 #: bot/telegram_bot/handlers/user.py:144
 msgid "Main Menu:"
@@ -819,7 +819,7 @@ msgstr "Сталася помилка під час відображення с�
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:127
 msgid "Blacklisted Users (Block List)"
-msgstr "Користувачі в чорному списку"
+msgstr "Список ігнорованих (чорний список)"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:128
 msgid "Your blacklist is empty."
@@ -827,7 +827,7 @@ msgstr "Ваш чорний список порожній."
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:130
 msgid "Whitelisted Users (Allow List)"
-msgstr "Користувачі в білому списку"
+msgstr "Список відстежуваних (білий список)"
 
 #: bot/telegram_bot/handlers/callback_handlers/mute.py:131
 msgid "Your whitelist is empty."
