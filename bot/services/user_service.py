@@ -1,13 +1,25 @@
 """Service layer for user-related operations, like profile deletion."""
 
+import gettext
+from html import escape
 import logging
 from typing import TYPE_CHECKING
 
+import pytalk
+from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.constants import (
+    WHO_CHANNEL_ID_ROOT,
+    WHO_CHANNEL_ID_SERVER_ROOT_ALT,
+    WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
+)
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, UserSettings
+from bot.telegram_bot.models import WhoChannelGroup, WhoUser
+from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 
 from . import _utils
 
@@ -15,6 +27,154 @@ if TYPE_CHECKING:
     from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
+ttstr = pytalk.instance.sdk.ttstr
+
+
+def _get_user_display_channel_name(
+    user_obj: TeamTalkUser, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+) -> str:
+    channel_obj = user_obj.channel
+    user_display_channel_name = ""
+    is_channel_hidden = False
+
+    if channel_obj:
+        try:
+            if (
+                hasattr(pytalk.instance.sdk, "ChannelType")
+                and hasattr(channel_obj, "channel_type")
+                and isinstance(channel_obj.channel_type, int)
+                and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0
+            ):
+                is_channel_hidden = True
+        except AttributeError:  # Catches missing ChannelType or channel_obj.channel_type
+            log_msg = (
+                f"SDK, ChannelType or channel_type attribute missing, "
+                f"cannot determine if channel {ttstr(channel_obj.name)} ({channel_obj.id}) is hidden."
+            )
+            logger.warning(log_msg)
+        except TypeError as e_chan_type:
+            log_msg = f"TypeError checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan_type}"
+            logger.exception(log_msg)
+        except Exception as e_chan:
+            log_msg = (
+                f"Unexpected error checking channel type for {ttstr(channel_obj.name)} ({channel_obj.id}): {e_chan}"
+            )
+            logger.exception(log_msg)
+
+    server_root_ids = [WHO_CHANNEL_ID_ROOT, WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]
+    if channel_obj and channel_obj.id not in server_root_ids:
+        if is_caller_admin or not is_channel_hidden:
+            channel_name_str = ttstr(channel_obj.name)
+            user_display_channel_name = translator.gettext("in {channel_name}").format(channel_name=channel_name_str)
+        else:
+            user_display_channel_name = translator.gettext("under server")
+    elif channel_obj and channel_obj.id == WHO_CHANNEL_ID_ROOT:
+        user_display_channel_name = translator.gettext("in root channel")
+    elif not channel_obj or (
+        hasattr(channel_obj, "id")
+        and channel_obj.id in [WHO_CHANNEL_ID_SERVER_ROOT_ALT, WHO_CHANNEL_ID_SERVER_ROOT_ALT2]
+    ):
+        user_display_channel_name = translator.gettext("under server")
+    else:  # Should ideally not be reached if channel_obj exists and ID is checked
+        user_display_channel_name = translator.gettext("in unknown location")
+
+    return user_display_channel_name
+
+
+def _group_users_for_who_command(
+    users: list[TeamTalkUser], bot_user_id: int | None, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+) -> tuple[list[WhoChannelGroup], int]:
+    channels_display_data: dict[str, list[str]] = {}
+    users_added_to_groups_count = 0
+
+    for user_obj in users:
+        if bot_user_id is not None and user_obj.id == bot_user_id and not is_caller_admin:
+            continue
+
+        user_display_channel_name = _get_user_display_channel_name(
+            user_obj, is_caller_admin=is_caller_admin, translator=translator
+        )
+
+        if user_display_channel_name not in channels_display_data:
+            channels_display_data[user_display_channel_name] = []
+
+        user_nickname = get_tt_user_display_name(user_obj, translator)
+        channels_display_data[user_display_channel_name].append(escape(user_nickname))
+        users_added_to_groups_count += 1
+
+    result_groups = [
+        WhoChannelGroup(channel_name=name, users=[WhoUser(nickname=nick) for nick in nicks])
+        for name, nicks in channels_display_data.items()
+    ]
+    return result_groups, users_added_to_groups_count
+
+
+def _format_who_message(
+    grouped_data: list[WhoChannelGroup],
+    total_users: int,
+    translator: "gettext.GNUTranslations",
+    server_host: str | None,
+) -> str:
+    _ = translator.gettext
+    ngettext = translator.ngettext
+
+    if total_users == 0:
+        no_users_text = _("No users found online")
+        if server_host:
+            no_users_text = _("No users found online on server {server_host}.").format(server_host=server_host)
+        else:
+            no_users_text = _("No users found online.")
+        return no_users_text
+
+    sorted_groups = sorted(grouped_data, key=lambda group: group.channel_name)
+
+    if server_host:
+        header_template = ngettext(
+            "There is {user_count} user on the server {server_host}:\n",
+            "There are {user_count} users on the server {server_host}:\n",
+            total_users,
+        )
+        text_reply = header_template.format(user_count=total_users, server_host=server_host)
+    else:
+        header_template = ngettext(
+            "There is {user_count} user on the server:\n", "There are {user_count} users on the server:\n", total_users
+        )
+        text_reply = header_template.format(user_count=total_users)
+
+    channel_info_parts: list[str] = []
+    for group in sorted_groups:
+        sorted_nicknames = sorted([user.nickname for user in group.users])
+        user_text_segment = ""
+        if sorted_nicknames:
+            if len(sorted_nicknames) > 1:
+                user_separator = translator.gettext(" and ")
+                user_list_except_last_segment = ", ".join(sorted_nicknames[:-1])
+                user_text_segment = f"<b>{user_list_except_last_segment}{user_separator}{sorted_nicknames[-1]}</b>"
+            else:
+                user_text_segment = f"<b>{sorted_nicknames[0]}</b>"
+            channel_info_parts.append(f"{user_text_segment} {group.channel_name}")
+
+    if channel_info_parts:
+        text_reply += "\n" + "\n".join(channel_info_parts)
+    return text_reply
+
+
+async def get_online_users_report(
+    tt_connection: TeamTalkConnection, *, is_caller_admin: bool, translator: gettext.GNUTranslations
+) -> str:
+    """Generates a formatted report of online users."""
+    if not tt_connection.instance:
+        return translator.gettext("Error: No active TeamTalk connection.")
+
+    all_users_list = list(tt_connection.online_users_cache.values())
+    bot_user_id = tt_connection.instance.getMyUserID()
+    server_host = tt_connection.server_info.host
+
+    grouped_data, total_users = _group_users_for_who_command(
+        all_users_list, bot_user_id, is_caller_admin=is_caller_admin, translator=translator
+    )
+
+    return _format_who_message(grouped_data, total_users, translator=translator, server_host=server_host)
 
 
 async def delete_full_user_profile(
