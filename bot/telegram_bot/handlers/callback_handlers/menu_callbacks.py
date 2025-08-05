@@ -2,11 +2,12 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminAction
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -16,8 +17,10 @@ from bot.telegram_bot.callback_data import MenuCallback
 from ..admin import _show_user_buttons
 from ..user import help_command_handler, settings_command_handler, who_command_handler
 from ._helpers import ensure_message_context
-from .banned_user_actions import _show_banned_list_page
-from .list_utils import _show_subscriber_list_page
+from .list_utils import (
+    _show_banned_list_page,
+    _show_subscriber_list_page,
+)
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -147,8 +150,8 @@ async def menu_unban_handler(
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
         target=query.message,  # type: ignore[arg-type]
-        session=session,  # type: ignore[arg-type]
-        services=services,
+        session=cast(SQLModelAsyncSession, session),
+        bot=services.bot_event,
         page=0,
         translator=translator,
     )

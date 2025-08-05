@@ -19,8 +19,10 @@ from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
 
-from .callback_handlers.banned_user_actions import _show_banned_list_page
-from .callback_handlers.list_utils import _show_subscriber_list_page
+from .callback_handlers.list_utils import (
+    _show_banned_list_page,
+    _show_subscriber_list_page,
+)
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -133,7 +135,7 @@ async def unban_command_handler(
     await _show_banned_list_page(
         target=message,
         session=cast(SQLModelAsyncSession, session),
-        services=services,
+        bot=services.bot_event,
         page=0,
         translator=translator,
     )

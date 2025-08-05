@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import gettext
 import logging
 from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from sqlalchemy.sql.selectable import Select
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -19,8 +19,11 @@ if TYPE_CHECKING:
     from aiogram.types import CallbackQuery, Message
 
 from bot.database.crud import get_all_subscribers_ids
-from bot.models import UserSettings
-from bot.telegram_bot.keyboards import create_subscriber_list_keyboard
+from bot.models import BanList, UserSettings
+from bot.telegram_bot.keyboards import (
+    create_banned_user_list_keyboard,
+    create_subscriber_list_keyboard,
+)
 from bot.telegram_bot.models import SubscriberInfo
 from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import get_display_names_for_ids
@@ -68,47 +71,92 @@ async def _prepare_user_list(
     return user_info_list
 
 
-async def _get_all_subscribers_info(session: AsyncSession, bot: Bot) -> list[SubscriberInfo]:
-    """Fetches all subscriber details using the generic _prepare_user_list helper."""
-    all_subscriber_ids = await get_all_subscribers_ids(session)
-    if not all_subscriber_ids:
-        return []
-
-    statement = select(UserSettings).where(UserSettings.telegram_id.in_(all_subscriber_ids))  # type: ignore[attr-defined]
-
-    def extractor(user_settings: UserSettings) -> tuple[int, str | None]:
-        return user_settings.telegram_id, user_settings.teamtalk_username
-
-    return await _prepare_user_list(session, bot, statement, extractor)
+async def _show_generic_user_list(
+    target: Message | CallbackQuery,
+    session: AsyncSession,
+    bot: Bot,
+    translator: gettext.GNUTranslations,
+    page: int,
+    statement: Select[Any],
+    extractor: Callable[[Any], tuple[int, str | None] | None],
+    title_text_key: str,
+    empty_list_text_key: str,
+    keyboard_factory: Callable[..., Awaitable[InlineKeyboardMarkup]],
+) -> None:
+    """A generic function to display a paginated list of users."""
+    _ = translator.gettext
+    user_infos = await _prepare_user_list(session, bot, statement, extractor)
+    await display_paginated_list(
+        target=target,
+        bot=bot,
+        translator=translator,
+        items=user_infos,
+        page=page,
+        title_text=_(title_text_key),
+        empty_list_text=_(empty_list_text_key),
+        keyboard_factory=keyboard_factory,
+        keyboard_factory_kwargs={},
+        page_size=SUBSCRIBERS_PER_PAGE,
+    )
 
 
 async def _show_subscriber_list_page(
     target: Message | CallbackQuery,
     session: AsyncSession,
-    bot: Bot,  # bot is needed for _get_all_subscribers_info
+    bot: Bot,
     translator: gettext.GNUTranslations,
     page: int = 0,
 ) -> None:
     """Fetches all subscribers and displays a paginated list."""
-    _ = translator.gettext
+    all_subscriber_ids = await get_all_subscribers_ids(session)
+    statement = select(UserSettings).where(
+        UserSettings.telegram_id.in_(all_subscriber_ids)  # type: ignore[attr-defined]
+    )
 
-    # The isinstance(target, CallbackQuery) check is removed,
-    # as display_paginated_list now handles both Message and CallbackQuery targets.
+    def extractor(user_settings: UserSettings) -> tuple[int, str | None]:
+        return user_settings.telegram_id, user_settings.teamtalk_username
 
-    all_subscribers_info = await _get_all_subscribers_info(session, bot)
-
-    # The `bot` object passed to this function will be relayed to display_paginated_list.
-    # if `callback_query.bot` is used internally by `safe_edit_text`.
-    # However, `create_subscriber_list_keyboard` might need it or other specific args.
-    await display_paginated_list(
-        target=target,  # Pass target
-        bot=bot,  # Pass bot instance
+    await _show_generic_user_list(
+        target=target,
+        session=session,
+        bot=bot,
         translator=translator,
-        items=all_subscribers_info,
         page=page,
-        title_text=_("Here is the list of subscribers."),
-        empty_list_text=_("No subscribers found."),
+        statement=statement,
+        extractor=extractor,
+        title_text_key="Here is the list of subscribers.",
+        empty_list_text_key="No subscribers found.",
         keyboard_factory=create_subscriber_list_keyboard,
-        keyboard_factory_kwargs={},  # Add any specific kwargs needed by create_subscriber_list_keyboard
-        page_size=SUBSCRIBERS_PER_PAGE,
+    )
+
+
+async def _show_banned_list_page(
+    target: CallbackQuery | Message,
+    session: AsyncSession,
+    bot: Bot,
+    translator: gettext.GNUTranslations,
+    page: int,
+) -> None:
+    """Shows a paginated list of banned users."""
+    statement = select(BanList).where(BanList.telegram_id.isnot(None))  # type: ignore[union-attr]
+
+    def extractor(ban_entry: BanList) -> tuple[int, str | None] | None:
+        # This check is technically redundant due to the WHERE clause,
+        # but it's good practice for robustness.
+        if ban_entry.telegram_id is None:
+            logger.error("BanList entry with id %s has null telegram_id.", ban_entry.id)
+            return None
+        return ban_entry.telegram_id, ban_entry.teamtalk_username
+
+    await _show_generic_user_list(
+        target=target,
+        session=session,
+        bot=bot,
+        translator=translator,
+        page=page,
+        statement=statement,
+        extractor=extractor,
+        title_text_key="Banned Users",
+        empty_list_text_key="The ban list is empty.",
+        keyboard_factory=create_banned_user_list_keyboard,
     )

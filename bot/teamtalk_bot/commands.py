@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Tuple, TypedDict
 
 from pydantic import BaseModel, Field, model_validator
 import pytalk
@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
+from bot.models import UserSettings
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import handle_common_tt_command_errors, send_long_tt_reply
@@ -116,6 +117,25 @@ def _create_admin_action_report(
     return "\n\n".join(reply_parts)
 
 
+class AdminActionConfig(TypedDict):
+    """Configuration for a specific admin action."""
+
+    service_func: Callable[[AsyncSession, int, UserSettings, "Services"], Awaitable[bool]]
+    success_msg: tuple[str, str]
+
+
+ACTION_MAP: dict[str, AdminActionConfig] = {
+    "add": {
+        "service_func": admin_service.add_admin_full,
+        "success_msg": ("Successfully added {count} admin.", "Successfully added {count} admins."),
+    },
+    "remove": {
+        "service_func": admin_service.remove_admin_full,
+        "success_msg": ("Successfully removed {count} admin.", "Successfully removed {count} admins."),
+    },
+}
+
+
 async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: str | None,
@@ -129,6 +149,11 @@ async def _manage_admin_ids(
     services: Services,
 ) -> None:
     _ = translator.gettext
+    action_config = ACTION_MAP.get(action_type)
+    if not action_config:
+        logger.error("Unknown action_type '%s' passed to _manage_admin_ids.", action_type)
+        return
+
     args = AdminIdArgs.model_validate(args_str)
     if not args.valid_ids and not args.invalid_entries:
         tt_message.reply(_(prompt_msg_key))
@@ -136,24 +161,20 @@ async def _manage_admin_ids(
 
     success_count = 0
     failed_action_ids = []
+    service_func = action_config["service_func"]
+
     for telegram_id in args.valid_ids:
         user_settings = await services.get_or_create_user_settings(telegram_id, session)
-        # Ensure user_settings has a default language if new
         if not user_settings.language_code:
             user_settings.language_code = services.config.general.default_lang
-            # No need to save here just for this, admin_service will use it
 
-        action_successful = False
-        if action_type == "add":
-            logger.info(
-                "Attempting to add admin for TG ID %s by TT admin %s.", telegram_id, ttstr(tt_message.user.username)
-            )
-            action_successful = await admin_service.add_admin_full(session, telegram_id, user_settings, services)
-        elif action_type == "remove":
-            logger.info(
-                "Attempting to remove admin for TG ID %s by TT admin %s.", telegram_id, ttstr(tt_message.user.username)
-            )
-            action_successful = await admin_service.remove_admin_full(session, telegram_id, user_settings, services)
+        logger.info(
+            "Attempting to %s admin for TG ID %s by TT admin %s.",
+            action_type,
+            telegram_id,
+            ttstr(tt_message.user.username),
+        )
+        action_successful = await service_func(session, telegram_id, user_settings, services)
 
         if action_successful:
             success_count += 1
@@ -170,15 +191,8 @@ async def _manage_admin_ids(
                 telegram_id,
             )
 
-    success_message_formatted = ""
-    if action_type == "add":
-        success_message_formatted = translator.ngettext(
-            "Successfully added {count} admin.", "Successfully added {count} admins.", success_count
-        ).format(count=success_count)
-    elif action_type == "remove":
-        success_message_formatted = translator.ngettext(
-            "Successfully removed {count} admin.", "Successfully removed {count} admins.", success_count
-        ).format(count=success_count)
+    msg_single, msg_plural = action_config["success_msg"]
+    success_message_formatted = translator.ngettext(msg_single, msg_plural, success_count).format(count=success_count)
 
     report_message = _create_admin_action_report(
         translator,
