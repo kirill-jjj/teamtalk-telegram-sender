@@ -84,10 +84,10 @@ async def create_subscription_settings_keyboard(
 ) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
     settings_map_source = {
-        NotificationSetting.ALL: (_("All (Join & Leave)"), NotificationSetting.ALL.value),
-        NotificationSetting.LEAVE_OFF: (_("Join Only"), NotificationSetting.LEAVE_OFF.value),
-        NotificationSetting.JOIN_OFF: (_("Leave Only"), NotificationSetting.JOIN_OFF.value),
-        NotificationSetting.NONE: (_("None"), NotificationSetting.NONE.value),
+        NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
+        NotificationSetting.LEAVE_OFF: ("Join Only", NotificationSetting.LEAVE_OFF.value),
+        NotificationSetting.JOIN_OFF: ("Leave Only", NotificationSetting.JOIN_OFF.value),
+        NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
     }
     options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
 
@@ -140,8 +140,8 @@ async def create_manage_muted_users_keyboard(
     """Creates the 'Manage Mute List' keyboard."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    active_marker = _("✅")
-    inactive_marker = _("⚪️")
+    active_marker = "✅"
+    inactive_marker = "⚪️"
 
     blacklist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker
     whitelist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker

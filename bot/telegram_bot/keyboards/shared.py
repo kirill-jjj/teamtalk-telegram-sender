@@ -43,13 +43,13 @@ async def _create_option_selection_keyboard(
     current_value: str | None,
     callback_data_factory: Callable[[str], PackableCallbackData],
     back_button_callback_data: PackableCallbackData,
-    back_button_text_key: str = _("⬅️ Back"),
+    back_button_text_key: str = "⬅️ Back",
     buttons_per_row: int = 1,
 ) -> InlineKeyboardMarkup:
     """Creates a generic keyboard for selecting one option from a list."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    active_marker = _("✅ ")
+    active_marker = "✅ "
 
     for value, display_text in options:
         button_text = f"{active_marker}{_(display_text)}" if value == current_value else _(display_text)
