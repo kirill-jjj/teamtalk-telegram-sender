@@ -39,6 +39,7 @@ def build_help_message(
                 _(
                     "/kick - Kick a user from the server (via buttons).\n"
                     "/ban - Ban a user from the server (via buttons).\n"
+                    "/unban - Unban a user from the server (shows a list of banned users).\n"
                     "/subscribers - View and manage subscribed users."
                 )
             )

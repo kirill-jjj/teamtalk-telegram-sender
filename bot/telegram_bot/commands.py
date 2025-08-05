@@ -26,6 +26,7 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
     admin_specific = [
         BotCommand(command="kick", description=_("Kick TT user (admin, via buttons)")),
         BotCommand(command="ban", description=_("Ban TT user (admin, via buttons)")),
+        BotCommand(command="unban", description=_("Unban user (shows a list of banned users)")),
         BotCommand(command="subscribers", description=_("View and manage subscribed users")),
     ]
     return get_user_commands(_) + admin_specific
