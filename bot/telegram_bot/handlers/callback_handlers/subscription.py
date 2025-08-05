@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery
 from pydantic import BaseModel, Field, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import SettingsNavAction, SubscriptionAction
+from bot.core.enums import Actor, SettingsNavAction, SubscriptionAction
 from bot.models import NotificationSetting, UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
@@ -102,7 +102,7 @@ async def cq_set_subscription_setting(
         services=services,
         user_settings=user_settings,
         new_pref=new_setting_enum,
-        actor="user",
+        actor=Actor.USER,
     )
 
     if not updated_settings:

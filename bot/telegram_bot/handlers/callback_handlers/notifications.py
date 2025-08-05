@@ -10,7 +10,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import NotificationAction, SettingsNavAction
+from bot.core.enums import Actor, NotificationAction, SettingsNavAction
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
@@ -72,7 +72,7 @@ async def cq_toggle_noon_setting_action(
         session=session,
         services=services,
         user_settings=user_settings,
-        actor="user",
+        actor=Actor.USER,
     )
 
     if not updated_settings:

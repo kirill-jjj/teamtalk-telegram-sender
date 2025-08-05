@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, TypedDict, cast
 
 from aiogram import F, Router
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import QueryableAttribute
@@ -29,7 +30,6 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.telegram_bot.handlers.callback_handlers._helpers import (
     action_and_refresh_view,
-    create_setting_change_handler,
     ensure_message_context,
     refresh_subscriber_view,
 )
@@ -311,58 +311,85 @@ async def handle_paginate_mute_list(
     await query.answer()
 
 
-@settings_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
+from typing import Any, Awaitable, Callable, Type
+
+# Data-driven configuration for admin setting handlers
+
+class AdminSettingHandlerConfig(TypedDict):
+    """A type hint for the admin setting handler configuration dictionary."""
+
+    service_func: Callable[..., Awaitable[UserSettings | None]]
+    param_name: str
+    value_extractor: Callable[[Any], Any]
+    success_msg_formatter: str
+    failure_msg: str
+
+
+SETTING_HANDLERS_CONFIG: dict[Type[CallbackData], AdminSettingHandlerConfig] = {
+    AdminSetSubscriberLanguageCallback: {
+        "service_func": admin_service.admin_set_user_language,
+        "param_name": "new_lang_code",
+        "value_extractor": lambda cb: cb.lang_code,
+        "success_msg_formatter": "Language for subscriber {tg_id} changed to {value}.",
+        "failure_msg": "Failed to change language. Subscriber settings might be missing or an error occurred.",
+    },
+    AdminSetSubscriberNotificationPrefCallback: {
+        "service_func": admin_service.admin_set_user_notification_preference,
+        "param_name": "new_pref_enum",
+        "value_extractor": lambda cb: NotificationSetting(cb.setting_value),
+        "success_msg_formatter": "Notification preference for subscriber {tg_id} set to: {value}.",
+        "failure_msg": "Failed to change notification preference. Please check logs or try again.",
+    },
+    AdminSetSubscriberMuteModeCallback: {
+        "service_func": admin_service.admin_set_user_mute_mode,
+        "param_name": "new_mode",
+        "value_extractor": lambda cb: cb.mode,
+        "success_msg_formatter": "Mute list mode for subscriber {tg_id} set to: {value}.",
+        "failure_msg": "Failed to change mute mode. Subscriber settings might be missing or an error occurred.",
+    },
+}
+
+
+@settings_router.callback_query(
+    AdminSetSubscriberLanguageCallback.filter(),
+    AdminSetSubscriberNotificationPrefCallback.filter(),
+    AdminSetSubscriberMuteModeCallback.filter(),
+)
 @ensure_message_context
 @action_and_refresh_view(refresh_subscriber_view)
-async def handle_admin_set_subscriber_language(
+async def handle_admin_set_any_subscriber_setting(
     query: CallbackQuery,
-    callback_data: AdminSetSubscriberLanguageCallback,
+    callback_data: (
+        AdminSetSubscriberLanguageCallback
+        | AdminSetSubscriberNotificationPrefCallback
+        | AdminSetSubscriberMuteModeCallback
+    ),
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
 ) -> tuple[bool, str]:
-    """Handles an admin setting a specific subscriber's language."""
-    return await create_setting_change_handler(
-        service_func=admin_service.admin_set_user_language,
-        value_extractor=lambda cb: cb.lang_code,
-        success_msg_formatter="Language for subscriber {tg_id} changed to {value}.",
-        failure_msg="Failed to change language. Subscriber settings might be missing or an error occurred.",
-    )(query, callback_data, session, translator, services)
+    """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
+    _ = translator.gettext
+    config = SETTING_HANDLERS_CONFIG.get(type(callback_data))
+    if not config:
+        logger.error("No handler config found for callback data type: %s", type(callback_data).__name__)
+        return False, _("An unexpected error occurred.")
 
+    target_telegram_id = callback_data.target_telegram_id
+    param_name = config["param_name"]
+    value_to_set = config["value_extractor"](callback_data)
 
-@settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
-@ensure_message_context
-@action_and_refresh_view(refresh_subscriber_view)
-async def handle_admin_set_subscriber_notification_pref(
-    query: CallbackQuery,
-    callback_data: AdminSetSubscriberNotificationPrefCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-) -> tuple[bool, str]:
-    """Handles an admin setting a specific subscriber's notification preference."""
-    return await create_setting_change_handler(
-        service_func=admin_service.admin_set_user_notification_preference,
-        value_extractor=lambda cb: NotificationSetting(cb.setting_value),
-        success_msg_formatter="Notification preference for subscriber {tg_id} set to: {value}.",
-        failure_msg="Failed to change notification preference. Please check logs or try again.",
-    )(query, callback_data, session, translator, services)
+    # Dynamically call the appropriate service function
+    service_kwargs = {
+        "session": session,
+        "services": services,
+        "target_telegram_id": target_telegram_id,
+        param_name: value_to_set,
+    }
+    updated_user_settings = await config["service_func"](**service_kwargs)
 
+    if updated_user_settings:
+        message = _(config["success_msg_formatter"]).format(tg_id=target_telegram_id, value=value_to_set)
+        return True, message
 
-@settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
-@ensure_message_context
-@action_and_refresh_view(refresh_subscriber_view)
-async def handle_admin_set_subscriber_mute_mode(
-    query: CallbackQuery,
-    callback_data: AdminSetSubscriberMuteModeCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-) -> tuple[bool, str]:
-    """Handles an admin setting a specific subscriber's mute list mode."""
-    return await create_setting_change_handler(
-        service_func=admin_service.admin_set_user_mute_mode,
-        value_extractor=lambda cb: cb.mode,
-        success_msg_formatter="Mute list mode for subscriber {tg_id} set to: {value}.",
-        failure_msg="Failed to change mute mode. Subscriber settings might be missing or an error occurred.",
-    )(query, callback_data, session, translator, services)
+    return False, _(config["failure_msg"])

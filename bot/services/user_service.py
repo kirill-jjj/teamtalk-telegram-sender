@@ -14,6 +14,7 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
+from bot.core.enums import Actor
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, NotificationSetting, OperationResult, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -210,10 +211,10 @@ async def update_mute_mode(
     services: "Services",
     user_settings: UserSettings,
     new_mode: MuteListMode,
-    actor: str = "user",
+    actor: Actor = Actor.USER,
 ) -> UserSettings | None:
     """Sets the mute list mode for a user."""
-    log_context = f" by {actor}"
+    log_context = f" by {actor.value}"
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -229,10 +230,10 @@ async def update_language(
     services: "Services",
     user_settings: UserSettings,
     new_lang_code: str,
-    actor: str = "user",
+    actor: Actor = Actor.USER,
 ) -> UserSettings | None:
     """Updates the language for a user."""
-    log_context = f" by {actor}"
+    log_context = f" by {actor.value}"
     updated_settings = await _utils._update_user_setting_field(
         session=session,
         services=services,
@@ -252,7 +253,7 @@ async def update_noon_setting(
     session: AsyncSession,
     services: "Services",
     user_settings: UserSettings,
-    actor: str = "user",
+    actor: Actor = Actor.USER,
 ) -> UserSettings | None:
     """Toggles the NOON (Not On Online Notifications) setting for a user.
 
@@ -271,7 +272,7 @@ async def update_noon_setting(
         settings_to_update=user_settings,
         field_name="not_on_online_enabled",
         new_value=new_noon_enabled_value,
-        log_context=f" by {actor} (toggle NOON)",
+        log_context=f" by {actor.value} (toggle NOON)",
     )
 
     if not updated_settings_noon_toggle:
@@ -287,7 +288,7 @@ async def update_noon_setting(
             settings_to_update=updated_settings_noon_toggle,  # Use the already updated object
             field_name="not_on_online_confirmed",
             new_value=True,
-            log_context=f" by {actor} (confirm NOON after toggle)",
+            log_context=f" by {actor.value} (confirm NOON after toggle)",
         )
         if not confirmed_settings:
             # Log a warning if the confirmation step failed
@@ -314,10 +315,10 @@ async def update_notification_preference(
     services: "Services",
     user_settings: UserSettings,
     new_pref: "NotificationSetting",
-    actor: str = "user",
+    actor: Actor = Actor.USER,
 ) -> UserSettings | None:
     """Sets the notification preference for a user."""
-    log_context = f" by {actor}"
+    log_context = f" by {actor.value}"
     return await _utils._update_user_setting_field(
         session=session,
         services=services,

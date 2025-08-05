@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.core.enums import Actor
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
 
@@ -377,7 +378,7 @@ async def admin_toggle_noon_setting(
         session=session,
         services=services,
         user_settings=target_user_settings,
-        actor="admin",
+        actor=Actor.ADMIN,
     )
 
 
@@ -398,7 +399,7 @@ async def admin_set_user_mute_mode(
         services=services,
         user_settings=target_user_settings,
         new_mode=new_mode,
-        actor="admin",
+        actor=Actor.ADMIN,
     )
 
 
@@ -419,7 +420,7 @@ async def admin_set_user_notification_preference(
         services=services,
         user_settings=target_user_settings,
         new_pref=new_pref_enum,
-        actor="admin",
+        actor=Actor.ADMIN,
     )
 
 
@@ -557,5 +558,5 @@ async def admin_set_user_language(
         services=services,
         user_settings=target_user_settings,
         new_lang_code=new_lang_code,
-        actor="admin",
+        actor=Actor.ADMIN,
     )

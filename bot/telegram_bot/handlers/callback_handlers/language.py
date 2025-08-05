@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
-from bot.core.enums import LanguageAction, SettingsNavAction
+from bot.core.enums import Actor, LanguageAction, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
 from bot.services import user_service
@@ -78,7 +78,7 @@ async def cq_set_language(
         services=services,
         user_settings=user_settings,
         new_lang_code=new_lang_code,
-        actor="user",
+        actor=Actor.USER,
     )
 
     if updated_settings:

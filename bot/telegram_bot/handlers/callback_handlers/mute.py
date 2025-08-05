@@ -21,6 +21,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
+    Actor,
     NotificationAction,
     ToggleMuteSpecificAction,
     UserListAction,
@@ -336,7 +337,9 @@ async def cq_set_mute_mode_action(
     # The user_settings object from middleware should already be session-managed.
     # The service function `update_mute_mode` will handle merging if necessary,
     # committing, cache updates, and error handling.
-    updated_user_settings = await user_service.update_mute_mode(session, services, user_settings, new_mode)
+    updated_user_settings = await user_service.update_mute_mode(
+        session, services, user_settings, new_mode, actor=Actor.USER
+    )
 
     if not updated_user_settings:
         # Service function handles logging and rollback.

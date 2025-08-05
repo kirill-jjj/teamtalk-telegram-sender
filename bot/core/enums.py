@@ -91,3 +91,10 @@ class ManageTTAccountAction(str, Enum):
 
     UNLINK = "unlink"
     LINK_NEW = "link_new"
+
+
+class Actor(str, Enum):
+    """Represents the actor performing an action, for logging and context."""
+
+    USER = "user"
+    ADMIN = "admin"

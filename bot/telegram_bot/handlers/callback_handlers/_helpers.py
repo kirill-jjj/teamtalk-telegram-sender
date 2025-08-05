@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "_display_subscriber_view",
     "action_and_refresh_view",
-    "create_setting_change_handler",
     "ensure_message_context",
     "ensure_tt_user_exists",
     "refresh_subscriber_view",
@@ -299,40 +298,3 @@ async def _display_subscriber_view(
     # This assumes query.message is a Message, which is guaranteed by @ensure_message_context
     await cast(Message, query.message).edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await query.answer()
-
-
-def create_setting_change_handler(
-    service_func: Callable[[AsyncSession, "Services", int, Any], Awaitable[UserSettings | None]],
-    value_extractor: Callable[[Any], Any],
-    success_msg_formatter: str,
-    failure_msg: str,
-) -> Callable[..., Awaitable[tuple[bool, str]]]:
-    """Creates a generic handler for changing a subscriber's setting.
-
-    :param service_func: The admin service function to call.
-    :param value_extractor: A function to extract the new value from callback_data.
-    :param success_msg_formatter: The format string for the success message.
-    :param failure_msg: The static string for the failure message.
-    :return: An async handler function.
-    """
-
-    async def handler(
-        query: CallbackQuery,
-        callback_data: RefreshableViewCallback,
-        session: AsyncSession,
-        translator: gettext.GNUTranslations,
-        services: "Services",
-        **kwargs: object,
-    ) -> tuple[bool, str]:
-        _ = translator.gettext
-        target_telegram_id = callback_data.target_telegram_id
-        new_value = value_extractor(callback_data)
-
-        updated_user_settings = await service_func(session, services, target_telegram_id, new_value)
-
-        if updated_user_settings:
-            message = _(success_msg_formatter).format(tg_id=target_telegram_id, value=new_value)
-            return True, message
-        return False, _(failure_msg)
-
-    return handler
