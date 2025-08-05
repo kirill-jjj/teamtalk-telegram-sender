@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import SQLModel's AsyncSession for casting
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import AdminAction
+from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
@@ -38,7 +38,7 @@ admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 async def _show_user_buttons(
     message: Message,
-    command_type: AdminAction,
+    command_type: AdminCommand,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by parent MW; checked by local MW
 ) -> None:
@@ -79,10 +79,10 @@ async def _show_user_buttons(
     builder = await create_user_selection_keyboard(translator, sorted_users, command_type)
 
     command_text_map = {
-        AdminAction.KICK: _("Select a user to kick from {server_host}:").format(
+        AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(
             server_host=tt_connection.server_info.host  # type: ignore[union-attr]
         ),
-        AdminAction.BAN: _("Select a user to ban from {server_host}:").format(
+        AdminCommand.BAN: _("Select a user to ban from {server_host}:").format(
             server_host=tt_connection.server_info.host  # type: ignore[union-attr]
         ),
     }
@@ -98,7 +98,7 @@ async def kick_command_handler(
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ) -> None:
     """Handles the /kick command for administrators."""
-    await _show_user_buttons(message, AdminAction.KICK, translator, tt_connection)
+    await _show_user_buttons(message, AdminCommand.KICK, translator, tt_connection)
 
 
 @admin_router.message(Command("ban"), IsAdmin())
@@ -108,7 +108,7 @@ async def ban_command_handler(
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
 ) -> None:
     """Handles the /ban command for administrators."""
-    await _show_user_buttons(message, AdminAction.BAN, translator, tt_connection)
+    await _show_user_buttons(message, AdminCommand.BAN, translator, tt_connection)
 
 
 @admin_router.message(Command("subscribers"), IsAdmin())

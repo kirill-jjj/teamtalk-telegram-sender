@@ -11,10 +11,10 @@ import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
-from bot.core.enums import AdminAction
+from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
-from bot.telegram_bot.callback_data import AdminActionCallback
+from bot.telegram_bot.callback_data import AdminCallback
 
 # Middlewares are now applied in the parent router in callbacks.py
 from ._helpers import ensure_message_context, ensure_tt_user_exists, safe_edit_text
@@ -31,7 +31,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 def _handle_pytalk_action_error(
     exc: Exception,
-    action: AdminAction,
+    action: AdminCommand,
     user_id_to_log: int | str,
     server_host: str,
     translator: gettext.GNUTranslations,
@@ -58,7 +58,7 @@ def _handle_pytalk_action_error(
 
 
 async def _execute_tt_user_action(  # noqa: PLR0911
-    action: AdminAction,
+    action: AdminCommand,
     user_to_act_on: pytalk.user.User,
     translator: gettext.GNUTranslations,
     admin_tg_id: int,
@@ -73,7 +73,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
     quoted_nickname = escape(user_nickname)
 
     try:
-        if action == AdminAction.KICK:
+        if action == AdminCommand.KICK:
             user_to_act_on.kick(from_server=True)
             logger.info(
                 "Admin %s kicked TT user '%s' (ID: %s) from server %s",
@@ -85,7 +85,7 @@ async def _execute_tt_user_action(  # noqa: PLR0911
             return True, _("User {user_nickname} kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
-        if action == AdminAction.BAN:
+        if action == AdminCommand.BAN:
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
             logger.info(
@@ -113,12 +113,12 @@ async def _execute_tt_user_action(  # noqa: PLR0911
         return _handle_pytalk_action_error(e, action, user_id_log, server_host, translator, is_critical=True)
 
 
-@admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))
+@admin_actions_router.callback_query(AdminCallback.filter(F.action.in_({AdminCommand.KICK, AdminCommand.BAN})))
 @ensure_message_context
 @ensure_tt_user_exists
-async def process_user_action_selection(
+async def confirm_user_action(
     callback_query: CallbackQuery,
-    callback_data: AdminActionCallback,
+    callback_data: AdminCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
     tt_user: pytalk.user.User,  # Injected by @ensure_tt_user_exists

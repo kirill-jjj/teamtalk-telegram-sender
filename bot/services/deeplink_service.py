@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def process_subscribe_deeplink(
+async def execute_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     translator: gettext.GNUTranslations,
@@ -53,18 +53,18 @@ async def process_subscribe_deeplink(
             tt_username=tt_username_from_payload
         )
 
-    # Call the new user_service function to handle subscription and core settings update
-    subscription_processed = await user_service.process_new_subscription(
+    # Call the user_service function to create the subscription and update settings
+    subscription_created = await user_service.create_subscription(
         session, user_settings, tt_username_from_payload, services
     )
 
-    if not subscription_processed:
+    if not subscription_created:
         logger.error(
-            "Failed to process subscription for user %s with TT username '%s' via user_service.",
+            "Failed to create subscription for user %s with TT username '%s' via user_service.",
             telegram_id,
             tt_username_from_payload,
         )
-        # The user_service.process_new_subscription should log specifics.
+        # The user_service.create_subscription should log specifics.
         # Provide a generic error to the user.
         return _("An error occurred. Please try again later.")
 
@@ -86,7 +86,7 @@ async def process_subscribe_deeplink(
     return _("You have successfully subscribed to notifications.")
 
 
-async def process_unsubscribe_deeplink(
+async def execute_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
     translator: gettext.GNUTranslations,
@@ -94,7 +94,7 @@ async def process_unsubscribe_deeplink(
 ) -> str:
     """Handles the logic for an unsubscribe deeplink."""
     _ = translator.gettext
-    if await user_service.delete_full_user_profile(session=session, telegram_id=telegram_id, services=services):
+    if await user_service.delete_user_profile(session=session, telegram_id=telegram_id, services=services):
         logger.info("User %s unsubscribed and all data was deleted via deeplink (using user_service).", telegram_id)
         return _("You have successfully unsubscribed from notifications.")
     logger.warning(
@@ -130,12 +130,12 @@ def is_unsubscribe_handler(
 
 
 DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandler] = {
-    DeeplinkAction.SUBSCRIBE: process_subscribe_deeplink,
-    DeeplinkAction.UNSUBSCRIBE: process_unsubscribe_deeplink,
+    DeeplinkAction.SUBSCRIBE: execute_subscribe_deeplink,
+    DeeplinkAction.UNSUBSCRIBE: execute_unsubscribe_deeplink,
 }
 
 
-async def process_deeplink(
+async def execute_deeplink(
     deeplink_obj: DeeplinkModel,
     session: AsyncSession,
     telegram_id: int,

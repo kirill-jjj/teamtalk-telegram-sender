@@ -11,7 +11,7 @@ catch_all_router = Router(name="catch_all_router")
 
 
 @catch_all_router.message()
-async def handle_unknown_command_or_message(message: Message, translator: gettext.GNUTranslations) -> None:
+async def on_unknown_message(message: Message, translator: gettext.GNUTranslations) -> None:
     """Handles any message that isn't caught by other command or message handlers."""
     _ = translator.gettext  # Assign for usage if this was the intent
     if not message.text or not message.from_user:  # Ignore non-text messages or messages without user

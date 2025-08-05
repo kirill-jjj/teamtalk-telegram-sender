@@ -10,13 +10,13 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import Actor, NotificationAction, SettingsNavAction
+from bot.core.enums import Actor, NotificationControl, SettingsNavAction
 from bot.models import UserSettings
 from bot.services import user_service
-from bot.telegram_bot.callback_data import NotificationActionCallback, SettingsCallback
+from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 
-from ._helpers import action_and_refresh_view, ensure_message_context, safe_edit_text
+from ._helpers import ensure_message_context, safe_edit_text, with_view_refresh
 from .settings_view import refresh_notification_settings_view
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ notifications_router = Router(name="callback_handlers.notifications")
 
 @notifications_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS))
 @ensure_message_context
-async def cq_show_notifications_menu(
+async def show_notifications_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
@@ -49,10 +49,10 @@ async def cq_show_notifications_menu(
     )
 
 
-@notifications_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.TOGGLE_NOON))
+@notifications_router.callback_query(NotificationCallback.filter(F.action == NotificationControl.TOGGLE_NOON))
 @ensure_message_context
-@action_and_refresh_view(refresh_notification_settings_view)
-async def cq_toggle_noon_setting_action(
+@with_view_refresh(refresh_notification_settings_view)
+async def toggle_noon_setting(
     callback_query: CallbackQuery,
     session: SQLModelAsyncSession,
     translator: gettext.GNUTranslations,

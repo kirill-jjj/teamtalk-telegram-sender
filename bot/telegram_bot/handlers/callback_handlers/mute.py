@@ -22,18 +22,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
-    NotificationAction,
-    ToggleMuteSpecificAction,
+    NotificationControl,
+    ToggleMuteUser,
     UserListAction,
 )
 from bot.models import MutedUser, MuteListMode, UserSettings
 from bot.services import user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
-    NotificationActionCallback,
+    NotificationCallback,
     PaginateUsersCallback,
     SetMuteModeCallback,
-    ToggleMuteSpecificCallback,
+    ToggleMuteCallback,
 )
 from bot.telegram_bot.keyboards import (
     create_account_list_keyboard,
@@ -185,7 +185,7 @@ async def _display_all_server_accounts_list(
 
 
 async def _get_username_from_all_accounts(
-    callback_data: ToggleMuteSpecificCallback,
+    callback_data: ToggleMuteCallback,
     tt_connection: TeamTalkConnection,
 ) -> str | None:
     """Retrieves a username from the cached list of all server accounts."""
@@ -206,7 +206,7 @@ async def _get_username_from_all_accounts(
 
 
 async def _get_username_from_muted_list(
-    callback_data: ToggleMuteSpecificCallback,
+    callback_data: ToggleMuteCallback,
     user_settings: UserSettings,
     session: SQLModelAsyncSession,
 ) -> str | None:
@@ -223,9 +223,10 @@ async def _get_username_from_muted_list(
     return None
 
 
-def _generate_mute_toggle_toast_message(
+def format_mute_toast(
     username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: gettext.GNUTranslations
 ) -> str:
+    """Formats the toast message for a mute/unmute action."""
     _ = translator.gettext
     clean_username = username_to_toggle.strip("<>")
     quoted_username = html.quote(clean_username)
@@ -247,7 +248,7 @@ async def _refresh_mute_related_ui(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
-    callback_data: ToggleMuteSpecificCallback,
+    callback_data: ToggleMuteCallback,
     session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -274,8 +275,8 @@ async def _refresh_mute_related_ui(
             await callback_query.answer(
                 _("TeamTalk bot is disconnected. UI could not be fully refreshed."), show_alert=True
             )
-            manage_muted_cb_data = NotificationActionCallback(action=NotificationAction.MANAGE_MUTED)
-            await cq_show_manage_muted_menu(callback_query, translator, user_settings, manage_muted_cb_data)
+            manage_muted_cb_data = NotificationCallback(action=NotificationControl.MANAGE_MUTED)
+            await show_manage_muted_menu(callback_query, translator, user_settings, manage_muted_cb_data)
     else:
         await _display_internal_user_list(
             callback_query,
@@ -287,13 +288,13 @@ async def _refresh_mute_related_ui(
         )
 
 
-@mute_router.callback_query(NotificationActionCallback.filter(F.action == NotificationAction.MANAGE_MUTED))
+@mute_router.callback_query(NotificationCallback.filter(F.action == NotificationControl.MANAGE_MUTED))
 @ensure_message_context
-async def cq_show_manage_muted_menu(
+async def show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    _callback_data: NotificationActionCallback | None = None,  # Keep for consistent signature, though not used
+    _callback_data: NotificationCallback | None = None,  # Keep for consistent signature, though not used
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
@@ -319,7 +320,7 @@ async def cq_show_manage_muted_menu(
 
 @mute_router.callback_query(SetMuteModeCallback.filter())
 @ensure_message_context
-async def cq_set_mute_mode_action(
+async def set_mute_mode(
     callback_query: CallbackQuery,
     session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
@@ -387,7 +388,7 @@ async def cq_set_mute_mode_action(
     PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]))
 )
 @ensure_message_context
-async def cq_handle_internal_user_list_display(
+async def display_internal_user_list(
     callback_query: CallbackQuery,
     session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
@@ -409,7 +410,7 @@ async def cq_handle_internal_user_list_display(
 
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
 @ensure_message_context
-async def cq_handle_all_accounts_list_display(
+async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
@@ -426,7 +427,7 @@ async def cq_handle_all_accounts_list_display(
     )
 
 
-@mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
+@mute_router.callback_query(ToggleMuteCallback.filter(F.action == ToggleMuteUser.EXECUTE))
 @ensure_message_context
 async def toggle_user_mute(
     callback_query: CallbackQuery,
@@ -434,7 +435,7 @@ async def toggle_user_mute(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
-    callback_data: ToggleMuteSpecificCallback,
+    callback_data: ToggleMuteCallback,
     services: "Services",
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""

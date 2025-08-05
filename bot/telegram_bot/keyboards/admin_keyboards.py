@@ -9,16 +9,16 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
 from bot.core.enums import (
-    AdminAction,
+    AdminCommand,
     ManageTTAccountAction,
-    SubscriberAction,
+    SubscriberCommand,
     SubscriberListAction,
 )
 from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import (
-    AdminActionCallback,
+    AdminCallback,
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
@@ -27,7 +27,7 @@ from bot.telegram_bot.callback_data import (
     MenuCallback,
     PaginateLinkableAccountsCallback,
     PaginateMuteListCallback,
-    SubscriberActionCallback,
+    SubscriberCallback,
     SubscriberListCallback,
     ViewSubscriberCallback,
 )
@@ -36,8 +36,8 @@ from bot.telegram_bot.models import SubscriberInfo
 from .shared import (
     _add_pagination_controls_generic,
     _create_back_button_text,
-    _create_generic_paginated_list_keyboard,
     _create_option_selection_keyboard,
+    create_paginated_keyboard,
 )
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -66,8 +66,8 @@ async def create_banned_user_list_keyboard(
             ),
             InlineKeyboardButton(
                 text=_("✅ Unban"),
-                callback_data=SubscriberActionCallback(
-                    action=SubscriberAction.UNBAN,
+                callback_data=SubscriberCallback(
+                    action=SubscriberCommand.UNBAN,
                     target_telegram_id=user.telegram_id,
                     page=page_num,
                 ).pack(),
@@ -76,7 +76,7 @@ async def create_banned_user_list_keyboard(
 
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
-    return await _create_generic_paginated_list_keyboard(
+    return await create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -110,7 +110,7 @@ async def create_subscriber_list_keyboard(
 
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
-    return await _create_generic_paginated_list_keyboard(
+    return await create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -124,7 +124,7 @@ async def create_subscriber_list_keyboard(
 async def create_user_selection_keyboard(
     translator: gettext.GNUTranslations,
     users_to_display: list[pytalk.user.User],
-    command_type: AdminAction,
+    command_type: AdminCommand,
 ) -> InlineKeyboardBuilder:
     """Creates a keyboard with buttons for each user in the provided list."""
     builder = InlineKeyboardBuilder()
@@ -135,7 +135,7 @@ async def create_user_selection_keyboard(
         if not hasattr(user_obj, "id"):
             continue
         user_id = user_obj.id
-        callback_data = AdminActionCallback(action=command_type, user_id=user_id).pack()
+        callback_data = AdminCallback(action=command_type, user_id=user_id).pack()
         builder.button(text=user_nickname, callback_data=callback_data)
     builder.adjust(2)
     return builder
@@ -168,62 +168,62 @@ async def create_subscriber_action_menu_keyboard(
     builder = InlineKeyboardBuilder()
     builder.button(
         text=_("🗑️ Delete Subscriber"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.DELETE,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.DELETE,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("🚫 Ban User (TG & TT)"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.BAN, target_telegram_id=target_telegram_id, page=page
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.BAN, target_telegram_id=target_telegram_id, page=page
         ).pack(),
     )
     builder.button(
         text=_("🔗 Manage TeamTalk Account"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.MANAGE_TT_ACCOUNT,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("🗣️ Change Language"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.ADMIN_SET_LANGUAGE,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.ADMIN_SET_LANGUAGE,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("🌞 Toggle NOON"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.ADMIN_TOGGLE_NOON,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.ADMIN_TOGGLE_NOON,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("🔔 Set Notification Prefs"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.ADMIN_SET_NOTIF_PREF,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.ADMIN_SET_NOTIF_PREF,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("🔇 Set Mute Mode"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.ADMIN_SET_MUTE_MODE,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.ADMIN_SET_MUTE_MODE,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
     )
     builder.button(
         text=_("📜 View Mute List"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.ADMIN_VIEW_MUTE_LIST,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.ADMIN_VIEW_MUTE_LIST,
             target_telegram_id=target_telegram_id,
             page=page,
         ).pack(),
@@ -376,8 +376,8 @@ async def create_linkable_tt_account_list_keyboard(
 
     back_button = InlineKeyboardButton(
         text=_create_back_button_text(translator, "Manage Account"),
-        callback_data=SubscriberActionCallback(
-            action=SubscriberAction.MANAGE_TT_ACCOUNT,
+        callback_data=SubscriberCallback(
+            action=SubscriberCommand.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
             page=subscriber_list_page,
         ).pack(),
@@ -389,7 +389,7 @@ async def create_linkable_tt_account_list_keyboard(
         "target_telegram_id": target_telegram_id,
     }
 
-    return await _create_generic_paginated_list_keyboard(
+    return await create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,

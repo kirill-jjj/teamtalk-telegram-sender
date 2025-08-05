@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery, Message
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import ManageTTAccountAction, SubscriberAction
+from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.models import OperationResult, UserSettings
 from bot.services import admin_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -17,7 +17,7 @@ from bot.telegram_bot.callback_data import (
     LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
-    SubscriberActionCallback,
+    SubscriberCallback,
 )
 from bot.telegram_bot.handlers.callback_handlers._helpers import ensure_message_context
 from bot.telegram_bot.handlers.callback_handlers.list_utils import SUBSCRIBERS_PER_PAGE
@@ -35,11 +35,11 @@ logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
 
 
-@tt_account_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.MANAGE_TT_ACCOUNT))
+@tt_account_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.MANAGE_TT_ACCOUNT))
 @ensure_message_context
-async def handle_manage_tt_account(
+async def manage_tt_account(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -73,7 +73,7 @@ async def handle_manage_tt_account(
 
 @tt_account_router.callback_query(ManageTTAccountCallback.filter(F.action == ManageTTAccountAction.LINK_NEW))
 @ensure_message_context
-async def handle_link_new_tt_account_choice(
+async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     translator: gettext.GNUTranslations,
@@ -162,7 +162,7 @@ async def _display_linkable_tt_accounts_page(
 
 @tt_account_router.callback_query(PaginateLinkableAccountsCallback.filter())
 @ensure_message_context
-async def handle_paginate_linkable_accounts(
+async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
     tt_connection: TeamTalkConnection | None,
@@ -181,7 +181,7 @@ async def handle_paginate_linkable_accounts(
 
 @tt_account_router.callback_query(LinkTTAccountChosenCallback.filter())
 @ensure_message_context
-async def handle_link_tt_account_chosen(
+async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
     session: AsyncSession,

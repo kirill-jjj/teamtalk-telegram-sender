@@ -28,7 +28,7 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
 @ensure_message_context
-async def handle_subscriber_list_actions(
+async def subscriber_list_actions(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
     session: AsyncSession,
@@ -46,7 +46,7 @@ async def handle_subscriber_list_actions(
             return
 
         telegram_id_to_delete = callback_data.telegram_id
-        success = await user_service.delete_full_user_profile(
+        success = await user_service.delete_user_profile(
             cast(SQLModelAsyncSession, session), telegram_id_to_delete, services=services
         )  # Pass services
 

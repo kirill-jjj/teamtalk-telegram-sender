@@ -41,7 +41,7 @@ async def _validate_deeplink_token(
     return deeplink_obj
 
 
-async def _process_deeplink(
+async def _execute_deeplink(
     session: AsyncSession,
     telegram_id: int,
     translator: gettext.GNUTranslations,
@@ -49,8 +49,8 @@ async def _process_deeplink(
     user_settings: UserSettings,
     services: "Services",
 ) -> str:
-    """Wrapper to call the deeplink_service.process_deeplink."""
-    return await deeplink_service.process_deeplink(
+    """Wrapper to call the deeplink_service.execute_deeplink."""
+    return await deeplink_service.execute_deeplink(
         deeplink_obj=deeplink_obj,
         session=session,
         telegram_id=telegram_id,
@@ -60,7 +60,7 @@ async def _process_deeplink(
     )
 
 
-async def handle_deeplink_payload(
+async def on_deeplink_payload(
     message: Message,
     token: str,
     session: AsyncSession,
@@ -94,7 +94,7 @@ async def handle_deeplink_payload(
     if not deeplink_obj:
         return
 
-    reply_text = await _process_deeplink(
+    reply_text = await _execute_deeplink(
         session=session,
         telegram_id=message_from_user_id,
         translator=translator,

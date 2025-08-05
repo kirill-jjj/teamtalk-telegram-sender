@@ -23,7 +23,7 @@ from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
-from bot.telegram_bot.deeplink import handle_deeplink_payload
+from bot.telegram_bot.deeplink import on_deeplink_payload
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.utils import safe_delete_message
 
@@ -63,9 +63,7 @@ async def start_with_payload_handler(
     if not message.from_user:
         return
 
-    await handle_deeplink_payload(
-        message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services
-    )
+    await on_deeplink_payload(message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services)
 
 
 @user_commands_router.message(Command("who"))

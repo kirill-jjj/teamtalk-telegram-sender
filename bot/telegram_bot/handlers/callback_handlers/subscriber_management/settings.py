@@ -14,7 +14,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
-from bot.core.enums import SubscriberAction
+from bot.core.enums import SubscriberCommand
 from bot.models import (
     MutedUser,
     MuteListMode,
@@ -27,12 +27,12 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     PaginateMuteListCallback,
-    SubscriberActionCallback,
+    SubscriberCallback,
 )
 from bot.telegram_bot.handlers.callback_handlers._helpers import (
-    action_and_refresh_view,
     ensure_message_context,
     refresh_subscriber_view,
+    with_view_refresh,
 )
 from bot.telegram_bot.keyboards import (
     create_admin_subscriber_lang_keyboard,
@@ -63,7 +63,7 @@ settings_router = Router(name="subscriber_management.settings_router")
 
 async def _present_subscriber_setting_choice(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     message_text: str,
     keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]",
     keyboard_factory_kwargs: dict[str, object],
@@ -75,20 +75,20 @@ async def _present_subscriber_setting_choice(
 
 
 @settings_router.callback_query(
-    SubscriberActionCallback.filter(
+    SubscriberCallback.filter(
         F.action.in_(
             [
-                SubscriberAction.ADMIN_SET_LANGUAGE,
-                SubscriberAction.ADMIN_SET_NOTIF_PREF,
-                SubscriberAction.ADMIN_SET_MUTE_MODE,
+                SubscriberCommand.ADMIN_SET_LANGUAGE,
+                SubscriberCommand.ADMIN_SET_NOTIF_PREF,
+                SubscriberCommand.ADMIN_SET_MUTE_MODE,
             ]
         )
     )
 )
 @ensure_message_context
-async def handle_admin_set_setting_choice(
+async def admin_set_setting_choice(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -100,23 +100,23 @@ async def handle_admin_set_setting_choice(
 
     user_settings = None
     if action in [
-        SubscriberAction.ADMIN_SET_NOTIF_PREF,
-        SubscriberAction.ADMIN_SET_MUTE_MODE,
+        SubscriberCommand.ADMIN_SET_NOTIF_PREF,
+        SubscriberCommand.ADMIN_SET_MUTE_MODE,
     ]:
         user_settings = await session.get(UserSettings, target_telegram_id)
         if not user_settings:
             await query.answer(_("Subscriber settings not found."), show_alert=True)
             return
 
-    setting_choice_config: dict[SubscriberAction, SettingChoiceConfig] = {
-        SubscriberAction.ADMIN_SET_LANGUAGE: {
+    setting_choice_config: dict[SubscriberCommand, SettingChoiceConfig] = {
+        SubscriberCommand.ADMIN_SET_LANGUAGE: {
             "message_text": _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_lang_keyboard,
             "keyboard_factory_kwargs": {
                 "available_languages": services.available_languages,
             },
         },
-        SubscriberAction.ADMIN_SET_NOTIF_PREF: {
+        SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
             "message_text": _("Select notification preference for subscriber {tg_id}:").format(
                 tg_id=target_telegram_id
             ),
@@ -125,7 +125,7 @@ async def handle_admin_set_setting_choice(
                 "current_setting": user_settings.notification_settings if user_settings else None,
             },
         },
-        SubscriberAction.ADMIN_SET_MUTE_MODE: {
+        SubscriberCommand.ADMIN_SET_MUTE_MODE: {
             "message_text": _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
             "keyboard_factory_kwargs": {
@@ -154,12 +154,12 @@ async def handle_admin_set_setting_choice(
     )
 
 
-@settings_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.ADMIN_TOGGLE_NOON))
+@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON))
 @ensure_message_context
-@action_and_refresh_view(refresh_subscriber_view)
-async def handle_admin_toggle_noon(
+@with_view_refresh(refresh_subscriber_view)
+async def admin_toggle_noon(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -223,11 +223,11 @@ def _build_mute_list_title(
     return "\n".join(title_text_parts)
 
 
-@settings_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.ADMIN_VIEW_MUTE_LIST))
+@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_VIEW_MUTE_LIST))
 @ensure_message_context
-async def handle_admin_view_mute_list(
+async def admin_view_mute_list(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -290,7 +290,7 @@ async def _display_subscriber_mute_list_page(
 
 @settings_router.callback_query(PaginateMuteListCallback.filter())
 @ensure_message_context
-async def handle_paginate_mute_list(
+async def paginate_mute_list(
     query: CallbackQuery,
     callback_data: PaginateMuteListCallback,
     session: AsyncSession,
@@ -354,8 +354,8 @@ SETTING_HANDLERS_CONFIG: dict[type[CallbackData], AdminSettingHandlerConfig] = {
     AdminSetSubscriberMuteModeCallback.filter(),
 )
 @ensure_message_context
-@action_and_refresh_view(refresh_subscriber_view)
-async def handle_admin_set_any_subscriber_setting(
+@with_view_refresh(refresh_subscriber_view)
+async def admin_set_any_subscriber_setting(
     query: CallbackQuery,
     callback_data: (
         AdminSetSubscriberLanguageCallback

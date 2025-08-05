@@ -44,7 +44,7 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
             logger.warning("User %s blocked the bot or is deactivated. Deleting all user data...", chat_id)
             try:
                 async with services.session_factory() as session:
-                    success = await user_service.delete_full_user_profile(session, chat_id, services=services)
+                    success = await user_service.delete_user_profile(session, chat_id, services=services)
                 if success:
                     logger.info("Successfully deleted all data for blocked/deactivated user %s.", chat_id)
                 else:
@@ -58,7 +58,7 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
             logger.warning("Chat not found for TG ID %s. Deleting all user data. Error: %s", chat_id, error)
             try:
                 async with services.session_factory() as session:
-                    delete_success = await user_service.delete_full_user_profile(session, chat_id, services=services)
+                    delete_success = await user_service.delete_user_profile(session, chat_id, services=services)
                 if delete_success:
                     logger.info("Successfully deleted all data for TG ID %s due to chat not found.", chat_id)
                 else:

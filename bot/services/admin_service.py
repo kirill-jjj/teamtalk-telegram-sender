@@ -183,7 +183,7 @@ async def _manage_teamtalk_user_on_server(
         return True
 
 
-async def _orchestrate_user_banning(
+async def _perform_ban_steps(
     session: AsyncSession,
     target_telegram_id: int,
     tt_username_to_ban: str | None,
@@ -252,7 +252,7 @@ async def ban_user(
     Handles banning in the database and conceptually on the TeamTalk server.
     Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
     """
-    return await _orchestrate_user_banning(session, target_telegram_id, tt_username_to_ban, tt_connection)
+    return await _perform_ban_steps(session, target_telegram_id, tt_username_to_ban, tt_connection)
 
 
 async def ban_and_delete_subscriber(
@@ -272,9 +272,7 @@ async def ban_and_delete_subscriber(
         if commit_needed:
             async with managed_db_transaction(session, logger):
                 pass  # The transaction is committed on exiting the block
-        profile_deleted_status = await user_service.delete_full_user_profile(
-            session, target_telegram_id, services=services
-        )
+        profile_deleted_status = await user_service.delete_user_profile(session, target_telegram_id, services=services)
     else:
         await session.rollback()  # Rollback if the initial ban failed
 
@@ -282,7 +280,7 @@ async def ban_and_delete_subscriber(
     if not isinstance(translator, gettext.GNUTranslations):
         translator = services.get_translator(services.config.general.default_lang)
 
-    return format_ban_delete_result_message(
+    return format_ban_result(
         translator=translator,
         telegram_id=target_telegram_id,
         tt_username=tt_username_to_ban,
@@ -293,7 +291,7 @@ async def ban_and_delete_subscriber(
     )
 
 
-def format_ban_delete_result_message(  # noqa: PLR0912
+def format_ban_result(  # noqa: PLR0912
     translator: gettext.GNUTranslations | gettext.NullTranslations,
     telegram_id: int,
     tt_username: str | None,

@@ -7,9 +7,9 @@ but are not directly part of the Telegram or TeamTalk bot handlers/commands.
 
 from . import deeplink_service, notification_service, user_service
 from .deeplink_service import (
-    process_deeplink,
-    process_subscribe_deeplink,
-    process_unsubscribe_deeplink,
+    execute_deeplink,
+    execute_subscribe_deeplink,
+    execute_unsubscribe_deeplink,
 )
 from .notification_service import (
     filter_recipients_for_noon,
@@ -17,18 +17,18 @@ from .notification_service import (
     is_user_subject_to_noon_check,
 )
 from .user_service import (
-    delete_full_user_profile,
+    delete_user_profile,
 )
 
 __all__ = [
     "deeplink_service",
-    "delete_full_user_profile",
+    "delete_user_profile",
+    "execute_deeplink",
+    "execute_subscribe_deeplink",
+    "execute_unsubscribe_deeplink",
     "filter_recipients_for_noon",
     "is_linked_user_online",
     "is_user_subject_to_noon_check",
     "notification_service",
-    "process_deeplink",
-    "process_subscribe_deeplink",
-    "process_unsubscribe_deeplink",
     "user_service",
 ]

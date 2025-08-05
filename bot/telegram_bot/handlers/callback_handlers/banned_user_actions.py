@@ -8,15 +8,15 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import SubscriberAction
+from bot.core.enums import SubscriberCommand
 from bot.services import admin_service
-from bot.telegram_bot.callback_data import SubscriberActionCallback
+from bot.telegram_bot.callback_data import SubscriberCallback
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,
 )
 
-from ._helpers import action_and_refresh_view, ensure_message_context
+from ._helpers import ensure_message_context, with_view_refresh
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -29,7 +29,7 @@ banned_user_actions_router = Router(name="banned_user_actions_router")
 
 async def refresh_banned_list_view(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -45,12 +45,12 @@ async def refresh_banned_list_view(
     )
 
 
-@banned_user_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.UNBAN))
+@banned_user_actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.UNBAN))
 @ensure_message_context
-@action_and_refresh_view(refresh_banned_list_view)
-async def handle_unban_subscriber(
+@with_view_refresh(refresh_banned_list_view)
+async def unban_subscriber(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -67,7 +67,7 @@ async def handle_unban_subscriber(
 
 async def refresh_subscriber_list_view(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -88,12 +88,12 @@ async def refresh_subscriber_list_view(
     )
 
 
-@banned_user_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
+@banned_user_actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.BAN))
 @ensure_message_context
-@action_and_refresh_view(refresh_subscriber_list_view)
-async def handle_ban_subscriber(
+@with_view_refresh(refresh_subscriber_list_view)
+async def ban_subscriber(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",

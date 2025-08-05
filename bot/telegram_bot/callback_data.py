@@ -25,15 +25,15 @@ from bot.constants import (
     CB_PREFIX_VIEW_SUB,
 )
 from bot.core.enums import (
-    AdminAction,
-    LanguageAction,
+    AdminCommand,
+    LanguageChoice,
     ManageTTAccountAction,
-    NotificationAction,
+    NotificationControl,
     SettingsNavAction,
-    SubscriberAction,
+    SubscriberCommand,
     SubscriberListAction,
-    SubscriptionAction,
-    ToggleMuteSpecificAction,
+    SubscriptionCommand,
+    ToggleMuteUser,
     UserListAction,
 )
 from bot.models import MuteListMode
@@ -50,7 +50,7 @@ class SettingsCallback(CallbackData, prefix=CB_PREFIX_SETTINGS_NAV):
 class LanguageCallback(CallbackData, prefix=CB_PREFIX_LANG_SET):
     """Callback data for language selection."""
 
-    action: LanguageAction
+    action: LanguageChoice
     lang_code: str | None = None  # e.g., "en", "ru"; None if action is to show menu
 
 
@@ -58,15 +58,15 @@ class LanguageCallback(CallbackData, prefix=CB_PREFIX_LANG_SET):
 class SubscriptionCallback(CallbackData, prefix=CB_PREFIX_SUB_SET):
     """Callback data for subscription settings."""
 
-    action: SubscriptionAction
+    action: SubscriptionCommand
     setting_value: str  # e.g., "all", "join_off", "leave_off", "none"
 
 
 # For NOON toggle, navigating to mute management
-class NotificationActionCallback(CallbackData, prefix=CB_PREFIX_NOTIF_ACTION):
+class NotificationCallback(CallbackData, prefix=CB_PREFIX_NOTIF_ACTION):
     """Callback data for notification actions like toggling NOON or managing mutes."""
 
-    action: NotificationAction
+    action: NotificationControl
 
 
 # For navigating user lists (initial call to display a list)
@@ -92,20 +92,20 @@ class PaginateUsersCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_LIST):
 
 
 # For muting/unmuting a specific user from a list
-class ToggleMuteSpecificCallback(CallbackData, prefix=CB_PREFIX_TOGGLE_USER_MUTE):
+class ToggleMuteCallback(CallbackData, prefix=CB_PREFIX_TOGGLE_USER_MUTE):
     """Callback data for toggling the mute status of a specific user."""
 
-    action: ToggleMuteSpecificAction
+    action: ToggleMuteUser
     user_idx: int
     current_page: int
     list_type: UserListAction
 
 
 # For Admin actions like kick/ban
-class AdminActionCallback(CallbackData, prefix=CB_PREFIX_ADMIN_ACTION):
+class AdminCallback(CallbackData, prefix=CB_PREFIX_ADMIN_ACTION):
     """Callback data for administrator actions like kick/ban."""
 
-    action: AdminAction
+    action: AdminCommand
     user_id: int
 
 
@@ -134,10 +134,10 @@ class ViewSubscriberCallback(CallbackData, prefix=CB_PREFIX_VIEW_SUB):
 
 
 # For actions within a subscriber's detail menu
-class SubscriberActionCallback(CallbackData, prefix=CB_PREFIX_SUB_ACTION):
+class SubscriberCallback(CallbackData, prefix=CB_PREFIX_SUB_ACTION):
     """Callback data for actions performed on a specific subscriber from their menu."""
 
-    action: SubscriberAction
+    action: SubscriberCommand
     target_telegram_id: int
     page: int  # To return to the main subscriber list page
 

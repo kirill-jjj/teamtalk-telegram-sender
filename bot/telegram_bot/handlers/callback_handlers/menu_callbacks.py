@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import AdminAction
+from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 
@@ -106,7 +106,7 @@ async def menu_kick_handler(
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.KICK, translator, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)  # type: ignore
     await query.answer()
 
 
@@ -120,7 +120,7 @@ async def menu_ban_handler(
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
     # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminAction.BAN, translator, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)  # type: ignore
     await query.answer()
 
 

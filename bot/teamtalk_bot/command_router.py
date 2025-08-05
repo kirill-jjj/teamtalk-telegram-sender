@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, cast
 
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
-    handle_tt_add_admin_command,
-    handle_tt_help_command,
-    handle_tt_remove_admin_command,
-    handle_tt_subscribe_command,
-    handle_tt_unknown_command,
-    handle_tt_unsubscribe_command,
+    on_add_admin_command,
+    on_help_command,
+    on_remove_admin_command,
+    on_subscribe_command,
+    on_unknown_command,
+    on_unsubscribe_command,
 )
 
 if TYPE_CHECKING:
@@ -38,11 +38,11 @@ class CommandRouter:
         self.services = services
         self.connection = connection
         self.handlers = {
-            tt_cmds.TT_CMD_SUBSCRIBE: handle_tt_subscribe_command,
-            tt_cmds.TT_CMD_UNSUBSCRIBE: handle_tt_unsubscribe_command,
-            tt_cmds.TT_CMD_ADD_ADMIN: handle_tt_add_admin_command,
-            tt_cmds.TT_CMD_REMOVE_ADMIN: handle_tt_remove_admin_command,
-            tt_cmds.TT_CMD_HELP: handle_tt_help_command,
+            tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe_command,
+            tt_cmds.TT_CMD_UNSUBSCRIBE: on_unsubscribe_command,
+            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin_command,
+            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin_command,
+            tt_cmds.TT_CMD_HELP: on_help_command,
         }
 
     async def route(
@@ -72,4 +72,4 @@ class CommandRouter:
                 kwargs["session"] = session
             await typed_handler(**kwargs)
         else:
-            await handle_tt_unknown_command(tt_message, translator, connection=self.connection)
+            await on_unknown_command(tt_message, translator, connection=self.connection)

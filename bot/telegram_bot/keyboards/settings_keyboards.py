@@ -8,17 +8,17 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
 from bot.core.enums import (
-    LanguageAction,
-    NotificationAction,
+    LanguageChoice,
+    NotificationControl,
     SettingsNavAction,
-    SubscriptionAction,
+    SubscriptionCommand,
     UserListAction,
 )
 from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.telegram_bot.callback_data import (
     LanguageCallback,
-    NotificationActionCallback,
+    NotificationCallback,
     PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
@@ -64,7 +64,7 @@ async def create_language_selection_keyboard(
     options = [(lang["code"], lang["native_name"]) for lang in available_languages]
 
     def lang_callback_factory(lang_code_value: str) -> LanguageCallback:
-        return LanguageCallback(action=LanguageAction.SET_LANG, lang_code=lang_code_value)
+        return LanguageCallback(action=LanguageChoice.SET_LANG, lang_code=lang_code_value)
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
@@ -92,7 +92,7 @@ async def create_subscription_settings_keyboard(
     options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
 
     def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
-        return SubscriptionCallback(action=SubscriptionAction.SET_SUB, setting_value=setting_value_str)
+        return SubscriptionCallback(action=SubscriptionCommand.SET_SUB, setting_value=setting_value_str)
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
@@ -120,11 +120,11 @@ async def create_notification_settings_keyboard(
 
     builder.button(
         text=noon_button_text,
-        callback_data=NotificationActionCallback(action=NotificationAction.TOGGLE_NOON).pack(),
+        callback_data=NotificationCallback(action=NotificationControl.TOGGLE_NOON).pack(),
     )
     builder.button(
         text=_("Manage Mute List"),
-        callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
+        callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
     )
     builder.button(
         text=_create_back_button_text(translator, "Settings"),
@@ -205,7 +205,7 @@ async def create_paginated_user_list_keyboard(
         list_type_for_callback=list_type,
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
-        back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
+        back_button_callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
         back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )
 
@@ -234,6 +234,6 @@ async def create_account_list_keyboard(
         list_type_for_callback=UserListAction.LIST_ALL_ACCOUNTS,
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
-        back_button_callback_data=NotificationActionCallback(action=NotificationAction.MANAGE_MUTED).pack(),
+        back_button_callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
         back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )

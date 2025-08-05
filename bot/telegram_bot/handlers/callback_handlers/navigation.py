@@ -18,7 +18,7 @@ navigation_router = Router(name="callback_handlers.navigation")
 
 @navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
 @ensure_message_context
-async def cq_back_to_main_settings_menu(
+async def back_to_main_settings_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     _callback_data: SettingsCallback | None = None,  # Keep for consistent signature, though not used

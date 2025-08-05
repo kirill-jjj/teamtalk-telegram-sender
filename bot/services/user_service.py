@@ -178,7 +178,7 @@ async def get_online_users_report(
     return _format_who_message(grouped_data, total_users, translator=translator, server_host=server_host)
 
 
-async def delete_full_user_profile(
+async def delete_user_profile(
     session: AsyncSession,
     telegram_id: int,
     services: "Services",
@@ -329,7 +329,7 @@ async def update_notification_preference(
     )
 
 
-async def process_new_subscription(
+async def create_subscription(
     session: AsyncSession,
     user_settings: UserSettings,
     tt_username: str,

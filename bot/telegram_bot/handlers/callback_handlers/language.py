@@ -8,14 +8,14 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession  # SQLModel's session
 
-from bot.core.enums import Actor, LanguageAction, SettingsNavAction
+from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard
 
-from ._helpers import action_and_refresh_view, ensure_message_context, safe_edit_text
+from ._helpers import ensure_message_context, safe_edit_text, with_view_refresh
 from .settings_view import refresh_main_settings_view
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ language_router = Router(name="callback_handlers.language")
 
 @language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
 @ensure_message_context
-async def cq_show_language_menu(
+async def show_language_menu(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     available_languages: list[LanguageInfo],
@@ -49,10 +49,10 @@ async def cq_show_language_menu(
     )
 
 
-@language_router.callback_query(LanguageCallback.filter(F.action == LanguageAction.SET_LANG))
+@language_router.callback_query(LanguageCallback.filter(F.action == LanguageChoice.SET_LANG))
 @ensure_message_context
-@action_and_refresh_view(refresh_main_settings_view)
-async def cq_set_language(
+@with_view_refresh(refresh_main_settings_view)
+async def set_language(
     query: CallbackQuery,
     session: SQLModelAsyncSession,
     user_settings: UserSettings,

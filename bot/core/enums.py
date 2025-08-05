@@ -3,8 +3,8 @@
 from enum import Enum
 
 
-class AdminAction(Enum):
-    """Actions an administrator can perform."""
+class AdminCommand(Enum):
+    """Admin commands on TeamTalk users."""
 
     KICK = "kick"
     BAN = "ban"
@@ -19,19 +19,19 @@ class SettingsNavAction(Enum):
     BACK_TO_MAIN = "back_to_main"
 
 
-class LanguageAction(Enum):
+class LanguageChoice(Enum):
     """Actions related to language settings."""
 
     SET_LANG = "set_lang"
 
 
-class SubscriptionAction(Enum):
-    """Actions related to subscription settings."""
+class SubscriptionCommand(Enum):
+    """Commands related to subscription settings."""
 
     SET_SUB = "set_sub"
 
 
-class NotificationAction(Enum):
+class NotificationControl(Enum):
     """Actions related to notification settings, like NOON and mute list management."""
 
     TOGGLE_NOON = "toggle_noon"
@@ -52,10 +52,10 @@ class PaginateUsersAction(Enum):
     PAGE = "page"
 
 
-class ToggleMuteSpecificAction(Enum):
+class ToggleMuteUser(Enum):
     """Actions for toggling the mute status of a specific user."""
 
-    TOGGLE_USER = "toggle_user"
+    EXECUTE = "toggle_user"
 
 
 class SubscriberListAction(Enum):
@@ -72,7 +72,7 @@ class DeeplinkAction(Enum):
     UNSUBSCRIBE = "unsubscribe"
 
 
-class SubscriberAction(str, Enum):
+class SubscriberCommand(str, Enum):
     """Actions that can be performed on a specific subscriber from their details menu."""
 
     DELETE = "delete"

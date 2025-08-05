@@ -440,7 +440,7 @@ class TeamTalkConnection:
 
     async def on_message(self, message: TeamTalkMessage) -> None:
         """Handles an incoming message on this server connection."""
-        await self.message_handler.handle_message(message)
+        await self.message_handler.route_message(message)
 
     async def on_user_login(self, user: PytalkUser) -> None:
         """Handles another user logging into this server connection."""

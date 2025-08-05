@@ -33,7 +33,7 @@ class MessageHandler:
         self.connection = connection
         self.command_router = CommandRouter(services, connection)
 
-    async def handle_message(self, tt_message: TeamTalkMessage) -> None:
+    async def route_message(self, tt_message: TeamTalkMessage) -> None:
         """Public method to handle an incoming TeamTalk message."""
         if not self._is_valid_message(tt_message):
             return

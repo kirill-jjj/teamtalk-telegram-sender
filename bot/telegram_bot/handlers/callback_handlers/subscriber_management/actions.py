@@ -8,17 +8,17 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import SubscriberAction
+from bot.core.enums import SubscriberCommand
 from bot.services import admin_service, user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
-    SubscriberActionCallback,
+    SubscriberCallback,
     ViewSubscriberCallback,
 )
 from bot.telegram_bot.handlers.callback_handlers._helpers import (
     _display_subscriber_view,
-    action_and_refresh_view,
     ensure_message_context,
+    with_view_refresh,
 )
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
@@ -33,7 +33,7 @@ actions_router = Router(name="subscriber_management.actions_router")
 
 async def refresh_subscriber_list_view(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -49,12 +49,12 @@ async def refresh_subscriber_list_view(
     )
 
 
-@actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
+@actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.BAN))
 @ensure_message_context
-@action_and_refresh_view(refresh_subscriber_list_view)
+@with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -73,12 +73,12 @@ async def on_ban_subscriber_confirm(
     return result.success, short_message
 
 
-@actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.DELETE))
+@actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.DELETE))
 @ensure_message_context
-@action_and_refresh_view(refresh_subscriber_list_view)
-async def handle_delete_subscriber(
+@with_view_refresh(refresh_subscriber_list_view)
+async def delete_subscriber(
     query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
+    callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",
@@ -88,7 +88,7 @@ async def handle_delete_subscriber(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    success = await user_service.delete_full_user_profile(session, target_telegram_id, services=services)
+    success = await user_service.delete_user_profile(session, target_telegram_id, services=services)
 
     if success:
         message = _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id)
@@ -123,7 +123,7 @@ async def _refresh_and_display_subscriber_list(
 
 @actions_router.callback_query(ViewSubscriberCallback.filter())
 @ensure_message_context
-async def handle_view_subscriber(
+async def view_subscriber(
     query: CallbackQuery,
     callback_data: ViewSubscriberCallback,
     session: AsyncSession,
