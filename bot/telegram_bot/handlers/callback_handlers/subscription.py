@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery
 from pydantic import BaseModel, Field, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
-from bot.core.enums import Actor, SettingsNavAction, SubscriptionCommand
+from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
 from bot.models import NotificationSetting, UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
@@ -64,7 +64,7 @@ async def show_subscriptions_menu(
     )
 
 
-@subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionCommand.SET_SUB))
+@subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionSetting.SET_SUB))
 @ensure_message_context
 async def set_subscription_setting(
     callback_query: CallbackQuery,

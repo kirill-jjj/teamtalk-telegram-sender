@@ -11,7 +11,7 @@ from bot.core.enums import (
     LanguageChoice,
     NotificationControl,
     SettingsNavAction,
-    SubscriptionCommand,
+    SubscriptionSetting,
     UserListAction,
 )
 from bot.core.languages import LanguageInfo
@@ -26,8 +26,8 @@ from bot.telegram_bot.callback_data import (
 )
 
 from .shared import (
+    _build_user_toggle_keyboard,
     _create_back_button_text,
-    _create_generic_user_toggle_list_keyboard,
     _create_option_selection_keyboard,
 )
 
@@ -92,7 +92,7 @@ async def create_subscription_settings_keyboard(
     options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
 
     def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
-        return SubscriptionCallback(action=SubscriptionCommand.SET_SUB, setting_value=setting_value_str)
+        return SubscriptionCallback(action=SubscriptionSetting.SET_SUB, setting_value=setting_value_str)
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
@@ -196,7 +196,7 @@ async def create_paginated_user_list_keyboard(
     def display_name_extractor(item: str) -> str:
         return item
 
-    return await _create_generic_user_toggle_list_keyboard(
+    return await _build_user_toggle_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -225,7 +225,7 @@ async def create_account_list_keyboard(
     def display_name_extractor(item: pytalk.UserAccount) -> str:
         return cast(str, ttstr(item.username))
 
-    return await _create_generic_user_toggle_list_keyboard(
+    return await _build_user_toggle_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,

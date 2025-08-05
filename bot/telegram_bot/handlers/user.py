@@ -23,7 +23,7 @@ from bot.core.utils import build_help_message
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.teamtalk_bot.connection import TeamTalkConnection  # For type hinting
-from bot.telegram_bot.deeplink import on_deeplink_payload
+from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.utils import safe_delete_message
 
@@ -41,7 +41,7 @@ user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
 @user_commands_router.message(CommandStart(deep_link=False))
-async def start_command_handler(
+async def on_start_command(
     message: Message,
     translator: gettext.GNUTranslations,
 ) -> None:
@@ -51,7 +51,7 @@ async def start_command_handler(
 
 
 @user_commands_router.message(CommandStart(deep_link=True, magic=F.args.as_("token")))
-async def start_with_payload_handler(
+async def on_start_with_payload(
     message: Message,
     token: str,
     session: AsyncSession,
@@ -63,11 +63,11 @@ async def start_with_payload_handler(
     if not message.from_user:
         return
 
-    await on_deeplink_payload(message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services)
+    await handle_deeplink(message, token, cast(SQLModelAsyncSession, session), translator, user_settings, services)
 
 
 @user_commands_router.message(Command("who"))
-async def who_command_handler(
+async def on_who_command(
     message: Message,
     translator: "gettext.GNUTranslations",
     services: "Services",
@@ -90,7 +90,7 @@ async def who_command_handler(
 
 
 @user_commands_router.message(Command("help"))
-async def help_command_handler(
+async def on_help_command(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data
@@ -106,7 +106,7 @@ async def help_command_handler(
 
 
 @user_commands_router.message(Command("settings"))
-async def settings_command_handler(
+async def on_settings_command(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
 ) -> None:
@@ -124,7 +124,7 @@ async def settings_command_handler(
 
 
 @user_commands_router.message(Command("menu"))
-async def menu_command_handler(
+async def on_menu_command(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     services: "Services",  # Injected from workflow_data

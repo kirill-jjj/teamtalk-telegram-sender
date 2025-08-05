@@ -19,7 +19,7 @@ from bot.database.crud import create_deeplink
 from bot.models import UserSettings
 from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.utils import send_long_tt_reply, with_common_command_errors
+from bot.teamtalk_bot.utils import handle_command_errors, send_long_tt_reply
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -207,7 +207,7 @@ async def _manage_admin_ids(
     tt_message.reply(report_message)
 
 
-@with_common_command_errors()
+@handle_command_errors()
 async def reply_with_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
@@ -240,7 +240,7 @@ async def reply_with_deeplink(
     tt_message.reply(reply_text)
 
 
-async def on_subscribe_command(
+async def on_subscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
@@ -265,7 +265,7 @@ async def on_subscribe_command(
     )
 
 
-async def on_unsubscribe_command(
+async def on_unsubscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
@@ -290,7 +290,7 @@ async def on_unsubscribe_command(
 
 
 @is_tt_admin
-async def on_add_admin_command(
+async def on_add_admin(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
@@ -320,7 +320,7 @@ async def on_add_admin_command(
 
 
 @is_tt_admin
-async def on_remove_admin_command(
+async def on_remove_admin(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     session: AsyncSession,
@@ -349,7 +349,7 @@ async def on_remove_admin_command(
     )
 
 
-async def on_help_command(
+async def on_help(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations,
     services: Services,
@@ -372,7 +372,7 @@ async def on_help_command(
     await send_long_tt_reply(tt_message.reply, help_text)
 
 
-async def on_unknown_command(
+async def on_unknown(
     tt_message: TeamTalkMessage,
     translator: gettext.GNUTranslations | gettext.NullTranslations,
     connection: TeamTalkConnection,

@@ -25,8 +25,8 @@ class LanguageChoice(Enum):
     SET_LANG = "set_lang"
 
 
-class SubscriptionCommand(Enum):
-    """Commands related to subscription settings."""
+class SubscriptionSetting(Enum):
+    """Represents a subscription notification setting."""
 
     SET_SUB = "set_sub"
 
@@ -50,12 +50,6 @@ class PaginateUsersAction(Enum):
     """Actions for paginating user lists."""
 
     PAGE = "page"
-
-
-class ToggleMuteUser(Enum):
-    """Actions for toggling the mute status of a specific user."""
-
-    EXECUTE = "toggle_user"
 
 
 class SubscriberListAction(Enum):

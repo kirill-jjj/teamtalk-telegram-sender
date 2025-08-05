@@ -32,8 +32,7 @@ from bot.core.enums import (
     SettingsNavAction,
     SubscriberCommand,
     SubscriberListAction,
-    SubscriptionCommand,
-    ToggleMuteUser,
+    SubscriptionSetting,
     UserListAction,
 )
 from bot.models import MuteListMode
@@ -58,7 +57,7 @@ class LanguageCallback(CallbackData, prefix=CB_PREFIX_LANG_SET):
 class SubscriptionCallback(CallbackData, prefix=CB_PREFIX_SUB_SET):
     """Callback data for subscription settings."""
 
-    action: SubscriptionCommand
+    action: SubscriptionSetting
     setting_value: str  # e.g., "all", "join_off", "leave_off", "none"
 
 
@@ -95,7 +94,6 @@ class PaginateUsersCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_LIST):
 class ToggleMuteCallback(CallbackData, prefix=CB_PREFIX_TOGGLE_USER_MUTE):
     """Callback data for toggling the mute status of a specific user."""
 
-    action: ToggleMuteUser
     user_idx: int
     current_page: int
     list_type: UserListAction

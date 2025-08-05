@@ -289,11 +289,8 @@ WrappedFunctionType = Callable[..., Awaitable[None]]
 TTCommandHandlerDecorator = Callable[[OriginalFunctionType], WrappedFunctionType]
 
 
-def with_common_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHandlerDecorator:
-    """Decorator to handle common exceptions (TelegramAPIError, SQLAlchemyError, TeamTalkException).
-
-    for TeamTalk bot command handlers. Logs the error and optionally replies to the user.
-    """
+def handle_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHandlerDecorator:
+    """Decorator to handle common exceptions for TeamTalk command handlers."""
 
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)

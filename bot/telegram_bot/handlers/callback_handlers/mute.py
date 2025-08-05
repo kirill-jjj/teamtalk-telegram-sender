@@ -23,7 +23,6 @@ from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
     NotificationControl,
-    ToggleMuteUser,
     UserListAction,
 )
 from bot.models import MutedUser, MuteListMode, UserSettings
@@ -427,7 +426,7 @@ async def display_all_accounts_list(
     )
 
 
-@mute_router.callback_query(ToggleMuteCallback.filter(F.action == ToggleMuteUser.EXECUTE))
+@mute_router.callback_query(ToggleMuteCallback.filter())
 @ensure_message_context
 async def toggle_user_mute(
     callback_query: CallbackQuery,

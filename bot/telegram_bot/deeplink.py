@@ -60,7 +60,7 @@ async def _execute_deeplink(
     )
 
 
-async def on_deeplink_payload(
+async def handle_deeplink(
     message: Message,
     token: str,
     session: AsyncSession,

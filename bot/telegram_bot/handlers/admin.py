@@ -92,7 +92,7 @@ async def _show_user_buttons(
 
 
 @admin_router.message(Command("kick"), IsAdmin())
-async def kick_command_handler(
+async def on_kick_command(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
@@ -102,7 +102,7 @@ async def kick_command_handler(
 
 
 @admin_router.message(Command("ban"), IsAdmin())
-async def ban_command_handler(
+async def on_ban_command(
     message: Message,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
@@ -112,7 +112,7 @@ async def ban_command_handler(
 
 
 @admin_router.message(Command("subscribers"), IsAdmin())
-async def subscribers_command_handler(
+async def on_subscribers_command(
     message: Message,
     session: AsyncSession,  # Injected by DbSessionMiddleware
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
@@ -125,7 +125,7 @@ async def subscribers_command_handler(
 
 
 @admin_router.message(Command("unban"), IsAdmin())
-async def unban_command_handler(
+async def on_unban_command(
     message: Message,
     session: AsyncSession,
     translator: gettext.GNUTranslations,

@@ -8,7 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
-from bot.core.enums import ToggleMuteUser, UserListAction
+from bot.core.enums import UserListAction
 from bot.models import MuteListMode, UserSettings
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 
@@ -170,7 +170,7 @@ async def _add_pagination_controls(
         builder.row(*pagination_buttons)
 
 
-async def _create_generic_user_toggle_list_keyboard(
+async def _build_user_toggle_keyboard(
     translator: gettext.GNUTranslations,
     page_items: list[Any],
     current_page: int,
@@ -198,7 +198,6 @@ async def _create_generic_user_toggle_list_keyboard(
         else:
             button_text = _("{item_display_name} (Status: Not Muted)").format(item_display_name=display_name_on_button)
         callback_d = ToggleMuteCallback(
-            action=ToggleMuteUser.EXECUTE,
             user_idx=idx,
             current_page=current_page,
             list_type=list_type_for_callback,

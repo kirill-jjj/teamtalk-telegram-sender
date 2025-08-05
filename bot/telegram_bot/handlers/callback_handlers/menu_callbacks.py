@@ -15,7 +15,7 @@ from bot.telegram_bot.callback_data import MenuCallback
 
 # Import business logic directly, not through other handlers
 from ..admin import _show_user_buttons
-from ..user import help_command_handler, settings_command_handler, who_command_handler
+from ..user import on_help_command, on_settings_command, on_who_command
 from ._helpers import ensure_message_context
 from .list_utils import (
     _show_banned_list_page,
@@ -47,8 +47,8 @@ async def menu_who_handler(
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     # Ensure query.message exists due to @ensure_message_context
-    # who_command_handler will be refactored to use services.cache.is_admin or accept is_admin
-    await who_command_handler(
+    # on_who_command will be refactored to use services.cache.is_admin or accept is_admin
+    await on_who_command(
         message=query.message,
         translator=translator,
         services=services,  # Pass services
@@ -68,8 +68,8 @@ async def menu_help_handler(
 ) -> None:
     """Handles the 'Help' menu button click."""
     # Ensure query.message exists
-    # help_command_handler will be refactored to use services.cache.is_admin or accept is_admin
-    await help_command_handler(
+    # on_help_command will be refactored to use services.cache.is_admin or accept is_admin
+    await on_help_command(
         message=query.message,
         translator=translator,
         services=services,  # Pass services
@@ -86,7 +86,7 @@ async def menu_settings_handler(
 ) -> None:
     """Handles the 'Settings' menu button click."""
     # Ensure query.message exists
-    await settings_command_handler(
+    await on_settings_command(
         message=query.message,
         translator=translator,
     )
