@@ -30,6 +30,7 @@ __all__ = [
     "action_and_refresh_view",
     "create_setting_change_handler",
     "ensure_message_context",
+    "ensure_tt_user_exists",
     "refresh_subscriber_view",
     "safe_edit_text",
 ]
@@ -179,6 +180,66 @@ def ensure_message_context(
                 logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
             return None  # Stop further execution of the handler
 
+        return await func(query, *args, **kwargs)
+
+    return wrapper
+
+
+def ensure_tt_user_exists(
+    func: Callable[..., Awaitable[Any | None]],
+) -> Callable[..., Awaitable[Any | None]]:
+    """Decorator to ensure that a TeamTalk user from a callback query exists.
+
+    It finds the user based on callback_data.user_id.
+    If the user does not exist, it notifies the admin and cleans up the UI.
+    If the user exists, it injects the `pytalk.User` object into the handler's
+    keyword arguments as `tt_user`.
+
+    This decorator must be placed *after* @ensure_message_context, as it relies on
+    query.message being present. It also relies on 'tt_connection' and 'translator'
+    being in the handler's kwargs, provided by middlewares.
+    """
+
+    @functools.wraps(func)
+    async def wrapper(
+        query: CallbackQuery,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
+        _ = kwargs["translator"].gettext
+        tt_connection = kwargs.get("tt_connection")
+        callback_data = next((arg for arg in args if hasattr(arg, "user_id")), None)
+
+        if not tt_connection or not hasattr(tt_connection, "instance"):
+            logger.error("Handler '%s': tt_connection is not valid.", func.__name__)
+            await query.answer(_("Error processing command: TeamTalk connection invalid."), show_alert=True)
+            return None
+
+        if not callback_data or not hasattr(callback_data, "user_id"):
+            logger.error("Handler '%s': could not find callback_data with user_id.", func.__name__)
+            await query.answer(_("Error processing command: Invalid callback data."), show_alert=True)
+            return None
+
+        server_host = tt_connection.server_info.host
+        user_to_act_on = tt_connection.instance.get_user(callback_data.user_id)
+
+        if not user_to_act_on:
+            await query.answer(
+                _("User not found on server {server_host} anymore.").format(server_host=server_host),
+                show_alert=True,
+            )
+            try:
+                # query.message is guaranteed by @ensure_message_context
+                await cast(Message, query.message).edit_reply_markup(reply_markup=None)
+            except TelegramAPIError:
+                logger.debug(
+                    "Failed to remove reply markup when user %s was not found on %s.",
+                    callback_data.user_id,
+                    server_host,
+                )
+            return None
+
+        kwargs["tt_user"] = user_to_act_on
         return await func(query, *args, **kwargs)
 
     return wrapper

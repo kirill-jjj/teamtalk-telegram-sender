@@ -19,10 +19,10 @@ from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.telegram_bot.callback_data import (
     LanguageCallback,
     NotificationActionCallback,
+    PaginateUsersCallback,
     SetMuteModeCallback,
     SettingsCallback,
     SubscriptionCallback,
-    UserListCallback,
 )
 
 from .shared import (
@@ -165,12 +165,12 @@ async def create_manage_muted_users_keyboard(
         list_mode_text = _("Manage Whitelist")
     builder.button(
         text=list_mode_text,
-        callback_data=UserListCallback(action=UserListAction.LIST_MUTED).pack(),
+        callback_data=PaginateUsersCallback(list_type=UserListAction.LIST_MUTED, page=0).pack(),
     )
 
     builder.button(
         text=_("Mute/Unmute from Server List"),
-        callback_data=UserListCallback(action=UserListAction.LIST_ALL_ACCOUNTS).pack(),
+        callback_data=PaginateUsersCallback(list_type=UserListAction.LIST_ALL_ACCOUNTS, page=0).pack(),
     )
     builder.button(
         text=_create_back_button_text(translator, "Notification Settings"),

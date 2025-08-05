@@ -33,7 +33,6 @@ from bot.telegram_bot.callback_data import (
     PaginateUsersCallback,
     SetMuteModeCallback,
     ToggleMuteSpecificCallback,
-    UserListCallback,
 )
 from bot.telegram_bot.keyboards import (
     create_account_list_keyboard,
@@ -383,34 +382,10 @@ async def cq_set_mute_mode_action(
 
 
 @mute_router.callback_query(
-    UserListCallback.filter(F.action.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]))
-)
-@ensure_message_context
-async def cq_list_internal_users_action(
-    callback_query: CallbackQuery,
-    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    callback_data: UserListCallback,
-) -> None:
-    """Displays the first page of the internal muted/allowed user list."""
-    _ = translator.gettext
-    # Callback answering handled by decorator or _display_internal_user_list.
-    await _display_internal_user_list(
-        callback_query,
-        translator,
-        user_settings,
-        callback_data.action,
-        0,
-        session,  # No longer need to cast
-    )
-
-
-@mute_router.callback_query(
     PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]))
 )
 @ensure_message_context
-async def cq_paginate_internal_user_list_action(
+async def cq_handle_internal_user_list_display(
     callback_query: CallbackQuery,
     session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
     translator: gettext.GNUTranslations,
@@ -430,27 +405,9 @@ async def cq_paginate_internal_user_list_action(
     )
 
 
-@mute_router.callback_query(UserListCallback.filter(F.action == UserListAction.LIST_ALL_ACCOUNTS))
-@ensure_message_context
-async def cq_show_all_accounts_list_action(
-    callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    tt_connection: TeamTalkConnection | None,
-) -> None:
-    """Displays the first page of all TeamTalk server accounts for muting/unmuting."""
-    _ = translator.gettext
-    # Callback answering handled by decorator or _display_all_server_accounts_list.
-    # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
-    # Decorator ensures callback_query.message exists.
-    await _display_all_server_accounts_list(
-        callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), 0
-    )
-
-
 @mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
 @ensure_message_context
-async def cq_paginate_all_accounts_list_action(
+async def cq_handle_all_accounts_list_display(
     callback_query: CallbackQuery,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,

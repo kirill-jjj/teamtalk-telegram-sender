@@ -6,8 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
@@ -18,7 +17,7 @@ from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminActionCallback
 
 # Middlewares are now applied in the parent router in callbacks.py
-from ._helpers import ensure_message_context, safe_edit_text
+from ._helpers import ensure_message_context, ensure_tt_user_exists, safe_edit_text
 
 if TYPE_CHECKING:
     pass
@@ -116,39 +115,23 @@ async def _execute_tt_user_action(  # noqa: PLR0911
 
 @admin_actions_router.callback_query(AdminActionCallback.filter(F.action.in_({AdminAction.KICK, AdminAction.BAN})))
 @ensure_message_context
+@ensure_tt_user_exists
 async def process_user_action_selection(
     callback_query: CallbackQuery,
     callback_data: AdminActionCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
     tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
+    tt_user: pytalk.user.User,  # Injected by @ensure_tt_user_exists
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     _ = translator.gettext
-    # Decorator ensures callback_query.message exists.
+    # Decorators ensure message context and tt_user existence.
 
-    tt_instance = tt_connection.instance  # type: ignore[union-attr] # Middleware ensures tt_connection is not None here
     server_host_for_display = tt_connection.server_info.host  # type: ignore[union-attr]
-
-    user_to_act_on = tt_instance.get_user(callback_data.user_id)  # type: ignore[union-attr] # Middleware ensures tt_instance is not None
-    if not user_to_act_on:
-        await callback_query.answer(
-            _("User not found on server {server_host} anymore.").format(server_host=server_host_for_display),
-            show_alert=True,
-        )
-        try:
-            if isinstance(callback_query.message, Message):
-                await callback_query.message.edit_reply_markup(reply_markup=None)
-        except TelegramAPIError:
-            logger.debug(
-                "Failed to remove reply markup when user %s was not found on %s.",
-                callback_data.user_id,
-                server_host_for_display,
-            )
-        return
 
     success, message_text = await _execute_tt_user_action(
         action=callback_data.action,
-        user_to_act_on=user_to_act_on,
+        user_to_act_on=tt_user,
         translator=translator,
         admin_tg_id=callback_query.from_user.id,
         server_host=server_host_for_display,
