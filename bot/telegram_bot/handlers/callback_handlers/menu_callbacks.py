@@ -53,6 +53,7 @@ async def menu_who_handler(
         translator=translator,
         services=services,  # Pass services
         tt_connection=tt_connection,
+        bot=query.bot,
     )
     await query.answer()
 
