@@ -138,9 +138,9 @@ def _generate_join_leave_notification_text(
 
     _ = recipient_translator.gettext  # Keep this for the template strings below
     if event_type == NOTIFICATION_EVENT_JOIN:
-        notification_template = _("User {user_nickname} joined server {server_name}")
+        notification_template = _("{user_nickname} joined server {server_name}")
     else:
-        notification_template = _("User {user_nickname} left server {server_name}")
+        notification_template = _("{user_nickname} left server {server_name}")
     return notification_template.format(user_nickname=escape(localized_user_nickname), server_name=escape(server_name))
 
 

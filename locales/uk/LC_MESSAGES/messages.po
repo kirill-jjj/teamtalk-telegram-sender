@@ -1,8 +1,9 @@
+
 msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-04 23:31+0000\n"
+"POT-Creation-Date: 2025-08-05 01:12+0000\n"
 "PO-Revision-Date: 2025-07-08 17:08+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -20,13 +21,13 @@ msgstr "Українська"
 
 #: bot/core/notifications.py:141
 #, python-brace-format
-msgid "User {user_nickname} joined server {server_name}"
-msgstr "👤 Користувач {user_nickname} приєднався до сервера {server_name}"
+msgid "{user_nickname} joined server {server_name}"
+msgstr "{user_nickname} приєднався до сервера {server_name}"
 
 #: bot/core/notifications.py:143
 #, python-brace-format
-msgid "User {user_nickname} left server {server_name}"
-msgstr "👤 Користувач {user_nickname} покинув сервер {server_name}"
+msgid "{user_nickname} left server {server_name}"
+msgstr "{user_nickname} покинув сервер {server_name}"
 
 #: bot/core/utils.py:26
 msgid "<b>Available Commands:</b>"
@@ -682,7 +683,7 @@ msgstr "Вітаю! Використовуйте /help для перегляду
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:31
 #: bot/telegram_bot/handlers/user.py:123
 msgid "Settings"
-msgstr "⚙️ Налаштування"
+msgstr "Налаштування"
 
 #: bot/telegram_bot/handlers/user.py:144
 msgid "Main Menu:"
