@@ -124,7 +124,7 @@ async def _show_subscriber_list_page(
         page=page,
         statement=statement,
         extractor=extractor,
-        title_text_key="Here is the list of subscribers.",
+        title_text_key=_("Here is the list of subscribers."),
         empty_list_text_key="No subscribers found.",
         keyboard_factory=create_subscriber_list_keyboard,
     )
