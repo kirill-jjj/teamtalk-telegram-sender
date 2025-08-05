@@ -79,6 +79,7 @@ def extract() -> None:
 
 def update() -> None:
     """Updates existing .po translation files from the .pot template file."""
+    extract()
     command = [
         "pybabel",
         "update",
@@ -124,19 +125,17 @@ def compile_cmd() -> None:
 def main() -> None:
     """Main function to handle CLI arguments for locale management."""
     if len(sys.argv) < 2:  # noqa: PLR2004 - 2 is standard for checking script name + one argument
-        print("Usage: python manage-locales.py [extract|update|compile]")
+        print("Usage: python manage-locales.py [update|compile]")
         sys.exit(1)
 
     action = sys.argv[1]
 
-    if action == "extract":
-        extract()
-    elif action == "update":
+    if action == "update":
         update()
     elif action == "compile":
         compile_cmd()
     else:
-        print(f"Unknown command: {action}. Valid commands are 'extract', 'update', 'compile'.")
+        print(f"Unknown command: {action}. Valid commands are 'update', 'compile'.")
         sys.exit(1)
 
 

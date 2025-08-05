@@ -56,7 +56,7 @@ Located at `bot/services_container.py`, the `Services` class is the single sourc
 
 ### 3.3. Internationalization (i18n)
 *   All user-facing strings **must** be wrapped in a `_()` call for translation.
-*   The workflow is managed by `Babel` via `uv run i18n [extract|update|compile]`.
+*   The workflow is managed by `Babel` via `uv run i18n [update|compile]`.
 
 ## 4. Code Quality and Contribution Guidelines
 
@@ -100,10 +100,9 @@ Follow this workflow for every task.
 1.  **Code Implementation:** Write code that adheres to all the principles outlined above.
 2.  **Localization (if new user-facing strings were added):**
     1.  Wrap new strings in `_()`.
-    2.  Run `uv run i18n extract` to update the `.pot` template.
-    3.  Run `uv run i18n update` to update the `.po` files.
-    4.  Add translations to the `.po` files.
-    5.  Run `uv run i18n compile` to create the `.mo` files.
+    2.  Run `uv run i18n update` to update the `.pot` template and the `.po` files.
+    3.  Add translations to the `.po` files.
+    4.  Run `uv run i18n compile` to create the `.mo` files.
 3.  **Database Migration (if `bot/models.py` was changed):**
     1.  Run `uv run migrate revision -m "Descriptive message" --autogenerate`.
     2.  **CRITICAL: Manually inspect the generated migration script for correctness.**

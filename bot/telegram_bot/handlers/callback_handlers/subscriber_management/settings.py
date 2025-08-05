@@ -44,6 +44,7 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from typing import Any
 
     from aiogram.types import InlineKeyboardMarkup
 
@@ -311,9 +312,8 @@ async def handle_paginate_mute_list(
     await query.answer()
 
 
-from typing import Any, Awaitable, Callable, Type
-
 # Data-driven configuration for admin setting handlers
+
 
 class AdminSettingHandlerConfig(TypedDict):
     """A type hint for the admin setting handler configuration dictionary."""
@@ -325,7 +325,7 @@ class AdminSettingHandlerConfig(TypedDict):
     failure_msg: str
 
 
-SETTING_HANDLERS_CONFIG: dict[Type[CallbackData], AdminSettingHandlerConfig] = {
+SETTING_HANDLERS_CONFIG: dict[type[CallbackData], AdminSettingHandlerConfig] = {
     AdminSetSubscriberLanguageCallback: {
         "service_func": admin_service.admin_set_user_language,
         "param_name": "new_lang_code",
