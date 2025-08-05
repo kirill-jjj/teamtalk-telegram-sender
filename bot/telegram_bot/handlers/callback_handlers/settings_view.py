@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 async def refresh_main_settings_view(
     query: CallbackQuery,
-    callback_data: Any,  # To match the decorator's signature
-    session: AsyncSession,  # To match the decorator's signature
+    callback_data: Any,  # noqa: ANN401
+    session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",  # To match the decorator's signature
+    services: "Services",
     **kwargs: object,
 ) -> None:
     """Refreshes the main settings view."""
@@ -46,7 +46,7 @@ async def refresh_main_settings_view(
 
 async def refresh_notification_settings_view(
     query: CallbackQuery,
-    callback_data: Any,
+    callback_data: Any,  # noqa: ANN401
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     services: "Services",

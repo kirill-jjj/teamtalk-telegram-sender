@@ -20,7 +20,7 @@ from bot.constants import (
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
 )
-from bot.core.notifications import send_join_leave_notification_logic
+from bot.core.notifications import send_join_leave_notification
 from bot.teamtalk_bot.message_handler import MessageHandler
 
 if TYPE_CHECKING:
@@ -447,7 +447,7 @@ class TeamTalkConnection:
         self.update_caches_on_event("user_login", user)
         if not self.instance:
             return
-        await send_join_leave_notification_logic(
+        await send_join_leave_notification(
             services=self.services,
             event_type=NOTIFICATION_EVENT_JOIN,
             tt_user=user,
@@ -461,7 +461,7 @@ class TeamTalkConnection:
         self.update_caches_on_event("user_logout", user)
         if not self.instance:
             return
-        await send_join_leave_notification_logic(
+        await send_join_leave_notification(
             services=self.services,
             event_type=NOTIFICATION_EVENT_LEAVE,
             tt_user=user,

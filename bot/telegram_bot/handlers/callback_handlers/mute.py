@@ -429,7 +429,7 @@ async def cq_handle_all_accounts_list_display(
 
 @mute_router.callback_query(ToggleMuteSpecificCallback.filter(F.action == ToggleMuteSpecificAction.TOGGLE_USER))
 @ensure_message_context
-async def cq_toggle_specific_user_mute_action(
+async def toggle_user_mute(
     callback_query: CallbackQuery,
     session: SQLModelAsyncSession,
     translator: gettext.GNUTranslations,

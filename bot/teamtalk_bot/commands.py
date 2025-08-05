@@ -126,11 +126,11 @@ class AdminActionConfig(TypedDict):
 
 ACTION_MAP: dict[str, AdminActionConfig] = {
     "add": {
-        "service_func": admin_service.add_admin_full,
+        "service_func": admin_service.add_admin,
         "success_msg": ("Successfully added {count} admin.", "Successfully added {count} admins."),
     },
     "remove": {
-        "service_func": admin_service.remove_admin_full,
+        "service_func": admin_service.remove_admin,
         "success_msg": ("Successfully removed {count} admin.", "Successfully removed {count} admins."),
     },
 }

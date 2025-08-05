@@ -19,11 +19,10 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "Admin",
     "add_admin",
+    "add_record",
     "add_subscriber",
     "add_to_ban_list",
     "create_deeplink",
-    "db_add_generic",
-    "db_remove_generic",
     "delete_deeplink_by_token",
     "get_all_admins_ids",
     "get_all_banned_users",
@@ -36,12 +35,13 @@ __all__ = [
     "remove_admin_db",
     "remove_ban_entries_for_telegram_id",
     "remove_from_ban_list_by_id",
+    "remove_record",
 ]
 
 T = TypeVar("T", bound=SQLModel)
 
 
-async def db_add_generic(session: AsyncSession, model_instance: T) -> bool:
+async def add_record(session: AsyncSession, model_instance: T) -> bool:
     """Adds a generic SQLModel instance to the database and commits.
 
     Args:
@@ -66,7 +66,7 @@ async def db_add_generic(session: AsyncSession, model_instance: T) -> bool:
         return True
 
 
-async def db_remove_generic(session: AsyncSession, record_to_remove: T | None) -> bool:
+async def remove_record(session: AsyncSession, record_to_remove: T | None) -> bool:
     """Removes a generic SQLModel instance from the database and commits.
 
     Args:
@@ -105,7 +105,7 @@ async def _add_entity_if_not_exists(session: AsyncSession, model_class: type[T],
         return False
 
     entity = model_class(telegram_id=telegram_id)
-    return await db_add_generic(session, entity)
+    return await add_record(session, entity)
 
 
 async def _remove_entity(session: AsyncSession, model_class: type[T], telegram_id: int) -> bool:
@@ -113,7 +113,7 @@ async def _remove_entity(session: AsyncSession, model_class: type[T], telegram_i
     if not entity:
         logger.debug("Entity with ID %s not found in %s for removal.", telegram_id, model_class.__tablename__)
         return False
-    return await db_remove_generic(session, entity)
+    return await remove_record(session, entity)
 
 
 async def _get_all_entity_ids(session: AsyncSession, model_class: type[T]) -> list[int]:
@@ -181,7 +181,7 @@ async def create_deeplink(
         expected_telegram_id=expected_telegram_id,
         expiry_time=expiry_time,
     )
-    if await db_add_generic(session, deeplink_obj):
+    if await add_record(session, deeplink_obj):
         logger.debug(
             "Created deeplink: token=%s, action=%s, payload=%s, expected_id=%s",
             token_str,
@@ -210,7 +210,7 @@ async def get_deeplink(session: AsyncSession, token: str) -> Deeplink | None:
         loaded_expiry_time_utc = deeplink_obj.expiry_time.replace(tzinfo=dt.UTC)
         if loaded_expiry_time_utc < datetime.now(dt.UTC):
             logger.warning("Deeplink %s expired. Deleting.", token)
-            await db_remove_generic(session, deeplink_obj)
+            await remove_record(session, deeplink_obj)
             return None
     return deeplink_obj
 
@@ -227,7 +227,7 @@ async def delete_deeplink_by_token(session: AsyncSession, token: str) -> bool:
     """
     deeplink_obj = await session.get(Deeplink, token)
     if deeplink_obj:
-        return await db_remove_generic(session, deeplink_obj)
+        return await remove_record(session, deeplink_obj)
     logger.debug("Deeplink %s not found for deletion.", token)
     return False
 
@@ -292,7 +292,7 @@ async def add_to_ban_list(
         return False
 
     ban_entry = BanList(telegram_id=telegram_id, teamtalk_username=teamtalk_username, ban_reason=reason)
-    added = await db_add_generic(session, ban_entry)
+    added = await add_record(session, ban_entry)
     if added:
         logger.info(
             "Added to ban list: telegram_id=%s, teamtalk_username='%s', reason='%s'",
@@ -306,7 +306,7 @@ async def add_to_ban_list(
 async def remove_from_ban_list_by_id(session: AsyncSession, ban_id: int) -> bool:
     """Removes a ban list entry by its primary ID."""
     ban_entry = await session.get(BanList, ban_id)
-    removed = await db_remove_generic(session, ban_entry)
+    removed = await remove_record(session, ban_entry)
     if removed:
         logger.info("Removed from ban list by id: %s", ban_id)
     return removed

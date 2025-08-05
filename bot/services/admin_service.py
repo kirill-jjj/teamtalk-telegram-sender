@@ -1,8 +1,9 @@
 """Service layer for administrator-related operations."""
 
+from collections.abc import Awaitable, Callable
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -71,7 +72,7 @@ async def _manage_admin_status(
         return True
 
 
-async def add_admin_full(
+async def add_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
@@ -81,7 +82,7 @@ async def add_admin_full(
     return await _manage_admin_status(session, telegram_id, user_settings, services, action="add")
 
 
-async def remove_admin_full(
+async def remove_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
@@ -371,8 +372,8 @@ async def _admin_update_user_setting(
     session: AsyncSession,
     services: "Services",
     target_telegram_id: int,
-    update_function: UpdateFunc,
-    **kwargs: Any,
+    update_function: UpdateFunc,  # type: ignore[type-arg]
+    **kwargs: Any,  # noqa: ANN401
 ) -> T | None:
     """Generic helper to update a user setting for a target user by an admin."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)

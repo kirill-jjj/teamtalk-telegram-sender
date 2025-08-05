@@ -108,6 +108,7 @@ async def _show_subscriber_list_page(
     page: int = 0,
 ) -> None:
     """Fetches all subscribers and displays a paginated list."""
+    _ = translator.gettext
     all_subscriber_ids = await get_all_subscribers_ids(session)
     statement = select(UserSettings).where(
         UserSettings.telegram_id.in_(all_subscriber_ids)  # type: ignore[attr-defined]

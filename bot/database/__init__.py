@@ -3,11 +3,10 @@
 from .crud import (
     Admin,
     add_admin,
+    add_record,
     add_subscriber,
     add_to_ban_list,
     create_deeplink,
-    db_add_generic,
-    db_remove_generic,
     delete_deeplink_by_token,
     get_all_admins_ids,
     get_all_subscribers_ids,
@@ -18,6 +17,7 @@ from .crud import (
     is_telegram_id_banned,
     remove_admin_db,
     remove_from_ban_list_by_id,
+    remove_record,
 )
 from .engine import AsyncSessionFactoryType, create_session_factory
 
@@ -25,12 +25,11 @@ __all__ = [
     "Admin",
     "AsyncSessionFactoryType",
     "add_admin",
+    "add_record",
     "add_subscriber",
     "add_to_ban_list",
     "create_deeplink",
     "create_session_factory",
-    "db_add_generic",
-    "db_remove_generic",
     "delete_deeplink_by_token",
     "get_all_admins_ids",
     "get_all_subscribers_ids",
@@ -41,4 +40,5 @@ __all__ = [
     "is_telegram_id_banned",
     "remove_admin_db",
     "remove_from_ban_list_by_id",
+    "remove_record",
 ]

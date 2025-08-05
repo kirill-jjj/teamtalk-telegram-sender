@@ -135,7 +135,7 @@ DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandler] = {
 }
 
 
-async def execute_deeplink_action(
+async def process_deeplink(
     deeplink_obj: DeeplinkModel,
     session: AsyncSession,
     telegram_id: int,

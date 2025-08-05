@@ -245,8 +245,8 @@ class Services:
                 self.logger.error("Failed to get/create settings for admin %s.", tg_admin_chat_id)
                 return
 
-            # Assuming admin_service.add_admin_full handles all logic including cache update
-            added = await admin_service.add_admin_full(
+            # Assuming admin_service.add_admin handles all logic including cache update
+            added = await admin_service.add_admin(
                 session=session,
                 telegram_id=tg_admin_chat_id,
                 user_settings=user_settings,

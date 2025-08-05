@@ -13,7 +13,7 @@ from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
 from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
-from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
+from bot.telegram_bot.keyboards import create_language_selection_keyboard
 
 from ._helpers import action_and_refresh_view, ensure_message_context, safe_edit_text
 from .settings_view import refresh_main_settings_view

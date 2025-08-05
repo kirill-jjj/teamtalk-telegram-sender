@@ -144,7 +144,7 @@ def _generate_join_leave_notification_text(
     return notification_template.format(user_nickname=escape(localized_user_nickname), server_name=escape(server_name))
 
 
-async def send_join_leave_notification_logic(
+async def send_join_leave_notification(
     event_type: str,
     tt_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,

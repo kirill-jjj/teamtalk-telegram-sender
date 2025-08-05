@@ -1,8 +1,8 @@
 """Callback query handlers for an admin managing a subscriber's settings."""
 
+from collections.abc import Awaitable, Callable
 import gettext
 import logging
-from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from aiogram import F, Router
@@ -45,6 +45,7 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 
 if TYPE_CHECKING:
     from aiogram.types import InlineKeyboardMarkup
+
     from bot.services_container import Services
 
 

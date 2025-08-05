@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -58,7 +58,7 @@ async def cq_toggle_noon_setting_action(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     services: Services,
-    **kwargs,
+    **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
