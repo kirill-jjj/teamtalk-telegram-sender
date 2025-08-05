@@ -441,7 +441,7 @@ async def create_admin_subscriber_lang_keyboard(
         current_value=None,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="⬅️ Back to User Actions",
+        back_button_text_key=_("⬅️ Back to User Actions"),
         buttons_per_row=1,
     )
 

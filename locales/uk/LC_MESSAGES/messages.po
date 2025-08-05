@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender VERSION\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-05 13:48+0000\n"
+"POT-Creation-Date: 2025-08-05 13:54+0000\n"
 "PO-Revision-Date: 2025-07-08 17:08+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -542,6 +542,7 @@ msgstr "Прив'язаний акаунт TT: {tt_username}"
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:277
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:286
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:117
+#: bot/telegram_bot/keyboards/settings_keyboards.py:90
 msgid "None"
 msgstr "Немає"
 
@@ -572,16 +573,19 @@ msgstr "NOON (Не в мережі): {status}"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:283
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:114
+#: bot/telegram_bot/keyboards/settings_keyboards.py:87
 msgid "All (Join & Leave)"
 msgstr "Всі (вхід та вихід)"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:284
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:115
+#: bot/telegram_bot/keyboards/settings_keyboards.py:88
 msgid "Join Only"
 msgstr "Тільки вхід"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:285
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:116
+#: bot/telegram_bot/keyboards/settings_keyboards.py:89
 msgid "Leave Only"
 msgstr "Тільки вихід"
 
@@ -960,6 +964,10 @@ msgstr "Режим білого списку"
 msgid "No languages available"
 msgstr "Немає доступних мов"
 
+#: bot/telegram_bot/keyboards/admin_keyboards.py:444
+msgid "⬅️ Back to User Actions"
+msgstr "⬅️ Назад до дій користувача"
+
 #: bot/telegram_bot/keyboards/settings_keyboards.py:44
 msgid "Language"
 msgstr "Мова"
@@ -967,6 +975,14 @@ msgstr "Мова"
 #: bot/telegram_bot/keyboards/settings_keyboards.py:126
 msgid "Manage Mute List"
 msgstr "Керування списком ігнорування"
+
+#: bot/telegram_bot/keyboards/settings_keyboards.py:143
+msgid "✅"
+msgstr "✅"
+
+#: bot/telegram_bot/keyboards/settings_keyboards.py:144
+msgid "⚪️"
+msgstr "⚪️"
 
 #: bot/telegram_bot/keyboards/settings_keyboards.py:149
 #, python-brace-format
@@ -993,6 +1009,14 @@ msgstr "Додати/скасувати ігнорування зі списку
 #: bot/telegram_bot/keyboards/shared.py:21
 msgid "Back to"
 msgstr "Назад до"
+
+#: bot/telegram_bot/keyboards/shared.py:46
+msgid "⬅️ Back"
+msgstr "⬅️ Назад"
+
+#: bot/telegram_bot/keyboards/shared.py:52
+msgid "✅ "
+msgstr "✅ "
 
 #: bot/telegram_bot/keyboards/shared.py:85
 #: bot/telegram_bot/keyboards/shared.py:158
