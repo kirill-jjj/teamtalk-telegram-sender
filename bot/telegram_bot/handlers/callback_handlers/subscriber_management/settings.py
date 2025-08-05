@@ -181,6 +181,49 @@ async def handle_admin_toggle_noon(
     return False, message
 
 
+async def _fetch_mute_list_data(
+    session: AsyncSession, target_telegram_id: int, services: "Services"
+) -> tuple[UserSettings | None, str]:
+    """Fetches user settings and their display name for the mute list view."""
+    statement = (
+        select(UserSettings)
+        .where(UserSettings.telegram_id == target_telegram_id)
+        .options(selectinload(cast(QueryableAttribute[list[MutedUser]], UserSettings.muted_users_list)))
+    )
+    target_user_settings = await session.scalar(statement)
+
+    subscriber_display_name = str(target_telegram_id)
+    if target_user_settings:
+        try:
+            chat_info = await services.bot_event.get_chat(target_telegram_id)
+            if chat_info:
+                subscriber_display_name = format_telegram_user_display_name(chat_info)
+        except Exception:
+            logger.warning(
+                "Could not fetch display name for %s in view_mute_list",
+                target_telegram_id,
+                exc_info=True,
+            )
+    return target_user_settings, subscriber_display_name
+
+
+def _build_mute_list_title(
+    translator: gettext.GNUTranslations,
+    user_settings: UserSettings,
+    subscriber_display_name: str,
+) -> str:
+    """Builds the title for the mute list view."""
+    _ = translator.gettext
+    mode_text = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+    title_text_parts = [
+        _("Mute list for subscriber: {subscriber_name} (ID: {subscriber_id})").format(
+            subscriber_name=subscriber_display_name, subscriber_id=user_settings.telegram_id
+        ),
+        _("Mute Mode: {mode}").format(mode=mode_text),
+    ]
+    return "\n".join(title_text_parts)
+
+
 @settings_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.ADMIN_VIEW_MUTE_LIST))
 @ensure_message_context
 async def handle_admin_view_mute_list(
@@ -213,50 +256,21 @@ async def _display_subscriber_mute_list_page(
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    statement = (
-        select(UserSettings)
-        .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(cast(QueryableAttribute[list[MutedUser]], UserSettings.muted_users_list)))
-    )
-    target_user_settings = await session.scalar(statement)
+    target_user_settings, subscriber_display_name = await _fetch_mute_list_data(session, target_telegram_id, services)
 
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
-        logger.info(
-            "Subscriber settings not found for %s when viewing mute list.",
-            target_telegram_id,
-        )
+        logger.info("Subscriber settings not found for %s when viewing mute list.", target_telegram_id)
         return
-
-    all_muted_usernames = sorted([mu.muted_teamtalk_username for mu in target_user_settings.muted_users_list])
-
-    subscriber_display_name = str(target_telegram_id)
-    try:
-        chat_info = await services.bot_event.get_chat(target_telegram_id)
-        if chat_info:
-            subscriber_display_name = format_telegram_user_display_name(chat_info)
-    except Exception:
-        logger.warning(
-            "Could not fetch display name for %s in view_mute_list",
-            target_telegram_id,
-            exc_info=True,
-        )
-
-    title_text_parts = [
-        _("Mute list for subscriber: {subscriber_name} (ID: {subscriber_id})").format(
-            subscriber_name=subscriber_display_name, subscriber_id=target_telegram_id
-        ),
-        _("Mute Mode: {mode}").format(
-            mode=_("Blacklist" if target_user_settings.mute_list_mode == MuteListMode.blacklist else "Whitelist")
-        ),
-    ]
-    title_text = "\n".join(title_text_parts)
-    empty_list_text = _("The mute list is currently empty.")
 
     if query.bot is None:
         logger.error("handle_admin_view_mute_list: query.bot is None. Cannot display list.")
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)
         return
+
+    all_muted_usernames = sorted([mu.muted_teamtalk_username for mu in target_user_settings.muted_users_list])
+    title_text = _build_mute_list_title(translator, target_user_settings, subscriber_display_name)
+    empty_list_text = _("The mute list is currently empty.")
 
     await display_paginated_list(
         target=query,

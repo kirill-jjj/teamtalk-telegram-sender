@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import SettingsNavAction, SubscriptionAction
 from bot.models import NotificationSetting, UserSettings
-from bot.services import _utils as service_utils
+from bot.services import user_service
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
@@ -95,15 +95,14 @@ async def cq_set_subscription_setting(
         await callback_query.answer()  # No change, just acknowledge.
         return
 
-    # Call the generic helper to update the field
-    # user_settings object from middleware is already session-managed.
-    updated_settings = await service_utils._update_user_setting_field(
+    # Call the dedicated service function to update the preference.
+    # This encapsulates business logic and makes the handler cleaner.
+    updated_settings = await user_service.update_notification_preference(
         session=session,
         services=services,
-        settings_to_update=user_settings,
-        field_name="notification_settings",
-        new_value=new_setting_enum,
-        log_context=" (user set subscription)",
+        user_settings=user_settings,
+        new_pref=new_setting_enum,
+        actor="user",
     )
 
     if not updated_settings:

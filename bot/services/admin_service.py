@@ -367,49 +367,18 @@ async def admin_toggle_noon_setting(
     services: "Services",
     target_telegram_id: int,
 ) -> UserSettings | None:
-    """Toggles the NOON (Not On Online Notifications) setting for a target user.
-
-    Handles DB session, commit, rollback, and cache update.
-    Returns the updated UserSettings object or None on failure.
-    """
+    """Toggles the NOON (Not On Online Notifications) setting for a target user."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:
         logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
         return None
 
-    new_noon_enabled_value = not target_user_settings.not_on_online_enabled
-
-    updated_settings = await _utils._update_user_setting_field(
+    return await user_service.update_noon_setting(
         session=session,
         services=services,
-        settings_to_update=target_user_settings,
-        field_name="not_on_online_enabled",
-        new_value=new_noon_enabled_value,
-        log_context=f" by admin for user {target_telegram_id} (toggle NOON)",
+        user_settings=target_user_settings,
+        actor="admin",
     )
-
-    if not updated_settings:
-        return None
-
-    if updated_settings.not_on_online_enabled and (updated_settings.not_on_online_confirmed is not True):
-        confirmed_settings = await _utils._update_user_setting_field(
-            session=session,
-            services=services,
-            settings_to_update=updated_settings,
-            field_name="not_on_online_confirmed",
-            new_value=True,
-            log_context=f" by admin for user {target_telegram_id} (confirm NOON after toggle)",
-        )
-        if not confirmed_settings:
-            logger.warning(
-                "NOON setting was toggled to enabled for user %s, "
-                "but the subsequent confirmation of 'not_on_online_confirmed' failed. "
-                "The 'not_on_online_enabled' field remains updated.",
-                target_telegram_id,
-            )
-            return updated_settings
-        return confirmed_settings
-    return updated_settings
 
 
 async def admin_set_user_mute_mode(
@@ -424,13 +393,12 @@ async def admin_set_user_mute_mode(
         logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    return await _utils._update_user_setting_field(
+    return await user_service.update_mute_mode(
         session=session,
         services=services,
-        settings_to_update=target_user_settings,
-        field_name="mute_list_mode",
-        new_value=new_mode,
-        log_context=" by admin",
+        user_settings=target_user_settings,
+        new_mode=new_mode,
+        actor="admin",
     )
 
 
@@ -446,13 +414,12 @@ async def admin_set_user_notification_preference(
         logger.warning("admin_set_user_notification_preference: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    return await _utils._update_user_setting_field(
+    return await user_service.update_notification_preference(
         session=session,
         services=services,
-        settings_to_update=target_user_settings,
-        field_name="notification_settings",
-        new_value=new_pref_enum,
-        log_context=f" by admin for user {target_telegram_id}",
+        user_settings=target_user_settings,
+        new_pref=new_pref_enum,
+        actor="admin",
     )
 
 
@@ -585,21 +552,10 @@ async def admin_set_user_language(
         logger.warning("admin_set_user_language: UserSettings not found for %s.", target_telegram_id)
         return None
 
-    updated_settings = await _utils._update_user_setting_field(
+    return await user_service.update_language(
         session=session,
         services=services,
-        settings_to_update=target_user_settings,
-        field_name="language_code",
-        new_value=new_lang_code,
-        log_context=" by admin",
+        user_settings=target_user_settings,
+        new_lang_code=new_lang_code,
+        actor="admin",
     )
-
-    if updated_settings:
-        commands_updated = await _utils.update_user_bot_commands(target_telegram_id, new_lang_code, services)
-        if not commands_updated:
-            logger.warning(
-                "Failed to update bot commands for user %s after language change by admin to '%s'.",
-                target_telegram_id,
-                new_lang_code,
-            )
-    return updated_settings

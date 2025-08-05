@@ -334,9 +334,9 @@ async def cq_set_mute_mode_action(
     new_mode = callback_data.mode
 
     # The user_settings object from middleware should already be session-managed.
-    # The service function `set_user_mute_mode` will handle merging if necessary,
+    # The service function `update_mute_mode` will handle merging if necessary,
     # committing, cache updates, and error handling.
-    updated_user_settings = await user_service.set_user_mute_mode(session, services, user_settings, new_mode)
+    updated_user_settings = await user_service.update_mute_mode(session, services, user_settings, new_mode)
 
     if not updated_user_settings:
         # Service function handles logging and rollback.

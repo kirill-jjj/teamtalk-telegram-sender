@@ -15,7 +15,7 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.database import crud
-from bot.models import MutedUser, MuteListMode, OperationResult, UserSettings
+from bot.models import MutedUser, MuteListMode, NotificationSetting, OperationResult, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
@@ -205,44 +205,54 @@ async def delete_full_user_profile(
         return True
 
 
-async def set_user_mute_mode(
+async def update_mute_mode(
     session: AsyncSession,
     services: "Services",
     user_settings: UserSettings,
     new_mode: MuteListMode,
+    actor: str = "user",
 ) -> UserSettings | None:
-    """Sets the mute list mode for the user themselves."""
+    """Sets the mute list mode for a user."""
+    log_context = f" by {actor}"
     return await _utils._update_user_setting_field(
         session=session,
         services=services,
         settings_to_update=user_settings,
         field_name="mute_list_mode",
         new_value=new_mode,
-        log_context=" (self)",
+        log_context=log_context,
     )
 
 
-async def update_user_language_settings(  # User-initiated
+async def update_language(
     session: AsyncSession,
+    services: "Services",
     user_settings: UserSettings,
     new_lang_code: str,
-    services: "Services",
+    actor: str = "user",
 ) -> UserSettings | None:
-    """Updates user language for the user themselves."""
-    return await _utils._update_user_setting_field(
+    """Updates the language for a user."""
+    log_context = f" by {actor}"
+    updated_settings = await _utils._update_user_setting_field(
         session=session,
         services=services,
         settings_to_update=user_settings,
         field_name="language_code",
         new_value=new_lang_code,
-        log_context=" (self)",
+        log_context=log_context,
     )
+    if updated_settings:
+        await _utils.update_user_bot_commands(
+            telegram_id=user_settings.telegram_id, new_lang_code=new_lang_code, services=services
+        )
+    return updated_settings
 
 
-async def toggle_noon_setting(
+async def update_noon_setting(
     session: AsyncSession,
     services: "Services",
     user_settings: UserSettings,
+    actor: str = "user",
 ) -> UserSettings | None:
     """Toggles the NOON (Not On Online Notifications) setting for a user.
 
@@ -261,7 +271,7 @@ async def toggle_noon_setting(
         settings_to_update=user_settings,
         field_name="not_on_online_enabled",
         new_value=new_noon_enabled_value,
-        log_context=" (user toggle NOON self)",
+        log_context=f" by {actor} (toggle NOON)",
     )
 
     if not updated_settings_noon_toggle:
@@ -277,7 +287,7 @@ async def toggle_noon_setting(
             settings_to_update=updated_settings_noon_toggle,  # Use the already updated object
             field_name="not_on_online_confirmed",
             new_value=True,
-            log_context=" (user confirm NOON after self toggle)",
+            log_context=f" by {actor} (confirm NOON after toggle)",
         )
         if not confirmed_settings:
             # Log a warning if the confirmation step failed
@@ -297,6 +307,25 @@ async def toggle_noon_setting(
     # 2. NOON was toggled to True, but 'not_on_online_confirmed' was already True.
     # In these cases, the 'updated_settings_noon_toggle' from the first call is the final state.
     return updated_settings_noon_toggle
+
+
+async def update_notification_preference(
+    session: AsyncSession,
+    services: "Services",
+    user_settings: UserSettings,
+    new_pref: "NotificationSetting",
+    actor: str = "user",
+) -> UserSettings | None:
+    """Sets the notification preference for a user."""
+    log_context = f" by {actor}"
+    return await _utils._update_user_setting_field(
+        session=session,
+        services=services,
+        settings_to_update=user_settings,
+        field_name="notification_settings",
+        new_value=new_pref,
+        log_context=log_context,
+    )
 
 
 async def process_new_subscription(
