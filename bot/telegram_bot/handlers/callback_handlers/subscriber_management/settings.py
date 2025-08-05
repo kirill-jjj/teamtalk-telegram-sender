@@ -44,7 +44,7 @@ from bot.telegram_bot.utils import format_telegram_user_display_name
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Any
+    from typing import Any, Callable
 
     from aiogram.types import InlineKeyboardMarkup
 
