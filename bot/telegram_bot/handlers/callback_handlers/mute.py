@@ -239,8 +239,7 @@ def _generate_mute_toggle_toast_message(
     return _("{username} has been {action}.").format(username=quoted_username, action=action_text)
 
 
-# _commit_mute_changes_and_notify is removed, logic moved to user_service.toggle_mute_status_for_tt_user
-# and handler cq_toggle_specific_user_mute_action
+# _commit_mute_changes_and_notify is removed, logic moved to user_service.toggle_mute_status_for_tt_user.
 
 
 async def _refresh_mute_related_ui(
@@ -256,7 +255,7 @@ async def _refresh_mute_related_ui(
     list_type_user_was_on = callback_data.list_type
     current_page_for_refresh = callback_data.current_page
 
-    # The calling handler (cq_toggle_specific_user_mute_action) is decorated with @ensure_message_context,
+    # The calling handler (toggle_user_mute) is decorated with @ensure_message_context,
     # so callback_query.message is guaranteed to be a Message object here.
     try:
         await session.refresh(user_settings, attribute_names=["muted_users_list"])

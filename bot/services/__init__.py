@@ -21,16 +21,14 @@ from .user_service import (
 )
 
 __all__ = [
-    # Modules (for direct service.module usage if preferred)
     "deeplink_service",
-    # User service functions
     "delete_full_user_profile",
-    "process_deeplink",  # Deeplink service functions
-    "filter_recipients_for_noon",  # Notification service functions
-    "is_linked_user_online",  # Notification service functions
-    "is_user_subject_to_noon_check",  # Notification service functions
+    "filter_recipients_for_noon",
+    "is_linked_user_online",
+    "is_user_subject_to_noon_check",
     "notification_service",
-    "process_subscribe_deeplink",  # Deeplink service functions
-    "process_unsubscribe_deeplink",  # Deeplink service functions
+    "process_deeplink",
+    "process_subscribe_deeplink",
+    "process_unsubscribe_deeplink",
     "user_service",
 ]
