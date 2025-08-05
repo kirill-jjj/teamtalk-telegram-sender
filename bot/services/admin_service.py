@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, TypeVar
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -363,22 +363,48 @@ def format_ban_delete_result_message(  # noqa: PLR0912
     )
 
 
+T = TypeVar("T")
+UpdateFunc = Callable[..., Awaitable[T | None]]
+
+
+async def _admin_update_user_setting(
+    session: AsyncSession,
+    services: "Services",
+    target_telegram_id: int,
+    update_function: UpdateFunc,
+    **kwargs: Any,
+) -> T | None:
+    """Generic helper to update a user setting for a target user by an admin."""
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning(
+            "%s: UserSettings not found for %s",
+            update_function.__name__,
+            target_telegram_id,
+        )
+        return None
+
+    # The 'actor' argument is consistently passed for admin actions.
+    kwargs["actor"] = Actor.ADMIN
+    return await update_function(
+        session=session,
+        services=services,
+        user_settings=target_user_settings,
+        **kwargs,
+    )
+
+
 async def admin_toggle_noon_setting(
     session: AsyncSession,
     services: "Services",
     target_telegram_id: int,
 ) -> UserSettings | None:
     """Toggles the NOON (Not On Online Notifications) setting for a target user."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_toggle_noon_setting: UserSettings not found for %s", target_telegram_id)
-        return None
-
-    return await user_service.update_noon_setting(
-        session=session,
-        services=services,
-        user_settings=target_user_settings,
-        actor=Actor.ADMIN,
+    return await _admin_update_user_setting(
+        session,
+        services,
+        target_telegram_id,
+        user_service.update_noon_setting,
     )
 
 
@@ -389,17 +415,12 @@ async def admin_set_user_mute_mode(
     new_mode: "MuteListMode",
 ) -> UserSettings | None:
     """Sets the mute list mode for a target user, managed by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_set_user_mute_mode: UserSettings not found for %s.", target_telegram_id)
-        return None
-
-    return await user_service.update_mute_mode(
-        session=session,
-        services=services,
-        user_settings=target_user_settings,
+    return await _admin_update_user_setting(
+        session,
+        services,
+        target_telegram_id,
+        user_service.update_mute_mode,
         new_mode=new_mode,
-        actor=Actor.ADMIN,
     )
 
 
@@ -410,17 +431,12 @@ async def admin_set_user_notification_preference(
     new_pref_enum: "NotificationSetting",
 ) -> UserSettings | None:
     """Sets the notification preference for a target user, managed by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_set_user_notification_preference: UserSettings not found for %s.", target_telegram_id)
-        return None
-
-    return await user_service.update_notification_preference(
-        session=session,
-        services=services,
-        user_settings=target_user_settings,
+    return await _admin_update_user_setting(
+        session,
+        services,
+        target_telegram_id,
+        user_service.update_notification_preference,
         new_pref=new_pref_enum,
-        actor=Actor.ADMIN,
     )
 
 
@@ -548,15 +564,10 @@ async def admin_set_user_language(
     new_lang_code: str,
 ) -> UserSettings | None:
     """Sets the language for a target user, managed by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning("admin_set_user_language: UserSettings not found for %s.", target_telegram_id)
-        return None
-
-    return await user_service.update_language(
-        session=session,
-        services=services,
-        user_settings=target_user_settings,
+    return await _admin_update_user_setting(
+        session,
+        services,
+        target_telegram_id,
+        user_service.update_language,
         new_lang_code=new_lang_code,
-        actor=Actor.ADMIN,
     )

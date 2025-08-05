@@ -15,7 +15,8 @@ from bot.services import user_service
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard, create_main_settings_keyboard
 
-from ._helpers import ensure_message_context, safe_edit_text
+from ._helpers import action_and_refresh_view, ensure_message_context, safe_edit_text
+from .settings_view import refresh_main_settings_view
 
 if TYPE_CHECKING:
     from bot.services_container import Services
@@ -50,6 +51,7 @@ async def cq_show_language_menu(
 
 @language_router.callback_query(LanguageCallback.filter(F.action == LanguageAction.SET_LANG))
 @ensure_message_context
+@action_and_refresh_view(refresh_main_settings_view)
 async def cq_set_language(
     query: CallbackQuery,
     session: SQLModelAsyncSession,
@@ -57,22 +59,21 @@ async def cq_set_language(
     translator: gettext.GNUTranslations,
     callback_data: LanguageCallback,
     services: "Services",
-) -> None:
-    """Sets the user's language preference using the refactored service function."""
+) -> tuple[bool, str]:
+    """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
     new_lang_code = callback_data.lang_code
 
     if not new_lang_code:
         logger.warning("LanguageCallback received with lang_code=None for user %s", query.from_user.id)
-        await query.answer(_("Invalid language selection."), show_alert=True)
-        return
+        # This is a client-side error, but we can still inform the user.
+        return False, _("Invalid language selection.")
 
     if new_lang_code == user_settings.language_code:
-        await query.answer()
-        return
+        # No change needed, but we don't want to show an error.
+        # The decorator will handle a simple ack and refresh.
+        return True, ""
 
-    # The user_service.update_language function now handles both updating the
-    # language in the database and refreshing the user's bot commands.
     updated_settings = await user_service.update_language(
         session=session,
         services=services,
@@ -82,17 +83,9 @@ async def cq_set_language(
     )
 
     if updated_settings:
+        # The message is now for the toast notification. The view is handled by the refresher.
+        # We need to get the new translator to provide the correct message language.
         new_translator = services.get_translator(new_lang_code)
-        _ = new_translator.gettext
-        await query.answer(_("Language has been changed."))
-        # Refresh the settings menu with the new language
-        main_settings_builder = await create_main_settings_keyboard(new_translator)
-        await safe_edit_text(
-            message_to_edit=query.message,  # type: ignore[arg-type]
-            text=_("Settings"),
-            reply_markup=main_settings_builder.as_markup(),
-            logger_instance=logger,
-            log_context="cq_set_language_ui_refresh",
-        )
-    else:
-        await query.answer(_("Failed to change language. Please try again."), show_alert=True)
+        return True, new_translator.gettext("Language has been changed.")
+    # Return a failure message if the update fails.
+    return False, _("Failed to change language. Please try again.")
