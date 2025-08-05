@@ -83,7 +83,65 @@ Before integrating any code from external sources (e.g., web snippets, other AI 
 ### 4.4. Code Maintenance
 *   **Dead Code Must Be Removed:** Do not comment out unused imports, functions, or blocks of code. Delete them. Version control is your safety net.
 
-### 4.5. Linting and Formatting
+### 4.5. Naming Conventions
+
+Clear and predictable naming is critical for code readability and maintainability. Names must reflect the **essence** of a component (what it does), not its technical implementation (how it does it) or its trigger mechanism. All names must be concise and free of redundancy.
+
+#### 4.5.1. Avoid Redundant Prefixes and Suffixes
+
+Prefixes and suffixes that state the obvious, such as `handle_`, `process_`, `cq_`, or `_action`, should be avoided. The context of a component is typically clear from its location, decorators, or usage. Adding these terms often creates unnecessary clutter.
+
+*   **Avoid:**
+    *   `handle_tt_subscribe_command` — The `handle_` prefix is redundant for a command handler.
+    *   `process_deeplink` — The verb "process" is ambiguous. Prefer a more descriptive verb that clarifies the action, such as `resolve_deeplink` or `execute_deeplink`.
+    *   `cq_show_language_menu` — The `cq_` (callback_query) prefix is unnecessary when a decorator like `@router.callback_query` already defines the context.
+    *   `SubscriberActionCallback` — The `Action` suffix is redundant. A callback inherently represents an action.
+
+*   **Prefer:**
+    *   `on_subscribe_command` or `subscribe_command`.
+    *   `resolve_deeplink` or `execute_deeplink`.
+    *   `show_language_menu`.
+    *   `SubscriberCallback`.
+
+#### 4.5.2. Eliminate Superfluous Words
+
+Words like `specific`, `full`, `generic`, `data`, and `info` are often implied and can be omitted. A function or class name should be as concise as possible without losing its meaning.
+
+*   **Avoid:**
+    *   `delete_full_user_profile` — A deletion function is expected to be complete. The word `full` is superfluous.
+    *   `ToggleMuteSpecificCallback` — A callback's context typically implies that it acts on a specific entity.
+    *   `_create_generic_paginated_list_keyboard` — A function's generic nature should be conveyed by its parameters and implementation, not by the word "generic" in its name.
+    *   `WorkflowData`, `SubscriberInfo` — Names ending in `Data` or `Info` can often be made more descriptive.
+
+*   **Prefer:**
+    *   `delete_user_profile`.
+    *   `ToggleMuteCallback`.
+    *   `create_paginated_keyboard`.
+    *   `WorkflowContext`, `SubscriberView` (or simply `Subscriber` if it represents a data model).
+
+#### 4.5.3. Focus on Purpose, Not Implementation
+
+A function's name should communicate its primary purpose, not summarize its implementation steps.
+
+*   **Avoid:**
+    *   `_generate_and_reply_deeplink` — This describes the implementation, not the singular goal.
+    *   `_is_username_effectively_muted` — The word "effectively" hints at the implementation detail (e.g., checking multiple conditions). The function's core purpose is to check the mute status.
+    *   `_orchestrate_user_banning` — Terms like "orchestrate" or "manage" are often too abstract and can be replaced with a more direct verb.
+
+*   **Prefer:**
+    *   `reply_with_deeplink`.
+    *   `is_muted`.
+    *   `apply_ban` or `ban_user`.
+
+#### 4.5.4. Use Verbs for Actions and Nouns for Data
+
+Adherence to this fundamental principle is essential for clarity.
+
+*   **Functions and methods** must begin with a verb that describes the action they perform (e.g., `get_user`, `create_keyboard`, `send_message`).
+*   **Classes, variables, and data structures** must be nouns that describe the entity they represent (e.g., `User`, `Settings`, `main_menu_keyboard`).
+*   **Boolean variables or functions** should be named to read like a question (e.g., `is_admin`, `is_ready`, `has_permissions`).
+
+### 4.6. Linting and Formatting
 All code must be validated against `ruff` before committing. The key commands are `uv run ruff check --fix .` and `uv run ruff format .`. Key enforced rules include:
 *   **`D` (pydocstyle):** All public modules, functions, classes, and methods **must** have a docstring in the Google convention. This is non-negotiable.
 *   **`SIM` (flake8-simplify):** Code must be simplified where possible. `ruff --fix` will handle most of this.
