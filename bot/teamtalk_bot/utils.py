@@ -23,7 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
-from bot.telegram_bot.utils import send_telegram_message_individual
+from bot.telegram_bot.utils import send_telegram_message
 
 if TYPE_CHECKING:
     from bot.services_container import Services  # Forward reference for Services
@@ -258,7 +258,7 @@ async def forward_tt_message_to_telegram_admin(
         message_content,  # No need to escape, Text handles it.
     )
 
-    was_sent: bool = await send_telegram_message_individual(
+    was_sent: bool = await send_telegram_message(
         bot_instance=services.bot_message,
         chat_id=admin_chat_id,
         services=services,

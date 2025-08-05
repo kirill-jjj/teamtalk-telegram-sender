@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def _manage_admin_status(
+async def _add_or_remove_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
@@ -79,7 +79,7 @@ async def add_admin(
     services: "Services",
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
-    return await _manage_admin_status(session, telegram_id, user_settings, services, action="add")
+    return await _add_or_remove_admin(session, telegram_id, user_settings, services, action="add")
 
 
 async def remove_admin(
@@ -89,7 +89,7 @@ async def remove_admin(
     services: "Services",
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
-    return await _manage_admin_status(session, telegram_id, user_settings, services, action="remove")
+    return await _add_or_remove_admin(session, telegram_id, user_settings, services, action="remove")
 
 
 async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> bool:
@@ -127,7 +127,7 @@ async def _ban_teamtalk_user_in_db(session: AsyncSession, tt_username: str, targ
         return True
 
 
-async def _manage_teamtalk_user_on_server(
+async def _apply_server_moderation(
     action: Literal["ban", "unban"],
     tt_connection: "TeamTalkConnection | None",
     tt_username: str,
@@ -183,7 +183,7 @@ async def _manage_teamtalk_user_on_server(
         return True
 
 
-async def _perform_ban_steps(
+async def _execute_ban(
     session: AsyncSession,
     target_telegram_id: int,
     tt_username_to_ban: str | None,
@@ -222,7 +222,7 @@ async def _perform_ban_steps(
 
     # Step 3: Conceptual TeamTalk server ban (if TT username exists)
     if tt_username_to_ban:
-        tt_server_ban_success = await _manage_teamtalk_user_on_server(
+        tt_server_ban_success = await _apply_server_moderation(
             action="ban",
             tt_connection=tt_connection,
             tt_username=tt_username_to_ban,
@@ -252,7 +252,7 @@ async def ban_user(
     Handles banning in the database and conceptually on the TeamTalk server.
     Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
     """
-    return await _perform_ban_steps(session, target_telegram_id, tt_username_to_ban, tt_connection)
+    return await _execute_ban(session, target_telegram_id, tt_username_to_ban, tt_connection)
 
 
 async def ban_and_delete_subscriber(
@@ -534,7 +534,7 @@ async def unban_subscriber(
         db_unban_success = await crud.remove_ban_entries_for_telegram_id(session, target_telegram_id)
         tt_unban_success = True
         if tt_username:
-            tt_unban_success = await _manage_teamtalk_user_on_server(
+            tt_unban_success = await _apply_server_moderation(
                 action="unban",
                 tt_connection=tt_connection,
                 tt_username=tt_username,

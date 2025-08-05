@@ -52,7 +52,7 @@ async def create_banned_user_list_keyboard(
     """Creates the keyboard for managing the banned user list."""
     _ = translator.gettext
 
-    def banned_user_button_former(
+    def _create_banned_user_button(
         user: SubscriberInfo, page_num: int, _translate: "Callable[[str], str]"
     ) -> list[InlineKeyboardButton]:
         user_info_parts = [user.display_name]
@@ -81,7 +81,7 @@ async def create_banned_user_list_keyboard(
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
-        item_button_former=banned_user_button_former,
+        item_button_former=_create_banned_user_button,
         pagination_callback_factory=SubscriberListCallback,
         pagination_factory_kwargs=pagination_kwargs,
     )
@@ -96,7 +96,7 @@ async def create_subscriber_list_keyboard(
     """Creates the keyboard for managing the subscriber list."""
     _ = translator.gettext
 
-    def subscriber_button_former(
+    def _create_subscriber_button(
         subscriber: SubscriberInfo, page_num: int, _translate: "Callable[[str], str]"
     ) -> InlineKeyboardButton:
         user_info_parts = [subscriber.display_name]
@@ -115,7 +115,7 @@ async def create_subscriber_list_keyboard(
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
-        item_button_former=subscriber_button_former,
+        item_button_former=_create_subscriber_button,
         pagination_callback_factory=SubscriberListCallback,
         pagination_factory_kwargs=pagination_kwargs,
     )
@@ -359,7 +359,7 @@ async def create_linkable_tt_account_list_keyboard(
     """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
     _ = translator.gettext
 
-    def tt_account_button_former(
+    def _create_tt_account_button(
         account_obj: pytalk.UserAccount,
         _page_num: int,
         _translate: "Callable[[str], str]",
@@ -394,7 +394,7 @@ async def create_linkable_tt_account_list_keyboard(
         page_items=page_items,
         current_page=current_page,
         total_pages=total_pages,
-        item_button_former=tt_account_button_former,
+        item_button_former=_create_tt_account_button,
         pagination_callback_factory=PaginateLinkableAccountsCallback,
         pagination_factory_kwargs=pagination_factory_kwargs,
         additional_buttons_bottom=bottom_buttons,

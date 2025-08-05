@@ -92,7 +92,7 @@ def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "S
     return False
 
 
-async def send_telegram_message_individual(
+async def send_telegram_message(
     bot_instance: AiogramBot,
     chat_id: int,
     services: "Services",
@@ -107,7 +107,6 @@ async def send_telegram_message_individual(
         bot_instance: The Aiogram Bot instance to use for sending.
         chat_id: The Telegram chat ID to send the message to.
         services: The application's services container.
-        _language: The language code for localization (currently unused here, but kept for consistency).
         reply_markup: Optional InlineKeyboardMarkup for the message.
         tt_user_is_online: Whether the user's linked TeamTalk account is currently online.
         **kwargs: Additional arguments to pass to `bot_instance.send_message`.
@@ -164,7 +163,7 @@ async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int
     return display_names
 
 
-async def send_telegram_messages_to_list(
+async def broadcast_to_users(
     bot_instance_to_use: AiogramBot,
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
@@ -174,7 +173,7 @@ async def send_telegram_messages_to_list(
 ) -> None:
     """Sends localized messages to a list of recipients using a TaskGroup for robustness."""
     if not bot_instance_to_use:
-        logger.error("No Telegram bot instance provided to send_telegram_messages_to_list.")
+        logger.error("No Telegram bot instance provided to broadcast_to_users.")
         return
 
     try:
@@ -195,7 +194,7 @@ async def send_telegram_messages_to_list(
                     )
 
                 tg.create_task(
-                    send_telegram_message_individual(
+                    send_telegram_message(
                         bot_instance=bot_instance_to_use,
                         chat_id=chat_id,
                         reply_markup=current_reply_markup,

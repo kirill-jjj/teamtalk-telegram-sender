@@ -108,7 +108,7 @@ class CacheService:
         logger.info("Loaded %s user settings into cache.", len(self._user_settings_cache))
 
     # --- Comprehensive operations ---
-    def remove_full_user_profile(self, telegram_id: int) -> None:
+    def remove_user_profile(self, telegram_id: int) -> None:
         """Removes a user from all relevant caches."""
         self.remove_admin(telegram_id)
         self.remove_subscriber(telegram_id)

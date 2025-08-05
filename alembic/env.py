@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
 
 
-def process_revision_directives(
+def prevent_empty_revisions(
     context: MigrationContext, revision: str | Iterable[str | None], directives: list[MigrationScript]
 ) -> None:
     """This hook prevents Alembic from creating empty migration files.
@@ -105,7 +105,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        process_revision_directives=process_revision_directives,
+        process_revision_directives=prevent_empty_revisions,
         render_as_batch=True,
     )
 
@@ -145,7 +145,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        process_revision_directives=process_revision_directives,
+        process_revision_directives=prevent_empty_revisions,
         render_as_batch=True,
     )
     with context.begin_transaction():

@@ -29,7 +29,7 @@ admin_actions_router = Router(name="callback_handlers.admin")
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def _handle_pytalk_action_error(
+def _handle_pytalk_error(
     exc: Exception,
     action: AdminCommand,
     user_id_to_log: int | str,
@@ -57,7 +57,7 @@ def _handle_pytalk_action_error(
     return False, _("An error occurred. Please try again later.")
 
 
-async def _execute_tt_user_action(  # noqa: PLR0911
+async def _apply_user_moderation(  # noqa: PLR0911
     action: AdminCommand,
     user_to_act_on: pytalk.user.User,
     translator: gettext.GNUTranslations,
@@ -102,21 +102,21 @@ async def _execute_tt_user_action(  # noqa: PLR0911
         return False, _("Unknown action.")
 
     except PytalkPermissionError as e:
-        return _handle_pytalk_action_error(e, action, user_to_act_on.id, server_host, translator)
+        return _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
     except PytalkException as e:
-        return _handle_pytalk_action_error(e, action, user_to_act_on.id, server_host, translator)
+        return _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
     except (ValueError, TypeError, AttributeError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        return _handle_pytalk_action_error(e, action, user_id_log, server_host, translator)
+        return _handle_pytalk_error(e, action, user_id_log, server_host, translator)
     except (TimeoutError, OSError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        return _handle_pytalk_action_error(e, action, user_id_log, server_host, translator, is_critical=True)
+        return _handle_pytalk_error(e, action, user_id_log, server_host, translator, is_critical=True)
 
 
 @admin_actions_router.callback_query(AdminCallback.filter(F.action.in_({AdminCommand.KICK, AdminCommand.BAN})))
 @ensure_message_context
 @ensure_tt_user_exists
-async def confirm_user_action(
+async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
     translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
@@ -129,7 +129,7 @@ async def confirm_user_action(
 
     server_host_for_display = tt_connection.server_info.host  # type: ignore[union-attr]
 
-    success, message_text = await _execute_tt_user_action(
+    success, message_text = await _apply_user_moderation(
         action=callback_data.action,
         user_to_act_on=tt_user,
         translator=translator,

@@ -18,7 +18,7 @@ from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services import notification_service
 from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
-from bot.telegram_bot.utils import send_telegram_messages_to_list
+from bot.telegram_bot.utils import broadcast_to_users
 
 # TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps
 if TYPE_CHECKING:
@@ -225,7 +225,7 @@ async def send_join_leave_notification(
 
     server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
     # The list of recipients now includes language codes, so we pass it directly
-    await send_telegram_messages_to_list(
+    await broadcast_to_users(
         bot_instance_to_use=services.bot_event,
         recipients_with_lang=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(

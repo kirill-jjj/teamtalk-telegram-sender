@@ -197,7 +197,7 @@ async def delete_user_profile(
         if not user_settings_deleted and not subscribed_user_deleted:
             logger.info("No DB data found for Telegram ID %s to delete.", telegram_id)
 
-        services.cache.remove_full_user_profile(telegram_id)
+        services.cache.remove_user_profile(telegram_id)
         logger.info(
             "Full user profile deletion process completed for Telegram ID: %s. "
             "DB changes (if any) committed. Caches cleared via CacheService.",

@@ -28,7 +28,7 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 
 @subscriber_list_router.callback_query(SubscriberListCallback.filter())
 @ensure_message_context
-async def subscriber_list_actions(
+async def on_subscriber_list_callback(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
     session: AsyncSession,
