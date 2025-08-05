@@ -2,7 +2,7 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -111,8 +111,32 @@ async def _show_banned_list_page(
     )
 
 
+async def refresh_subscriber_list_view(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    **kwargs: object,
+) -> None:
+    """Refresher function for the main subscriber list view."""
+    if not services.bot_event:
+        logger.error("refresh_subscriber_list_view: services.bot_event is not available.")
+        await query.answer(translator.gettext("An error occurred. Please try again later."), show_alert=True)
+        return
+
+    await _show_subscriber_list_page(
+        target=query,
+        session=session,
+        bot=services.bot_event,
+        translator=translator,
+        page=callback_data.page,
+    )
+
+
 @banned_user_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
 @ensure_message_context
+@action_and_refresh_view(refresh_subscriber_list_view)
 async def handle_ban_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -120,25 +144,15 @@ async def handle_ban_subscriber(
     translator: gettext.GNUTranslations,
     services: "Services",
     tt_connection: "TeamTalkConnection | None",
-) -> None:
-    """Handles banning a subscriber."""
+) -> tuple[bool, str]:
+    """Handles banning and deleting a subscriber."""
     _ = translator.gettext
-    message = cast(Message, query.message)
     target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page
 
     result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
 
-    short_alert_message = _(result.message_key).format(**(result.message_args or {}))
-    await query.answer(short_alert_message, show_alert=True)
-
     if result.long_message:
-        await message.answer(result.long_message)
+        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
 
-    await _show_subscriber_list_page(
-        target=query,
-        session=session,
-        bot=services.bot_event,
-        translator=translator,
-        page=return_page,
-    )
+    short_message = _(result.message_key).format(**(result.message_args or {}))
+    return result.success, short_message

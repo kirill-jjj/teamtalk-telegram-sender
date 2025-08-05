@@ -100,30 +100,6 @@ async def _present_subscriber_setting_choice(
     await query.answer()
 
 
-@subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
-@ensure_message_context
-async def on_ban_subscriber_confirm(
-    query: CallbackQuery,
-    callback_data: SubscriberActionCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-    tt_connection: TeamTalkConnection | None,
-) -> None:
-    """Handles banning and deleting a subscriber after admin confirmation."""
-    _ = translator.gettext
-    target_telegram_id = callback_data.target_telegram_id
-    return_page = callback_data.page
-
-    result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
-
-    short_message = _(result.message_key).format(**(result.message_args or {}))
-    await query.answer(short_message, show_alert=True)
-    if result.long_message:
-        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
-    await _refresh_and_display_subscriber_list(query, session, services, return_page, translator)
-
-
 async def refresh_subscriber_list_view(
     query: CallbackQuery,
     callback_data: SubscriberActionCallback,
@@ -140,6 +116,30 @@ async def refresh_subscriber_list_view(
         return_page=callback_data.page,
         translator=translator,
     )
+
+
+@subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.BAN))
+@ensure_message_context
+@action_and_refresh_view(refresh_subscriber_list_view)
+async def on_ban_subscriber_confirm(
+    query: CallbackQuery,
+    callback_data: SubscriberActionCallback,
+    session: AsyncSession,
+    translator: gettext.GNUTranslations,
+    services: "Services",
+    tt_connection: TeamTalkConnection | None,
+) -> tuple[bool, str]:
+    """Handles banning and deleting a subscriber after admin confirmation."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+
+    result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
+
+    if result.long_message:
+        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
+
+    short_message = _(result.message_key).format(**(result.message_args or {}))
+    return result.success, short_message
 
 
 @subscriber_actions_router.callback_query(SubscriberActionCallback.filter(F.action == SubscriberAction.DELETE))
@@ -695,41 +695,13 @@ async def handle_admin_set_subscriber_notification_pref(
     translator: gettext.GNUTranslations,
     services: "Services",
 ) -> tuple[bool, str]:
-    """Handles an admin setting a specific subscriber's notification preference using the service layer."""
-    _ = translator.gettext
-    target_telegram_id = callback_data.target_telegram_id
-    new_pref_str = callback_data.setting_value
-
-    try:
-        new_pref_enum = NotificationSetting(new_pref_str)
-    except ValueError:
-        logger.exception(
-            "Invalid notification setting value received: %s for user %s", new_pref_str, target_telegram_id
-        )
-        return False, _("Invalid setting value. Please try again.")
-
-    updated_user_settings = await admin_service.admin_set_user_notification_preference(
-        session, services, target_telegram_id, new_pref_enum
-    )
-
-    if updated_user_settings:
-        notif_setting_map = {
-            NotificationSetting.ALL.value: _("All (Join & Leave)"),
-            NotificationSetting.LEAVE_OFF.value: _("Join Only"),
-            NotificationSetting.JOIN_OFF.value: _("Leave Only"),
-            NotificationSetting.NONE.value: _("None"),
-        }
-        new_pref_display_name = notif_setting_map.get(
-            updated_user_settings.notification_settings.value, updated_user_settings.notification_settings.value
-        )
-        message = _("Notification preference for subscriber {tg_id} set to: {pref}.").format(
-            tg_id=target_telegram_id, pref=new_pref_display_name
-        )
-        return True, message
-    message = _(
-        "Failed to change notification preference for subscriber {tg_id}. Please check logs or try again."
-    ).format(tg_id=target_telegram_id)
-    return False, message
+    """Handles an admin setting a specific subscriber's notification preference."""
+    return await create_setting_change_handler(
+        service_func=admin_service.admin_set_user_notification_preference,
+        value_extractor=lambda cb: NotificationSetting(cb.setting_value),
+        success_msg_formatter="Notification preference for subscriber {tg_id} set to: {value}.",
+        failure_msg="Failed to change notification preference. Please check logs or try again.",
+    )(query, callback_data, session, translator, services)
 
 
 @subscriber_actions_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())

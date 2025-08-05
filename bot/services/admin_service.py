@@ -21,6 +21,55 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+async def _manage_admin_status(
+    session: AsyncSession,
+    telegram_id: int,
+    user_settings: UserSettings,
+    services: "Services",
+    action: Literal["add", "remove"],
+) -> bool:
+    """A generic helper to add or remove an admin, updating all necessary components."""
+    try:
+        if action == "add":
+            db_success = await crud.add_admin(session, telegram_id)
+            log_verb_past = "added"
+            log_verb_present = "add"
+            cache_op = services.cache.add_admin
+        else:  # action == "remove"
+            db_success = await crud.remove_admin_db(session, telegram_id)
+            log_verb_past = "removed"
+            log_verb_present = "remove"
+            cache_op = services.cache.remove_admin
+
+        if not db_success:
+            logger.warning(
+                "Failed to %s admin %s in DB (possibly due to state or DB error).", log_verb_present, telegram_id
+            )
+            return False
+
+        logger.info("Admin %s %s to/from DB.", telegram_id, log_verb_past)
+        cache_op(telegram_id)
+        logger.info("Admin %s %s to/from cache.", telegram_id, log_verb_past)
+
+        if user_settings:
+            commands_updated = await _utils.update_user_bot_commands(telegram_id, user_settings.language_code, services)
+            if commands_updated:
+                logger.info("Bot commands updated for admin %s following %s action.", telegram_id, action)
+            else:
+                logger.warning("Failed to update bot commands for admin %s.", telegram_id)
+        else:
+            logger.warning(
+                "User settings not available for admin %s, commands not updated.",
+                telegram_id,
+            )
+
+    except Exception:
+        logger.exception("Error in _manage_admin_status for telegram_id %s, action '%s'.", telegram_id, action)
+        return False
+    else:
+        return True
+
+
 async def add_admin_full(
     session: AsyncSession,
     telegram_id: int,
@@ -28,30 +77,7 @@ async def add_admin_full(
     services: "Services",
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
-    try:
-        if await crud.add_admin(session, telegram_id):  # crud.add_admin handles its own commit
-            logger.info("Admin %s added to DB.", telegram_id)
-            services.cache.add_admin(telegram_id)
-            logger.info("Admin %s added to cache.", telegram_id)
-
-            if user_settings:  # Should always have user_settings if adding admin
-                commands_updated = await _utils.update_user_bot_commands(
-                    telegram_id, user_settings.language_code, services
-                )
-                if commands_updated:
-                    logger.info("Bot commands updated for new admin %s.", telegram_id)
-                else:
-                    logger.warning("Failed to update bot commands for new admin %s.", telegram_id)
-            else:
-                logger.warning("User settings not available for new admin %s, commands not updated.", telegram_id)
-            return True
-        logger.warning("Failed to add admin %s to DB (possibly already admin or DB error).", telegram_id)
-    except Exception:
-        logger.exception("Error in add_admin_full for telegram_id %s.", telegram_id)
-        # crud.add_admin should manage its own session rollback on error.
-        return False
-    else:
-        return False  # This path is reached if crud.add_admin returns False
+    return await _manage_admin_status(session, telegram_id, user_settings, services, action="add")
 
 
 async def remove_admin_full(
@@ -61,30 +87,7 @@ async def remove_admin_full(
     services: "Services",
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
-    try:
-        if await crud.remove_admin_db(session, telegram_id):  # crud.remove_admin_db handles its own commit
-            logger.info("Admin %s removed from DB.", telegram_id)
-            services.cache.remove_admin(telegram_id)
-            logger.info("Admin %s removed from cache.", telegram_id)
-
-            if user_settings:  # Should always have user_settings
-                commands_updated = await _utils.update_user_bot_commands(
-                    telegram_id, user_settings.language_code, services
-                )
-                if commands_updated:
-                    logger.info("Bot commands updated for former admin %s.", telegram_id)
-                else:
-                    logger.warning("Failed to update bot commands for former admin %s.", telegram_id)
-            else:
-                logger.warning("User settings not available for former admin %s, commands not updated.", telegram_id)
-            return True
-        logger.warning("Failed to remove admin %s from DB (possibly not an admin or DB error).", telegram_id)
-    except Exception:
-        logger.exception("Error in remove_admin_full for telegram_id %s.", telegram_id)
-        # crud.remove_admin_db should manage its own session rollback on error.
-        return False
-    else:
-        return False  # This path is reached if crud.remove_admin_db returns False
+    return await _manage_admin_status(session, telegram_id, user_settings, services, action="remove")
 
 
 async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> bool:
