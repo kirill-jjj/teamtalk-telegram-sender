@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 import functools
 import gettext
 import logging
-from typing import TYPE_CHECKING, Any, Tuple, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from pydantic import BaseModel, Field, model_validator
 import pytalk
@@ -120,7 +120,7 @@ def _create_admin_action_report(
 class AdminActionConfig(TypedDict):
     """Configuration for a specific admin action."""
 
-    service_func: Callable[[AsyncSession, int, UserSettings, "Services"], Awaitable[bool]]
+    service_func: Callable[[AsyncSession, int, UserSettings, Services], Awaitable[bool]]
     success_msg: tuple[str, str]
 
 

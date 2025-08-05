@@ -6,7 +6,6 @@ for Telegram interactions using InlineKeyboardBuilder.
 
 from collections.abc import Callable
 import gettext
-import html
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -482,7 +481,7 @@ async def create_banned_user_list_keyboard(
     ) -> list[InlineKeyboardButton]:
         user_info_parts = [user.display_name]
         if user.teamtalk_username:
-            user_info_parts.append(f"TT: {html.escape(user.teamtalk_username)}")
+            user_info_parts.append(f"TT: {user.teamtalk_username}")
 
         button_text = ", ".join(user_info_parts)
 
@@ -526,7 +525,7 @@ async def create_subscriber_list_keyboard(
     ) -> InlineKeyboardButton:
         user_info_parts = [subscriber.display_name]
         if subscriber.teamtalk_username:
-            user_info_parts.append(f"TT: {html.escape(subscriber.teamtalk_username)}")
+            user_info_parts.append(f"TT: {subscriber.teamtalk_username}")
         button_text = ", ".join(user_info_parts)
 
         return InlineKeyboardButton(
@@ -562,7 +561,7 @@ async def create_user_selection_keyboard(
             continue
         user_id = user_obj.id
         callback_data = AdminActionCallback(action=command_type, user_id=user_id).pack()
-        builder.button(text=html.escape(user_nickname), callback_data=callback_data)
+        builder.button(text=user_nickname, callback_data=callback_data)
     builder.adjust(2)
     return builder
 
@@ -675,11 +674,11 @@ async def _create_generic_user_toggle_list_keyboard(
         )
         if effectively_muted:
             button_text = _("{item_display_name} (Status: Muted)").format(
-                item_display_name=html.escape(display_name_on_button)
+                item_display_name=display_name_on_button
             )
         else:
             button_text = _("{item_display_name} (Status: Not Muted)").format(
-                item_display_name=html.escape(display_name_on_button)
+                item_display_name=display_name_on_button
             )
         callback_d = ToggleMuteSpecificCallback(
             action=ToggleMuteSpecificAction.TOGGLE_USER,
@@ -713,7 +712,7 @@ async def create_manage_tt_account_keyboard(
 
     if current_tt_username:
         builder.button(
-            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=html.escape(current_tt_username)),
+            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=current_tt_username),
             callback_data=ManageTTAccountCallback(
                 action=ManageTTAccountAction.UNLINK, target_telegram_id=target_telegram_id, page=page
             ).pack(),
