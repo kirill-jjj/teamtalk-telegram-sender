@@ -11,8 +11,8 @@ from .callback_handlers.menu_callbacks import admin_menu_callback_router, menu_c
 from .callback_handlers.mute import mute_router
 from .callback_handlers.navigation import navigation_router
 from .callback_handlers.notifications import notifications_router
-from .callback_handlers.subscriber_actions import subscriber_actions_router
 from .callback_handlers.subscriber_list import subscriber_list_router
+from .callback_handlers.subscriber_management import subscriber_management_router
 from .callback_handlers.subscription import subscription_router
 
 # Parent router for handlers that require a TeamTalk connection
@@ -24,7 +24,7 @@ tt_connected_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware(
 tt_connected_router.include_router(menu_callback_router)
 tt_connected_router.include_router(admin_menu_callback_router)
 tt_connected_router.include_router(admin_actions_router)
-tt_connected_router.include_router(subscriber_actions_router)
+tt_connected_router.include_router(subscriber_management_router)
 
 
 # Main router that aggregates all callback handlers

@@ -184,50 +184,43 @@ async def _display_all_server_accounts_list(
     )
 
 
-async def _get_username_to_toggle_from_callback(
+async def _get_username_from_all_accounts(
     callback_data: ToggleMuteSpecificCallback,
-    user_settings: UserSettings,
-    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
-    tt_connection: TeamTalkConnection | None,
+    tt_connection: TeamTalkConnection,
 ) -> str | None:
-    user_idx = callback_data.user_idx
-    current_page = callback_data.current_page
-    list_type = callback_data.list_type
-    if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-        if not tt_connection or not tt_connection.user_accounts_cache:
-            logger.warning("Cannot get username from 'all_accounts': cache empty/None.")
-            return None
-        all_accounts = sorted(
-            tt_connection.user_accounts_cache.values(),
-            key=lambda acc: (
-                ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()
-            ),
-        )
-        page_items, _, _ = paginate_list(all_accounts, current_page, USERS_PER_PAGE)
-        if 0 <= user_idx < len(page_items):
-            username_attr = page_items[user_idx].username
-            # Assuming ttstr handles bytes and returns str. If username_attr can be None, handle it.
-            return cast(str, ttstr(username_attr)) if username_attr is not None else None
-    elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-        statement = select(MutedUser.muted_teamtalk_username).where(
-            MutedUser.user_settings_telegram_id == user_settings.telegram_id
-        )
-        results = await session.exec(statement)  # Changed to session.exec for SQLModel
-        # SQLModel's exec results directly give items
-        relevant_usernames = sorted([str(uname) for uname in results.all()])
-        page_items, _, _ = paginate_list(relevant_usernames, current_page, USERS_PER_PAGE)
-        if 0 <= user_idx < len(page_items):
-            return page_items[user_idx]  # type: ignore[no-any-return]
-    logger.warning(
-        "Could not find username for toggle. Idx: %s, List: %s, Page: %s",
-        user_idx,
-        list_type.value if isinstance(list_type, UserListAction) else list_type,
-        current_page,
+    """Retrieves a username from the cached list of all server accounts."""
+    if not tt_connection.user_accounts_cache:
+        logger.warning("Cannot get username from 'all_accounts': cache empty/None.")
+        return None
+
+    all_accounts = sorted(
+        tt_connection.user_accounts_cache.values(),
+        key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
     )
+    page_items, _, _ = paginate_list(all_accounts, callback_data.current_page, USERS_PER_PAGE)
+
+    if 0 <= callback_data.user_idx < len(page_items):
+        username_attr = page_items[callback_data.user_idx].username
+        return cast(str, ttstr(username_attr)) if username_attr is not None else None
     return None
 
 
-# _plan_mute_toggle_action is removed, logic moved to user_service.toggle_mute_status_for_tt_user
+async def _get_username_from_muted_list(
+    callback_data: ToggleMuteSpecificCallback,
+    user_settings: UserSettings,
+    session: SQLModelAsyncSession,
+) -> str | None:
+    """Retrieves a username from the user's persisted mute list."""
+    statement = select(MutedUser.muted_teamtalk_username).where(
+        MutedUser.user_settings_telegram_id == user_settings.telegram_id
+    )
+    results = await session.exec(statement)
+    relevant_usernames = sorted([str(uname) for uname in results.all()])
+    page_items, _, _ = paginate_list(relevant_usernames, callback_data.current_page, USERS_PER_PAGE)
+
+    if 0 <= callback_data.user_idx < len(page_items):
+        return page_items[callback_data.user_idx]
+    return None
 
 
 def _generate_mute_toggle_toast_message(
@@ -487,9 +480,15 @@ async def cq_toggle_specific_user_mute_action(
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
-    username_to_toggle = await _get_username_to_toggle_from_callback(
-        callback_data, user_settings, session, tt_connection
-    )
+    username_to_toggle = None
+    list_type = callback_data.list_type
+
+    if list_type == UserListAction.LIST_ALL_ACCOUNTS:
+        if tt_connection:
+            username_to_toggle = await _get_username_from_all_accounts(callback_data, tt_connection)
+    elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
+        username_to_toggle = await _get_username_from_muted_list(callback_data, user_settings, session)
+
     if not username_to_toggle:
         logger.warning(
             "Could not determine username to toggle mute for user %s. Callback data: %s",

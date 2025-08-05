@@ -135,8 +135,6 @@ async def refresh_subscriber_view(
     )
 
 
-
-
 def ensure_message_context(
     func: Callable[..., Awaitable[Any | None]],
 ) -> Callable[..., Awaitable[Any | None]]:
