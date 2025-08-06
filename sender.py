@@ -6,14 +6,22 @@ import logging
 import traceback
 from types import ModuleType  # For uvloop typing
 
-from aiogram import Bot
-from bot.config import Settings
-from bot.logging_setup import setup_logging
-from bot.telegram_bot.setup import (
-    create_telegram_dispatcher,
-    setup_telegram_dispatcher,
-)
+from aiogram import Bot, Dispatcher
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware
+from dishka import make_async_container
+from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
+from bot.config import Settings
+from bot.di_providers import AppProvider, RequestProvider
+from bot.logging_setup import setup_logging
+from bot.telegram_bot.handlers.admin import admin_router
+from bot.telegram_bot.handlers.callbacks import callback_router
+from bot.telegram_bot.handlers.unknown import catch_all_router
+from bot.telegram_bot.handlers.user import user_commands_router
+from bot.telegram_bot.middlewares import (
+    ActiveTeamTalkConnectionMiddleware,
+    SubscriptionCheckMiddleware,
+)
 
 uvloop: ModuleType | None = None
 try:
@@ -37,23 +45,35 @@ class Application:
         """
         self.app_config = app_config_instance
         self.logger = setup_logging()
-        self.dp: Dispatcher | None = None
+        self.dp = Dispatcher()
 
     async def run(self) -> None:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
-        self.dp = create_telegram_dispatcher()
+        # Register middlewares
+        self.dp.update.middleware.register(SubscriptionCheckMiddleware())
+        self.dp.update.middleware.register(
+            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+        )
+        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-        # This function sets up dishka and attaches the container to the dispatcher
-        setup_telegram_dispatcher(dp=self.dp)
+        # Create and set up dishka
+        app_provider = AppProvider()
+        app_provider.dispatcher = self.dp
+        container = make_async_container(
+            app_provider, RequestProvider(), AiogramProvider()
+        )
+        setup_dishka(container, router=self.dp)
 
-        # Retrieve the container that dishka created and attached
-        container = self.dp["dishka_container"]
+        # Include routers
+        self.dp.include_router(user_commands_router)
+        self.dp.include_router(admin_router)
+        self.dp.include_router(callback_router)
+        self.dp.include_router(catch_all_router)
 
         self.logger.info("Starting Telegram polling...")
         try:
-            # Resolve the Bot instance from the container and pass it to start_polling
             bot = await container.get(Bot)
             await self.dp.start_polling(bot)
         finally:
@@ -61,34 +81,26 @@ class Application:
             self.logger.info("Application finished.")
 
 
-# === CONFIGURATION AND CLI BLOCK START ===
 def main_cli() -> None:
-    """Main command-line interface function to start the bot.
-
-    Parses arguments, loads configuration, sets up uvloop if available,
-    and runs the application.
-    """
+    """Main command-line interface function to start the bot."""
     parser = argparse.ArgumentParser(description="TeamTalk Telegram Sender Bot")
     parser.add_argument(
         "--config",
         type=str,
-        default="config.toml",  # Changed default to config.toml
-        help="Path to the TOML configuration file (e.g., config.toml, config.prod.toml). Defaults to 'config.toml'",
+        default="config.toml",
+        help="Path to the TOML configuration file",
     )
-    args, _ = parser.parse_known_args()  # Keep known_args if other CLI tools might chain here, otherwise parse_args()
+    args, _ = parser.parse_known_args()
 
     try:
         print(f"Loading configuration from: {args.config}")
         app_config_instance = Settings.from_toml(args.config)
 
-        try:
-            if uvloop:  # Check if uvloop was successfully imported
-                uvloop.install()
-                print("uvloop installed and used.")
-            else:
-                print("uvloop not found (ImportError at top), using default asyncio event loop.")
-        except Exception as e_uvloop:  # Catch potential errors during uvloop.install() itself
-            print(f"Error during uvloop.install(): {e_uvloop}. Using default asyncio event loop.")
+        if uvloop:
+            uvloop.install()
+            print("uvloop installed and used.")
+        else:
+            print("uvloop not found, using default asyncio event loop.")
 
         app = Application(app_config_instance)
         asyncio.run(app.run())
@@ -97,10 +109,9 @@ def main_cli() -> None:
         print("Bot stopped by user.")
     except (ValueError, KeyError) as config_error:
         print(f"CRITICAL: Configuration Error: {config_error}.")
-        print("Please check your config.toml file or environment variables.")
         traceback.print_exc()
     except Exception as e:
-        print(f"CRITICAL: An unexpected critical error occurred at CLI level: {e}")
+        print(f"CRITICAL: An unexpected critical error occurred: {e}")
         traceback.print_exc()
 
 
