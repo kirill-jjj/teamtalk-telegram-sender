@@ -22,6 +22,7 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     SubscriptionCheckMiddleware,
 )
+from bot.telegram_bot.middlewares.dishka_inject import DishkaInjectMiddleware
 
 uvloop: ModuleType | None = None
 try:
@@ -52,6 +53,7 @@ class Application:
         self.logger.info("Application starting...")
 
         # Register middlewares
+        self.dp.update.middleware.register(DishkaInjectMiddleware())
         self.dp.update.middleware.register(SubscriptionCheckMiddleware())
         self.dp.update.middleware.register(
             ActiveTeamTalkConnectionMiddleware(default_server_key=None)
