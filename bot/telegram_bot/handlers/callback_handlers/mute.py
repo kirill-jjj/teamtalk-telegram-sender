@@ -278,10 +278,15 @@ async def _refresh_mute_related_ui(
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot show manage muted menu for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     manage_muted_builder = await create_manage_muted_users_keyboard(translator, user_settings)
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
@@ -306,12 +311,17 @@ async def set_mute_mode(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     callback_data: SetMuteModeCallback,
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot set mute mode for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     new_mode = callback_data.mode
 
     updated_user_settings = await user_service.update_mute_mode(
@@ -354,10 +364,16 @@ async def display_internal_user_list(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
+    if not user_settings:
+        _ = translator.gettext
+        logger.warning("Cannot display internal user list for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     await _display_internal_user_list(
         callback_query,
         translator,
@@ -373,11 +389,17 @@ async def display_internal_user_list(
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
+    if not user_settings:
+        _ = translator.gettext
+        logger.warning("Cannot display all accounts list for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     if not tt_connection:
         _ = translator.gettext
         await callback_query.answer(_("TeamTalk connection is not active."), show_alert=True)
@@ -393,13 +415,18 @@ async def toggle_user_mute(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: ToggleMuteCallback,
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot toggle mute for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     username_to_toggle = None
     list_type = callback_data.list_type
 

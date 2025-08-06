@@ -28,10 +28,15 @@ notifications_router = Router(name="callback_handlers.notifications")
 async def show_notifications_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
 ) -> None:
     """Shows the notification settings menu."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot show notifications menu for event without a user, user_settings is None.")
+        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        return
+
     notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
@@ -48,12 +53,15 @@ async def show_notifications_menu(
 async def toggle_noon_setting(
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     cache: FromDishka[CacheService],
     **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot toggle NOON setting for event without a user, user_settings is None.")
+        return False, _("An error occurred. Please try again later.")
 
     updated_settings = await user_service.update_noon_setting(
         session=session,

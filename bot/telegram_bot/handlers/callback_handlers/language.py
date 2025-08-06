@@ -50,7 +50,7 @@ async def show_language_menu(
 async def set_language(
     query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,
     cache: FromDishka[CacheService],
@@ -59,6 +59,10 @@ async def set_language(
 ) -> tuple[bool, str]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("Cannot set language for event without a user, user_settings is None.")
+        return False, _("An error occurred. Please try again later.")
+
     new_lang_code = callback_data.lang_code
 
     if not new_lang_code:

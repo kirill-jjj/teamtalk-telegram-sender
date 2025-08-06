@@ -44,11 +44,17 @@ async def on_start_with_payload(
     token: str,
     session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
-    user_settings: Annotated[UserSettings, FromDishka()],
+    user_settings: Annotated[UserSettings | None, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
 ) -> None:
     """Handles the /start command with a deeplink, extracting the token via a magic filter."""
     if not message.from_user:
+        return
+
+    if not user_settings:
+        _ = translator.gettext
+        logger.warning("Cannot handle deeplink for event without a user, user_settings is None.")
+        await message.reply(_("An error occurred. Please try again later."))
         return
 
     await handle_deeplink(message, token, cast(SQLModelAsyncSession, session), translator, user_settings, cache)
