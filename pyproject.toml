@@ -159,8 +159,7 @@ exclude = [
 ignore_missing_imports = true
 plugins = [
   "pydantic.mypy",
-  "sqlalchemy.ext.mypy.plugin",
-  "dishka.mypy"
+  "sqlalchemy.ext.mypy.plugin"
 ]
 warn_return_any = true
 warn_unused_configs = true
