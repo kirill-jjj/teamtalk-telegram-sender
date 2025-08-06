@@ -20,13 +20,12 @@ from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.utils import safe_delete_message
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
 user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-user_commands_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
 @user_commands_router.message(CommandStart(deep_link=False))
@@ -60,11 +59,16 @@ async def on_who_command(
     message: Message,
     translator: Annotated[GNUTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
-    tt_connection: TeamTalkConnection,
-    bot: Bot,
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     if not message.from_user:
+        return
+
+    if not tt_connection:
+        _ = translator.gettext
+        await message.reply(_("TeamTalk connection is not active."))
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):

@@ -5,7 +5,6 @@
 from .subscription_check import SubscriptionCheckMiddleware
 from .teamtalk_connection import (
     ActiveTeamTalkConnectionMiddleware,
-    TeamTalkConnectionCheckMiddleware,
 )
 
 # It's good practice to define __all__ to specify what gets imported
@@ -13,5 +12,4 @@ from .teamtalk_connection import (
 __all__ = [
     "ActiveTeamTalkConnectionMiddleware",
     "SubscriptionCheckMiddleware",
-    "TeamTalkConnectionCheckMiddleware",
 ]

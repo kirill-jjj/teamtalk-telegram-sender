@@ -16,7 +16,6 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
-from bot.telegram_bot.middlewares.teamtalk_connection import TeamTalkConnectionCheckMiddleware
 
 from .callback_handlers.list_utils import (
     _show_banned_list_page,
@@ -26,7 +25,6 @@ from .callback_handlers.list_utils import (
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
 async def _show_user_buttons(
@@ -82,9 +80,13 @@ async def _show_user_buttons(
 async def on_kick_command(
     message: Message,
     translator: Annotated[GNUTranslations, FromDishka()],
-    tt_connection: TeamTalkConnection,
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
+    if not tt_connection:
+        _ = translator.gettext
+        await message.reply(_("TeamTalk connection is not active."))
+        return
     await _show_user_buttons(message, AdminCommand.KICK, translator, tt_connection)
 
 
@@ -92,9 +94,13 @@ async def on_kick_command(
 async def on_ban_command(
     message: Message,
     translator: Annotated[GNUTranslations, FromDishka()],
-    tt_connection: TeamTalkConnection,
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
+    if not tt_connection:
+        _ = translator.gettext
+        await message.reply(_("TeamTalk connection is not active."))
+        return
     await _show_user_buttons(message, AdminCommand.BAN, translator, tt_connection)
 
 

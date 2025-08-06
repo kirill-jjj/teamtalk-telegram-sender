@@ -2,7 +2,7 @@
 
 from aiogram import Router
 
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 
 from .callback_handlers.admin import admin_actions_router
 from .callback_handlers.banned_user_actions import banned_user_actions_router
@@ -18,7 +18,6 @@ from .callback_handlers.subscription import subscription_router
 # Parent router for handlers that require a TeamTalk connection
 tt_connected_router = Router(name="tt_connected_router")
 tt_connected_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-tt_connected_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 
 # Routers that need a TT connection are included here
 tt_connected_router.include_router(menu_callback_router)

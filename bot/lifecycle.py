@@ -18,7 +18,6 @@ from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
 from bot.services import admin_service
 from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
@@ -35,23 +34,14 @@ async def on_startup(
     settings: FromDishka[Settings],
     translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
-    connections: FromDishka[dict[str, TeamTalkConnection]],
+    _tt_event_handler: FromDishka[TeamTalkEventHandler],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
     logger.info("Application startup...")
 
-    logger.info("Initializing TeamTalk components...")
-    TeamTalkEventHandler(
-        settings=settings,
-        session_factory=session_factory,
-        cache=cache,
-        translator_factory=translator_factory,
-        bot=bot,
-        tt_bot=tt_bot,
-        connections=connections,
-        logger=logger,
-    )
+    # The TeamTalkEventHandler is now managed by dishka.
+    # Simply requesting it (`_tt_event_handler`) is enough to initialize it.
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
         await tt_bot._async_setup_hook()

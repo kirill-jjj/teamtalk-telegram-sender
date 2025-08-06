@@ -5,9 +5,11 @@
 from collections.abc import AsyncGenerator, Callable
 import gettext
 from gettext import GNUTranslations, NullTranslations
+import logging
 
+from aiogram import Bot
 from aiogram.types import TelegramObject, User
-from dishka import Provider, Scope, provide
+from dishka import FromDishka, Provider, Scope, provide
 import pytalk
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,13 +19,14 @@ from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 
 
-# 1. Выносим логику создания фабрики в отдельную функцию
+# 1. Isolate the factory creation logic into a separate function
 def create_translator_factory(
     translator_cache: dict[str, GNUTranslations | NullTranslations],
 ) -> Callable[[str], GNUTranslations | NullTranslations]:
-    """Создает и возвращает функцию-фабрику для получения переводчиков."""
+    """Creates and returns a factory function for retrieving translators."""
 
     def get_translator(lang_code: str) -> GNUTranslations | NullTranslations:
         if lang_code in translator_cache:
@@ -33,7 +36,7 @@ def create_translator_factory(
         try:
             translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
         except FileNotFoundError:
-            # Возвращаем NullTranslations, если перевод не найден
+            # Return NullTranslations if a translation is not found
             translation = gettext.NullTranslations()
 
         translator_cache[lang_code] = translation
@@ -49,15 +52,15 @@ class AppProvider(Provider):
 
     @provide
     def get_settings(self) -> Settings:
-        """Загружает конфигурацию один раз при старте."""
+        """Loads the configuration once on startup."""
         return Settings.from_toml("config.toml")
 
     @provide
     def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
-        """Создает фабрику сессий, зависит от конфига."""
+        """Creates a session factory, depends on the config."""
         return create_session_factory(settings)
 
-    # Провайдеры для кэшей
+    # Cache providers
     @provide
     def get_user_settings_cache(self) -> dict[int, UserSettings]:
         """Provides a cache for user settings."""
@@ -115,8 +118,32 @@ class AppProvider(Provider):
             subscribed_users_cache=subscribed_users_cache,
         )
 
+    @provide
+    def get_teamtalk_event_handler(
+        self,
+        settings: Settings,
+        session_factory: AsyncSessionFactoryType,
+        cache: CacheService,
+        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        bot: Bot,
+        tt_bot: pytalk.TeamTalkBot,
+        connections: dict[str, TeamTalkConnection],
+    ) -> "TeamTalkEventHandler":
+        """Provides the TeamTalk event handler, which registers Pytalk callbacks."""
+        # dishka will automatically pass all dependencies here
+        return TeamTalkEventHandler(
+            settings=settings,
+            session_factory=session_factory,
+            cache=cache,
+            translator_factory=translator_factory,
+            bot=bot,
+            tt_bot=tt_bot,
+            connections=connections,
+            logger=logging.getLogger(TeamTalkEventHandler.__module__),
+        )
 
-# --- Провайдер для компонентов, живущих в рамках одного запроса (Scope.REQUEST) ---
+
+# --- Provider for components living within a single request (Scope.REQUEST) ---
 
 
 class RequestProvider(Provider):
@@ -126,13 +153,13 @@ class RequestProvider(Provider):
 
     @provide
     async def get_db_session(self, factory: AsyncSessionFactoryType) -> AsyncGenerator[AsyncSession, None]:
-        """Создает сессию БД для каждого входящего update."""
+        """Creates a DB session for each incoming update."""
         async with factory() as session:
             yield session
 
     @provide
     def get_event_user(self, event: TelegramObject) -> User | None:
-        """Извлекает пользователя из события."""
+        """Extracts the user from the event."""
         return getattr(event, "from_user", None)
 
     @provide
@@ -143,7 +170,7 @@ class RequestProvider(Provider):
         settings: Settings,
         cache: CacheService,
     ) -> UserSettings | None:
-        """Заменяет UserSettingsMiddleware. Создает или получает настройки пользователя."""
+        """Replaces UserSettingsMiddleware. Creates or retrieves user settings."""
         if not user:
             return None
 
@@ -151,13 +178,13 @@ class RequestProvider(Provider):
         if user_settings:
             return user_settings
 
-        # Логика из get_or_create_user_settings
+        # Logic from get_or_create_user_settings
         user_settings = await session.get(UserSettings, user.id)
         if not user_settings:
             user_settings = UserSettings(telegram_id=user.id, language_code=settings.general.default_lang)
             session.add(user_settings)
             await session.commit()
-            await session.refresh(user_settings)  # Обновляем, чтобы подгрузить все поля
+            await session.refresh(user_settings)  # Refresh to load all fields
 
         cache.update_user_settings(user_settings)
         return user_settings
@@ -169,7 +196,19 @@ class RequestProvider(Provider):
         settings: Settings,
         translator_cache: dict[str, GNUTranslations | NullTranslations],
     ) -> GNUTranslations | NullTranslations:
-        """Заменяет I18nMiddleware. Предоставляет объект переводчика."""
+        """Replaces I18nMiddleware. Provides a translator object."""
         lang_code = user_settings.language_code if user_settings else settings.general.default_lang
         factory = create_translator_factory(translator_cache)
         return factory(lang_code)
+
+    @provide
+    def get_tt_connection(self, connections: FromDishka[dict[str, TeamTalkConnection]]) -> TeamTalkConnection | None:
+        """Provides the active TeamTalk connection.
+
+        Currently returns the first available connection.
+        Returns None if no connections are active.
+        """
+        if not connections:
+            return None
+        # Return the first available connection
+        return next(iter(connections.values()), None)

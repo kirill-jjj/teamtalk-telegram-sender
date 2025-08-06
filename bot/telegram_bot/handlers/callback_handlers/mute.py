@@ -34,7 +34,7 @@ from bot.telegram_bot.keyboards import (
     create_manage_muted_users_keyboard,
     create_paginated_user_list_keyboard,
 )
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware, TeamTalkConnectionCheckMiddleware
+from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
 
 from ._helpers import ensure_message_context, safe_edit_text
@@ -42,7 +42,6 @@ from ._helpers import ensure_message_context, safe_edit_text
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
 mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-mute_router.callback_query.middleware(TeamTalkConnectionCheckMiddleware())
 ttstr = pytalk.instance.sdk.ttstr
 
 T = TypeVar("T")
@@ -375,10 +374,14 @@ async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[GNUTranslations],
     user_settings: FromDishka[UserSettings],
-    tt_connection: TeamTalkConnection,
+    tt_connection: FromDishka[TeamTalkConnection],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
+    if not tt_connection:
+        _ = translator.gettext
+        await callback_query.answer(_("TeamTalk connection is not active."), show_alert=True)
+        return
     await _display_all_server_accounts_list(
         callback_query, translator, user_settings, tt_connection, callback_data.page
     )
@@ -391,7 +394,7 @@ async def toggle_user_mute(
     session: FromDishka[AsyncSession],
     translator: FromDishka[GNUTranslations],
     user_settings: FromDishka[UserSettings],
-    tt_connection: TeamTalkConnection,
+    tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: ToggleMuteCallback,
     cache: FromDishka[CacheService],
 ) -> None:
