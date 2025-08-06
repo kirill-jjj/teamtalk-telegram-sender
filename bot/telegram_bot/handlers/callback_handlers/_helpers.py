@@ -4,7 +4,6 @@ from gettext import NullTranslations
 import logging
 from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
-from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,6 +17,7 @@ from bot.telegram_bot.callback_data import (
     SubscriberCallback,
 )
 from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
@@ -91,7 +91,7 @@ async def refresh_subscriber_view(
     callback_data: RefreshableViewCallback,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: "Bot",
+    bot: "EventBot",
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
@@ -208,7 +208,7 @@ async def _display_subscriber_view(
     page_context: int,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: "Bot",
+    bot: "EventBot",
 ) -> None:
     """Helper function to display the subscriber details view."""
     _ = translator.gettext

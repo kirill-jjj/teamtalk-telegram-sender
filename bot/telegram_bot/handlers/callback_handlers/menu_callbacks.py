@@ -3,7 +3,7 @@
 from gettext import NullTranslations
 import logging
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -12,6 +12,7 @@ from bot.core.enums import AdminCommand
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
+from bot.telegram_bot.types.bots import EventBot
 
 from ..admin import _show_user_buttons
 from ..user import on_help_command, on_settings_command, on_who_command
@@ -33,6 +34,7 @@ async def menu_who_handler(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection,
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     await on_who_command(
@@ -40,7 +42,7 @@ async def menu_who_handler(
         translator=translator,
         cache=cache,
         tt_connection=tt_connection,
-        bot=query.bot,
+        bot=bot,
     )
     await query.answer()
 
@@ -105,7 +107,7 @@ async def menu_subscribers_handler(
     query: CallbackQuery,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     await _show_subscriber_list_page(query.message, session, bot, translator, page=0)  # type: ignore[arg-type]
@@ -118,7 +120,7 @@ async def menu_unban_handler(
     query: CallbackQuery,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(

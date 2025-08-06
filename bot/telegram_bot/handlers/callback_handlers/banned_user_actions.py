@@ -4,7 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,6 +18,7 @@ from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,
 )
+from bot.telegram_bot.types.bots import EventBot
 
 from ._helpers import ensure_message_context, with_view_refresh
 
@@ -30,7 +31,7 @@ async def refresh_banned_list_view(
     callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: Bot,
+    bot: EventBot,
     **kwargs: object,
 ) -> None:
     """Refresher function for the banned user list view."""
@@ -66,7 +67,7 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: Bot,
+    bot: EventBot,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""

@@ -9,7 +9,6 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from aiogram import Bot
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from sqlalchemy.sql.selectable import Select
 from sqlmodel import select
@@ -25,6 +24,7 @@ from bot.telegram_bot.keyboards import (
     create_subscriber_list_keyboard,
 )
 from bot.telegram_bot.models import SubscriberInfo
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import get_display_names_for_ids
 
@@ -35,7 +35,7 @@ SUBSCRIBERS_PER_PAGE = 10
 
 async def _prepare_user_list(
     session: AsyncSession,
-    bot: Bot,
+    bot: EventBot,
     statement: Select[Any],
     extractor: Callable[[Any], tuple[int, str | None] | None],
 ) -> list[SubscriberInfo]:
@@ -74,7 +74,7 @@ async def _prepare_user_list(
 async def _show_generic_user_list(
     target: Message | CallbackQuery,
     session: AsyncSession,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     page: int,
     statement: Select[Any],
@@ -103,7 +103,7 @@ async def _show_generic_user_list(
 async def _show_subscriber_list_page(
     target: Message | CallbackQuery,
     session: AsyncSession,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     page: int = 0,
 ) -> None:
@@ -134,7 +134,7 @@ async def _show_subscriber_list_page(
 async def _show_banned_list_page(
     target: CallbackQuery | Message,
     session: AsyncSession,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     page: int,
 ) -> None:

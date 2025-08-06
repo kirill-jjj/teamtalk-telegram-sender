@@ -3,7 +3,7 @@
 from gettext import NullTranslations
 import logging
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -24,6 +24,7 @@ from bot.telegram_bot.handlers.callback_handlers._helpers import (
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )
+from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
@@ -34,7 +35,7 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: Bot,
+    bot: EventBot,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
@@ -98,7 +99,7 @@ async def delete_subscriber(
 async def _refresh_and_display_subscriber_list(
     query: CallbackQuery,
     session: AsyncSession,
-    bot: Bot,
+    bot: EventBot,
     return_page: int,
     translator: NullTranslations,
 ) -> None:
@@ -119,7 +120,7 @@ async def view_subscriber(
     callback_data: ViewSubscriberCallback,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles viewing details and actions for a specific subscriber by calling the display helper."""
     await _display_subscriber_view(

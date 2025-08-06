@@ -3,7 +3,7 @@
 from gettext import NullTranslations
 import logging
 
-from aiogram import Bot, Router
+from aiogram import Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -12,6 +12,7 @@ from bot.core.enums import SubscriberListAction
 from bot.services import user_service
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.callback_data import SubscriberListCallback
+from bot.telegram_bot.types.bots import EventBot
 
 from ._helpers import ensure_message_context
 from .list_utils import _show_subscriber_list_page
@@ -29,7 +30,7 @@ async def on_subscriber_list_callback(
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
     _ = translator.gettext
