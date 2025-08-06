@@ -243,9 +243,7 @@ async def forward_tt_message_to_telegram_admin(
         return
 
     admin_chat_id = settings.telegram.admin_chat_id
-    server_name_to_display = get_effective_server_name(
-        message.teamtalk_instance, translator, settings
-    )
+    server_name_to_display = get_effective_server_name(message.teamtalk_instance, translator, settings)
     sender_display = get_tt_user_display_name(message.user, translator)
     message_content = message.content
 

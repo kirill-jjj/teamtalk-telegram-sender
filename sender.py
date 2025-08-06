@@ -13,6 +13,7 @@ from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
 from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
+from bot.lifecycle import on_startup
 from bot.logging_setup import setup_logging
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
@@ -22,7 +23,6 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     SubscriptionCheckMiddleware,
 )
-from bot.telegram_bot.middlewares.dishka_inject import DishkaInjectMiddleware
 
 uvloop: ModuleType | None = None
 try:
@@ -53,20 +53,13 @@ class Application:
         self.logger.info("Application starting...")
 
         # Register middlewares
-        self.dp.update.middleware.register(DishkaInjectMiddleware())
-        self.dp.update.middleware.register(SubscriptionCheckMiddleware())
-        self.dp.update.middleware.register(
-            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-        )
-        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
+        # Create and set up dishka container
+        container = make_async_container(AppProvider(), RequestProvider(), AiogramProvider())
 
-        # Create and set up dishka
-        app_provider = AppProvider()
-        app_provider.dispatcher = self.dp
-        container = make_async_container(
-            app_provider, RequestProvider(), AiogramProvider()
-        )
-        setup_dishka(container, router=self.dp)
+        # Register middlewares
+        self.dp.update.middleware.register(SubscriptionCheckMiddleware())
+        self.dp.update.middleware.register(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         # Include routers
         self.dp.include_router(user_commands_router)
@@ -74,11 +67,21 @@ class Application:
         self.dp.include_router(callback_router)
         self.dp.include_router(catch_all_router)
 
+        # Register startup handler to be executed when the bot starts
+        self.dp.startup.register(on_startup)
+
+        # Set up dishka for aiogram integration
+        setup_dishka(container, router=self.dp, auto_inject=True)
+
         self.logger.info("Starting Telegram polling...")
-        # Retrieve the Bot instance directly from the container
-        bot_instance = await container.get(Bot)
-        # Start polling with the retrieved bot instance
-        await self.dp.start_polling(bot_instance)
+        try:
+            # Retrieve the Bot instance directly from the container
+            bot_instance = await container.get(Bot)
+            # Start polling with the retrieved bot instance
+            await self.dp.start_polling(bot_instance)
+        finally:
+            self.logger.info("Closing dishka container.")
+            await container.close()
 
 
 def main_cli() -> None:

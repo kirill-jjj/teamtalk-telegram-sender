@@ -18,7 +18,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.core.enums import DeeplinkAction
-from bot.core.exceptions import AdminAuthError
+from bot.core.exceptions import (
+    MissingSettingsError,
+    MissingTranslatorError,
+)
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import user_service
@@ -66,11 +69,11 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         settings = kwargs.get("settings")
         if not isinstance(settings, Settings):
-            raise AdminAuthError("Settings not found or of incorrect type in kwargs for is_tt_admin.")
+            raise MissingSettingsError()
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, GNUTranslations):
-            raise AdminAuthError("Translator not in kwargs.")
+            raise MissingTranslatorError()
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)

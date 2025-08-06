@@ -140,7 +140,7 @@ def ensure_message_context(
                 logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
             return
 
-        await func(query, translator=translator, *args, **kwargs)
+        await func(query, *args, translator=translator, **kwargs)
 
     return wrapper
 
@@ -197,9 +197,9 @@ def ensure_tt_user_exists(
         await func(
             query,
             callback_data,
+            *args,
             translator=translator,
             tt_connection=tt_connection,
-            *args,
             **kwargs,
         )
 

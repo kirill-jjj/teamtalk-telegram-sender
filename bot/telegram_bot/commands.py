@@ -77,9 +77,7 @@ async def set_telegram_commands(
                 scope=admin_scope,
                 language_code=admin_lang_code if admin_lang_code != settings.general.default_lang else None,
             )
-            logger.info(
-                "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
-            )
+            logger.info("Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code)
         except TelegramAPIError:
             logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
 

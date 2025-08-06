@@ -41,9 +41,7 @@ async def _handle_telegram_api_error(
             logger.warning("User %s blocked the bot or is deactivated. Deleting all user data...", chat_id)
             try:
                 async with session_factory() as session:
-                    success = await user_service.delete_user_profile(
-                        session, chat_id, cache=cache
-                    )
+                    success = await user_service.delete_user_profile(session, chat_id, cache=cache)
                 if success:
                     logger.info("Successfully deleted all data for blocked/deactivated user %s.", chat_id)
                 else:
@@ -57,9 +55,7 @@ async def _handle_telegram_api_error(
             logger.warning("Chat not found for TG ID %s. Deleting all user data. Error: %s", chat_id, error)
             try:
                 async with session_factory() as session:
-                    delete_success = await user_service.delete_user_profile(
-                        session, chat_id, cache=cache
-                    )
+                    delete_success = await user_service.delete_user_profile(session, chat_id, cache=cache)
                 if delete_success:
                     logger.info("Successfully deleted all data for TG ID %s due to chat not found.", chat_id)
                 else:

@@ -58,9 +58,7 @@ async def _show_user_buttons(
 
     if not online_users:
         await message.reply(
-            _("No users found online on server {server_host}.").format(
-                server_host=tt_connection.server_info.host
-            )
+            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host)
         )
         return
 
@@ -108,9 +106,7 @@ async def on_subscribers_command(
     bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(
-        message, cast(SQLModelAsyncSession, session), bot, translator, page=0
-    )
+    await _show_subscriber_list_page(message, cast(SQLModelAsyncSession, session), bot, translator, page=0)
 
 
 @admin_router.message(Command("unban"), IsAdmin())

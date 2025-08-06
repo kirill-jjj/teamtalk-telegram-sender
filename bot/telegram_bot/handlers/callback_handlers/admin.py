@@ -59,10 +59,12 @@ async def _apply_user_moderation(
     admin_tg_id: int,
     server_host: str,
 ) -> tuple[bool, str]:
-    """Executes a moderation action on a TeamTalk user."""
+    """Executes a moderation action on a TeamTalk user, returning the result."""
     _ = translator.gettext
     user_nickname = get_tt_user_display_name(user_to_act_on, translator)
     quoted_nickname = escape(user_nickname)
+    success = False
+    message = ""
 
     try:
         if action == AdminCommand.KICK:
@@ -74,10 +76,11 @@ async def _apply_user_moderation(
                 user_to_act_on.id,
                 server_host,
             )
-            return True, _("User {user_nickname} kicked from server {server_host}.").format(
+            success = True
+            message = _("User {user_nickname} kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
-        if action == AdminCommand.BAN:
+        elif action == AdminCommand.BAN:
             user_to_act_on.ban(from_server=True)
             user_to_act_on.kick(from_server=True)
             logger.info(
@@ -87,22 +90,27 @@ async def _apply_user_moderation(
                 user_to_act_on.id,
                 server_host,
             )
-            return True, _("User {user_nickname} banned and kicked from server {server_host}.").format(
+            success = True
+            message = _("User {user_nickname} banned and kicked from server {server_host}.").format(
                 user_nickname=quoted_nickname, server_host=server_host
             )
-        logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
-        return False, _("Unknown action.")
+        else:
+            logger.warning("Unknown action '%s' passed to _execute_tt_user_action for server %s.", action, server_host)
+            success = False
+            message = _("Unknown action.")
 
     except PytalkPermissionError as e:
-        return _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
+        success, message = _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
     except PytalkException as e:
-        return _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
+        success, message = _handle_pytalk_error(e, action, user_to_act_on.id, server_host, translator)
     except (ValueError, TypeError, AttributeError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        return _handle_pytalk_error(e, action, user_id_log, server_host, translator)
+        success, message = _handle_pytalk_error(e, action, user_id_log, server_host, translator)
     except (TimeoutError, OSError) as e:
         user_id_log = user_to_act_on.id if hasattr(user_to_act_on, "id") else "UNKNOWN"
-        return _handle_pytalk_error(e, action, user_id_log, server_host, translator, is_critical=True)
+        success, message = _handle_pytalk_error(e, action, user_id_log, server_host, translator, is_critical=True)
+
+    return success, message
 
 
 @admin_actions_router.callback_query(AdminCallback.filter(F.action.in_({AdminCommand.KICK, AdminCommand.BAN})))
