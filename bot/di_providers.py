@@ -6,9 +6,6 @@ from collections.abc import AsyncGenerator, Callable
 import gettext
 from gettext import GNUTranslations, NullTranslations
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
 from dishka import Provider, Scope, provide
 import pytalk
@@ -59,12 +56,6 @@ class AppProvider(Provider):
     def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
         """Создает фабрику сессий, зависит от конфига."""
         return create_session_factory(settings)
-
-    @provide
-    def get_bot_event(self, settings: Settings) -> Bot:
-        """Создает основной экземпляр бота."""
-        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return Bot(token=settings.telegram.event_token, default=default_props)
 
     # Провайдеры для кэшей
     @provide
