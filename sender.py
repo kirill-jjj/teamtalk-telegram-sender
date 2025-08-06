@@ -75,9 +75,10 @@ class Application:
         self.dp.include_router(catch_all_router)
 
         self.logger.info("Starting Telegram polling...")
-        async with container:
-            bot = await container.get(Bot)
-            await self.dp.start_polling(bot)
+        # Retrieve the Bot instance directly from the container
+        bot_instance = await container.get(Bot)
+        # Start polling with the retrieved bot instance
+        await self.dp.start_polling(bot_instance)
 
 
 def main_cli() -> None:
