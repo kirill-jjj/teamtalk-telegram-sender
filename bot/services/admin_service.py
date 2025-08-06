@@ -1,7 +1,7 @@
 """Service layer for administrator-related operations."""
 
 from collections.abc import Awaitable, Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any, Literal
 

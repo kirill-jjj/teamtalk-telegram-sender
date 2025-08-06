@@ -80,7 +80,7 @@ async def _show_user_buttons(
 async def on_kick_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
     if not tt_connection:
@@ -94,7 +94,7 @@ async def on_kick_command(
 async def on_ban_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
     if not tt_connection:

@@ -59,7 +59,7 @@ async def on_who_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
     bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""

@@ -1,7 +1,7 @@
 """Keyboards for admin-facing functions."""
 
 from collections.abc import Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from typing import Any
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup

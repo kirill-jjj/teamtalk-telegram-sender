@@ -1,6 +1,6 @@
 """General utility functions for the bot's core logic."""
 
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 
 logger = logging.getLogger(__name__)

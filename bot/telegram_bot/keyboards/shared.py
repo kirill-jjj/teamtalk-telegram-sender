@@ -1,7 +1,7 @@
 """Shared keyboard helper functions."""
 
 from collections.abc import Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from typing import Any, Protocol
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup

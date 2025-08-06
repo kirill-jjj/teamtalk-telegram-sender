@@ -1,7 +1,6 @@
 """Service layer for user-related operations, like profile deletion."""
 
-import gettext
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from html import escape
 import logging
 

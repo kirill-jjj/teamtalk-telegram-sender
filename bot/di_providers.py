@@ -192,7 +192,7 @@ class RequestProvider(Provider):
         factory = create_translator_factory(translator_cache)
         return factory(lang_code)
 
-    @provide
+    @provide(provides=TeamTalkConnection | None)
     def get_tt_connection(self, connections: FromDishka[dict[str, TeamTalkConnection]]) -> TeamTalkConnection | None:
         """Provides the active TeamTalk connection.
 

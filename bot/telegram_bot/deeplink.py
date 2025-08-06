@@ -1,6 +1,6 @@
 """Handles deeplink processing for Telegram bot commands like /start <token>."""
 
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 
 from aiogram.types import Message

@@ -1,6 +1,6 @@
 """Keyboards for user-facing settings menus."""
 
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from typing import cast
 
 from aiogram.types import InlineKeyboardMarkup

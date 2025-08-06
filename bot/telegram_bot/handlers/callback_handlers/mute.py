@@ -374,7 +374,7 @@ async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
-    tt_connection: FromDishka[TeamTalkConnection],
+    tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
