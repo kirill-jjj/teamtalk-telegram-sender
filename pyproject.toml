@@ -143,7 +143,8 @@ dev = [
     "mypy",
     "ruff",
     "types-toml",
-    "pydantic" # Add pydantic to dev dependencies for mypy plugin
+    "pydantic", # Add pydantic to dev dependencies for mypy plugin
+    "dishka[aiogram]~=1.6"
 ]
 
 [tool.mypy]

@@ -835,6 +835,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "dishka" },
     { name = "mypy" },
     { name = "pydantic" },
     { name = "pytest" },
@@ -852,6 +853,7 @@ requires-dist = [
     { name = "babel", specifier = "~=2.15" },
     { name = "cachetools", specifier = "~=6.1" },
     { name = "dishka", extras = ["aiogram"], specifier = "~=1.6" },
+    { name = "dishka", extras = ["aiogram"], marker = "extra == 'dev'", specifier = "~=1.6" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "py-talk-ex", specifier = "~=1.6" },
     { name = "pydantic", specifier = "~=2.11" },

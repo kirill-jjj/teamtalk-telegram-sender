@@ -17,7 +17,6 @@ from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.models import UserSettings
-from bot.services import admin_service
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import handle_command_errors, send_long_tt_reply
 
@@ -126,11 +125,11 @@ class AdminActionConfig(TypedDict):
 
 ACTION_MAP: dict[str, AdminActionConfig] = {
     "add": {
-        "service_func": admin_service.add_admin,
+        "service_func": "admin_service.add_admin",
         "success_msg": ("Successfully added {count} admin.", "Successfully added {count} admins."),
     },
     "remove": {
-        "service_func": admin_service.remove_admin,
+        "service_func": "admin_service.remove_admin",
         "success_msg": ("Successfully removed {count} admin.", "Successfully removed {count} admins."),
     },
 }
@@ -161,7 +160,10 @@ async def _manage_admin_ids(
 
     success_count = 0
     failed_action_ids = []
-    service_func = action_config["service_func"]
+
+    import importlib
+    module_name, func_name = action_config["service_func"].rsplit(".", 1)
+    service_func = getattr(importlib.import_module(module_name), func_name)
 
     for telegram_id in args.valid_ids:
         user_settings = await services.get_or_create_user_settings(telegram_id, session)
