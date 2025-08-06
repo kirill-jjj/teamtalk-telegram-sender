@@ -6,7 +6,7 @@ import logging
 import traceback
 from types import ModuleType  # For uvloop typing
 
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
@@ -23,6 +23,7 @@ from bot.telegram_bot.middlewares import (
     ActiveTeamTalkConnectionMiddleware,
     SubscriptionCheckMiddleware,
 )
+from bot.telegram_bot.types.bots import EventBot
 
 uvloop: ModuleType | None = None
 try:
@@ -77,8 +78,8 @@ class Application:
 
         self.logger.info("Starting Telegram polling...")
         try:
-            # Retrieve the Bot instance directly from the container
-            bot_instance = await container.get(Bot)
+            # Retrieve the EventBot instance directly from the container
+            bot_instance = await container.get(EventBot)
             # Start polling with the retrieved bot instance
             await self.dp.start_polling(bot_instance)
         finally:
