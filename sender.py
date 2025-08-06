@@ -74,6 +74,10 @@ class Application:
         self.dp.include_router(callback_router)
         self.dp.include_router(catch_all_router)
 
+        # Register startup handler
+        on_startup = await container.get(AppProvider.on_startup)
+        self.dp.startup.register(on_startup)
+
         self.logger.info("Starting Telegram polling...")
         try:
             bot = await container.get(Bot)
