@@ -2,13 +2,11 @@
 
 from gettext import NullTranslations
 import logging
-from typing import cast
 
 from aiogram import Bot, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import SubscriberListAction
 from bot.services import user_service
@@ -44,9 +42,7 @@ async def on_subscriber_list_callback(
             return
 
         telegram_id_to_delete = callback_data.telegram_id
-        success = await user_service.delete_user_profile(
-            cast(SQLModelAsyncSession, session), telegram_id_to_delete, cache=cache
-        )
+        success = await user_service.delete_user_profile(session, telegram_id_to_delete, cache=cache)
 
         if success:
             await query.answer(
@@ -58,9 +54,7 @@ async def on_subscriber_list_callback(
                 show_alert=True,
             )
 
-        await _show_subscriber_list_page(
-            query, cast(SQLModelAsyncSession, session), bot, translator, page=page_from_callback
-        )
+        await _show_subscriber_list_page(query, session, bot, translator, page=page_from_callback)
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -68,9 +62,7 @@ async def on_subscriber_list_callback(
             await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
-        await _show_subscriber_list_page(
-            query, cast(SQLModelAsyncSession, session), bot, translator, page=requested_page
-        )
+        await _show_subscriber_list_page(query, session, bot, translator, page=requested_page)
     else:
         logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

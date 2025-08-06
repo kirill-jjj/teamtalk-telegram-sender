@@ -3,7 +3,7 @@
 import logging
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.models import UserSettings
 

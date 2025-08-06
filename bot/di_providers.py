@@ -13,7 +13,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
 from dishka import FromDishka, Provider, Scope, provide
 import pytalk
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages

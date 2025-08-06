@@ -2,13 +2,11 @@
 
 from gettext import NullTranslations
 import logging
-from typing import cast
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import AdminCommand
 from bot.services.cache_service import CacheService
@@ -125,7 +123,7 @@ async def menu_unban_handler(
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
         target=query.message,  # type: ignore[arg-type]
-        session=cast(SQLModelAsyncSession, session),
+        session=session,
         bot=bot,
         page=0,
         translator=translator,

@@ -2,14 +2,13 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated, cast
+from typing import Annotated
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -112,7 +111,7 @@ async def on_subscribers_command(
     bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(message, cast(SQLModelAsyncSession, session), bot, translator, page=0)
+    await _show_subscriber_list_page(message, session, bot, translator, page=0)
 
 
 @admin_router.message(Command("unban"), IsAdmin())
@@ -125,7 +124,7 @@ async def on_unban_command(
     """Handles the /unban command for administrators."""
     await _show_banned_list_page(
         target=message,
-        session=cast(SQLModelAsyncSession, session),
+        session=session,
         bot=bot,
         page=0,
         translator=translator,

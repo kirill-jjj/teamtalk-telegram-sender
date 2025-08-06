@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated, cast
+from typing import Annotated
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramAPIError
@@ -10,8 +10,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.utils import build_help_message
 from bot.models import UserSettings
@@ -57,7 +56,7 @@ async def on_start_with_payload(
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    await handle_deeplink(message, token, cast(SQLModelAsyncSession, session), translator, user_settings, cache)
+    await handle_deeplink(message, token, session, translator, user_settings, cache)
 
 
 @user_commands_router.message(Command("who"))
