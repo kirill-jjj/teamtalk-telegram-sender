@@ -6,11 +6,16 @@ import logging
 import traceback
 from types import ModuleType  # For uvloop typing
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
+from dishka.integrations.aiogram import setup_dishka
 
 from bot.config import Settings
+from bot.di_providers import AppProvider, RequestProvider
 from bot.logging_setup import setup_logging
-from bot.telegram_bot.setup import create_telegram_dispatcher, setup_telegram_dispatcher
+from bot.telegram_bot.setup import (
+    create_telegram_dispatcher,
+    setup_bot_lifecycle_events,
+)
 
 uvloop: ModuleType | None = None
 try:
@@ -41,12 +46,18 @@ class Application:
         self.logger.info("Application starting...")
 
         self.dp = create_telegram_dispatcher()
+        app_provider = AppProvider()
+        app_provider.dispatcher = self.dp
 
         # This function sets up dishka and attaches the container to the dispatcher
-        setup_telegram_dispatcher(dp=self.dp)
+        setup_dishka(
+            container=make_async_container(app_provider, RequestProvider()),
+            router=self.dp,
+        )
 
         # Retrieve the container that dishka created and attached
         container = self.dp["dishka_container"]
+        setup_bot_lifecycle_events(dp=self.dp, container=container)
 
         self.logger.info("Starting Telegram polling...")
         try:
