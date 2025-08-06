@@ -16,6 +16,8 @@ from bot.telegram_bot.setup import (
     create_telegram_dispatcher,
     setup_bot_lifecycle_events,
 )
+from dishka import make_async_container
+
 
 uvloop: ModuleType | None = None
 try:
