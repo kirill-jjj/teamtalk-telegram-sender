@@ -7,7 +7,7 @@ import gettext
 from gettext import GNUTranslations, NullTranslations
 import logging
 
-from aiogram import Bot
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
@@ -67,6 +67,11 @@ class AppProvider(Provider):
         """Creates the main Bot instance for handling events."""
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
         return Bot(token=settings.telegram.event_token, default=default_props)
+
+    @provide
+    def get_dispatcher(self) -> Dispatcher:
+        """Creates the main Dispatcher instance."""
+        return Dispatcher()
 
     # Cache providers
     @provide

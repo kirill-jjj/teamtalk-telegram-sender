@@ -46,7 +46,8 @@ class Application:
         """
         self.app_config = app_config_instance
         self.logger = setup_logging()
-        self.dp = Dispatcher()
+        # self.dp will be provided by dishka
+        self.dp: Dispatcher | None = None
 
     async def run(self) -> None:
         """Sets up and runs the main application event loops."""
@@ -54,6 +55,7 @@ class Application:
 
         # Create and set up dishka container
         container = make_async_container(AppProvider(), RequestProvider(), AiogramProvider())
+        self.dp = await container.get(Dispatcher)
         self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
