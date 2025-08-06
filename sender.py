@@ -7,7 +7,7 @@ import traceback
 from types import ModuleType  # For uvloop typing
 
 from aiogram import Bot
-from dishka.integrations.aiogram import setup_dishka
+from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
 from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
@@ -50,7 +50,9 @@ class Application:
 
         # This function sets up dishka and attaches the container to the dispatcher
         setup_dishka(
-            container=make_async_container(app_provider, RequestProvider()),
+            container=make_async_container(
+                app_provider, RequestProvider(), AiogramProvider()
+            ),
             router=self.dp,
         )
 
