@@ -112,15 +112,10 @@ async def _get_recipients_for_notification(
         # The result now includes the language code
         recipients_data = cast(list[tuple[int, bool, bool, str | None]], result.all())
 
-    # NOON filtering is now a separate step before returning
-    return await notification_service.filter_recipients_for_noon(
-        recipients_data=recipients_data,
-        event_user=tt_user,
-        tt_instance=tt_instance,
-        online_users_cache=online_users_cache,
-        cache=cache,
-        settings=settings,
-    )
+    # We no longer filter here. Instead, we pass all recipients to the sender,
+    # which will decide whether to send a notification silently based on NOON settings.
+    # The data is transformed from (id, noon_enabled, noon_confirmed, lang) to (id, lang).
+    return [(tg_id, lang_code) for tg_id, _, _, lang_code in recipients_data]
 
 
 def _generate_join_leave_notification_text(
@@ -280,12 +275,7 @@ async def _get_recipients_for_notification(
         # The result now includes the language code
         recipients_data = cast(list[tuple[int, bool, bool, str | None]], result.all())
 
-    # NOON filtering is now a separate step before returning
-    return await notification_service.filter_recipients_for_noon(
-        recipients_data=recipients_data,
-        event_user=tt_user,
-        tt_instance=tt_instance,
-        online_users_cache=online_users_cache,
-        cache=cache,
-        settings=settings,
-    )
+    # We no longer filter here. Instead, we pass all recipients to the sender,
+    # which will decide whether to send a notification silently based on NOON settings.
+    # The data is transformed from (id, noon_enabled, noon_confirmed, lang) to (id, lang).
+    return [(tg_id, lang_code) for tg_id, _, _, lang_code in recipients_data]
