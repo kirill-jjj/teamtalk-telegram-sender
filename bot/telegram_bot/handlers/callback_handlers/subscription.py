@@ -40,10 +40,15 @@ subscription_router = Router(name="callback_handlers.subscription")
 async def show_subscriptions_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("show_subscriptions_menu called for an event without a user.")
+        await callback_query.answer(_("An error occurred. User data not found."), show_alert=True)
+        return
+
     # Callback answering handled by decorator or safe_edit_text.
 
     # Decorator ensures callback_query.message is a Message object.
@@ -67,12 +72,17 @@ async def set_subscription_setting(
     callback_query: CallbackQuery,
     session: FromDishka[SQLModelAsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings: FromDishka[UserSettings | None],
     callback_data: SubscriptionCallback,
     cache: FromDishka[CacheService],
 ) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
+    if not user_settings:
+        logger.warning("set_subscription_setting called for an event without a user.")
+        await callback_query.answer(_("An error occurred. User data not found."), show_alert=True)
+        return
+
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
