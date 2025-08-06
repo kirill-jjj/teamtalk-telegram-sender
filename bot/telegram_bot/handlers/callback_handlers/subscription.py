@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import gettext
+from gettext import NullTranslations
 import logging
 
 from aiogram import F, Router
@@ -39,9 +39,8 @@ subscription_router = Router(name="callback_handlers.subscription")
 @ensure_message_context
 async def show_subscriptions_menu(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    _callback_data: SettingsCallback | None = None,  # Prefixed
+    translator: FromDishka[NullTranslations],
+    user_settings: FromDishka[UserSettings],
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
@@ -66,9 +65,9 @@ async def show_subscriptions_menu(
 @ensure_message_context
 async def set_subscription_setting(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession,  # Changed type hint
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
+    session: FromDishka[SQLModelAsyncSession],
+    translator: FromDishka[NullTranslations],
+    user_settings: FromDishka[UserSettings],
     callback_data: SubscriptionCallback,
     cache: FromDishka[CacheService],
 ) -> None:
