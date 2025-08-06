@@ -230,13 +230,11 @@ class RequestProvider(Provider):
     @provide
     async def get_user_settings(
         self,
-        user: User | None,
+        user: User,
         user_settings_service: UserSettingsService,
         settings: Settings,
-    ) -> UserSettings | None:
+    ) -> UserSettings:
         """Provides UserSettings by delegating to the UserSettingsService."""
-        if not user:
-            return None
         return await user_settings_service.get_or_create(
             user.id, settings.general.default_lang
         )
