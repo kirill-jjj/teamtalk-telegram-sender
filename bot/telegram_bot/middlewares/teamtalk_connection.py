@@ -10,7 +10,6 @@ from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-from dishka.integrations.aiogram import FromDishka
 
 from bot.teamtalk_bot.connection import TeamTalkConnection
 

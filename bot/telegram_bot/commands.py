@@ -1,7 +1,7 @@
 """Functions for setting and managing Telegram bot commands."""
 
 from collections.abc import Callable
-from gettext import GNUTranslations
+from gettext import GNUTranslations, NullTranslations
 import logging
 
 from aiogram import Bot
@@ -39,7 +39,7 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
 async def set_telegram_commands(
     bot: Bot,
     cache: CacheService,
-    translator_factory: Callable[[str], GNUTranslations],
+    translator_factory: Callable[[str], GNUTranslations | NullTranslations],
     available_languages: list[LanguageInfo],
     settings: Settings,
 ) -> None:

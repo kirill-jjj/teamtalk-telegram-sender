@@ -7,7 +7,6 @@ from typing import Any
 from aiogram import BaseMiddleware
 from aiogram.types import Message, TelegramObject
 from aiogram.types import User as AiogramUser
-from dishka.integrations.aiogram import FromDishka
 
 from bot.services.cache_service import CacheService
 

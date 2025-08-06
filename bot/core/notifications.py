@@ -4,33 +4,26 @@ from collections.abc import Callable
 import datetime as dt
 from datetime import datetime, timedelta
 import gettext
+from gettext import GNUTranslations, NullTranslations
 from html import escape
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
+from aiogram import Bot
 import pytalk
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy import and_, or_
 from sqlmodel import select
 
+from bot.config import Settings
 from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
+from bot.database.engine import AsyncSessionFactoryType
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services import notification_service
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.utils import broadcast_to_users
-
-# TYPE_CHECKING block for imports ONLY used for type hinting that would cause circular deps
-if TYPE_CHECKING:
-    from sqlalchemy.orm import sessionmaker  # For DbSessionFactory alias if used as a type
-
-    # Using a more specific alias to avoid conflict if DbSessionFactory is used elsewhere
-    from bot.config import Settings
-    from bot.database.engine import AsyncSessionFactoryType as DbEngineSessionFactoryType
-    from bot.services_container import Services
-
-    DbSessionFactory = sessionmaker  # Alias for SessionFactory from sqlalchemy.orm for type hints in this module
-
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -68,10 +61,14 @@ def _is_user_globally_ignored(username: str, app_cfg: "Settings") -> bool:
 async def _get_recipients_for_notification(
     username_to_check: str,
     event_type: str,
-    session_factory: "DbEngineSessionFactoryType",
-    services: "Services",
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
+    settings: Settings,
+    tt_user: TeamTalkUser,
+    tt_instance: TeamTalkInstance,
+    online_users_cache: dict[int, "pytalk.user.User"],
 ) -> list[tuple[int, str | None]]:
-    subscriber_ids = list(services.cache.get_all_subscriber_ids())
+    subscriber_ids = list(cache.get_all_subscriber_ids())
     if not subscriber_ids:
         return []
 
@@ -118,10 +115,11 @@ async def _get_recipients_for_notification(
     # NOON filtering is now a separate step before returning
     return await notification_service.filter_recipients_for_noon(
         recipients_data=recipients_data,
-        event_user=services.tt_user,  # type: ignore
-        tt_instance=services.tt_instance,  # type: ignore
-        online_users_cache=services.online_users_cache,  # type: ignore
-        services=services,
+        event_user=tt_user,
+        tt_instance=tt_instance,
+        online_users_cache=online_users_cache,
+        cache=cache,
+        settings=settings,
     )
 
 
@@ -150,23 +148,15 @@ async def send_join_leave_notification(
     tt_instance: TeamTalkInstance,
     login_complete_time: datetime | None,
     online_users_cache_for_instance: dict[int, "pytalk.user.User"],
-    services: "Services",
+    settings: Settings,
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
+    translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+    bot: Bot,
 ) -> None:
-    """Core logic for sending join/leave notifications.
-
-    This function determines who should receive a notification based on their settings,
-    the event type (join/leave), and the NOON (Not On Online) feature.
-
-    Args:
-        event_type: The type of event ("join" or "leave").
-        tt_user: The TeamTalkUser object for the user who triggered the event.
-        tt_instance: The TeamTalkInstance where the event occurred.
-        login_complete_time: Timestamp when the bot's login to this instance was finalized.
-        online_users_cache_for_instance: Cache of online users for the specific TT instance.
-        services: The application's services container.
-    """
-    default_lang_for_markup_and_log = services.config.general.default_lang
-    default_lang_translator_obj = services.get_translator(default_lang_for_markup_and_log)
+    """Core logic for sending join/leave notifications."""
+    default_lang_for_markup_and_log = settings.general.default_lang
+    default_lang_translator_obj = translator_factory(default_lang_for_markup_and_log)
     user_nickname = get_tt_user_display_name(tt_user, default_lang_translator_obj)
 
     user_username = ttstr(tt_user.username)
@@ -185,7 +175,7 @@ async def send_join_leave_notification(
     if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
         return
 
-    if _is_user_globally_ignored(user_username, services.config):
+    if _is_user_globally_ignored(user_username, settings):
         logger.debug(
             "User %s is globally ignored on server %s. Skipping %s notification.",
             user_username,
@@ -194,16 +184,15 @@ async def send_join_leave_notification(
         )
         return
 
-    # Pass all necessary context for NOON filtering down to the core recipient getter
-    services.tt_user = tt_user
-    services.tt_instance = tt_instance
-    services.online_users_cache = online_users_cache_for_instance
-
     final_recipients = await _get_recipients_for_notification(
         username_to_check=user_username,
         event_type=event_type,
-        session_factory=services.session_factory,
-        services=services,
+        session_factory=session_factory,
+        cache=cache,
+        settings=settings,
+        tt_user=tt_user,
+        tt_instance=tt_instance,
+        online_users_cache=online_users_cache_for_instance,
     )
 
     if not final_recipients:
@@ -223,14 +212,16 @@ async def send_join_leave_notification(
         len(final_recipients),
     )
 
-    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, services.config)
+    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, settings)
     # The list of recipients now includes language codes, so we pass it directly
     await broadcast_to_users(
-        bot_instance_to_use=services.bot_event,
+        bot_instance_to_use=bot,
         recipients_with_lang=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
-            tt_user, server_name, event_type, lang_code, get_translator_func=services.get_translator
+            tt_user, server_name, event_type, lang_code, get_translator_func=translator_factory
         ),
-        services=services,
+        settings=settings,
+        cache=cache,
+        session_factory=session_factory,
         online_users_cache_for_instance=online_users_cache_for_instance,
     )

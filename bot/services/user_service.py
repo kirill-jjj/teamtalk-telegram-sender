@@ -10,6 +10,7 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.config import Settings
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
@@ -430,3 +431,28 @@ async def toggle_mute_status_for_tt_user(
         message_args={"username": tt_username_to_toggle},
         user_settings=user_settings,
     )
+
+
+async def get_or_create_user_settings(
+    session: AsyncSession,
+    cache: CacheService,
+    settings: Settings,
+    telegram_id: int,
+) -> UserSettings:
+    """Gets user settings from cache or DB, creates if not found."""
+    user_settings = cache.get_user_settings(telegram_id)
+    if user_settings:
+        return user_settings
+
+    user_settings = await session.get(UserSettings, telegram_id)
+    if not user_settings:
+        user_settings = UserSettings(
+            telegram_id=telegram_id,
+            language_code=settings.general.default_lang,
+        )
+        session.add(user_settings)
+        await session.commit()
+        await session.refresh(user_settings)
+
+    cache.update_user_settings(user_settings)
+    return user_settings

@@ -293,7 +293,7 @@ async def show_manage_muted_menu(
     full_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_text)
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
         logger_instance=logger,
@@ -339,7 +339,7 @@ async def set_mute_mode(
     updated_keyboard_markup = await create_manage_muted_users_keyboard(translator, current_settings_for_keyboard)
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),
         logger_instance=logger,

@@ -2,26 +2,29 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 import functools
 import gettext
+from gettext import GNUTranslations
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
+from aiogram import Bot
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.config import Settings
 from bot.core.enums import DeeplinkAction
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
-from bot.models import UserSettings
+from bot.services import user_service
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.utils import handle_command_errors, send_long_tt_reply
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
@@ -59,14 +62,9 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
 
     @functools.wraps(func)
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
-        services_from_kwargs = kwargs.get("services")
-        # Check type by name to avoid circular import issues with Services
-        if not hasattr(services_from_kwargs, "__class__") or services_from_kwargs.__class__.__name__ != "Services":
-            # This check ensures services_from_kwargs is indeed a Services instance or raises error
-            # Define the error message as a constant or a local variable
-            error_msg = "Services not found or of incorrect type in kwargs for is_tt_admin."
-            raise TypeError(error_msg)
-        services: Services = services_from_kwargs  # type: ignore[assignment] # Trusting the dynamic check
+        settings = kwargs.get("settings")
+        if not isinstance(settings, Settings):
+            raise TypeError("Settings not found or of incorrect type in kwargs for is_tt_admin.")
 
         translator = kwargs.get("translator")
         if not translator or not isinstance(translator, gettext.GNUTranslations):
@@ -74,7 +72,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
-        admin_username = services.config.general.admin_username
+        admin_username = settings.general.admin_username
 
         if not admin_username or username != admin_username:
             logger.warning("Unauthorized admin command attempt by TT user %s for function %s.", username, func.__name__)
@@ -112,14 +110,14 @@ def _create_admin_action_report(
         error_list_str = "\n".join(f"- {error}" for error in errors)
         reply_parts.append(f"{header}\n{error_list_str}")
     if not reply_parts:
-        return _("No action was performed. Please check the IDs provided.")
+        return str(_("No action was performed. Please check the IDs provided."))
     return "\n\n".join(reply_parts)
 
 
 class AdminActionConfig(TypedDict):
     """Configuration for a specific admin action."""
 
-    service_func: Callable[[AsyncSession, int, UserSettings, Services], Awaitable[bool]]
+    service_func: str
     success_msg: tuple[str, str]
 
 
@@ -139,13 +137,15 @@ async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: str | None,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     action_type: str,  # "add" or "remove"
     prompt_msg_key: str,
     error_msg_key: str,
     invalid_id_msg_key: str,
     header_msg_key: str,
-    services: Services,
+    settings: Settings,
+    cache: CacheService,
+    bot: Bot,
 ) -> None:
     _ = translator.gettext
     action_config = ACTION_MAP.get(action_type)
@@ -166,9 +166,9 @@ async def _manage_admin_ids(
     service_func = getattr(importlib.import_module(module_name), func_name)
 
     for telegram_id in args.valid_ids:
-        user_settings = await services.get_or_create_user_settings(telegram_id, session)
+        user_settings = await user_service.get_or_create_user_settings(session, cache, settings, telegram_id)
         if not user_settings.language_code:
-            user_settings.language_code = services.config.general.default_lang
+            user_settings.language_code = settings.general.default_lang
 
         logger.info(
             "Attempting to %s admin for TG ID %s by TT admin %s.",
@@ -176,7 +176,14 @@ async def _manage_admin_ids(
             telegram_id,
             ttstr(tt_message.user.username),
         )
-        action_successful = await service_func(session, telegram_id, user_settings, services)
+        action_successful = await service_func(
+            session,
+            telegram_id,
+            user_settings,
+            cache,
+            bot,
+            translator,
+        )
 
         if action_successful:
             success_count += 1
@@ -218,7 +225,8 @@ async def reply_with_deeplink(
     success_log_message: str,
     reply_text_source: str,
     _error_reply_source: str,  # Not directly used, but kept for signature consistency if refactoring
-    services: Services,
+    settings: Settings,
+    bot: Bot,
     payload: str | None = None,
 ) -> None:
     """Generates a deeplink and replies to the user with it."""
@@ -228,11 +236,11 @@ async def reply_with_deeplink(
     token = await create_deeplink(
         session,
         action,
-        services.config.operational_parameters.deeplink_ttl_seconds,
+        settings.operational_parameters.deeplink_ttl_seconds,
         payload=payload,
         expected_telegram_id=None,
     )
-    bot_info = await services.bot_event.get_me()
+    bot_info = await bot.get_me()
     deeplink_url = f"https://t.me/{bot_info.username}?start={token}"
     logger.info("%s Token: %s, User: %s", success_log_message, token, sender_tt_username)
     if "{deeplink_url}" in reply_text_source:
@@ -245,8 +253,9 @@ async def reply_with_deeplink(
 async def on_subscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: Services,
+    translator: GNUTranslations,
+    settings: Settings,
+    bot: Bot,
     _connection: TeamTalkConnection,
 ) -> None:
     """Handles the /sub command from a TeamTalk user."""
@@ -263,15 +272,17 @@ async def on_subscribe(
             "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
         _error_reply_source=_("An error occurred. Please try again later."),
-        services=services,
+        settings=settings,
+        bot=bot,
     )
 
 
 async def on_unsubscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: Services,
+    translator: GNUTranslations,
+    settings: Settings,
+    bot: Bot,
     _connection: TeamTalkConnection,
 ) -> None:
     """Handles the /unsub command from a TeamTalk user."""
@@ -287,16 +298,19 @@ async def on_unsubscribe(
             "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
         ),
         _error_reply_source=_("An error occurred. Please try again later."),
-        services=services,
+        settings=settings,
+        bot=bot,
     )
 
 
 @is_tt_admin
 async def on_add_admin(
     tt_message: TeamTalkMessage,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     session: AsyncSession,
-    services: Services,  # will be in kwargs for decorator
+    settings: Settings,
+    cache: CacheService,
+    bot: Bot,
     _connection: TeamTalkConnection,
     *,
     args_str: str | None,
@@ -317,16 +331,20 @@ async def on_add_admin(
         ),  # This message might need adjustment as service layer handles "already admin"
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        services=services,
+        settings=settings,
+        cache=cache,
+        bot=bot,
     )
 
 
 @is_tt_admin
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     session: AsyncSession,
-    services: Services,
+    settings: Settings,
+    cache: CacheService,
+    bot: Bot,
     _connection: TeamTalkConnection,
     *,
     args_str: str | None,
@@ -347,14 +365,16 @@ async def on_remove_admin(
         ),  # This message might need adjustment
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric Telegram ID."),
         header_msg_key=_("Action Results:"),
-        services=services,
+        settings=settings,
+        cache=cache,
+        bot=bot,
     )
 
 
 async def on_help(
     tt_message: TeamTalkMessage,
-    translator: gettext.GNUTranslations,
-    services: Services,
+    translator: GNUTranslations,
+    settings: Settings,
     _connection: TeamTalkConnection,
 ) -> None:
     """Handles the /help command from a TeamTalk user."""
@@ -363,7 +383,7 @@ async def on_help(
     tt_username_str = None
     if tt_message.user and hasattr(tt_message.user, "username"):
         tt_username_str = ttstr(tt_message.user.username)
-    admin_username_from_config = services.config.general.admin_username
+    admin_username_from_config = settings.general.admin_username
 
     if tt_username_str and admin_username_from_config and tt_username_str == admin_username_from_config:
         is_main_tt_admin = True

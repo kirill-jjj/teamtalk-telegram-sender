@@ -12,6 +12,7 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
+from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.utils.formatting import Bold, Text
 import pytalk
@@ -26,7 +27,7 @@ from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
 from bot.telegram_bot.utils import send_telegram_message
 
 if TYPE_CHECKING:
-    from bot.services_container import Services  # Forward reference for Services
+    pass
 
 logger = logging.getLogger(__name__)
 ttstr = sdk.ttstr
@@ -231,20 +232,21 @@ async def send_long_tt_reply(
 
 async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
-    services: Services,
+    settings: Settings,
+    bot: Bot,
     translator: gettext.GNUTranslations | gettext.NullTranslations,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""
     _ = translator.gettext
-    if not services.config.telegram.admin_chat_id or not services.bot_message:
+    if not settings.telegram.admin_chat_id or not bot:
         logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
         return
 
-    admin_chat_id = services.config.telegram.admin_chat_id
+    admin_chat_id = settings.telegram.admin_chat_id
     server_name_to_display = get_effective_server_name(
-        message.teamtalk_instance, translator, services.config
-    )  # Now local
-    sender_display = get_tt_user_display_name(message.user, translator)  # Now local
+        message.teamtalk_instance, translator, settings
+    )
+    sender_display = get_tt_user_display_name(message.user, translator)
     message_content = message.content
 
     # Using aiogram.utils.formatting for safe, declarative text construction
@@ -259,9 +261,9 @@ async def forward_tt_message_to_telegram_admin(
     )
 
     was_sent: bool = await send_telegram_message(
-        bot_instance=services.bot_message,
+        bot_instance=bot,
         chat_id=admin_chat_id,
-        services=services,
+        settings=settings,
         **content.as_kwargs(),
     )
 

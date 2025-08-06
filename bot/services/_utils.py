@@ -3,7 +3,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from gettext import GNUTranslations
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any
 
@@ -27,7 +27,7 @@ async def update_user_bot_commands(
     new_lang_code: str,
     cache: "CacheService",
     bot: "Bot",
-    translator: "GNUTranslations",
+    translator: "GNUTranslations | NullTranslations",
 ) -> bool:
     """Updates bot commands for a user based on their new language and admin status."""
     try:

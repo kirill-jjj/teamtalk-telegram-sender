@@ -85,7 +85,7 @@ async def menu_kick_handler(
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
-    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)
+    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)  # type: ignore[arg-type]
     await query.answer()
 
 
@@ -97,7 +97,7 @@ async def menu_ban_handler(
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
-    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)
+    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)  # type: ignore[arg-type]
     await query.answer()
 
 
@@ -110,7 +110,7 @@ async def menu_subscribers_handler(
     bot: FromDishka[Bot],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)
+    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)  # type: ignore[arg-type]
     await query.answer()
 
 
@@ -124,7 +124,7 @@ async def menu_unban_handler(
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
-        target=query.message,
+        target=query.message,  # type: ignore[arg-type]
         session=cast(SQLModelAsyncSession, session),
         bot=bot,
         page=0,

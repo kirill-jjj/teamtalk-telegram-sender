@@ -4,16 +4,17 @@ from __future__ import annotations
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from dishka.integrations.aiogram import FromDishka
 from pydantic import BaseModel, Field, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
 from bot.models import NotificationSetting, UserSettings
 from bot.services import user_service
+from bot.services.cache_service import CacheService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
@@ -21,9 +22,6 @@ from ._helpers import (
     ensure_message_context,
     safe_edit_text,
 )
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +70,7 @@ async def set_subscription_setting(
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
     callback_data: SubscriptionCallback,
-    services: Services,
+    cache: FromDishka[CacheService],
 ) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
@@ -99,7 +97,7 @@ async def set_subscription_setting(
     # This encapsulates business logic and makes the handler cleaner.
     updated_settings = await user_service.update_notification_preference(
         session=session,
-        services=services,
+        cache=cache,
         user_settings=user_settings,
         new_pref=new_setting_enum,
         actor=Actor.USER,

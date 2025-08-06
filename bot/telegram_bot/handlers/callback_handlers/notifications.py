@@ -34,7 +34,7 @@ async def show_notifications_menu(
     _ = translator.gettext
     notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),
         logger_instance=logger,

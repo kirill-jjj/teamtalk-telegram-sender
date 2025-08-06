@@ -1,11 +1,14 @@
 """Manages a single connection to a TeamTalk server, including state and caches."""
 
 import asyncio
+from collections.abc import Callable
 import datetime as dt
 from datetime import datetime
+from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from aiogram import Bot
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import Status as PytalkStatus
@@ -15,16 +18,16 @@ from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 from pytalk.user_account import UserAccount as PytalkUserAccount
 
+from bot.config import Settings
 from bot.constants import (
     INVALID_CHANNEL_ID,
     NOTIFICATION_EVENT_JOIN,
     NOTIFICATION_EVENT_LEAVE,
 )
 from bot.core.notifications import send_join_leave_notification
+from bot.database.engine import AsyncSessionFactoryType
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.message_handler import MessageHandler
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +39,20 @@ class TeamTalkConnection:
         self,
         server_info: PytalkTeamTalkServerInfo,
         pytalk_bot: pytalk.TeamTalkBot,
-        services: "Services",
+        settings: Settings,
+        session_factory: AsyncSessionFactoryType,
+        cache: CacheService,
+        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        bot: Bot,
     ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
         self.pytalk_bot = pytalk_bot
-        self.services = services
+        self.settings = settings
+        self.session_factory = session_factory
+        self.cache = cache
+        self.translator_factory = translator_factory
+        self.bot = bot
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
         self.online_users_cache: dict[int, PytalkUser] = {}
@@ -50,7 +61,13 @@ class TeamTalkConnection:
         self._populate_accounts_task: asyncio.Task[Any] | None = None
         self._is_finalized = False
         self.ttstr = pytalk.instance.sdk.ttstr
-        self.message_handler = MessageHandler(services, self)
+        self.message_handler = MessageHandler(
+            settings=settings,
+            session_factory=session_factory,
+            cache=cache,
+            translator_factory=translator_factory,
+            connection=self,
+        )
 
     async def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
@@ -79,7 +96,7 @@ class TeamTalkConnection:
             logger.error("[%s] Sync: No instance.", self.server_info.host)
             return
         logger.info("[%s] Starting periodic online users cache sync.", self.server_info.host)
-        cfg_params = self.services.config.operational_parameters
+        cfg_params = self.settings.operational_parameters
         sync_interval = cfg_params.online_users_cache_sync_interval_seconds
         reconnect_check_interval = cfg_params.tt_reconnect_check_interval_seconds
         reconnect_retry_interval = cfg_params.tt_reconnect_retry_seconds
@@ -276,14 +293,14 @@ class TeamTalkConnection:
 
         self.start_background_tasks()
         try:
-            gender = self.services.config.general.gender.lower()
+            gender = self.settings.general.gender.lower()
             status_val = PytalkStatus.online.neutral
             if gender == "male":
                 status_val = PytalkStatus.online.male
             elif gender == "female":
                 status_val = PytalkStatus.online.female
 
-            status_text = self.services.config.teamtalk.status_text
+            status_text = self.settings.teamtalk.status_text
             self.instance.change_status(status_val, status_text)
             self.login_complete_time = datetime.now(dt.UTC)
             self.mark_finalized(status=True)
@@ -309,7 +326,7 @@ class TeamTalkConnection:
         if not self.instance:
             return INVALID_CHANNEL_ID, ""
 
-        cfg_tt = self.services.config.teamtalk
+        cfg_tt = self.settings.teamtalk
         chan_path = cfg_tt.channel
         target_chan_name = chan_path
         final_chan_id = INVALID_CHANNEL_ID
@@ -339,7 +356,7 @@ class TeamTalkConnection:
             return
 
         final_chan_id, target_chan_name = await self._determine_target_channel()
-        chan_pass = self.services.config.teamtalk.channel_password or ""
+        chan_pass = self.settings.teamtalk.channel_password or ""
 
         try:
             if final_chan_id != INVALID_CHANNEL_ID:
@@ -448,12 +465,16 @@ class TeamTalkConnection:
         if not self.instance:
             return
         await send_join_leave_notification(
-            services=self.services,
             event_type=NOTIFICATION_EVENT_JOIN,
             tt_user=user,
             tt_instance=self.instance,
             login_complete_time=self.login_complete_time,
             online_users_cache_for_instance=self.online_users_cache,
+            settings=self.settings,
+            session_factory=self.session_factory,
+            cache=self.cache,
+            translator_factory=self.translator_factory,
+            bot=self.bot,
         )
 
     async def on_user_logout(self, user: PytalkUser) -> None:
@@ -462,12 +483,16 @@ class TeamTalkConnection:
         if not self.instance:
             return
         await send_join_leave_notification(
-            services=self.services,
             event_type=NOTIFICATION_EVENT_LEAVE,
             tt_user=user,
             tt_instance=self.instance,
             login_complete_time=self.login_complete_time,
             online_users_cache_for_instance=self.online_users_cache,
+            settings=self.settings,
+            session_factory=self.session_factory,
+            cache=self.cache,
+            translator_factory=self.translator_factory,
+            bot=self.bot,
         )
 
     async def on_user_update(self, user: PytalkUser) -> None:

@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import TYPE_CHECKING, cast
 
+from bot.config import Settings
+from bot.database.engine import AsyncSessionFactoryType
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
     on_add_admin,
@@ -18,12 +21,9 @@ from bot.teamtalk_bot.commands import (
 )
 
 if TYPE_CHECKING:
-    from gettext import GNUTranslations
-
     from pytalk.message import Message as TeamTalkMessage
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from bot.services_container import Services
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
@@ -33,9 +33,19 @@ logger = logging.getLogger(__name__)
 class CommandRouter:
     """Maps commands to their handlers and executes them."""
 
-    def __init__(self, services: Services, connection: TeamTalkConnection) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        session_factory: AsyncSessionFactoryType,
+        cache: CacheService,
+        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        connection: TeamTalkConnection,
+    ) -> None:
         """Initializes the command router."""
-        self.services = services
+        self.settings = settings
+        self.session_factory = session_factory
+        self.cache = cache
+        self.translator_factory = translator_factory
         self.connection = connection
         self.handlers = {
             tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe,
@@ -50,7 +60,7 @@ class CommandRouter:
         cmd: str,
         args: str | None,
         tt_message: TeamTalkMessage,
-        translator: GNUTranslations | gettext.NullTranslations,
+        translator: GNUTranslations | NullTranslations,
         session: AsyncSession,
     ) -> None:
         """Routes a command to the appropriate handler."""
@@ -63,7 +73,10 @@ class CommandRouter:
             kwargs = {
                 "tt_message": tt_message,
                 "translator": translator,
-                "services": self.services,
+                "settings": self.settings,
+                "session_factory": self.session_factory,
+                "cache": self.cache,
+                "translator_factory": self.translator_factory,
                 "_connection": self.connection,
             }
             if cmd in [tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN]:

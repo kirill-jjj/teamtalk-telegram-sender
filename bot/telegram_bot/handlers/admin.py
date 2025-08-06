@@ -2,7 +2,7 @@
 
 from gettext import GNUTranslations
 import logging
-from typing import cast, Annotated
+from typing import Annotated, cast
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
@@ -37,6 +37,13 @@ async def _show_user_buttons(
 ) -> None:
     _ = translator.gettext
     tt_instance = tt_connection.instance
+    if not tt_instance:
+        logger.error(
+            "[%s] Could not get own user ID in _show_user_buttons: tt_instance is None.",
+            tt_connection.server_info.host,
+        )
+        await message.reply(_("An error occurred. Please try again later."))
+        return
     my_user_id = tt_instance.getMyUserID()
 
     if my_user_id is None:

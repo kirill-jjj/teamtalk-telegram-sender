@@ -2,21 +2,22 @@
 
 from collections.abc import Awaitable, Callable
 import functools
+from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from aiogram import Bot
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
+from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID
+from bot.database.engine import AsyncSessionFactoryType
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 
 logger = logging.getLogger(__name__)
 
@@ -127,11 +128,11 @@ async def _broadcast_event_to_all_connections(
         type(event_primary_obj).__name__,
     )
     broadcast_count = 0
-    if not hasattr(self_event_handler, "services") or not hasattr(self_event_handler.services, "connections"):
-        logger.error("Broadcast: services.connections unavailable for '%s'.", handler_name_for_logs)
+    if not hasattr(self_event_handler, "connections"):
+        logger.error("Broadcast: connections unavailable for '%s'.", handler_name_for_logs)
         return
 
-    for conn_key, connection_obj in self_event_handler.services.connections.items():
+    for conn_key, connection_obj in self_event_handler.connections.items():
         if not isinstance(connection_obj, TeamTalkConnection):
             logger.error("Broadcast: Invalid obj for key '%s' (event: '%s'). Skip.", conn_key, handler_name_for_logs)
             continue
@@ -163,12 +164,28 @@ async def _broadcast_event_to_all_connections(
 class TeamTalkEventHandler:
     """Routes Pytalk events to the corresponding TeamTalkConnection instance."""
 
-    def __init__(self, services: "Services") -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        session_factory: AsyncSessionFactoryType,
+        cache: CacheService,
+        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        bot: Bot,
+        tt_bot: pytalk.TeamTalkBot,
+        connections: dict[str, TeamTalkConnection],
+        logger: logging.Logger,
+    ) -> None:
         """Initializes the TeamTalkEventHandler."""
-        self.services = services
-        self.tt_bot = services.tt_bot
+        self.settings = settings
+        self.session_factory = session_factory
+        self.cache = cache
+        self.translator_factory = translator_factory
+        self.bot = bot
+        self.tt_bot = tt_bot
+        self.connections = connections
+        self.logger = logger
         self._register_pytalk_event_handlers()
-        self.services.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered.")
+        self.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered.")
 
     def _register_pytalk_event_handlers(self) -> None:
         """Registers Pytalk event handlers with the PytalkBot instance."""
@@ -190,21 +207,21 @@ class TeamTalkEventHandler:
 
     def _get_connection_by_instance(self, tt_instance: pytalk.instance.TeamTalkInstance) -> TeamTalkConnection | None:
         """Retrieves an active TeamTalkConnection associated with the given Pytalk instance."""
-        for conn in self.services.connections.values():
+        for conn in self.connections.values():
             if conn.instance is tt_instance:
                 return conn
-        self.services.logger.warning("Could not find active TeamTalkConnection for instance: %s", tt_instance)
+        self.logger.warning("Could not find active TeamTalkConnection for instance: %s", tt_instance)
         return None
 
     def _get_connection_by_server_info(self, server_info: pytalk.TeamTalkServerInfo) -> TeamTalkConnection | None:
         """Retrieves an active TeamTalkConnection by server host and port."""
         server_key = f"{server_info.host}:{server_info.tcp_port}"
-        return self.services.connections.get(server_key)
+        return self.connections.get(server_key)
 
     async def on_pytalk_ready(self) -> None:
         """Handles PytalkBot on_ready; initializes primary TeamTalk server connection."""
-        self.services.logger.info("Pytalk Bot ready. Initializing TT connections...")
-        tt_config = self.services.config.teamtalk
+        self.logger.info("Pytalk Bot ready. Initializing TT connections...")
+        tt_config = self.settings.teamtalk
 
         pytalk_server_info = pytalk.TeamTalkServerInfo(
             host=tt_config.host_name,
@@ -213,19 +230,27 @@ class TeamTalkEventHandler:
             username=tt_config.user_name,
             password=tt_config.password,
             encrypted=tt_config.encrypted,
-            nickname=tt_config.nick_name,
+            nickname=self.settings.teamtalk.nick_name,
             join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else INVALID_CHANNEL_ID,
             join_channel_password=tt_config.channel_password or "",
         )
         server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
 
-        if server_key in self.services.connections:
+        if server_key in self.connections:
             logger.warning("Connection for %s exists. Reconnecting.", server_key)
-            connection = self.services.connections[server_key]
+            connection = self.connections[server_key]
             await connection.disconnect_instance()
         else:
-            connection = TeamTalkConnection(pytalk_server_info, self.tt_bot, self.services)
-            self.services.connections[server_key] = connection
+            connection = TeamTalkConnection(
+                pytalk_server_info,
+                self.tt_bot,
+                self.settings,
+                self.session_factory,
+                self.cache,
+                self.translator_factory,
+                self.bot,
+            )
+            self.connections[server_key] = connection
 
         logger.info("Connecting TeamTalkConnection for %s...", server_key)
         if not await connection.connect():

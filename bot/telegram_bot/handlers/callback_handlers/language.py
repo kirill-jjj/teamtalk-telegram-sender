@@ -36,7 +36,7 @@ async def show_language_menu(
     language_markup = await create_language_selection_keyboard(translator, available_languages=available_languages)
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Please choose your language:"),
         reply_markup=language_markup,
         logger_instance=logger,

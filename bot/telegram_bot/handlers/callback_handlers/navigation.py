@@ -29,7 +29,7 @@ async def back_to_main_settings_menu(
     main_settings_text = _("Settings")
 
     await safe_edit_text(
-        message_to_edit=callback_query.message,
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=main_settings_text,
         reply_markup=main_settings_builder.as_markup(),
         logger_instance=logger,

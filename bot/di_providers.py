@@ -24,7 +24,33 @@ from bot.models import UserSettings
 from bot.services import admin_service
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import set_telegram_commands as set_telegram_commands_for_bot
+
+
+# 1. Выносим логику создания фабрики в отдельную функцию
+def create_translator_factory(
+    translator_cache: dict[str, GNUTranslations | NullTranslations]
+) -> Callable[[str], GNUTranslations | NullTranslations]:
+    """Создает и возвращает функцию-фабрику для получения переводчиков."""
+
+    def get_translator(lang_code: str) -> GNUTranslations | NullTranslations:
+        if lang_code in translator_cache:
+            return translator_cache[lang_code]
+
+        translation: GNUTranslations | NullTranslations
+        try:
+            translation = gettext.translation(
+                DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code]
+            )
+        except FileNotFoundError:
+            # Возвращаем NullTranslations, если перевод не найден
+            translation = gettext.NullTranslations()
+
+        translator_cache[lang_code] = translation
+        return translation
+
+    return get_translator
 
 
 class AppProvider(Provider):
@@ -38,17 +64,17 @@ class AppProvider(Provider):
 
     @provide
     def get_settings(self) -> Settings:
-        """Загружает конфигурацию один раз при старте"""
+        """Загружает конфигурацию один раз при старте."""
         return Settings.from_toml("config.toml")
 
     @provide
     def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
-        """Создает фабрику сессий, зависит от конфига"""
+        """Создает фабрику сессий, зависит от конфига."""
         return create_session_factory(settings)
 
     @provide
     def get_bot_event(self, settings: Settings) -> Bot:
-        """Создает основной экземпляр бота"""
+        """Создает основной экземпляр бота."""
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
         return Bot(token=settings.telegram.event_token, default=default_props)
 
@@ -85,19 +111,7 @@ class AppProvider(Provider):
     def get_translator_factory(
         self, translator_cache: dict[str, GNUTranslations | NullTranslations]
     ) -> Callable[[str], GNUTranslations | NullTranslations]:
-        def get_translator(lang_code: str) -> GNUTranslations | NullTranslations:
-            if lang_code in translator_cache:
-                return translator_cache[lang_code]
-
-            try:
-                translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
-            except FileNotFoundError:
-                return gettext.NullTranslations()
-            else:
-                translator_cache[lang_code] = translation
-                return translation
-
-        return get_translator
+        return create_translator_factory(translator_cache)
 
     # Провайдер для CacheService, который зависит от кэшей
     @provide
@@ -122,13 +136,24 @@ class AppProvider(Provider):
         cache: CacheService,
         session_factory: AsyncSessionFactoryType,
         settings: Settings,
-        translator_factory: Callable[[str], GNUTranslations],
+        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
         available_languages: list[LanguageInfo],
+        connections: dict[str, TeamTalkConnection],
     ) -> None:
         logger = logging.getLogger(__name__)
         logger.info("Application startup...")
 
         logger.info("Initializing TeamTalk components...")
+        TeamTalkEventHandler(
+            settings=settings,
+            session_factory=session_factory,
+            cache=cache,
+            translator_factory=translator_factory,
+            bot=bot,
+            tt_bot=tt_bot,
+            connections=connections,
+            logger=logger,
+        )
         teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
         if teamtalk_task is None or teamtalk_task.done():
             await tt_bot._async_setup_hook()
@@ -145,7 +170,11 @@ class AppProvider(Provider):
             cache.load_admins_from_db(db_admin_ids)
             db_subscriber_ids = await crud.get_all_subscribers_ids(session)
             cache.load_subscribers_from_db(db_subscriber_ids)
-            all_settings_result = await session.execute(select(UserSettings).options(selectinload(UserSettings.muted_users_list)))
+            all_settings_result = await session.execute(
+                select(UserSettings).options(
+                    selectinload(UserSettings.muted_users_list)  # type: ignore[arg-type]
+                )
+            )
             cache.load_all_user_settings(list(all_settings_result.scalars().all()))
             logger.info("All caches have been loaded.")
 
@@ -178,14 +207,14 @@ class RequestProvider(Provider):
     async def get_db_session(
         self, factory: AsyncSessionFactoryType
     ) -> AsyncGenerator[AsyncSession, None]:
-        """Создает сессию БД для каждого входящего update"""
+        """Создает сессию БД для каждого входящего update."""
         async with factory() as session:
             yield session
 
     @provide
     def get_event_user(self, update: Update) -> User | None:
-        """Извлекает пользователя из события"""
-        return update.event.from_user
+        """Извлекает пользователя из события."""
+        return getattr(update.event, "from_user", None)
 
     @provide
     async def get_user_settings(
@@ -223,16 +252,5 @@ class RequestProvider(Provider):
     ) -> GNUTranslations | NullTranslations:
         """Заменяет I18nMiddleware. Предоставляет объект переводчика."""
         lang_code = user_settings.language_code if user_settings else settings.general.default_lang
-
-        if lang_code in translator_cache:
-            return translator_cache[lang_code]
-
-        # Упрощенная логика из `Services.get_translator`.
-        # В реальном проекте вы бы вынесли ее в отдельную функцию.
-        try:
-            translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
-        except FileNotFoundError:
-            return gettext.NullTranslations()
-        else:
-            translator_cache[lang_code] = translation
-            return translation
+        factory = create_translator_factory(translator_cache)
+        return factory(lang_code)

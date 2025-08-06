@@ -1,9 +1,9 @@
 """Service layer for administrator-related operations."""
 
 from collections.abc import Awaitable, Callable
-from gettext import GNUTranslations
+from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 
 from aiogram import Bot
 import pytalk
@@ -27,7 +27,7 @@ async def _add_or_remove_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: GNUTranslations | NullTranslations,
     action: Literal["add", "remove"],
 ) -> bool:
     """A generic helper to add or remove an admin, updating all necessary components."""
@@ -80,7 +80,7 @@ async def add_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: GNUTranslations | NullTranslations,
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
     return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="add")
@@ -92,7 +92,7 @@ async def remove_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: GNUTranslations | NullTranslations,
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
     return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="remove")
@@ -250,7 +250,7 @@ async def ban_user(
 async def ban_and_delete_subscriber(
     session: AsyncSession,
     cache: CacheService,
-    translator: GNUTranslations,
+    translator: GNUTranslations | NullTranslations,
     target_telegram_id: int,
     tt_connection: "TeamTalkConnection | None",
 ) -> OperationResult:
@@ -281,7 +281,7 @@ async def ban_and_delete_subscriber(
 
 
 def format_ban_result(
-    translator: GNUTranslations | None,
+    translator: GNUTranslations | NullTranslations,
     telegram_id: int,
     tt_username: str | None,
     *,
@@ -351,19 +351,18 @@ def format_ban_result(
     )
 
 
-T = TypeVar("T")
-UpdateFunc = Callable[..., Awaitable[T | None]]
+UpdateFunc = Callable[..., Awaitable[UserSettings | None]]
 
 
 async def _admin_update_user_setting(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: GNUTranslations | NullTranslations,
     target_telegram_id: int,
     update_function: UpdateFunc,
     **kwargs: Any,
-) -> T | None:
+) -> UserSettings | None:
     """Generic helper to update a user setting for a target user by an admin."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)
     if not target_user_settings:

@@ -1,16 +1,14 @@
 """Service for advanced notification logic like NOON."""
 
 import logging
-from typing import TYPE_CHECKING
 
 import pytalk  # Required for ttstr
 from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
+from bot.config import Settings
 from bot.models import UserSettings
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
+from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -25,11 +23,11 @@ def is_user_subject_to_noon_check(user_settings: UserSettings | None) -> bool:
 
 async def is_linked_user_online(
     telegram_id: int,
-    services: "Services",
+    cache: CacheService,
     online_users_cache: dict[int, TeamTalkUser],
 ) -> bool:
     """Checks if the TeamTalk user linked to the given telegram_id is online."""
-    user_settings = services.cache.get_user_settings(telegram_id)
+    user_settings = cache.get_user_settings(telegram_id)
     if not user_settings or not user_settings.teamtalk_username:
         return False
 
@@ -42,7 +40,8 @@ async def filter_recipients_for_noon(
     event_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,
     online_users_cache: dict[int, TeamTalkUser],
-    services: "Services",
+    cache: CacheService,
+    settings: Settings,
 ) -> list[tuple[int, str | None]]:
     """Filters recipients based on NOON logic and returns them with their language code."""
     final_recipients = []
@@ -61,7 +60,7 @@ async def filter_recipients_for_noon(
             continue
 
         is_event_user_tt_admin = (
-            services.config.general.admin_username and event_user_username == services.config.general.admin_username
+            settings.general.admin_username and event_user_username == settings.general.admin_username
         )
 
         if not is_event_user_tt_admin:

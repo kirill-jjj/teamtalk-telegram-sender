@@ -5,7 +5,7 @@ from collections.abc import Callable
 import logging
 
 # For type hinting Services
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from aiogram import Bot as AiogramBot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
@@ -14,37 +14,31 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError
 
+from bot.config import Settings
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
+from bot.database.engine import AsyncSessionFactoryType
+from bot.models import UserSettings
 from bot.services import notification_service, user_service
-
-if TYPE_CHECKING:
-    from bot.models import UserSettings
-    from bot.services_container import Services
+from bot.services.cache_service import CacheService
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, services: "Services") -> None:
+async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, session_factory: AsyncSessionFactoryType, cache: CacheService) -> None:
     """Handles specific Telegram API errors using structural pattern matching."""
-    if not services:
-        logger.error(
-            "Telegram API error for chat_id %s but services context was missing for full cleanup: %s",
-            chat_id,
-            error,
-        )
-        return
-
     logger.debug("Handling Telegram API error '%s' for chat_id %d", type(error).__name__, chat_id)
 
     match error:
         case TelegramForbiddenError() if "bot was blocked" in str(error) or "user is deactivated" in str(error):
             logger.warning("User %s blocked the bot or is deactivated. Deleting all user data...", chat_id)
             try:
-                async with services.session_factory() as session:
-                    success = await user_service.delete_user_profile(session, chat_id, services=services)
+                async with session_factory() as session:
+                    success = await user_service.delete_user_profile(
+                        session, chat_id, cache=cache
+                    )
                 if success:
                     logger.info("Successfully deleted all data for blocked/deactivated user %s.", chat_id)
                 else:
@@ -57,8 +51,10 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
         case TelegramBadRequest() if "chat not found" in str(error):
             logger.warning("Chat not found for TG ID %s. Deleting all user data. Error: %s", chat_id, error)
             try:
-                async with services.session_factory() as session:
-                    delete_success = await user_service.delete_user_profile(session, chat_id, services=services)
+                async with session_factory() as session:
+                    delete_success = await user_service.delete_user_profile(
+                        session, chat_id, cache=cache
+                    )
                 if delete_success:
                     logger.info("Successfully deleted all data for TG ID %s due to chat not found.", chat_id)
                 else:
@@ -73,13 +69,9 @@ async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, serv
             logger.error("Unhandled Telegram API error for chat_id %s: %s", chat_id, error)
 
 
-def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "Services") -> bool:
-    """Checks if a message to a given chat_id should be sent silently.
-
-    This is based on NOON settings and the provided online status of their linked TeamTalk user.
-    Uses `services.cache.get_user_settings()` and `notification_service`.
-    """
-    recipient_settings = services.cache.get_user_settings(chat_id)
+def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, cache: CacheService) -> bool:
+    """Checks if a message to a given chat_id should be sent silently."""
+    recipient_settings = cache.get_user_settings(chat_id)
 
     if notification_service.is_user_subject_to_noon_check(recipient_settings) and tt_user_is_online:
         logger.debug(
@@ -95,26 +87,15 @@ def _should_send_silently(chat_id: int, *, tt_user_is_online: bool, services: "S
 async def send_telegram_message(
     bot_instance: AiogramBot,
     chat_id: int,
-    services: "Services",
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     tt_user_is_online: bool = False,
     **kwargs: Any,  # noqa: ANN401
 ) -> bool:
-    """Sends a single Telegram message to a user, handling potential errors.
-
-    Args:
-        bot_instance: The Aiogram Bot instance to use for sending.
-        chat_id: The Telegram chat ID to send the message to.
-        services: The application's services container.
-        reply_markup: Optional InlineKeyboardMarkup for the message.
-        tt_user_is_online: Whether the user's linked TeamTalk account is currently online.
-        **kwargs: Additional arguments to pass to `bot_instance.send_message`.
-
-    Returns:
-        True if the message was sent successfully, False otherwise.
-    """
-    send_silently = _should_send_silently(chat_id=chat_id, tt_user_is_online=tt_user_is_online, services=services)
+    """Sends a single Telegram message to a user, handling potential errors."""
+    send_silently = _should_send_silently(chat_id=chat_id, tt_user_is_online=tt_user_is_online, cache=cache)
 
     try:
         await bot_instance.send_message(
@@ -122,7 +103,7 @@ async def send_telegram_message(
         )
         logger.debug("Message sent to %s. Silent: %s, kwargs used: %s", chat_id, send_silently, kwargs)
     except TelegramAPIError as e:
-        await _handle_telegram_api_error(e, chat_id, services=services)
+        await _handle_telegram_api_error(e, chat_id, session_factory=session_factory, cache=cache)
         return False
     else:
         return True
@@ -167,7 +148,9 @@ async def broadcast_to_users(
     bot_instance_to_use: AiogramBot,
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
-    services: "Services",
+    settings: Settings,
+    cache: CacheService,
+    session_factory: AsyncSessionFactoryType,
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None] | None = None,
 ) -> None:
@@ -185,7 +168,7 @@ async def broadcast_to_users(
                     reply_markup_generator(language_code, chat_id) if reply_markup_generator else None
                 )
 
-                user_settings: UserSettings | None = services.cache.get_user_settings(chat_id)
+                user_settings: UserSettings | None = cache.get_user_settings(chat_id)
                 individual_tt_user_is_online = False
                 if user_settings and user_settings.teamtalk_username and online_users_cache_for_instance:
                     individual_tt_user_is_online = any(
@@ -197,9 +180,11 @@ async def broadcast_to_users(
                     send_telegram_message(
                         bot_instance=bot_instance_to_use,
                         chat_id=chat_id,
+                        session_factory=session_factory,
                         reply_markup=current_reply_markup,
                         tt_user_is_online=individual_tt_user_is_online,
-                        services=services,
+                        settings=settings,
+                        cache=cache,
                         text=text,
                     )
                 )

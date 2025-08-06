@@ -2,7 +2,7 @@
 
 from gettext import GNUTranslations
 import logging
-from typing import cast, Annotated
+from typing import Annotated, cast
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramAPIError

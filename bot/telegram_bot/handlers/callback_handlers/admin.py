@@ -130,7 +130,7 @@ async def on_moderation_confirm(
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
         await safe_edit_text(
-            message_to_edit=callback_query.message,
+            message_to_edit=callback_query.message,  # type: ignore[arg-type]
             text=message_text,
             reply_markup=None,
             logger_instance=logger,

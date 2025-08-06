@@ -7,7 +7,7 @@ from typing import Any, TypeVar
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InaccessibleMessage, InlineKeyboardMarkup, Message
 
 from bot.constants import USERS_PER_PAGE
 
@@ -143,7 +143,7 @@ async def display_paginated_list(
 
 
 async def safe_edit_text(
-    message_to_edit: Message,
+    message_to_edit: Message | InaccessibleMessage,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     parse_mode: str | None = None,
@@ -155,6 +155,10 @@ async def safe_edit_text(
     """Safely edits a message text, handling common Telegram API errors."""
     current_logger = logger_instance or logger
     context_for_log = f" ({log_context})" if log_context else ""
+
+    if not isinstance(message_to_edit, Message):
+        current_logger.warning("Attempted to edit an inaccessible message%s.", context_for_log)
+        return False
 
     try:
         await message_to_edit.edit_text(

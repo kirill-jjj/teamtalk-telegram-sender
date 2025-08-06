@@ -164,6 +164,11 @@ def ensure_tt_user_exists(
             await query.answer(_("Error processing command: Invalid callback data."), show_alert=True)
             return None
 
+        if not tt_connection.instance:
+            logger.error("Handler '%s': tt_connection has no instance.", func.__name__)
+            await query.answer(_("Error: No active TeamTalk connection."), show_alert=True)
+            return None
+
         server_host = tt_connection.server_info.host
         user_to_act_on = tt_connection.instance.get_user(callback_data.user_id)
 
