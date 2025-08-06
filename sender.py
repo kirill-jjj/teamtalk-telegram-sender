@@ -12,10 +12,7 @@ from dishka.integrations.aiogram import setup_dishka
 from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
 from bot.logging_setup import setup_logging
-from bot.telegram_bot.setup import (
-    create_telegram_dispatcher,
-    setup_bot_lifecycle_events,
-)
+from bot.telegram_bot.setup import create_telegram_dispatcher
 from dishka import make_async_container
 
 
@@ -59,7 +56,6 @@ class Application:
 
         # Retrieve the container that dishka created and attached
         container = self.dp["dishka_container"]
-        setup_bot_lifecycle_events(dp=self.dp, container=container)
 
         self.logger.info("Starting Telegram polling...")
         try:
