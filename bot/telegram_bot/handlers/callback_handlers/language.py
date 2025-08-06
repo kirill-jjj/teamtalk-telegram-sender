@@ -1,7 +1,7 @@
 """Callback query handlers for language settings."""
 
 from collections.abc import Callable
-from gettext import NullTranslations
+from gettext import GNUTranslations, NullTranslations
 import logging
 
 from aiogram import Bot, F, Router
@@ -55,7 +55,7 @@ async def set_language(
     callback_data: LanguageCallback,
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
-    translator_factory: FromDishka[Callable[[str], NullTranslations]],
+    translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
 ) -> tuple[bool, str]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
