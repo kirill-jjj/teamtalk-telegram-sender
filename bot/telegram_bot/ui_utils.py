@@ -60,7 +60,7 @@ async def display_paginated_list(
     Args:
         target: The Aiogram CallbackQuery (to edit message) or Message (to send new message / get chat_id).
         bot: The Aiogram Bot instance.
-        translator: The gettext GNUTranslations object for localization.
+        translator: The gettext NullTranslations object for localization.
         items: The full list of items to display.
         page: The current page number (0-indexed).
         title_text: The main title text for the message.

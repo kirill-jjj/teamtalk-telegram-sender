@@ -1,6 +1,6 @@
 """Callback query handlers for navigating back in settings menus."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 
 from aiogram import F, Router
@@ -21,7 +21,7 @@ navigation_router = Router(name="callback_handlers.navigation")
 @ensure_message_context
 async def back_to_main_settings_menu(
     callback_query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles navigating back to the main settings menu."""
     _ = translator.gettext

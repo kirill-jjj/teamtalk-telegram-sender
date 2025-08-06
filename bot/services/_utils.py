@@ -27,7 +27,7 @@ async def update_user_bot_commands(
     new_lang_code: str,
     cache: "CacheService",
     bot: "EventBot",
-    translator: "GNUTranslations | NullTranslations",
+    translator: "NullTranslations",
 ) -> bool:
     """Updates bot commands for a user based on their new language and admin status."""
     try:

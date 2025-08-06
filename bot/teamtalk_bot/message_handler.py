@@ -36,7 +36,7 @@ class MessageHandler:
         settings: Settings,
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
-        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        translator_factory: Callable[[str], NullTranslations],
         connection: TeamTalkConnection,
         bot_for_admin_pm: MessageBot,
     ) -> None:
@@ -81,7 +81,7 @@ class MessageHandler:
                     cache=self.cache,
                 )
 
-    def _get_translator(self) -> GNUTranslations | NullTranslations:
+    def _get_translator(self) -> NullTranslations:
         """Determines the language for the reply and returns a translator."""
         admin_cfg = self.settings.telegram.admin_chat_id
         reply_lang = self.settings.general.default_lang

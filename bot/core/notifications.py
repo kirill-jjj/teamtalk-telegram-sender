@@ -128,7 +128,7 @@ def _generate_join_leave_notification_text(
     server_name: str,
     event_type: str,
     lang_code: str,
-    get_translator_func: Callable[[str | None], gettext.GNUTranslations | gettext.NullTranslations],
+    get_translator_func: Callable[[str | None], gettext.NullTranslations],
 ) -> str:
     recipient_translator = get_translator_func(lang_code)
     # Pass the full translator object to get_tt_user_display_name
@@ -151,7 +151,7 @@ async def send_join_leave_notification(
     settings: Settings,
     session_factory: AsyncSessionFactoryType,
     cache: CacheService,
-    translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+    translator_factory: Callable[[str], NullTranslations],
     bot: Bot,
 ) -> None:
     """Core logic for sending join/leave notifications."""
@@ -223,4 +223,69 @@ async def send_join_leave_notification(
         cache=cache,
         session_factory=session_factory,
         online_users_cache_for_instance=online_users_cache_for_instance,
+    )
+
+
+async def _get_recipients_for_notification(
+    username_to_check: str,
+    event_type: str,
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
+    settings: Settings,
+    tt_user: TeamTalkUser,
+    tt_instance: TeamTalkInstance,
+    online_users_cache: dict[int, "pytalk.user.User"],
+) -> list[tuple[int, str | None]]:
+    subscriber_ids = list(cache.get_all_subscriber_ids())
+    if not subscriber_ids:
+        return []
+
+    async with session_factory() as session:
+        # Now selecting telegram_id and language_code along with NOON flags
+        stmt = select(
+            UserSettings.telegram_id,
+            UserSettings.not_on_online_enabled,
+            UserSettings.not_on_online_confirmed,
+            UserSettings.language_code,
+        )
+
+        # The rest of the query remains the same
+        stmt = stmt.join(
+            MutedUser,
+            and_(
+                UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
+                MutedUser.muted_teamtalk_username == username_to_check,
+            ),
+            isouter=True,
+        )
+
+        filters = [
+            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
+            UserSettings.notification_settings != NotificationSetting.NONE,
+        ]
+        if event_type == NOTIFICATION_EVENT_JOIN:
+            filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
+        elif event_type == NOTIFICATION_EVENT_LEAVE:
+            filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
+
+        mute_logic = or_(
+            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
+            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
+        )
+        filters.append(mute_logic)  # type: ignore[arg-type]
+
+        stmt = stmt.where(and_(*filters))
+
+        result = await session.execute(stmt)
+        # The result now includes the language code
+        recipients_data = cast(list[tuple[int, bool, bool, str | None]], result.all())
+
+    # NOON filtering is now a separate step before returning
+    return await notification_service.filter_recipients_for_noon(
+        recipients_data=recipients_data,
+        event_user=tt_user,
+        tt_instance=tt_instance,
+        online_users_cache=online_users_cache,
+        cache=cache,
+        settings=settings,
     )

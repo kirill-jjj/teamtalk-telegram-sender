@@ -42,7 +42,7 @@ class TeamTalkConnection:
         settings: Settings,
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
-        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        translator_factory: Callable[[str], NullTranslations],
         event_bot: EventBot,
         message_bot: MessageBot,
     ) -> None:

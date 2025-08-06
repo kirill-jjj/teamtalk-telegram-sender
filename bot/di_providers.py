@@ -28,15 +28,15 @@ from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 # 1. Isolate the factory creation logic into a separate function
 def create_translator_factory(
-    translator_cache: dict[str, GNUTranslations | NullTranslations],
-) -> Callable[[str], GNUTranslations | NullTranslations]:
+    translator_cache: dict[str, NullTranslations],
+) -> Callable[[str], NullTranslations]:
     """Creates and returns a factory function for retrieving translators."""
 
-    def get_translator(lang_code: str) -> GNUTranslations | NullTranslations:
+    def get_translator(lang_code: str) -> NullTranslations:
         if lang_code in translator_cache:
             return translator_cache[lang_code]
 
-        translation: GNUTranslations | NullTranslations
+        translation: NullTranslations
         try:
             translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
         except FileNotFoundError:
@@ -87,7 +87,7 @@ class AppProvider(Provider):
         return pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
 
     @provide
-    def get_translator_cache(self) -> dict[str, GNUTranslations | NullTranslations]:
+    def get_translator_cache(self) -> dict[str, NullTranslations]:
         """Provides a cache for translators."""
         return {}
 
@@ -103,8 +103,8 @@ class AppProvider(Provider):
 
     @provide
     def get_translator_factory(
-        self, translator_cache: dict[str, GNUTranslations | NullTranslations]
-    ) -> Callable[[str], GNUTranslations | NullTranslations]:
+        self, translator_cache: dict[str, NullTranslations]
+    ) -> Callable[[str], NullTranslations]:
         """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
@@ -123,7 +123,7 @@ class AppProvider(Provider):
         settings: Settings,
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
-        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        translator_factory: Callable[[str], NullTranslations],
         event_bot: EventBot,
         message_bot: MessageBot,
         tt_bot: pytalk.TeamTalkBot,
@@ -195,8 +195,8 @@ class RequestProvider(Provider):
         self,
         user_settings: UserSettings | None,
         settings: Settings,
-        translator_cache: dict[str, GNUTranslations | NullTranslations],
-    ) -> GNUTranslations | NullTranslations:
+        translator_cache: dict[str, NullTranslations],
+    ) -> NullTranslations:
         """Replaces I18nMiddleware. Provides a translator object."""
         lang_code = user_settings.language_code if user_settings else settings.general.default_lang
         factory = create_translator_factory(translator_cache)

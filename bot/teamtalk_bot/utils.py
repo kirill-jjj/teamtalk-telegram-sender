@@ -40,7 +40,7 @@ ttstr = sdk.ttstr
 
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
-    translator: gettext.GNUTranslations | gettext.NullTranslations,
+    translator: gettext.NullTranslations,
     app_cfg: Settings,
 ) -> str:
     """Determines the effective server name to display.
@@ -82,7 +82,7 @@ def get_effective_server_name(
     return server_name if server_name else _("Unknown Server")
 
 
-def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.GNUTranslations | gettext.NullTranslations) -> str:
+def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.NullTranslations) -> str:
     """Gets a display-friendly name for a TeamTalk user.
 
     Prioritizes nickname, then username. Falls back to a localized "unknown user".
@@ -236,7 +236,7 @@ async def forward_tt_message_to_telegram_admin(
     message: TeamTalkMessage,
     settings: Settings,
     bot: Bot,
-    translator: gettext.GNUTranslations | gettext.NullTranslations,
+    translator: gettext.NullTranslations,
     session_factory: AsyncSessionFactoryType,
     cache: CacheService,
 ) -> None:
@@ -307,7 +307,7 @@ def handle_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHa
                 translator = kwargs.get("translator")
                 _ = (
                     translator.gettext
-                    if isinstance(translator, gettext.GNUTranslations | gettext.NullTranslations)  # UP038
+                    if isinstance(translator, gettext.NullTranslations)  # UP038
                     else lambda s: s
                 )
 

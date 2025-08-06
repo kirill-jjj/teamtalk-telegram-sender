@@ -39,7 +39,7 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
 async def set_telegram_commands(
     bot: EventBot,
     cache: CacheService,
-    translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+    translator_factory: Callable[[str], NullTranslations],
     available_languages: list[LanguageInfo],
     settings: Settings,
 ) -> None:

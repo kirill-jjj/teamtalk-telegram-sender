@@ -33,7 +33,7 @@ async def on_startup(
     cache: FromDishka[CacheService],
     session_factory: FromDishka[AsyncSessionFactoryType],
     settings: FromDishka[Settings],
-    translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
+    translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
     _tt_event_handler: FromDishka[TeamTalkEventHandler],
 ) -> None:

@@ -56,7 +56,7 @@ async def set_language(
     callback_data: LanguageCallback,
     cache: FromDishka[CacheService],
     bot: FromDishka[EventBot],
-    translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
+    translator_factory: FromDishka[Callable[[str], NullTranslations]],
 ) -> tuple[bool, str, UserSettings | None]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
