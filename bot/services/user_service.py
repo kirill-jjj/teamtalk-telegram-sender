@@ -384,43 +384,60 @@ async def toggle_mute_status_for_tt_user(
 ) -> OperationResult:
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
     _ = translator.gettext
-    if user_settings.muted_users_list is None:
-        user_settings.muted_users_list = []
 
+    # --- FIX STARTS HERE ---
+    # Attach the cached object to the current session
+    try:
+        managed_user_settings = await session.merge(user_settings)
+        await session.refresh(managed_user_settings, attribute_names=["muted_users_list"])
+    except Exception:
+        logger.exception("Failed to merge or refresh user_settings for TG ID %s", user_settings.telegram_id)
+        return OperationResult(success=False, message_key=_("An error occurred. Please try again."))
+    # --- FIX ENDS HERE ---
+
+    # Now work with the object that is definitely in the current session
     existing_entry = next(
-        (entry for entry in user_settings.muted_users_list if entry.muted_teamtalk_username == tt_username_to_toggle),
+        (
+            entry
+            for entry in managed_user_settings.muted_users_list
+            if entry.muted_teamtalk_username == tt_username_to_toggle
+        ),
         None,
     )
 
-    log_context = f" while toggling mute for '{tt_username_to_toggle}' for user {user_settings.telegram_id}"
+    log_context = f" while toggling mute for '{tt_username_to_toggle}' for user {managed_user_settings.telegram_id}"
     resulting_action = "unmuted" if existing_entry else "muted"
 
     try:
         async with managed_db_transaction(session, logger, log_context):
             if existing_entry:
-                user_settings.muted_users_list.remove(existing_entry)
+                managed_user_settings.muted_users_list.remove(existing_entry)
                 await session.delete(existing_entry)
-                logger.info("Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+                logger.info(
+                    "Unmuting TT user '%s' for TG user %s.", tt_username_to_toggle, managed_user_settings.telegram_id
+                )
             else:
                 new_entry = MutedUser(
-                    user_settings_telegram_id=user_settings.telegram_id,
+                    user_settings_telegram_id=managed_user_settings.telegram_id,
                     muted_teamtalk_username=tt_username_to_toggle,
                 )
-                user_settings.muted_users_list.append(new_entry)
+                managed_user_settings.muted_users_list.append(new_entry)
                 session.add(new_entry)
-                logger.info("Muting TT user '%s' for TG user %s.", tt_username_to_toggle, user_settings.telegram_id)
+                logger.info(
+                    "Muting TT user '%s' for TG user %s.", tt_username_to_toggle, managed_user_settings.telegram_id
+                )
     except Exception:
         return OperationResult(
             success=False, message_key=_("An error occurred while changing the mute status. Please try again.")
         )
 
     # This block executes only if the transaction was successful
-    await session.refresh(user_settings, attribute_names=["muted_users_list"])
-    cache.update_user_settings(user_settings)
+    await session.refresh(managed_user_settings, attribute_names=["muted_users_list"])
+    cache.update_user_settings(managed_user_settings)
     logger.info(
         "Successfully toggled mute for '%s' for user %s to '%s'. Cache updated.",
         tt_username_to_toggle,
-        user_settings.telegram_id,
+        managed_user_settings.telegram_id,
         resulting_action,
     )
     message_key = _("mute_toggle_success_muted") if resulting_action == "muted" else _("mute_toggle_success_unmuted")
@@ -428,7 +445,7 @@ async def toggle_mute_status_for_tt_user(
         success=True,
         message_key=message_key,
         message_args={"username": tt_username_to_toggle},
-        user_settings=user_settings,
+        user_settings=managed_user_settings,
     )
 
 

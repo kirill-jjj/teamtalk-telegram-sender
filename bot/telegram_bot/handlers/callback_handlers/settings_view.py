@@ -1,6 +1,6 @@
 """View refreshers for settings menus."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import cast
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 async def refresh_main_settings_view(
     query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     **kwargs: object,
 ) -> None:
     """Refreshes the main settings view."""
@@ -36,7 +36,7 @@ async def refresh_main_settings_view(
 
 async def refresh_notification_settings_view(
     query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     **kwargs: object,
 ) -> None:
