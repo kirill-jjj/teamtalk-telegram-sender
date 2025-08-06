@@ -1,6 +1,6 @@
 """Callback query handlers for actions related to banned users."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Annotated
 
@@ -29,7 +29,7 @@ async def refresh_banned_list_view(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     bot: Bot,
     **kwargs: object,
 ) -> None:
@@ -49,7 +49,7 @@ async def refresh_banned_list_view(
 async def unban_subscriber(
     callback_data: SubscriberCallback,
     session: Annotated[AsyncSession, FromDishka()],
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
 ) -> tuple[bool, str]:
     """Handles unbanning a subscriber."""
@@ -65,7 +65,7 @@ async def refresh_subscriber_list_view(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     bot: Bot,
     **kwargs: object,
 ) -> None:
@@ -85,7 +85,7 @@ async def refresh_subscriber_list_view(
 async def ban_subscriber(
     callback_data: SubscriberCallback,
     session: Annotated[AsyncSession, FromDishka()],
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
 ) -> tuple[bool, str]:

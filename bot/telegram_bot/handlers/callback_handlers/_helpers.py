@@ -1,7 +1,6 @@
 from collections.abc import Awaitable, Callable
 import functools
-import gettext
-from gettext import GNUTranslations
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
@@ -58,7 +57,7 @@ def with_view_refresh(
             query: CallbackQuery,
             callback_data: Any,  # noqa: ANN401
             session: AsyncSession,
-            translator: GNUTranslations,
+            translator: NullTranslations,
             bot: Bot,
             cache: CacheService,
             **kwargs: object,
@@ -94,7 +93,7 @@ async def refresh_subscriber_view(
     query: CallbackQuery,
     callback_data: RefreshableViewCallback,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     bot: "Bot",
     **kwargs: object,
 ) -> None:
@@ -120,7 +119,7 @@ def ensure_message_context(
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        translator: GNUTranslations,
+        translator: NullTranslations,
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
@@ -159,7 +158,7 @@ def ensure_tt_user_exists(
     async def wrapper(
         query: CallbackQuery,
         callback_data: T,
-        translator: GNUTranslations,
+        translator: NullTranslations,
         tt_connection: TeamTalkConnection,
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
@@ -211,7 +210,7 @@ async def _display_subscriber_view(
     target_telegram_id: int,
     page_context: int,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     bot: "Bot",
 ) -> None:
     """Helper function to display the subscriber details view."""

@@ -1,6 +1,6 @@
 """Callback query handlers for notification settings."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any
 
@@ -27,7 +27,7 @@ notifications_router = Router(name="callback_handlers.notifications")
 @ensure_message_context
 async def show_notifications_menu(
     callback_query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
 ) -> None:
     """Shows the notification settings menu."""
@@ -47,7 +47,7 @@ async def show_notifications_menu(
 @with_view_refresh(refresh_notification_settings_view)
 async def toggle_noon_setting(
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     cache: FromDishka[CacheService],
     **kwargs: Any,  # noqa: ANN401

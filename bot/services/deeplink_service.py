@@ -1,7 +1,7 @@
 """Service layer for handling deeplink actions."""
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import TypeGuard
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def execute_subscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     payload: str | None,
     user_settings: UserSettings,
     cache: CacheService,
@@ -87,7 +87,7 @@ async def execute_subscribe_deeplink(
 async def execute_unsubscribe_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     cache: CacheService,
 ) -> str:
     """Handles the logic for an unsubscribe deeplink."""
@@ -106,10 +106,10 @@ async def execute_unsubscribe_deeplink(
 # This is a simplified version; you might need to use a Protocol or more complex Callable
 # if the signatures vary significantly and you want stricter checking for all.
 SubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, gettext.GNUTranslations, str | None, UserSettings, CacheService],
+    [AsyncSession, int, NullTranslations, str | None, UserSettings, CacheService],
     Awaitable[str],
 ]
-UnsubscribeDeeplinkHandlerType = Callable[[AsyncSession, int, gettext.GNUTranslations, CacheService], Awaitable[str]]
+UnsubscribeDeeplinkHandlerType = Callable[[AsyncSession, int, NullTranslations, CacheService], Awaitable[str]]
 
 # Using a Union for the handler type to accommodate different signatures
 DeeplinkHandler = SubscribeDeeplinkHandlerType | UnsubscribeDeeplinkHandlerType
@@ -137,7 +137,7 @@ async def execute_deeplink(
     deeplink_obj: DeeplinkModel,
     session: AsyncSession,
     telegram_id: int,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,  # Needed for subscribe
     cache: CacheService,
 ) -> str:

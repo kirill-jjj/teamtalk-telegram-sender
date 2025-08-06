@@ -1,6 +1,6 @@
 """Callback query handlers for displaying and paginating the list of subscribers."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import cast
 
@@ -29,7 +29,7 @@ async def on_subscriber_list_callback(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
 ) -> None:

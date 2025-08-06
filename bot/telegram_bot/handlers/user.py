@@ -1,6 +1,6 @@
 """Telegram bot command handlers for regular user interactions."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Annotated, cast
 
@@ -31,7 +31,7 @@ user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(defau
 @user_commands_router.message(CommandStart(deep_link=False))
 async def on_start_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
 ) -> None:
     """Handles the /start command without a deeplink."""
     _ = translator.gettext
@@ -43,7 +43,7 @@ async def on_start_with_payload(
     message: Message,
     token: str,
     session: Annotated[AsyncSession, FromDishka()],
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     user_settings: Annotated[UserSettings, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
 ) -> None:
@@ -57,7 +57,7 @@ async def on_start_with_payload(
 @user_commands_router.message(Command("who"))
 async def on_who_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     tt_connection: Annotated[TeamTalkConnection, FromDishka()],
     bot: Annotated[Bot, FromDishka()],
@@ -84,7 +84,7 @@ async def on_who_command(
 @user_commands_router.message(Command("help"))
 async def on_help_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
 ) -> None:
     """Handles the /help command, showing available commands."""
@@ -100,7 +100,7 @@ async def on_help_command(
 @user_commands_router.message(Command("settings"))
 async def on_settings_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
 ) -> None:
     """Handles the /settings command, showing the main settings menu."""
     _ = translator.gettext
@@ -118,7 +118,7 @@ async def on_settings_command(
 @user_commands_router.message(Command("menu"))
 async def on_menu_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
 ) -> None:
     """Handles the /menu command, showing the main command menu."""

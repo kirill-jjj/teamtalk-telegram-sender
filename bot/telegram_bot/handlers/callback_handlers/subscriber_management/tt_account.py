@@ -1,6 +1,6 @@
 """Callback query handlers for subscriber's TeamTalk account management."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import cast
 
@@ -39,7 +39,7 @@ async def manage_tt_account(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
@@ -72,7 +72,7 @@ async def manage_tt_account(
 async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Link/Change TeamTalk Account' action by showing a list of linkable accounts."""
@@ -92,7 +92,7 @@ async def _display_linkable_tt_accounts_page(
     subscriber_context_page: int,
     linkable_accounts_page_to_show: int,
     tt_connection: TeamTalkConnection,
-    translator: GNUTranslations,
+    translator: NullTranslations,
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
@@ -162,7 +162,7 @@ async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
     tt_connection: TeamTalkConnection,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
     await _display_linkable_tt_accounts_page(
@@ -181,7 +181,7 @@ async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""

@@ -1,6 +1,6 @@
 """Telegram bot command handlers for administrator actions."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Annotated, cast
 
@@ -30,7 +30,7 @@ admin_router = Router(name="admin_router")
 async def _show_user_buttons(
     message: Message,
     command_type: AdminCommand,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     tt_connection: TeamTalkConnection,
 ) -> None:
     _ = translator.gettext
@@ -79,7 +79,7 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"), IsAdmin())
 async def on_kick_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: Annotated[TeamTalkConnection, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
@@ -93,7 +93,7 @@ async def on_kick_command(
 @admin_router.message(Command("ban"), IsAdmin())
 async def on_ban_command(
     message: Message,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: Annotated[TeamTalkConnection, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
@@ -108,7 +108,7 @@ async def on_ban_command(
 async def on_subscribers_command(
     message: Message,
     session: Annotated[AsyncSession, FromDishka()],
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
@@ -119,7 +119,7 @@ async def on_subscribers_command(
 async def on_unban_command(
     message: Message,
     session: Annotated[AsyncSession, FromDishka()],
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""

@@ -27,7 +27,7 @@ async def _add_or_remove_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
     action: Literal["add", "remove"],
 ) -> bool:
     """A generic helper to add or remove an admin, updating all necessary components."""
@@ -80,7 +80,7 @@ async def add_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
     return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="add")
@@ -92,7 +92,7 @@ async def remove_admin(
     user_settings: UserSettings,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
     return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="remove")
@@ -250,7 +250,7 @@ async def ban_user(
 async def ban_and_delete_subscriber(
     session: AsyncSession,
     cache: CacheService,
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     tt_connection: "TeamTalkConnection | None",
 ) -> OperationResult:
@@ -281,7 +281,7 @@ async def ban_and_delete_subscriber(
 
 
 def format_ban_result(
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
     telegram_id: int,
     tt_username: str | None,
     *,
@@ -348,7 +348,7 @@ async def _admin_update_user_setting(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations | NullTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     update_function: UpdateFunc,
     **kwargs: Any,  # noqa: ANN401
@@ -378,7 +378,7 @@ async def admin_toggle_noon_setting(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
 ) -> UserSettings | None:
     """Toggles the NOON (Not On Online Notifications) setting for a target user."""
@@ -391,7 +391,7 @@ async def admin_set_user_mute_mode(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     new_mode: "MuteListMode",
 ) -> UserSettings | None:
@@ -405,7 +405,7 @@ async def admin_set_user_notification_preference(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     new_pref_enum: "NotificationSetting",
 ) -> UserSettings | None:
@@ -426,7 +426,7 @@ async def admin_link_tt_account(
     cache: CacheService,
     target_telegram_id: int,
     tt_username_to_link: str,
-    translator: "GNUTranslations",
+    translator: "NullTranslations",
 ) -> OperationResult:
     """Links a TeamTalk account to a subscriber, managed by an admin."""
     _ = translator.gettext
@@ -538,7 +538,7 @@ async def admin_set_user_language(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     new_lang_code: str,
 ) -> UserSettings | None:

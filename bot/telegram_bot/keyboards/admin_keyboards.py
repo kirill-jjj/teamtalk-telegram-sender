@@ -1,7 +1,7 @@
 """Keyboards for admin-facing functions."""
 
 from collections.abc import Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 from typing import Any
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -44,7 +44,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 async def create_banned_user_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[SubscriberInfo],
     current_page: int,
     total_pages: int,
@@ -88,7 +88,7 @@ async def create_banned_user_list_keyboard(
 
 
 async def create_subscriber_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[SubscriberInfo],
     current_page: int,
     total_pages: int,
@@ -122,7 +122,7 @@ async def create_subscriber_list_keyboard(
 
 
 async def create_user_selection_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     users_to_display: list[pytalk.user.User],
     command_type: AdminCommand,
 ) -> InlineKeyboardBuilder:
@@ -141,7 +141,7 @@ async def create_user_selection_keyboard(
     return builder
 
 
-async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_admin: bool) -> InlineKeyboardBuilder:
+async def create_main_menu_keyboard(translator: NullTranslations, *, is_admin: bool) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
@@ -161,7 +161,7 @@ async def create_main_menu_keyboard(translator: gettext.GNUTranslations, *, is_a
 
 
 async def create_subscriber_action_menu_keyboard(
-    translator: gettext.GNUTranslations, target_telegram_id: int, page: int
+    translator: NullTranslations, target_telegram_id: int, page: int
 ) -> InlineKeyboardMarkup:
     """Creates the action menu for a specific subscriber."""
     _ = translator.gettext
@@ -237,7 +237,7 @@ async def create_subscriber_action_menu_keyboard(
 
 
 async def create_manage_tt_account_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     target_telegram_id: int,
     current_tt_username: str | None,
     page: int,
@@ -273,7 +273,7 @@ async def create_manage_tt_account_keyboard(
 
 
 async def create_view_mute_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     _page_items: list[Any],
     current_page: int,
     total_pages: int,
@@ -313,7 +313,7 @@ async def create_view_mute_list_keyboard(
 
 
 async def create_admin_subscriber_mute_mode_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     current_mode: MuteListMode,
     target_telegram_id: int,
     subscriber_page_context: int,
@@ -349,7 +349,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
 
 
 async def create_linkable_tt_account_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[pytalk.UserAccount],
     current_page: int,
     total_pages: int,
@@ -402,7 +402,7 @@ async def create_linkable_tt_account_list_keyboard(
 
 
 async def create_admin_subscriber_lang_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     available_languages: list[LanguageInfo],
     target_telegram_id: int,
     subscriber_page_context: int,
@@ -447,7 +447,7 @@ async def create_admin_subscriber_lang_keyboard(
 
 
 async def create_admin_subscriber_notification_pref_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     current_setting: NotificationSetting,
     target_telegram_id: int,
     subscriber_page_context: int,

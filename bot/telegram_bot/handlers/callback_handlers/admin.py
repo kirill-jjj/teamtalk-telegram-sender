@@ -1,6 +1,6 @@
 """Callback query handlers for administrator actions originating from inline keyboards."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 from html import escape
 import logging
 from typing import Annotated
@@ -30,7 +30,7 @@ def _handle_pytalk_error(
     action: AdminCommand,
     user_id_to_log: int | str,
     server_host: str,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     *,
     is_critical: bool = False,
 ) -> tuple[bool, str]:
@@ -55,7 +55,7 @@ def _handle_pytalk_error(
 async def _apply_user_moderation(
     action: AdminCommand,
     user_to_act_on: pytalk.user.User,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     admin_tg_id: int,
     server_host: str,
 ) -> tuple[bool, str]:
@@ -119,7 +119,7 @@ async def _apply_user_moderation(
 async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
-    translator: Annotated[GNUTranslations, FromDishka()],
+    translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: TeamTalkConnection,
     tt_user: pytalk.user.User,
 ) -> None:

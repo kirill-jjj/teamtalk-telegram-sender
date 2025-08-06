@@ -1,7 +1,7 @@
 """Callback query handlers for an admin managing a subscriber's settings."""
 
 from collections.abc import Awaitable, Callable
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any, TypedDict, cast
 
@@ -87,7 +87,7 @@ async def admin_set_setting_choice(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     available_languages: FromDishka[list[LanguageInfo]],
 ) -> None:
     """Handles showing the choice menu for various subscriber settings to an admin."""
@@ -154,7 +154,7 @@ async def admin_set_setting_choice(
 async def admin_toggle_noon(
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
 ) -> tuple[bool, str]:
@@ -203,7 +203,7 @@ async def _fetch_mute_list_data(
 
 
 def _build_mute_list_title(
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     subscriber_display_name: str,
 ) -> str:
@@ -225,7 +225,7 @@ async def admin_view_mute_list(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     bot: FromDishka[Bot],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
@@ -243,7 +243,7 @@ async def admin_view_mute_list(
 async def _display_subscriber_mute_list_page(
     query: CallbackQuery,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     bot: Bot,
     target_telegram_id: int,
     subscriber_list_return_page: int,
@@ -290,7 +290,7 @@ async def paginate_mute_list(
     query: CallbackQuery,
     callback_data: PaginateMuteListCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     bot: FromDishka[Bot],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
@@ -355,7 +355,7 @@ async def admin_set_any_subscriber_setting(
         | AdminSetSubscriberMuteModeCallback
     ),
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
 ) -> tuple[bool, str]:

@@ -1,6 +1,6 @@
 """Handles deeplink processing for Telegram bot commands like /start <token>."""
 
-import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
 
 from aiogram.types import Message
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _validate_deeplink_token(
-    session: AsyncSession, token: str, message_from_user_id: int, message: Message, translator: gettext.GNUTranslations
+    session: AsyncSession, token: str, message_from_user_id: int, message: Message, translator: NullTranslations
 ) -> DeeplinkModel | None:
     """Validates the deeplink token and checks if it's intended for the current user.
 
@@ -41,7 +41,7 @@ async def _validate_deeplink_token(
 async def _execute_deeplink(
     session: AsyncSession,
     telegram_id: int,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
     cache: CacheService,
@@ -61,7 +61,7 @@ async def handle_deeplink(
     message: Message,
     token: str,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     cache: CacheService,
 ) -> None:

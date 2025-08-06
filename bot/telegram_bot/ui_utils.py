@@ -1,7 +1,7 @@
 """Utility functions for creating and managing UI elements like paginated lists."""
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any, TypeVar
 
@@ -43,7 +43,7 @@ def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
 async def display_paginated_list(
     target: CallbackQuery | Message,
     bot: Bot,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     items: list[Any],
     page: int,
     title_text: str,

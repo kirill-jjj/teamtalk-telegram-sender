@@ -73,26 +73,10 @@ class AppProvider(Provider):
         """Creates the main Dispatcher instance."""
         return Dispatcher()
 
-    # Cache providers
-    @provide
-    def get_user_settings_cache(self) -> dict[int, UserSettings]:
-        """Provides a cache for user settings."""
-        return {}
-
     @provide
     def get_teamtalk_bot(self, settings: Settings) -> pytalk.TeamTalkBot:
         """Provides the TeamTalk bot instance."""
         return pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
-
-    @provide
-    def get_admin_ids_cache(self) -> set[int]:
-        """Provides a cache for admin IDs."""
-        return set()
-
-    @provide
-    def get_subscribed_users_cache(self) -> set[int]:
-        """Provides a cache for subscribed user IDs."""
-        return set()
 
     @provide
     def get_translator_cache(self) -> dict[str, GNUTranslations | NullTranslations]:
@@ -116,19 +100,13 @@ class AppProvider(Provider):
         """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
-    # Провайдер для CacheService, который зависит от кэшей
     @provide
-    def get_cache_service(
-        self,
-        user_settings_cache: dict[int, UserSettings],
-        admin_ids_cache: set[int],
-        subscribed_users_cache: set[int],
-    ) -> CacheService:
+    def get_cache_service(self) -> CacheService:
         """Provides the cache service."""
         return CacheService(
-            user_settings_cache=user_settings_cache,
-            admin_ids_cache=admin_ids_cache,
-            subscribed_users_cache=subscribed_users_cache,
+            user_settings_cache={},
+            admin_ids_cache=set(),
+            subscribed_users_cache=set(),
         )
 
     @provide
@@ -202,7 +180,7 @@ class RequestProvider(Provider):
         cache.update_user_settings(user_settings)
         return user_settings
 
-    @provide
+    @provide(provides=NullTranslations)
     def get_translator(
         self,
         user_settings: UserSettings | None,

@@ -1,6 +1,6 @@
 """Callback query handlers for main menu button interactions."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import cast
 
@@ -32,7 +32,7 @@ admin_menu_callback_router = Router(name="admin_menu_callback_router")
 @ensure_message_context
 async def menu_who_handler(
     query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection,
 ) -> None:
@@ -51,7 +51,7 @@ async def menu_who_handler(
 @ensure_message_context
 async def menu_help_handler(
     query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles the 'Help' menu button click."""
@@ -67,7 +67,7 @@ async def menu_help_handler(
 @ensure_message_context
 async def menu_settings_handler(
     query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles the 'Settings' menu button click."""
     await on_settings_command(
@@ -81,7 +81,7 @@ async def menu_settings_handler(
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
@@ -93,7 +93,7 @@ async def menu_kick_handler(
 @ensure_message_context
 async def menu_ban_handler(
     query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
@@ -106,7 +106,7 @@ async def menu_ban_handler(
 async def menu_subscribers_handler(
     query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     bot: FromDishka[Bot],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
@@ -119,7 +119,7 @@ async def menu_subscribers_handler(
 async def menu_unban_handler(
     query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     bot: FromDishka[Bot],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""

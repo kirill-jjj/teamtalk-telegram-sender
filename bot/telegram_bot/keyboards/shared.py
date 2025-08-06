@@ -1,7 +1,7 @@
 """Shared keyboard helper functions."""
 
 from collections.abc import Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 from typing import Any, Protocol
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -15,7 +15,7 @@ from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCall
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def _create_back_button_text(translator: gettext.GNUTranslations, destination_key: str) -> str:
+def _create_back_button_text(translator: NullTranslations, destination_key: str) -> str:
     """Creates a standardized 'Back to...' button text."""
     _ = translator.gettext
     return f"⬅️ {_('Back to')} {_(destination_key)}"
@@ -38,7 +38,7 @@ class PackableCallbackData(Protocol):
 
 
 async def _create_option_selection_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     options: list[tuple[str, str]],
     current_value: str | None,
     callback_data_factory: Callable[[str], PackableCallbackData],
@@ -70,7 +70,7 @@ async def _create_option_selection_keyboard(
 
 def _add_pagination_controls_generic(
     builder: InlineKeyboardBuilder,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     current_page: int,
     total_pages: int,
     pagination_callback_factory: "Callable[..., Any]",
@@ -98,7 +98,7 @@ def _add_pagination_controls_generic(
 
 
 async def create_paginated_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[Any],
     current_page: int,
     total_pages: int,
@@ -143,7 +143,7 @@ async def create_paginated_keyboard(
 
 async def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     current_page: int,
     total_pages: int,
     list_type: UserListAction,
@@ -171,7 +171,7 @@ async def _add_pagination_controls(
 
 
 async def _build_user_toggle_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[Any],
     current_page: int,
     total_pages: int,

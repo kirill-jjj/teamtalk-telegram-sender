@@ -1,6 +1,6 @@
 """Keyboards for user-facing settings menus."""
 
-import gettext
+from gettext import GNUTranslations, NullTranslations
 from typing import cast
 
 from aiogram.types import InlineKeyboardMarkup
@@ -35,7 +35,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 async def create_main_settings_keyboard(
-    translator: gettext.GNUTranslations | gettext.NullTranslations,
+    translator: NullTranslations,
 ) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
     _ = translator.gettext
@@ -57,7 +57,7 @@ async def create_main_settings_keyboard(
 
 
 async def create_language_selection_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     available_languages: list[LanguageInfo],
 ) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard using the generic helper."""
@@ -80,7 +80,7 @@ async def create_language_selection_keyboard(
 
 
 async def create_subscription_settings_keyboard(
-    translator: gettext.GNUTranslations, current_setting: NotificationSetting
+    translator: NullTranslations, current_setting: NotificationSetting
 ) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
     settings_map_source = {
@@ -108,7 +108,7 @@ async def create_subscription_settings_keyboard(
 
 
 async def create_notification_settings_keyboard(
-    translator: gettext.GNUTranslations, user_settings: UserSettings
+    translator: NullTranslations, user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
     _ = translator.gettext
@@ -135,7 +135,7 @@ async def create_notification_settings_keyboard(
 
 
 async def create_manage_muted_users_keyboard(
-    translator: gettext.GNUTranslations, user_settings: UserSettings
+    translator: NullTranslations, user_settings: UserSettings
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
     _ = translator.gettext
@@ -181,7 +181,7 @@ async def create_manage_muted_users_keyboard(
 
 
 async def create_paginated_user_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[str],
     current_page: int,
     total_pages: int,
@@ -211,7 +211,7 @@ async def create_paginated_user_list_keyboard(
 
 
 async def create_account_list_keyboard(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page_items: list[pytalk.UserAccount],
     current_page: int,
     total_pages: int,

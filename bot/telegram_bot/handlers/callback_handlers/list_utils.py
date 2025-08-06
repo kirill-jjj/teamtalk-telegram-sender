@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -75,7 +75,7 @@ async def _show_generic_user_list(
     target: Message | CallbackQuery,
     session: AsyncSession,
     bot: Bot,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page: int,
     statement: Select[Any],
     extractor: Callable[[Any], tuple[int, str | None] | None],
@@ -104,7 +104,7 @@ async def _show_subscriber_list_page(
     target: Message | CallbackQuery,
     session: AsyncSession,
     bot: Bot,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page: int = 0,
 ) -> None:
     """Fetches all subscribers and displays a paginated list."""
@@ -135,7 +135,7 @@ async def _show_banned_list_page(
     target: CallbackQuery | Message,
     session: AsyncSession,
     bot: Bot,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     page: int,
 ) -> None:
     """Shows a paginated list of banned users."""

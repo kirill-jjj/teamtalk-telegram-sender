@@ -1,7 +1,7 @@
 """Service layer for user-related operations, like profile deletion."""
 
 import gettext
-from gettext import GNUTranslations
+from gettext import GNUTranslations, NullTranslations
 from html import escape
 import logging
 
@@ -32,7 +32,7 @@ ttstr = pytalk.instance.sdk.ttstr
 
 
 def _get_user_display_channel_name(
-    user_obj: TeamTalkUser, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+    user_obj: TeamTalkUser, *, is_caller_admin: bool, translator: "NullTranslations"
 ) -> str:
     channel_obj = user_obj.channel
     user_display_channel_name = ""
@@ -83,7 +83,7 @@ def _get_user_display_channel_name(
 
 
 def _group_users_for_who_command(
-    users: list[TeamTalkUser], bot_user_id: int | None, *, is_caller_admin: bool, translator: "gettext.GNUTranslations"
+    users: list[TeamTalkUser], bot_user_id: int | None, *, is_caller_admin: bool, translator: "NullTranslations"
 ) -> tuple[list[WhoChannelGroup], int]:
     channels_display_data: dict[str, list[str]] = {}
     users_added_to_groups_count = 0
@@ -113,7 +113,7 @@ def _group_users_for_who_command(
 def _format_who_message(
     grouped_data: list[WhoChannelGroup],
     total_users: int,
-    translator: "gettext.GNUTranslations",
+    translator: "NullTranslations",
     server_host: str | None,
 ) -> str:
     _ = translator.gettext
@@ -161,7 +161,7 @@ def _format_who_message(
 
 
 async def get_online_users_report(
-    tt_connection: TeamTalkConnection, *, is_caller_admin: bool, translator: gettext.GNUTranslations
+    tt_connection: TeamTalkConnection, *, is_caller_admin: bool, translator: NullTranslations
 ) -> str:
     """Generates a formatted report of online users."""
     if not tt_connection.instance:
@@ -229,7 +229,7 @@ async def update_language(
     session: AsyncSession,
     cache: CacheService,
     bot: Bot,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     new_lang_code: str,
     actor: Actor = Actor.USER,
@@ -381,7 +381,7 @@ async def toggle_mute_status_for_tt_user(
     user_settings: UserSettings,
     tt_username_to_toggle: str,
     cache: CacheService,
-    translator: "gettext.GNUTranslations",
+    translator: "NullTranslations",
 ) -> OperationResult:
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
     _ = translator.gettext

@@ -1,6 +1,6 @@
 """Callback query handlers for core actions related to specific subscribers."""
 
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 
 from aiogram import Bot, F, Router
@@ -33,7 +33,7 @@ async def refresh_subscriber_list_view(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     bot: Bot,
     **kwargs: object,
 ) -> None:
@@ -53,7 +53,7 @@ async def refresh_subscriber_list_view(
 async def on_ban_subscriber_confirm(
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection | None,
 ) -> tuple[bool, str]:
@@ -78,7 +78,7 @@ async def on_ban_subscriber_confirm(
 async def delete_subscriber(
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
 ) -> tuple[bool, str]:
     """Handles deleting a subscriber."""
@@ -100,7 +100,7 @@ async def _refresh_and_display_subscriber_list(
     session: AsyncSession,
     bot: Bot,
     return_page: int,
-    translator: GNUTranslations,
+    translator: NullTranslations,
 ) -> None:
     """Refreshes and displays the paginated list of subscribers by calling the central list display function."""
     await _show_subscriber_list_page(
@@ -118,7 +118,7 @@ async def view_subscriber(
     query: CallbackQuery,
     callback_data: ViewSubscriberCallback,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     bot: FromDishka[Bot],
 ) -> None:
     """Handles viewing details and actions for a specific subscriber by calling the display helper."""

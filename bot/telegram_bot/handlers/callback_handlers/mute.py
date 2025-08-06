@@ -1,7 +1,7 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
 from collections.abc import Awaitable, Callable
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any, TypeVar, cast
 
@@ -49,7 +49,7 @@ T = TypeVar("T")
 
 async def _display_user_list_generic(
     callback_query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     page: int,
     data_fetcher: Callable[[], Awaitable[list[Any]]],
@@ -90,7 +90,7 @@ async def _display_user_list_generic(
 
 async def _display_internal_user_list(
     callback_query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
@@ -137,7 +137,7 @@ async def _display_internal_user_list(
 
 async def _display_all_server_accounts_list(
     callback_query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection,
     page: int = 0,
@@ -214,7 +214,7 @@ async def _get_username_from_muted_list(
 
 
 def format_mute_toast(
-    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: GNUTranslations
+    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: NullTranslations
 ) -> str:
     """Formats the toast message for a mute/unmute action."""
     _ = translator.gettext
@@ -232,7 +232,7 @@ def format_mute_toast(
 
 async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteCallback,
@@ -277,7 +277,7 @@ async def _refresh_mute_related_ui(
 @ensure_message_context
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
@@ -305,7 +305,7 @@ async def show_manage_muted_menu(
 async def set_mute_mode(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     callback_data: SetMuteModeCallback,
     cache: FromDishka[CacheService],
@@ -353,7 +353,7 @@ async def set_mute_mode(
 async def display_internal_user_list(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     callback_data: PaginateUsersCallback,
 ) -> None:
@@ -372,7 +372,7 @@ async def display_internal_user_list(
 @ensure_message_context
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     tt_connection: FromDishka[TeamTalkConnection],
     callback_data: PaginateUsersCallback,
@@ -392,7 +392,7 @@ async def display_all_accounts_list(
 async def toggle_user_mute(
     callback_query: CallbackQuery,
     session: FromDishka[AsyncSession],
-    translator: FromDishka[GNUTranslations],
+    translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: ToggleMuteCallback,
