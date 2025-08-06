@@ -359,6 +359,7 @@ async def admin_set_any_subscriber_setting(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[EventBot],
+    translator_factory: FromDishka[Callable[[str], NullTranslations]],  # Добавлено
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
     _ = translator.gettext
@@ -379,6 +380,11 @@ async def admin_set_any_subscriber_setting(
         "target_telegram_id": target_telegram_id,
         param_name: value_to_set,
     }
+
+    # Добавляем translator_factory только для нужной функции
+    if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
+        service_kwargs["translator_factory"] = translator_factory
+
     updated_user_settings = await config["service_func"](**service_kwargs)
 
     if updated_user_settings:

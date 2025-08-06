@@ -21,6 +21,40 @@ from ._utils import managed_db_transaction
 logger = logging.getLogger(__name__)
 
 
+UpdateFunc = Callable[..., Awaitable[UserSettings | None]]
+
+
+async def _admin_update_user_setting(
+    session: AsyncSession,
+    cache: CacheService,
+    bot: EventBot,
+    translator: NullTranslations,
+    target_telegram_id: int,
+    update_function: UpdateFunc,
+    **kwargs: Any,  # noqa: ANN401
+) -> UserSettings | None:
+    """Generic helper to update a user setting for a target user by an admin."""
+    target_user_settings = await session.get(UserSettings, target_telegram_id)
+    if not target_user_settings:
+        logger.warning(
+            "%s: UserSettings not found for %s",
+            update_function.__name__,
+            target_telegram_id,
+        )
+        return None
+
+    kwargs["actor"] = Actor.ADMIN
+    # Pass all original and new kwargs to the update function
+    return await update_function(
+        session=session,
+        cache=cache,
+        bot=bot,
+        translator=translator,
+        user_settings=target_user_settings,
+        **kwargs,
+    )
+
+
 async def _add_or_remove_admin(
     session: AsyncSession,
     telegram_id: int,
@@ -341,37 +375,6 @@ def format_ban_result(
     )
 
 
-UpdateFunc = Callable[..., Awaitable[UserSettings | None]]
-
-
-async def _admin_update_user_setting(
-    session: AsyncSession,
-    cache: CacheService,
-    bot: EventBot,
-    translator: NullTranslations,
-    target_telegram_id: int,
-    update_function: UpdateFunc,
-    **kwargs: Any,  # noqa: ANN401
-) -> UserSettings | None:
-    """Generic helper to update a user setting for a target user by an admin."""
-    target_user_settings = await session.get(UserSettings, target_telegram_id)
-    if not target_user_settings:
-        logger.warning(
-            "%s: UserSettings not found for %s",
-            update_function.__name__,
-            target_telegram_id,
-        )
-        return None
-
-    kwargs["actor"] = Actor.ADMIN
-    return await update_function(
-        session=session,
-        cache=cache,
-        bot=bot,
-        translator=translator,
-        user_settings=target_user_settings,
-        **kwargs,
-    )
 
 
 async def admin_toggle_noon_setting(
@@ -539,6 +542,7 @@ async def admin_set_user_language(
     cache: CacheService,
     bot: EventBot,
     translator: NullTranslations,
+    translator_factory: Callable[[str], NullTranslations],  # Добавлено
     target_telegram_id: int,
     new_lang_code: str,
 ) -> UserSettings | None:
@@ -551,4 +555,5 @@ async def admin_set_user_language(
         target_telegram_id,
         user_service.update_language,
         new_lang_code=new_lang_code,
+        translator_factory=translator_factory,  # Добавлено
     )

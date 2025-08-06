@@ -80,6 +80,7 @@ async def set_language(
         translator=translator,
         user_settings=user_settings,
         new_lang_code=new_lang_code,
+        translator_factory=translator_factory,
         actor=Actor.USER,
     )
 

@@ -1,5 +1,6 @@
 """Service layer for user-related operations, like profile deletion."""
 
+from collections.abc import Callable
 from gettext import NullTranslations
 from html import escape
 import logging
@@ -228,9 +229,10 @@ async def update_language(
     session: AsyncSession,
     cache: CacheService,
     bot: EventBot,
-    translator: NullTranslations,
+    translator: NullTranslations,  # noqa: ARG001
     user_settings: UserSettings,
     new_lang_code: str,
+    translator_factory: Callable[[str], NullTranslations],
     actor: Actor = Actor.USER,
 ) -> UserSettings | None:
     """Updates the language for a user."""
@@ -244,12 +246,14 @@ async def update_language(
         log_context=log_context,
     )
     if updated_settings:
+        # Создаем новый переводчик для языка, который выбрал пользователь
+        new_translator = translator_factory(new_lang_code)
         await _utils.update_user_bot_commands(
             telegram_id=user_settings.telegram_id,
             new_lang_code=new_lang_code,
             cache=cache,
             bot=bot,
-            translator=translator,
+            translator=new_translator,  # Используем правильный переводчик
         )
     return updated_settings
 
