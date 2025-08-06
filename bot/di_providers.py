@@ -224,20 +224,39 @@ class RequestProvider(Provider):
 
     @provide
     def get_event_user(self, event: TelegramObject) -> User | None:
-        """Provides the user object from the current event."""
+        """Provides the user object from the current event, if available."""
         return getattr(event, "from_user", None)
 
-    @provide
-    async def get_user_settings(
+    @provide(provides=UserSettings | None)
+    async def get_user_settings_optional(
         self,
-        user: User,
+        user: User | None,
         user_settings_service: UserSettingsService,
         settings: Settings,
-    ) -> UserSettings:
-        """Provides UserSettings by delegating to the UserSettingsService."""
+    ) -> UserSettings | None:
+        """Provides UserSettings if a user is present in the event."""
+        if not user:
+            return None
         return await user_settings_service.get_or_create(
             user.id, settings.general.default_lang
         )
+
+    @provide
+    def get_user_settings_guaranteed(
+        self,
+        user_settings: UserSettings | None,
+    ) -> UserSettings:
+        """
+        Provides a guaranteed UserSettings object.
+        Raises:
+            ValueError: If UserSettings cannot be provided because no user
+                        is present in the event context.
+        """
+        if user_settings is None:
+            raise ValueError(
+                "Cannot provide UserSettings because no user is present in the event."
+            )
+        return user_settings
 
     @provide(provides=NullTranslations)
     def get_translator(
