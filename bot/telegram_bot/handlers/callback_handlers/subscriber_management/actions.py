@@ -1,15 +1,16 @@
 """Callback query handlers for core actions related to specific subscribers."""
 
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
+from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import SubscriberCommand
 from bot.services import admin_service, user_service
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     SubscriberCallback,
@@ -24,9 +25,6 @@ from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
 
@@ -35,15 +33,15 @@ async def refresh_subscriber_list_view(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    translator: GNUTranslations,
+    bot: Bot,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
     await _refresh_and_display_subscriber_list(
         query=query,
         session=session,
-        services=services,
+        bot=bot,
         return_page=callback_data.page,
         translator=translator,
     )
@@ -53,18 +51,19 @@ async def refresh_subscriber_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
-    query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection | None,
 ) -> tuple[bool, str]:
     """Handles banning and deleting a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await admin_service.ban_and_delete_subscriber(session, services, target_telegram_id, tt_connection)
+    result = await admin_service.ban_and_delete_subscriber(
+        session, cache, translator, target_telegram_id, tt_connection
+    )
 
     if result.long_message:
         logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
@@ -77,18 +76,16 @@ async def on_ban_subscriber_confirm(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber(
-    query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-    tt_connection: TeamTalkConnection | None,  # Injected by middleware, unused
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
 ) -> tuple[bool, str]:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    success = await user_service.delete_user_profile(session, target_telegram_id, services=services)
+    success = await user_service.delete_user_profile(session, target_telegram_id, cache=cache)
 
     if success:
         message = _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id)
@@ -101,21 +98,15 @@ async def delete_subscriber(
 async def _refresh_and_display_subscriber_list(
     query: CallbackQuery,
     session: AsyncSession,
-    services: "Services",
+    bot: Bot,
     return_page: int,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
 ) -> None:
     """Refreshes and displays the paginated list of subscribers by calling the central list display function."""
-    _ = translator.gettext
-    if not services.bot_event:
-        logger.error("_refresh_and_display_subscriber_list: services.bot_event is not available.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
-
     await _show_subscriber_list_page(
         target=query,
         session=session,
-        bot=services.bot_event,
+        bot=bot,
         translator=translator,
         page=return_page,
     )
@@ -126,9 +117,9 @@ async def _refresh_and_display_subscriber_list(
 async def view_subscriber(
     query: CallbackQuery,
     callback_data: ViewSubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    bot: FromDishka[Bot],
 ) -> None:
     """Handles viewing details and actions for a specific subscriber by calling the display helper."""
     await _display_subscriber_view(
@@ -137,5 +128,5 @@ async def view_subscriber(
         page_context=callback_data.page,
         session=session,
         translator=translator,
-        services=services,
+        bot=bot,
     )

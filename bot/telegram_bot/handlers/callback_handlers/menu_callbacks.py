@@ -1,19 +1,20 @@
 """Callback query handlers for main menu button interactions."""
 
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
+from dishka.integrations.aiogram import FromDishka
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminCommand
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 
-# Import business logic directly, not through other handlers
 from ..admin import _show_user_buttons
 from ..user import on_help_command, on_settings_command, on_who_command
 from ._helpers import ensure_message_context
@@ -22,36 +23,24 @@ from .list_utils import (
     _show_subscriber_list_page,
 )
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
-# Middlewares are now applied in the parent router in callbacks.py
-
 admin_menu_callback_router = Router(name="admin_menu_callback_router")
-# The other middlewares are applied in the parent router in callbacks.py
-
-
-# --- User Handlers ---
 
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "who"))
 @ensure_message_context
 async def menu_who_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-    services: "Services",  # Injected from workflow_data
-    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
-    # Ensure query.message exists due to @ensure_message_context
-    # on_who_command will be refactored to use services.cache.is_admin or accept is_admin
     await on_who_command(
         message=query.message,
         translator=translator,
-        services=services,  # Pass services
+        cache=cache,
         tt_connection=tt_connection,
         bot=query.bot,
     )
@@ -62,17 +51,14 @@ async def menu_who_handler(
 @ensure_message_context
 async def menu_help_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
-    services: "Services",  # Injected from workflow_data
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the 'Help' menu button click."""
-    # Ensure query.message exists
-    # on_help_command will be refactored to use services.cache.is_admin or accept is_admin
     await on_help_command(
         message=query.message,
         translator=translator,
-        services=services,  # Pass services
+        cache=cache,
     )
     await query.answer()
 
@@ -81,11 +67,9 @@ async def menu_help_handler(
 @ensure_message_context
 async def menu_settings_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Injected by UserSettingsMiddleware
+    translator: FromDishka[GNUTranslations],
 ) -> None:
     """Handles the 'Settings' menu button click."""
-    # Ensure query.message exists
     await on_settings_command(
         message=query.message,
         translator=translator,
@@ -93,20 +77,15 @@ async def menu_settings_handler(
     await query.answer()
 
 
-# --- Administrator Handlers ---
-
-
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
 @ensure_message_context
 async def menu_kick_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Injected
-    tt_connection: TeamTalkConnection | None,  # Injected
+    translator: FromDishka[GNUTranslations],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
-    # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)
     await query.answer()
 
 
@@ -114,13 +93,11 @@ async def menu_kick_handler(
 @ensure_message_context
 async def menu_ban_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    translator: "gettext.GNUTranslations",  # Injected
-    tt_connection: TeamTalkConnection | None,  # Injected
+    translator: FromDishka[GNUTranslations],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
-    # Ensure query.message exists
-    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)  # type: ignore
+    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)
     await query.answer()
 
 
@@ -128,14 +105,12 @@ async def menu_ban_handler(
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    session: AsyncSession,  # Injected
-    translator: "gettext.GNUTranslations",  # Injected
-    services: "Services",  # Injected
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    bot: FromDishka[Bot],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    # Ensure query.message exists
-    await _show_subscriber_list_page(query.message, session, services.bot_event, translator, page=0)  # type: ignore
+    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)
     await query.answer()
 
 
@@ -143,16 +118,15 @@ async def menu_subscribers_handler(
 @ensure_message_context
 async def menu_unban_handler(
     query: CallbackQuery,
-    callback_data: MenuCallback,
-    session: AsyncSession,
-    translator: "gettext.GNUTranslations",
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    bot: FromDishka[Bot],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
-        target=query.message,  # type: ignore[arg-type]
+        target=query.message,
         session=cast(SQLModelAsyncSession, session),
-        bot=services.bot_event,
+        bot=bot,
         page=0,
         translator=translator,
     )

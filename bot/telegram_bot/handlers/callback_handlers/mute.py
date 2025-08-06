@@ -1,23 +1,17 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import Any, TypeVar, cast
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
+from dishka.integrations.aiogram import FromDishka
 import pytalk
 from sqlmodel import select
-
-# Import SQLModel's AsyncSession and alias the other one if needed, or just use one consistently.
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
@@ -27,6 +21,7 @@ from bot.core.enums import (
 )
 from bot.models import MutedUser, MuteListMode, UserSettings
 from bot.services import user_service
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
@@ -44,9 +39,6 @@ from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
 
 from ._helpers import ensure_message_context, safe_edit_text
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
 mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
@@ -58,7 +50,7 @@ T = TypeVar("T")
 
 async def _display_user_list_generic(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     page: int,
     data_fetcher: Callable[[], Awaitable[list[Any]]],
@@ -99,11 +91,11 @@ async def _display_user_list_generic(
 
 async def _display_internal_user_list(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
-    session: SQLModelAsyncSession | None = None,
+    session: AsyncSession | None = None,
 ) -> None:
     _ = translator.gettext
     if not session:
@@ -146,7 +138,7 @@ async def _display_internal_user_list(
 
 async def _display_all_server_accounts_list(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection,
     page: int = 0,
@@ -207,7 +199,7 @@ async def _get_username_from_all_accounts(
 async def _get_username_from_muted_list(
     callback_data: ToggleMuteCallback,
     user_settings: UserSettings,
-    session: SQLModelAsyncSession,
+    session: AsyncSession,
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
     statement = select(MutedUser.muted_teamtalk_username).where(
@@ -223,7 +215,7 @@ async def _get_username_from_muted_list(
 
 
 def format_mute_toast(
-    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: gettext.GNUTranslations
+    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: GNUTranslations
 ) -> str:
     """Formats the toast message for a mute/unmute action."""
     _ = translator.gettext
@@ -239,24 +231,19 @@ def format_mute_toast(
     return _("{username} has been {action}.").format(username=quoted_username, action=action_text)
 
 
-# _commit_mute_changes_and_notify is removed, logic moved to user_service.toggle_mute_status_for_tt_user.
-
-
 async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteCallback,
-    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
+    session: AsyncSession,
 ) -> None:
     """Refreshes the mute list UI after an action."""
     _ = translator.gettext
     list_type_user_was_on = callback_data.list_type
     current_page_for_refresh = callback_data.current_page
 
-    # The calling handler (toggle_user_mute) is decorated with @ensure_message_context,
-    # so callback_query.message is guaranteed to be a Message object here.
     try:
         await session.refresh(user_settings, attribute_names=["muted_users_list"])
         logger.debug("Refreshed muted_users_list for user %s before UI refresh.", user_settings.telegram_id)
@@ -283,7 +270,7 @@ async def _refresh_mute_related_ui(
             user_settings,
             list_type_user_was_on,
             current_page_for_refresh,
-            session,  # No longer need to cast
+            session,
         )
 
 
@@ -291,13 +278,11 @@ async def _refresh_mute_related_ui(
 @ensure_message_context
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    _callback_data: NotificationCallback | None = None,  # Keep for consistent signature, though not used
+    translator: FromDishka[GNUTranslations],
+    user_settings: FromDishka[UserSettings],
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
-    # Callback answering handled by decorator or safe_edit_text.
     manage_muted_builder = await create_manage_muted_users_keyboard(translator, user_settings)
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
@@ -307,9 +292,8 @@ async def show_manage_muted_menu(
         current_mode_text = _("Current mode is Whitelist. You only receive notifications from users on the list.")
     full_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_text)
 
-    # Decorator ensures callback_query.message is a Message object.
     await safe_edit_text(
-        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        message_to_edit=callback_query.message,
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
         logger_instance=logger,
@@ -321,48 +305,29 @@ async def show_manage_muted_menu(
 @ensure_message_context
 async def set_mute_mode(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    user_settings: FromDishka[UserSettings],
     callback_data: SetMuteModeCallback,
-    services: "Services",
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
-    # Decorator ensures callback_query.message exists.
-
     new_mode = callback_data.mode
 
-    # The user_settings object from middleware should already be session-managed.
-    # The service function `update_mute_mode` will handle merging if necessary,
-    # committing, cache updates, and error handling.
     updated_user_settings = await user_service.update_mute_mode(
-        session, services, user_settings, new_mode, actor=Actor.USER
+        session, cache, user_settings, new_mode, actor=Actor.USER
     )
 
     if not updated_user_settings:
-        # Service function handles logging and rollback.
-        # Inform user of failure. The user_settings object might be in its original state
-        # or state before the failed commit attempt if service function restored it.
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        # We might need to refresh the UI to reflect the (potentially) unchanged state.
-        # For now, just answering. If the settings object was mutated then rolled back,
-        # the keyboard might be built with this transient state if not careful.
-        # However, create_manage_muted_users_keyboard should use the state from the object as it is.
-        # Let's ensure we pass the original user_settings if update failed, or the updated one if success.
-        # The `user_settings` variable itself might have been modified by `set_user_mute_mode` if it did a rollback
-        # and restored the original value to the passed object.
-        # For simplicity, we'll rely on the service to have restored the object's state on failure.
         current_settings_for_keyboard = user_settings
     else:
-        # Success
         mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)
         current_settings_for_keyboard = updated_user_settings
 
-    # Determine description and build keyboard based on the settings state
-    # (either updated or original if service call failed and restored it)
     if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist:
         current_mode_desc = _(
             "Current mode is Blacklist. You receive notifications from everyone except those on the list."
@@ -373,9 +338,8 @@ async def set_mute_mode(
     menu_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_desc)
     updated_keyboard_markup = await create_manage_muted_users_keyboard(translator, current_settings_for_keyboard)
 
-    # Decorator ensures callback_query.message is a Message object.
     await safe_edit_text(
-        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        message_to_edit=callback_query.message,
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),
         logger_instance=logger,
@@ -389,21 +353,19 @@ async def set_mute_mode(
 @ensure_message_context
 async def display_internal_user_list(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession,  # Changed to SQLModel's AsyncSession
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    user_settings: FromDishka[UserSettings],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
-    _ = translator.gettext
-    # Callback answering handled by decorator or _display_internal_user_list.
     await _display_internal_user_list(
         callback_query,
         translator,
         user_settings,
         callback_data.list_type,
         callback_data.page,
-        session,  # No longer need to cast
+        session,
     )
 
 
@@ -411,18 +373,14 @@ async def display_internal_user_list(
 @ensure_message_context
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    tt_connection: TeamTalkConnection | None,
+    translator: FromDishka[GNUTranslations],
+    user_settings: FromDishka[UserSettings],
+    tt_connection: TeamTalkConnection,
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
-    _ = translator.gettext
-    # Callback answering handled by decorator or _display_all_server_accounts_list.
-    # The TeamTalkConnectionCheckMiddleware ensures tt_connection is valid.
-    # Decorator ensures callback_query.message exists.
     await _display_all_server_accounts_list(
-        callback_query, translator, user_settings, cast(TeamTalkConnection, tt_connection), callback_data.page
+        callback_query, translator, user_settings, tt_connection, callback_data.page
     )
 
 
@@ -430,12 +388,12 @@ async def display_all_accounts_list(
 @ensure_message_context
 async def toggle_user_mute(
     callback_query: CallbackQuery,
-    session: SQLModelAsyncSession,
-    translator: gettext.GNUTranslations,
-    user_settings: UserSettings,
-    tt_connection: TeamTalkConnection | None,
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    user_settings: FromDishka[UserSettings],
+    tt_connection: TeamTalkConnection,
     callback_data: ToggleMuteCallback,
-    services: "Services",
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
@@ -458,7 +416,7 @@ async def toggle_user_mute(
         return
 
     result = await user_service.toggle_mute_status_for_tt_user(
-        session, user_settings, username_to_toggle, services, translator
+        session, user_settings, username_to_toggle, cache, translator
     )
 
     toast_message = translator.gettext(result.message_key).format(**(result.message_args or {}))

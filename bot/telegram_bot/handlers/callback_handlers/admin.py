@@ -1,12 +1,13 @@
 """Callback query handlers for administrator actions originating from inline keyboards."""
 
-import gettext
+from gettext import GNUTranslations
 from html import escape
 import logging
-from typing import TYPE_CHECKING
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from dishka.integrations.aiogram import FromDishka
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
@@ -16,15 +17,10 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminCallback
 
-# Middlewares are now applied in the parent router in callbacks.py
 from ._helpers import ensure_message_context, ensure_tt_user_exists, safe_edit_text
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
-# Middlewares are now applied in the parent router in callbacks.py
 
 ttstr = pytalk.instance.sdk.ttstr
 
@@ -34,7 +30,7 @@ def _handle_pytalk_error(
     action: AdminCommand,
     user_id_to_log: int | str,
     server_host: str,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     *,
     is_critical: bool = False,
 ) -> tuple[bool, str]:
@@ -42,7 +38,6 @@ def _handle_pytalk_error(
     _ = translator.gettext
     log_message = "Error during '%s' on TT user (ID: %s) on server %s."
     if is_critical:
-        # For critical errors, logger.critical with exc_info=True is appropriate
         logger.critical(
             "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on server %s: %s",
             action,
@@ -57,17 +52,14 @@ def _handle_pytalk_error(
     return False, _("An error occurred. Please try again later.")
 
 
-async def _apply_user_moderation(  # noqa: PLR0911
+async def _apply_user_moderation(
     action: AdminCommand,
     user_to_act_on: pytalk.user.User,
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     admin_tg_id: int,
     server_host: str,
 ) -> tuple[bool, str]:
-    """Executes a moderation action on a TeamTalk user.
-
-    Returns a tuple of (success_boolean, message_string).
-    """
+    """Executes a moderation action on a TeamTalk user."""
     _ = translator.gettext
     user_nickname = get_tt_user_display_name(user_to_act_on, translator)
     quoted_nickname = escape(user_nickname)
@@ -119,15 +111,13 @@ async def _apply_user_moderation(  # noqa: PLR0911
 async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
-    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
-    tt_user: pytalk.user.User,  # Injected by @ensure_tt_user_exists
+    translator: Annotated[GNUTranslations, FromDishka()],
+    tt_connection: TeamTalkConnection,
+    tt_user: pytalk.user.User,
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     _ = translator.gettext
-    # Decorators ensure message context and tt_user existence.
-
-    server_host_for_display = tt_connection.server_info.host  # type: ignore[union-attr]
+    server_host_for_display = tt_connection.server_info.host
 
     success, message_text = await _apply_user_moderation(
         action=callback_data.action,
@@ -139,22 +129,12 @@ async def on_moderation_confirm(
 
     if success:
         await callback_query.answer(_("Success!"), show_alert=False)
-        # The @ensure_message_context decorator guarantees callback_query.message is a Message object.
-        # No need for `isinstance(callback_query.message, Message)` check here.
-        # We use safe_edit_text from the local _helpers module (which should be ui_utils.safe_edit_text)
-        # to set the new text and remove the keyboard.
         await safe_edit_text(
-            message_to_edit=callback_query.message,  # type: ignore[arg-type] # Decorator ensures this
+            message_to_edit=callback_query.message,
             text=message_text,
-            reply_markup=None,  # This will remove the keyboard
+            reply_markup=None,
             logger_instance=logger,
             log_context=f"process_user_action_selection ({callback_data.action.value}) on {server_host_for_display}",
         )
-        # The original code had a two-step fallback to remove markup if edit_text failed.
-        # safe_edit_text attempts to edit text and markup together. If it fails, it logs.
-        # For simplicity and DRY, we rely on this single call. If removing markup
-        # specifically after a text edit failure is critical and common, safe_edit_text
-        # would need to be enhanced or a more complex structure kept.
-        # Given typical usage, this simplification is usually acceptable.
     else:
         await callback_query.answer(message_text, show_alert=True)

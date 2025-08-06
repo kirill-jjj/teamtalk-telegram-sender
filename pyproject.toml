@@ -45,7 +45,8 @@ dependencies = [
     "alembic~=1.16",
     "cachetools~=6.1",
     "toml~=0.10", # For writing TOML files (e.g., in env-to-toml script)
-    "types-toml" # For mypy toml type checking
+    "types-toml", # For mypy toml type checking
+    "dishka[aiogram]~=1.6"
 ]
 
 [project.urls]
@@ -157,7 +158,8 @@ exclude = [
 ignore_missing_imports = true
 plugins = [
   "pydantic.mypy",
-  "sqlalchemy.ext.mypy.plugin"
+  "sqlalchemy.ext.mypy.plugin",
+  "dishka.mypy"
 ]
 warn_return_any = true
 warn_unused_configs = true

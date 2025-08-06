@@ -9,10 +9,7 @@ from types import ModuleType  # For uvloop typing
 from aiogram import Dispatcher
 
 from bot.config import Settings
-from bot.database.engine import create_session_factory
 from bot.logging_setup import setup_logging
-from bot.services_container import Services
-from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.setup import create_telegram_dispatcher, setup_telegram_dispatcher
 
 uvloop: ModuleType | None = None
@@ -37,31 +34,19 @@ class Application:
         """
         self.app_config = app_config_instance
         self.logger = setup_logging()
-
-        session_factory = create_session_factory(app_config_instance)
-        self.services = Services(config=app_config_instance, session_factory=session_factory)
-        self.dp: Dispatcher | None = None  # Will be initialized in run()
-        self.tt_event_handler = TeamTalkEventHandler(self.services)
-        # self.teamtalk_task is removed as it's now managed in setup.py via dispatcher.workflow_data
+        self.dp: Dispatcher | None = None
 
     async def run(self) -> None:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
-        self.logger.info("Initializing available languages in services...")
-        self.services.initialize_languages()
-
         self.dp = create_telegram_dispatcher()
 
-        # Setup the dispatcher without app_callbacks
-        setup_telegram_dispatcher(dp=self.dp, services=self.services)
+        setup_telegram_dispatcher(dp=self.dp)
 
         self.logger.info("Starting Telegram polling...")
         try:
-            await self.dp.start_polling(
-                self.services.bot_event,
-                allowed_updates=self.dp.resolve_used_update_types(),
-            )
+            await self.dp.start_polling()
         finally:
             self.logger.info("Application finished.")
 

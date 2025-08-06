@@ -1,13 +1,14 @@
 """Callback query handlers for an admin managing a subscriber's settings."""
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import Any, TypedDict, cast
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from dishka.integrations.aiogram import FromDishka
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlmodel import select
@@ -15,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
 from bot.core.enums import SubscriberCommand
+from bot.core.languages import LanguageInfo
 from bot.models import (
     MutedUser,
     MuteListMode,
@@ -22,6 +24,7 @@ from bot.models import (
     UserSettings,
 )
 from bot.services import admin_service
+from bot.services.cache_service import CacheService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
@@ -43,11 +46,6 @@ from bot.telegram_bot.keyboards import (
 from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
-if TYPE_CHECKING:
-    from aiogram.types import InlineKeyboardMarkup
-
-    from bot.services_container import Services
-
 
 class SettingChoiceConfig(TypedDict):
     """A type hint for the setting choice configuration dictionary."""
@@ -63,7 +61,6 @@ settings_router = Router(name="subscriber_management.settings_router")
 
 async def _present_subscriber_setting_choice(
     query: CallbackQuery,
-    callback_data: SubscriberCallback,
     message_text: str,
     keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]",
     keyboard_factory_kwargs: dict[str, object],
@@ -89,9 +86,9 @@ async def _present_subscriber_setting_choice(
 async def admin_set_setting_choice(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    available_languages: FromDishka[list[LanguageInfo]],
 ) -> None:
     """Handles showing the choice menu for various subscriber settings to an admin."""
     _ = translator.gettext
@@ -112,9 +109,7 @@ async def admin_set_setting_choice(
         SubscriberCommand.ADMIN_SET_LANGUAGE: {
             "message_text": _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_lang_keyboard,
-            "keyboard_factory_kwargs": {
-                "available_languages": services.available_languages,
-            },
+            "keyboard_factory_kwargs": {"available_languages": available_languages},
         },
         SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
             "message_text": _("Select notification preference for subscriber {tg_id}:").format(
@@ -147,7 +142,6 @@ async def admin_set_setting_choice(
 
     await _present_subscriber_setting_choice(
         query=query,
-        callback_data=callback_data,
         message_text=config["message_text"],
         keyboard_factory=config["keyboard_factory"],
         keyboard_factory_kwargs={**config["keyboard_factory_kwargs"], **common_kwargs},
@@ -158,17 +152,19 @@ async def admin_set_setting_choice(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
-    query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
+    bot: FromDishka[Bot],
 ) -> tuple[bool, str]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    updated_user_settings = await admin_service.admin_toggle_noon_setting(session, services, target_telegram_id)
+    updated_user_settings = await admin_service.admin_toggle_noon_setting(
+        session, cache, bot, translator, target_telegram_id
+    )
 
     if updated_user_settings:
         new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
@@ -181,7 +177,7 @@ async def admin_toggle_noon(
 
 
 async def _fetch_mute_list_data(
-    session: AsyncSession, target_telegram_id: int, services: "Services"
+    session: AsyncSession, target_telegram_id: int, bot: Bot
 ) -> tuple[UserSettings | None, str]:
     """Fetches user settings and their display name for the mute list view."""
     statement = (
@@ -194,7 +190,7 @@ async def _fetch_mute_list_data(
     subscriber_display_name = str(target_telegram_id)
     if target_user_settings:
         try:
-            chat_info = await services.bot_event.get_chat(target_telegram_id)
+            chat_info = await bot.get_chat(target_telegram_id)
             if chat_info:
                 subscriber_display_name = format_telegram_user_display_name(chat_info)
         except Exception:
@@ -207,7 +203,7 @@ async def _fetch_mute_list_data(
 
 
 def _build_mute_list_title(
-    translator: gettext.GNUTranslations,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     subscriber_display_name: str,
 ) -> str:
@@ -228,16 +224,16 @@ def _build_mute_list_title(
 async def admin_view_mute_list(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    bot: FromDishka[Bot],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
     await _display_subscriber_mute_list_page(
         query=query,
         session=session,
         translator=translator,
-        services=services,
+        bot=bot,
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_list_return_page=callback_data.page,
         mute_list_page_num=0,
@@ -247,15 +243,15 @@ async def admin_view_mute_list(
 async def _display_subscriber_mute_list_page(
     query: CallbackQuery,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    translator: GNUTranslations,
+    bot: Bot,
     target_telegram_id: int,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    target_user_settings, subscriber_display_name = await _fetch_mute_list_data(session, target_telegram_id, services)
+    target_user_settings, subscriber_display_name = await _fetch_mute_list_data(session, target_telegram_id, bot)
 
     if not target_user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
@@ -293,24 +289,21 @@ async def _display_subscriber_mute_list_page(
 async def paginate_mute_list(
     query: CallbackQuery,
     callback_data: PaginateMuteListCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    bot: FromDishka[Bot],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
     await _display_subscriber_mute_list_page(
         query=query,
         session=session,
         translator=translator,
-        services=services,
+        bot=bot,
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_list_return_page=callback_data.subscriber_context_page,
         mute_list_page_num=callback_data.mute_list_page,
     )
     await query.answer()
-
-
-# Data-driven configuration for admin setting handlers
 
 
 class AdminSettingHandlerConfig(TypedDict):
@@ -356,15 +349,15 @@ SETTING_HANDLERS_CONFIG: dict[type[CallbackData], AdminSettingHandlerConfig] = {
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
-    query: CallbackQuery,
     callback_data: (
         AdminSetSubscriberLanguageCallback
         | AdminSetSubscriberNotificationPrefCallback
         | AdminSetSubscriberMuteModeCallback
     ),
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
+    bot: FromDishka[Bot],
 ) -> tuple[bool, str]:
     """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
     _ = translator.gettext
@@ -377,10 +370,11 @@ async def admin_set_any_subscriber_setting(
     param_name = config["param_name"]
     value_to_set = config["value_extractor"](callback_data)
 
-    # Dynamically call the appropriate service function
     service_kwargs = {
         "session": session,
-        "services": services,
+        "cache": cache,
+        "bot": bot,
+        "translator": translator,
         "target_telegram_id": target_telegram_id,
         param_name: value_to_set,
     }

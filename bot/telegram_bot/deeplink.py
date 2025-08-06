@@ -2,7 +2,6 @@
 
 import gettext
 import logging
-from typing import TYPE_CHECKING
 
 from aiogram.types import Message
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -14,9 +13,7 @@ from bot.database.crud import get_deeplink as db_get_deeplink
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
 from bot.services import deeplink_service
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
+from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +44,7 @@ async def _execute_deeplink(
     translator: gettext.GNUTranslations,
     deeplink_obj: DeeplinkModel,
     user_settings: UserSettings,
-    services: "Services",
+    cache: CacheService,
 ) -> str:
     """Wrapper to call the deeplink_service.execute_deeplink."""
     return await deeplink_service.execute_deeplink(
@@ -56,7 +53,7 @@ async def _execute_deeplink(
         telegram_id=telegram_id,
         translator=translator,
         user_settings=user_settings,
-        services=services,
+        cache=cache,
     )
 
 
@@ -66,7 +63,7 @@ async def handle_deeplink(
     session: AsyncSession,
     translator: gettext.GNUTranslations,
     user_settings: UserSettings,
-    services: "Services",
+    cache: CacheService,
 ) -> None:
     """Handles a /start command with a deeplink token.
 
@@ -78,7 +75,7 @@ async def handle_deeplink(
         session: The active AsyncSession.
         translator: The gettext translator object.
         user_settings: The UserSettings object for the user.
-        services: The application's services container.
+        cache: The application's cache service.
     """
     _ = translator.gettext
     if not message.from_user:
@@ -100,7 +97,7 @@ async def handle_deeplink(
         translator=translator,
         deeplink_obj=deeplink_obj,
         user_settings=user_settings,
-        services=services,
+        cache=cache,
     )
 
     await message.reply(reply_text)

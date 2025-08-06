@@ -1,15 +1,14 @@
 """Telegram bot command handlers for administrator actions."""
 
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast, Annotated
 
-from aiogram import Router
+from aiogram import Bot, Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from dishka.integrations.aiogram import FromDishka
 from sqlalchemy.ext.asyncio import AsyncSession
-
-# Import SQLModel's AsyncSession for casting
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import AdminCommand
@@ -24,53 +23,36 @@ from .callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 logger = logging.getLogger(__name__)
 
 admin_router = Router(name="admin_router")
-# ActiveTeamTalkConnectionMiddleware is assumed to be on a parent router.
-# TeamTalkConnectionCheckMiddleware will check the tt_connection provided.
-# Admin checks are now done via the IsAdmin filter on each handler.
 admin_router.message.middleware(TeamTalkConnectionCheckMiddleware())
 
 
 async def _show_user_buttons(
     message: Message,
     command_type: AdminCommand,
-    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None,  # Injected by parent MW; checked by local MW
+    translator: GNUTranslations,
+    tt_connection: TeamTalkConnection,
 ) -> None:
     _ = translator.gettext
-    # The tt_connection is now guaranteed to be non-None and ready by the TeamTalkConnectionCheckMiddleware.
-    # Also, user is guaranteed to be an admin by AdminCheckMiddleware.
-    # However, tt_connection can still be None if ActiveTeamTalkConnectionMiddleware fails to provide one,
-    # but TeamTalkConnectionCheckMiddleware should then prevent handler execution.
-    # For type safety, we might still check, or rely on middleware guarantees.
-    # Given the middleware setup, tt_connection here should be a valid, ready connection.
-
-    # TeamTalkConnectionCheckMiddleware ensures tt_connection, tt_connection.instance,
-    # and tt_connection.online_users_cache are valid and ready.
-    # Therefore, tt_connection and tt_connection.instance are not None here.
-    tt_instance = tt_connection.instance  # type: ignore[union-attr] # tt_connection is not None
-    my_user_id = tt_instance.getMyUserID()  # type: ignore[union-attr] # tt_instance is not None
+    tt_instance = tt_connection.instance
+    my_user_id = tt_instance.getMyUserID()
 
     if my_user_id is None:
         logger.error(
             "[%s] Could not get own user ID in _show_user_buttons.",
-            tt_connection.server_info.host,  # type: ignore[union-attr] # tt_connection is not None
+            tt_connection.server_info.host,
         )
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    # online_users_cache is guaranteed by middleware and its own initialization.
-    online_users = list(tt_connection.online_users_cache.values())  # type: ignore[union-attr] # tt_connection is not None
+    online_users = list(tt_connection.online_users_cache.values())
 
     if not online_users:
         await message.reply(
             _("No users found online on server {server_host}.").format(
-                server_host=tt_connection.server_info.host  # type: ignore[union-attr]
+                server_host=tt_connection.server_info.host
             )
         )
         return
@@ -80,10 +62,10 @@ async def _show_user_buttons(
 
     command_text_map = {
         AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(
-            server_host=tt_connection.server_info.host  # type: ignore[union-attr]
+            server_host=tt_connection.server_info.host
         ),
         AdminCommand.BAN: _("Select a user to ban from {server_host}:").format(
-            server_host=tt_connection.server_info.host  # type: ignore[union-attr]
+            server_host=tt_connection.server_info.host
         ),
     }
     reply_text = command_text_map.get(command_type, _("Select a user:"))
@@ -94,8 +76,8 @@ async def _show_user_buttons(
 @admin_router.message(Command("kick"), IsAdmin())
 async def on_kick_command(
     message: Message,
-    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
+    translator: Annotated[GNUTranslations, FromDishka()],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the /kick command for administrators."""
     await _show_user_buttons(message, AdminCommand.KICK, translator, tt_connection)
@@ -104,8 +86,8 @@ async def on_kick_command(
 @admin_router.message(Command("ban"), IsAdmin())
 async def on_ban_command(
     message: Message,
-    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    tt_connection: TeamTalkConnection | None,  # Injected by ActiveTeamTalkConnectionMiddleware
+    translator: Annotated[GNUTranslations, FromDishka()],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the /ban command for administrators."""
     await _show_user_buttons(message, AdminCommand.BAN, translator, tt_connection)
@@ -114,28 +96,28 @@ async def on_ban_command(
 @admin_router.message(Command("subscribers"), IsAdmin())
 async def on_subscribers_command(
     message: Message,
-    session: AsyncSession,  # Injected by DbSessionMiddleware
-    translator: gettext.GNUTranslations,  # Injected by UserSettingsMiddleware
-    services: "Services",  # Injected from workflow_data
+    session: Annotated[AsyncSession, FromDishka()],
+    translator: Annotated[GNUTranslations, FromDishka()],
+    bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(
-        message, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=0
+        message, cast(SQLModelAsyncSession, session), bot, translator, page=0
     )
 
 
 @admin_router.message(Command("unban"), IsAdmin())
 async def on_unban_command(
     message: Message,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: Annotated[AsyncSession, FromDishka()],
+    translator: Annotated[GNUTranslations, FromDishka()],
+    bot: Annotated[Bot, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
     await _show_banned_list_page(
         target=message,
         session=cast(SQLModelAsyncSession, session),
-        bot=services.bot_event,
+        bot=bot,
         page=0,
         translator=translator,
     )

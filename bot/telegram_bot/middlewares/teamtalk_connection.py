@@ -4,37 +4,26 @@ from collections.abc import (
     Awaitable,
     Callable,
 )
-from gettext import GNUTranslations, NullTranslations
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
+from dishka.integrations.aiogram import FromDishka
 
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
 from .utils import _send_error_response
 
-if TYPE_CHECKING:
-    pass
-
 logger = logging.getLogger(__name__)
 
 
 class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
-    """Injects an active TeamTalkConnection instance into the event data.
-
-    For now, assumes a single primary connection if multiple exist.
-    Relies on 'connections' (Dict[str, TeamTalkConnection]) being in workflow_data.
-    """
+    """Injects an active TeamTalkConnection instance into the event data."""
 
     def __init__(self, default_server_key: str | None = None) -> None:
-        """Initializes ActiveTeamTalkConnectionMiddleware.
-
-        Args:
-            default_server_key: Optional key of the default TeamTalk server connection
-                                to provide if multiple connections exist.
-        """
+        """Initializes ActiveTeamTalkConnectionMiddleware."""
         super().__init__()
         self.default_server_key = default_server_key
 
@@ -43,33 +32,21 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:  # noqa: ANN401
-        """Executes the middleware.
-
-        Injects an active TeamTalkConnection instance into the data dictionary.
-        It uses `default_server_key` if provided, otherwise the first available connection.
-
-        Args:
-            handler: The next handler in the chain.
-            event: The incoming Telegram event.
-            data: Data to be passed to the handler.
-
-        Returns:
-            The result of the next handler.
-        """
-        connections: dict[str, TeamTalkConnection] = data.get("connections", {})
+    ) -> Any:
+        """Executes the middleware."""
+        connections: dict[str, TeamTalkConnection] = data["connections"]
         determined_connection: TeamTalkConnection | None = None
 
         if not connections:
-            logger.warning("ActiveTeamTalkConnectionMiddleware: No TeamTalk connections found in workflow_data.")
+            logger.warning("ActiveTeamTalkConnectionMiddleware: No TeamTalk connections found.")
             data["tt_connection"] = None
             return await handler(event, data)
 
         if self.default_server_key and self.default_server_key in connections:
             determined_connection = connections[self.default_server_key]
-        elif connections:  # Get the first one if no specific key or key not found
+        elif connections:
             determined_connection = next(iter(connections.values()), None)
-            if self.default_server_key and not determined_connection:  # Log if key was given but not found
+            if self.default_server_key and not determined_connection:
                 logger.warning(
                     "ActiveTeamTalkConnectionMiddleware: Default server key '%s' not found. "
                     "Falling back to first available connection if any.",
@@ -80,7 +57,6 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
                     "ActiveTeamTalkConnectionMiddleware: Using first available connection for %s.",
                     determined_connection.server_info.host,
                 )
-            # else: no connections available, determined_connection remains None
 
         if determined_connection:
             logger.debug(
@@ -95,36 +71,17 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
 
 
 class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
-    """Checks if the provided TeamTalkConnection is connected and logged in.
-
-    (from ActiveTeamTalkConnectionMiddleware)
-    If not, it replies to the user and prevents the handler from executing.
-    Relies on 'tt_connection' and 'translator' (or 'services') being in workflow_data.
-    """
+    """Checks if the provided TeamTalkConnection is connected and logged in."""
 
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:  # noqa: ANN401
-        """Executes the middleware.
-
-        Checks if the TeamTalk connection (injected by ActiveTeamTalkConnectionMiddleware)
-        is ready. If not, sends an error message to the user and stops processing.
-
-        Args:
-            handler: The next handler in the chain.
-            event: The incoming Telegram event.
-            data: Data to be passed to the handler.
-
-        Returns:
-            The result of the next handler if connection is ready, or None otherwise.
-        """
+    ) -> Any:
+        """Executes the middleware."""
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
-
-        # Translator is now guaranteed to be in data by I18nMiddleware
-        translator: GNUTranslations | NullTranslations = data["translator"]
+        translator: GNUTranslations = data["translator"]
         _ = translator.gettext
 
         if not tt_connection:
@@ -138,7 +95,7 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
                 user_id_info,
                 type(event).__name__,
             )
-            return None  # Stop processing
+            return None
 
         if not tt_connection.is_ready or not tt_connection.is_finalized:
             error_message_text = _("TeamTalk bot is not connected or not fully initialized. Please try again later.")
@@ -155,7 +112,7 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
                 tt_connection.is_finalized,
                 type(event).__name__,
             )
-            return None  # Stop processing
+            return None
 
         logger.debug(
             "TeamTalkConnectionCheckMiddleware: Access granted for server %s. Connection is ready.",

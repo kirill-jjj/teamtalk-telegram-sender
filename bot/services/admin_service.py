@@ -1,24 +1,22 @@
 """Service layer for administrator-related operations."""
 
 from collections.abc import Awaitable, Callable
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
+from aiogram import Bot
+import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import Actor
 from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
+from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
 from . import _utils, user_service
 from ._utils import managed_db_transaction
-
-if TYPE_CHECKING:
-    import pytalk
-
-    from bot.services_container import Services
-    from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,9 @@ async def _add_or_remove_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     action: Literal["add", "remove"],
 ) -> bool:
     """A generic helper to add or remove an admin, updating all necessary components."""
@@ -36,12 +36,12 @@ async def _add_or_remove_admin(
             db_success = await crud.add_admin(session, telegram_id)
             log_verb_past = "added"
             log_verb_present = "add"
-            cache_op = services.cache.add_admin
+            cache_op = cache.add_admin
         else:  # action == "remove"
             db_success = await crud.remove_admin_db(session, telegram_id)
             log_verb_past = "removed"
             log_verb_present = "remove"
-            cache_op = services.cache.remove_admin
+            cache_op = cache.remove_admin
 
         if not db_success:
             logger.warning(
@@ -54,7 +54,9 @@ async def _add_or_remove_admin(
         logger.info("Admin %s %s to/from cache.", telegram_id, log_verb_past)
 
         if user_settings:
-            commands_updated = await _utils.update_user_bot_commands(telegram_id, user_settings.language_code, services)
+            commands_updated = await _utils.update_user_bot_commands(
+                telegram_id, user_settings.language_code, cache, bot, translator
+            )
             if commands_updated:
                 logger.info("Bot commands updated for admin %s following %s action.", telegram_id, action)
             else:
@@ -76,20 +78,24 @@ async def add_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
-    return await _add_or_remove_admin(session, telegram_id, user_settings, services, action="add")
+    return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="add")
 
 
 async def remove_admin(
     session: AsyncSession,
     telegram_id: int,
     user_settings: UserSettings,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
-    return await _add_or_remove_admin(session, telegram_id, user_settings, services, action="remove")
+    return await _add_or_remove_admin(session, telegram_id, user_settings, cache, bot, translator, action="remove")
 
 
 async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> bool:
@@ -106,13 +112,10 @@ async def _ban_telegram_user(session: AsyncSession, target_telegram_id: int) -> 
 
 
 async def _ban_teamtalk_user_in_db(session: AsyncSession, tt_username: str, target_telegram_id: int) -> bool:
-    """Bans a TeamTalk username in the database.
-
-    Returns True on success or if already banned, False on error.
-    """
+    """Bans a TeamTalk username in the database."""
     if not tt_username:
         logger.debug("No TeamTalk username provided to _ban_teamtalk_user_in_db for TG ID %s.", target_telegram_id)
-        return True  # No username to ban, not an error for this specific function
+        return True
 
     async with managed_db_transaction(session, logger) as transaction_success:
         if not transaction_success:
@@ -189,11 +192,7 @@ async def _execute_ban(
     tt_username_to_ban: str | None,
     tt_connection: "TeamTalkConnection | None",
 ) -> tuple[dict[str, bool], bool]:
-    """Orchestrates banning a user's Telegram ID and TeamTalk username.
-
-    Handles banning in the database and conceptually on the TeamTalk server.
-    Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
-    """
+    """Orchestrates banning a user's Telegram ID and TeamTalk username."""
     ban_statuses: dict[str, bool] = {
         "telegram_ban": False,
         "teamtalk_db_ban": False,
@@ -201,7 +200,6 @@ async def _execute_ban(
     }
     commit_needed_for_bans = False
 
-    # Step 1: Ban Telegram ID
     tg_ban_success = await _ban_telegram_user(session, target_telegram_id)
     ban_statuses["telegram_ban"] = tg_ban_success
     if not tg_ban_success:
@@ -209,7 +207,6 @@ async def _execute_ban(
     else:
         commit_needed_for_bans = True
 
-    # Step 2: Ban TeamTalk username in DB (if exists)
     if tt_username_to_ban:
         tt_db_ban_success = await _ban_teamtalk_user_in_db(session, tt_username_to_ban, target_telegram_id)
         ban_statuses["teamtalk_db_ban"] = tt_db_ban_success
@@ -220,7 +217,6 @@ async def _execute_ban(
     else:
         ban_statuses["teamtalk_db_ban"] = True
 
-    # Step 3: Conceptual TeamTalk server ban (if TT username exists)
     if tt_username_to_ban:
         tt_server_ban_success = await _apply_server_moderation(
             action="ban",
@@ -247,17 +243,14 @@ async def ban_user(
     tt_username_to_ban: str | None,
     tt_connection: "TeamTalkConnection | None",
 ) -> tuple[dict[str, bool], bool]:
-    """Bans a user's Telegram ID and TeamTalk username.
-
-    Handles banning in the database and conceptually on the TeamTalk server.
-    Returns a dictionary of success statuses and a boolean indicating if a commit is needed.
-    """
+    """Bans a user's Telegram ID and TeamTalk username."""
     return await _execute_ban(session, target_telegram_id, tt_username_to_ban, tt_connection)
 
 
 async def ban_and_delete_subscriber(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    translator: GNUTranslations,
     target_telegram_id: int,
     tt_connection: "TeamTalkConnection | None",
 ) -> OperationResult:
@@ -271,14 +264,10 @@ async def ban_and_delete_subscriber(
     if ban_statuses.get("telegram_ban"):
         if commit_needed:
             async with managed_db_transaction(session, logger):
-                pass  # The transaction is committed on exiting the block
-        profile_deleted_status = await user_service.delete_user_profile(session, target_telegram_id, services=services)
+                pass
+        profile_deleted_status = await user_service.delete_user_profile(session, target_telegram_id, cache=cache)
     else:
-        await session.rollback()  # Rollback if the initial ban failed
-
-    translator = services.get_translator()
-    if not isinstance(translator, gettext.GNUTranslations):
-        translator = services.get_translator(services.config.general.default_lang)
+        await session.rollback()
 
     return format_ban_result(
         translator=translator,
@@ -291,8 +280,8 @@ async def ban_and_delete_subscriber(
     )
 
 
-def format_ban_result(  # noqa: PLR0912
-    translator: gettext.GNUTranslations | gettext.NullTranslations,
+def format_ban_result(
+    translator: GNUTranslations | None,
     telegram_id: int,
     tt_username: str | None,
     *,
@@ -302,7 +291,7 @@ def format_ban_result(  # noqa: PLR0912
     profile_deleted: bool,
 ) -> OperationResult:
     """Formats a consolidated message based on the outcomes of ban and delete operations."""
-    _ = translator.gettext
+    _ = translator.gettext if translator else lambda s: s
     parts = []
 
     if tg_banned:
@@ -368,10 +357,12 @@ UpdateFunc = Callable[..., Awaitable[T | None]]
 
 async def _admin_update_user_setting(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     target_telegram_id: int,
-    update_function: UpdateFunc,  # type: ignore[type-arg]
-    **kwargs: Any,  # noqa: ANN401
+    update_function: UpdateFunc,
+    **kwargs: Any,
 ) -> T | None:
     """Generic helper to update a user setting for a target user by an admin."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)
@@ -383,11 +374,12 @@ async def _admin_update_user_setting(
         )
         return None
 
-    # The 'actor' argument is consistently passed for admin actions.
     kwargs["actor"] = Actor.ADMIN
     return await update_function(
         session=session,
-        services=services,
+        cache=cache,
+        bot=bot,
+        translator=translator,
         user_settings=target_user_settings,
         **kwargs,
     )
@@ -395,44 +387,45 @@ async def _admin_update_user_setting(
 
 async def admin_toggle_noon_setting(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     target_telegram_id: int,
 ) -> UserSettings | None:
     """Toggles the NOON (Not On Online Notifications) setting for a target user."""
     return await _admin_update_user_setting(
-        session,
-        services,
-        target_telegram_id,
-        user_service.update_noon_setting,
+        session, cache, bot, translator, target_telegram_id, user_service.update_noon_setting
     )
 
 
 async def admin_set_user_mute_mode(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     target_telegram_id: int,
     new_mode: "MuteListMode",
 ) -> UserSettings | None:
     """Sets the mute list mode for a target user, managed by an admin."""
     return await _admin_update_user_setting(
-        session,
-        services,
-        target_telegram_id,
-        user_service.update_mute_mode,
-        new_mode=new_mode,
+        session, cache, bot, translator, target_telegram_id, user_service.update_mute_mode, new_mode=new_mode
     )
 
 
 async def admin_set_user_notification_preference(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     target_telegram_id: int,
     new_pref_enum: "NotificationSetting",
 ) -> UserSettings | None:
     """Sets the notification preference for a target user, managed by an admin."""
     return await _admin_update_user_setting(
         session,
-        services,
+        cache,
+        bot,
+        translator,
         target_telegram_id,
         user_service.update_notification_preference,
         new_pref=new_pref_enum,
@@ -441,15 +434,12 @@ async def admin_set_user_notification_preference(
 
 async def admin_link_tt_account(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
     target_telegram_id: int,
     tt_username_to_link: str,
-    translator: "gettext.GNUTranslations",
+    translator: "GNUTranslations",
 ) -> OperationResult:
-    """Links a TeamTalk account to a subscriber, managed by an admin.
-
-    Returns an OperationResult indicating success/failure and relevant details.
-    """
+    """Links a TeamTalk account to a subscriber, managed by an admin."""
     _ = translator.gettext
     if await crud.is_teamtalk_username_banned(session, tt_username_to_link):
         logger.warning(
@@ -472,7 +462,7 @@ async def admin_link_tt_account(
 
     updated_settings_tt_link = await _utils._update_user_setting_field(
         session=session,
-        services=services,
+        cache=cache,
         settings_to_update=target_user_settings,
         field_name="teamtalk_username",
         new_value=tt_username_to_link,
@@ -493,7 +483,7 @@ async def admin_link_tt_account(
     if updated_settings_tt_link.not_on_online_confirmed is not True:
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
-            services=services,
+            cache=cache,
             settings_to_update=updated_settings_tt_link,
             field_name="not_on_online_confirmed",
             new_value=True,
@@ -515,7 +505,6 @@ async def admin_link_tt_account(
 
 async def unban_subscriber(
     session: AsyncSession,
-    _services: "Services",
     tt_connection: "TeamTalkConnection | None",
     target_telegram_id: int,
 ) -> OperationResult:
@@ -558,14 +547,18 @@ async def unban_subscriber(
 
 async def admin_set_user_language(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     target_telegram_id: int,
     new_lang_code: str,
 ) -> UserSettings | None:
     """Sets the language for a target user, managed by an admin."""
     return await _admin_update_user_setting(
         session,
-        services,
+        cache,
+        bot,
+        translator,
         target_telegram_id,
         user_service.update_language,
         new_lang_code=new_lang_code,

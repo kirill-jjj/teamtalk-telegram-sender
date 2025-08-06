@@ -1,14 +1,18 @@
 from collections.abc import Awaitable, Callable
 import functools
 import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
+from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
@@ -18,10 +22,6 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
 from bot.telegram_bot.ui_utils import safe_edit_text
 from bot.telegram_bot.utils import format_telegram_user_display_name
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +48,7 @@ ViewRefresher: TypeAlias = Callable[..., Awaitable[None]]
 def with_view_refresh(
     view_refresher: ViewRefresher,
 ) -> Callable[[Callable[..., Awaitable[tuple[bool, str]]]], Callable[..., Awaitable[None]]]:
-    """Decorator factory for actions that result in refreshing a view.
-
-    - It calls the wrapped handler, which should perform an action and return a (success, message) tuple.
-    - It answers the callback query with the message.
-    - It calls the provided `view_refresher` function to update the UI.
-
-    :param view_refresher: An async function that handles the UI refresh logic.
-    :return: A decorator.
-    """
+    """Decorator factory for actions that result in refreshing a view."""
 
     def decorator(
         func: Callable[..., Awaitable[tuple[bool, str]]],
@@ -64,35 +56,31 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            callback_data: Any,  # noqa: ANN401 Keep it generic to support various callbacks
+            callback_data: Any,
             session: AsyncSession,
-            translator: gettext.GNUTranslations,
-            services: "Services",
+            translator: GNUTranslations,
+            bot: Bot,
+            cache: CacheService,
             **kwargs: object,
         ) -> None:
-            # The @ensure_message_context decorator should be applied before this one,
-            # so we can assume query.message is not None.
-
-            # 1. Call the wrapped handler to perform the core action
             success, message = await func(
                 query=query,
                 callback_data=callback_data,
                 session=session,
                 translator=translator,
-                services=services,
+                bot=bot,
+                cache=cache,
                 **kwargs,
             )
 
-            # 2. Answer the callback query with the result message
             await query.answer(message, show_alert=not success)
 
-            # 3. Call the provided view refresher function to refresh the UI
             await view_refresher(
                 query=query,
                 callback_data=callback_data,
                 session=session,
                 translator=translator,
-                services=services,
+                bot=bot,
                 **kwargs,
             )
 
@@ -106,64 +94,36 @@ async def refresh_subscriber_view(
     callback_data: RefreshableViewCallback,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",
+    bot: "Bot",
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
-    # This function is designed to be used with the `action_and_refresh_view` decorator.
     target_telegram_id = callback_data.target_telegram_id
+    page_context = getattr(callback_data, "subscriber_page_context", getattr(callback_data, "page", 0))
 
-    # The page context attribute can have different names in different callbacks.
-    if hasattr(callback_data, "subscriber_page_context"):
-        page_context = callback_data.subscriber_page_context
-    elif hasattr(callback_data, "page"):
-        page_context = callback_data.page
-    else:
-        logger.warning(
-            "Could not determine page context from callback_data. Defaulting to page 0.",
-        )
-        page_context = 0
-
-    # Call the view rendering function to refresh the UI
     await _display_subscriber_view(
         query=query,
         target_telegram_id=target_telegram_id,
         page_context=page_context,
         session=session,
         translator=translator,
-        services=services,
+        bot=bot,
     )
 
 
 def ensure_message_context(
     func: Callable[..., Awaitable[Any | None]],
 ) -> Callable[..., Awaitable[Any | None]]:
-    """Decorator to ensure that a callback query handler has a message context.
-
-    If query.message is None, it logs an error and attempts to answer the callback query.
-    """
+    """Decorator to ensure that a callback query handler has a message context."""
 
     @functools.wraps(func)
     async def wrapper(
-        query: CallbackQuery,  # Keep query as first arg for clarity in wrapper
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
-        # I18nMiddleware is expected to inject 'translator' into kwargs
-        translator = kwargs.get("translator")
-
-        if not isinstance(translator, gettext.GNUTranslations):
-            # This is an unexpected situation if middlewares are correctly configured.
-            logger.critical(
-                "Translator object not found or not a GNUTranslations instance in handler '%s' context! "
-                "Check middleware order/injection. Falling back to NullTranslations.",
-                func.__name__,
-            )
-            translator = gettext.NullTranslations()
-
+        query: CallbackQuery,
+        translator: GNUTranslations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any | None:
         _ = translator.gettext
-
-        # This message is specifically for the case where query.message is None
         error_message_for_missing_context = _("Error processing command.")
 
         if not query.message:
@@ -177,9 +137,9 @@ def ensure_message_context(
                 await query.answer(error_message_for_missing_context, show_alert=True)
             except TelegramAPIError:
                 logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
-            return None  # Stop further execution of the handler
+            return None
 
-        return await func(query, *args, **kwargs)
+        return await func(query, translator=translator, *args, **kwargs)
 
     return wrapper
 
@@ -187,34 +147,19 @@ def ensure_message_context(
 def ensure_tt_user_exists(
     func: Callable[..., Awaitable[Any | None]],
 ) -> Callable[..., Awaitable[Any | None]]:
-    """Decorator to ensure that a TeamTalk user from a callback query exists.
-
-    It finds the user based on callback_data.user_id.
-    If the user does not exist, it notifies the admin and cleans up the UI.
-    If the user exists, it injects the `pytalk.User` object into the handler's
-    keyword arguments as `tt_user`.
-
-    This decorator must be placed *after* @ensure_message_context, as it relies on
-    query.message being present. It also relies on 'tt_connection' and 'translator'
-    being in the handler's kwargs, provided by middlewares.
-    """
+    """Decorator to ensure that a TeamTalk user from a callback query exists."""
 
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
-        _ = kwargs["translator"].gettext
-        tt_connection = kwargs.get("tt_connection")
-        callback_data = next((arg for arg in args if hasattr(arg, "user_id")), None)
-
-        if not tt_connection or not hasattr(tt_connection, "instance"):
-            logger.error("Handler '%s': tt_connection is not valid.", func.__name__)
-            await query.answer(_("Error processing command: TeamTalk connection invalid."), show_alert=True)
-            return None
-
-        if not callback_data or not hasattr(callback_data, "user_id"):
+        callback_data: Any,
+        translator: GNUTranslations,
+        tt_connection: TeamTalkConnection,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any | None:
+        _ = translator.gettext
+        if not hasattr(callback_data, "user_id"):
             logger.error("Handler '%s': could not find callback_data with user_id.", func.__name__)
             await query.answer(_("Error processing command: Invalid callback data."), show_alert=True)
             return None
@@ -228,7 +173,6 @@ def ensure_tt_user_exists(
                 show_alert=True,
             )
             try:
-                # query.message is guaranteed by @ensure_message_context
                 await cast(Message, query.message).edit_reply_markup(reply_markup=None)
             except TelegramAPIError:
                 logger.debug(
@@ -239,7 +183,7 @@ def ensure_tt_user_exists(
             return None
 
         kwargs["tt_user"] = user_to_act_on
-        return await func(query, *args, **kwargs)
+        return await func(query, callback_data, translator=translator, tt_connection=tt_connection, *args, **kwargs)
 
     return wrapper
 
@@ -250,7 +194,7 @@ async def _display_subscriber_view(
     page_context: int,
     session: AsyncSession,
     translator: gettext.GNUTranslations,
-    services: "Services",
+    bot: "Bot",
 ) -> None:
     """Helper function to display the subscriber details view."""
     _ = translator.gettext
@@ -261,10 +205,9 @@ async def _display_subscriber_view(
     user_to_view = await session.get(UserSettings, target_telegram_id)
     display_name = str(target_telegram_id)
 
-    active_bot = services.bot_event
     if user_to_view and user_to_view.telegram_id:
         try:
-            chat_info = await active_bot.get_chat(user_to_view.telegram_id)
+            chat_info = await bot.get_chat(user_to_view.telegram_id)
             display_name = format_telegram_user_display_name(chat_info)
         except TelegramAPIError:
             logger.exception("Could not fetch chat info for %s via Telegram API.", user_to_view.telegram_id)

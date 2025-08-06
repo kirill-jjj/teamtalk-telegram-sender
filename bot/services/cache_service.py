@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from bot.models import UserSettings
 
 if TYPE_CHECKING:
-    from bot.services_container import Services
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +14,16 @@ logger = logging.getLogger(__name__)
 class CacheService:
     """Provides an interface to manage various in-memory caches."""
 
-    def __init__(self, services: "Services") -> None:
+    def __init__(
+        self,
+        user_settings_cache: dict[int, UserSettings],
+        admin_ids_cache: set[int],
+        subscribed_users_cache: set[int],
+    ) -> None:
         """Initializes the CacheService with underlying cache storages."""
-        self._services = services
-        # Direct access for convenience within this service
-        self._user_settings_cache = services.user_settings_cache
-        self._admin_ids_cache = services.admin_ids_cache
-        self._subscribed_users_cache = services.subscribed_users_cache
+        self._user_settings_cache = user_settings_cache
+        self._admin_ids_cache = admin_ids_cache
+        self._subscribed_users_cache = subscribed_users_cache
 
     # --- Methods for admins ---
     def add_admin(self, telegram_id: int) -> None:

@@ -1,25 +1,22 @@
 """Callback query handlers for displaying and paginating the list of subscribers."""
 
-import gettext
+from gettext import GNUTranslations
 import logging
+from typing import cast
 
-# For type hinting app instance
-from typing import TYPE_CHECKING, cast
-
-from aiogram import Router
+from aiogram import Bot, Router
 from aiogram.types import CallbackQuery
+from dishka.integrations.aiogram import FromDishka
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import SubscriberListAction
 from bot.services import user_service
+from bot.services.cache_service import CacheService
 from bot.telegram_bot.callback_data import SubscriberListCallback
 
 from ._helpers import ensure_message_context
 from .list_utils import _show_subscriber_list_page
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +28,10 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 async def on_subscriber_list_callback(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
+    bot: FromDishka[Bot],
 ) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
     _ = translator.gettext
@@ -47,8 +45,8 @@ async def on_subscriber_list_callback(
 
         telegram_id_to_delete = callback_data.telegram_id
         success = await user_service.delete_user_profile(
-            cast(SQLModelAsyncSession, session), telegram_id_to_delete, services=services
-        )  # Pass services
+            cast(SQLModelAsyncSession, session), telegram_id_to_delete, cache=cache
+        )
 
         if success:
             await query.answer(
@@ -61,8 +59,8 @@ async def on_subscriber_list_callback(
             )
 
         await _show_subscriber_list_page(
-            query, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=page_from_callback
-        )  # Use services.bot_event
+            query, cast(SQLModelAsyncSession, session), bot, translator, page=page_from_callback
+        )
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -71,8 +69,8 @@ async def on_subscriber_list_callback(
             return
 
         await _show_subscriber_list_page(
-            query, cast(SQLModelAsyncSession, session), services.bot_event, translator, page=requested_page
-        )  # Use services.bot_event
+            query, cast(SQLModelAsyncSession, session), bot, translator, page=requested_page
+        )
     else:
         logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

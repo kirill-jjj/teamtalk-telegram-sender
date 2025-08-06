@@ -1,12 +1,16 @@
 """Functions for setting and managing Telegram bot commands."""
 
 from collections.abc import Callable
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
+
+from bot.config import Settings
+from bot.core.languages import LanguageInfo
+from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -32,57 +36,52 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
     return get_user_commands(_) + admin_specific
 
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
-
-async def set_telegram_commands(services: "Services") -> None:
+async def set_telegram_commands(
+    bot: Bot,
+    cache: CacheService,
+    translator_factory: Callable[[str], GNUTranslations],
+    available_languages: list[LanguageInfo],
+    settings: Settings,
+) -> None:
     """Sets bot commands globally for all supported languages and individually for administrators."""
     logger.info("Setting up global and admin-specific Telegram commands...")
 
-    # --- 1. Set global commands for each supported language ---
-    for lang_info in services.available_languages:
+    for lang_info in available_languages:
         lang_code = lang_info["code"]
-        translator = services.get_translator(lang_code)
+        translator = translator_factory(lang_code)
         user_commands = get_user_commands(translator.gettext)
 
         try:
-            await services.bot_event.set_my_commands(
+            await bot.set_my_commands(
                 commands=user_commands,
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code if lang_code != services.config.general.default_lang else None,
+                language_code=lang_code if lang_code != settings.general.default_lang else None,
             )
             logger.info("Successfully set global user commands for language: '%s'.", lang_code)
         except TelegramAPIError:
             logger.exception("Failed to set global commands for language '%s'.", lang_code)
 
-    # --- 2. Set individual commands for each administrator ---
-    async with services.session_factory() as session:
-        for admin_id in services.cache.get_all_admin_ids():
-            admin_lang_code = services.config.general.default_lang
+    for admin_id in cache.get_all_admin_ids():
+        admin_lang_code = settings.general.default_lang
+        admin_settings = cache.get_user_settings(admin_id)
+        if admin_settings and admin_settings.language_code:
+            admin_lang_code = admin_settings.language_code
 
-            admin_settings = services.cache.get_user_settings(admin_id)
-            if not admin_settings:
-                admin_settings = await services.get_or_create_user_settings(admin_id, session)
+        admin_translator = translator_factory(admin_lang_code)
+        admin_commands = get_admin_commands(admin_translator.gettext)
+        admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
-            if admin_settings and admin_settings.language_code:
-                admin_lang_code = admin_settings.language_code
-
-            admin_translator = services.get_translator(admin_lang_code)
-            admin_commands = get_admin_commands(admin_translator.gettext)
-            admin_scope = BotCommandScopeChat(chat_id=admin_id)
-
-            try:
-                await services.bot_event.set_my_commands(
-                    commands=admin_commands,
-                    scope=admin_scope,
-                    language_code=admin_lang_code if admin_lang_code != services.config.general.default_lang else None,
-                )
-                logger.info(
-                    "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
-                )
-            except TelegramAPIError:
-                logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
+        try:
+            await bot.set_my_commands(
+                commands=admin_commands,
+                scope=admin_scope,
+                language_code=admin_lang_code if admin_lang_code != settings.general.default_lang else None,
+            )
+            logger.info(
+                "Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code
+            )
+        except TelegramAPIError:
+            logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
 
 
 async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int) -> None:

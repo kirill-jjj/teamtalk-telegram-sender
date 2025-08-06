@@ -2,14 +2,14 @@
 
 from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import Message, TelegramObject
 from aiogram.types import User as AiogramUser
+from dishka.integrations.aiogram import FromDishka
 
-if TYPE_CHECKING:
-    pass  # Import Services for type hinting
+from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -22,30 +22,10 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:  # noqa: ANN401
-        """Executes the middleware.
-
-        Checks if the user is subscribed. If not, and the command is not a /start command
-        with a token, it stops processing. Otherwise, allows subscribed users or
-        specific /start commands to proceed.
-
-        Args:
-            handler: The next handler in the chain.
-            event: The incoming Telegram event (Message or CallbackQuery).
-            data: Data to be passed to the handler.
-
-        Returns:
-            The result of the next handler if authorized, or None if not.
-        """
+    ) -> Any:
+        """Executes the middleware."""
         user: AiogramUser | None = data.get("event_from_user")
-        services = data.get("services")
-        if not services:
-            logger.critical(
-                "SubscriptionCheckMiddleware: 'services' not found in data. Cannot perform subscription check."
-            )
-            # This situation should ideally not happen.
-            # Depending on policy, might want to inform user or just block.
-            return None
+        cache: CacheService = data["cache"]
 
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
@@ -56,20 +36,19 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         if isinstance(event, Message) and event.text:
             command_parts = event.text.split()
             if command_parts[0].lower() == "/start" and len(command_parts) > 1:
-                # This allows /start <token> for deeplinking, which might be used for initial subscription
                 logger.debug(
                     "SubscriptionCheckMiddleware: Allowing /start command with potential token for user %s.",
                     telegram_id,
                 )
                 return await handler(event, data)
 
-        if not services.cache.is_subscribed(telegram_id):
+        if not cache.is_subscribed(telegram_id):
             logger.info(
                 "SubscriptionCheckMiddleware: Ignored event from non-subscribed user %s (Event type: %s).",
                 telegram_id,
                 type(event).__name__,
             )
-            return None  # Stop processing for non-subscribed users
+            return None
 
         logger.debug(
             "SubscriptionCheckMiddleware: User %s is subscribed. Proceeding (Event type: %s).",

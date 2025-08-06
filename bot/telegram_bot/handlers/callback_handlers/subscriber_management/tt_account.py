@@ -1,17 +1,19 @@
 """Callback query handlers for subscriber's TeamTalk account management."""
 
-import gettext
+from gettext import GNUTranslations
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from dishka.integrations.aiogram import FromDishka
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.models import OperationResult, UserSettings
 from bot.services import admin_service
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     LinkTTAccountChosenCallback,
@@ -27,10 +29,6 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
 
-if TYPE_CHECKING:
-    from bot.services_container import Services
-
-
 logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
 
@@ -40,10 +38,8 @@ tt_account_router = Router(name="subscriber_management.tt_account_router")
 async def manage_tt_account(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
-    tt_connection: TeamTalkConnection | None,
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
@@ -76,8 +72,8 @@ async def manage_tt_account(
 async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
-    translator: gettext.GNUTranslations,
-    tt_connection: TeamTalkConnection | None,
+    translator: FromDishka[GNUTranslations],
+    tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Link/Change TeamTalk Account' action by showing a list of linkable accounts."""
     await _display_linkable_tt_accounts_page(
@@ -95,13 +91,13 @@ async def _display_linkable_tt_accounts_page(
     target_telegram_id: int,
     subscriber_context_page: int,
     linkable_accounts_page_to_show: int,
-    tt_connection: TeamTalkConnection | None,
-    translator: gettext.GNUTranslations,
+    tt_connection: TeamTalkConnection,
+    translator: GNUTranslations,
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
 
-    if not tt_connection or not tt_connection.is_ready or not tt_connection.user_accounts_cache:
+    if not tt_connection.is_ready or not tt_connection.user_accounts_cache:
         logger.warning(
             "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for displaying linkable accounts. User %s.",
             query.from_user.id,
@@ -165,8 +161,8 @@ async def _display_linkable_tt_accounts_page(
 async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
-    tt_connection: TeamTalkConnection | None,
-    translator: gettext.GNUTranslations,
+    tt_connection: TeamTalkConnection,
+    translator: FromDishka[GNUTranslations],
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
     await _display_linkable_tt_accounts_page(
@@ -184,9 +180,9 @@ async def paginate_linkable_accounts(
 async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
-    session: AsyncSession,
-    translator: gettext.GNUTranslations,
-    services: "Services",
+    session: FromDishka[AsyncSession],
+    translator: FromDishka[GNUTranslations],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
     _ = translator.gettext
@@ -195,7 +191,7 @@ async def link_tt_account_chosen(
     return_page = callback_data.page
 
     operation_result: OperationResult = await admin_service.admin_link_tt_account(
-        session, services, target_telegram_id, tt_username_to_link, translator
+        session, cache, target_telegram_id, tt_username_to_link, translator
     )
 
     alert_message_args = operation_result.message_args or {}

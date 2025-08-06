@@ -7,11 +7,9 @@ from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
-# Define a path to the locales directory relative to this file or project root
-# Assuming project root is parent of 'bot' directory
-# For robustness, this might need to be derived from app_config or a known structure
-_LOCALE_DIR = Path(__file__).resolve().parent.parent.parent / "locales"
-
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+LOCALE_DIR = _PROJECT_ROOT / "locales"
+DOMAIN = "messages"
 DEFAULT_LANGUAGE_CODE = "en"
 
 
@@ -22,7 +20,7 @@ class LanguageInfo(TypedDict):
     native_name: str
 
 
-def discover_languages(locales_path: Path = _LOCALE_DIR) -> list[LanguageInfo]:
+def discover_languages(locales_path: Path = LOCALE_DIR) -> list[LanguageInfo]:
     """Scans the locales directory for translated languages and always includes English as the base language."""
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.

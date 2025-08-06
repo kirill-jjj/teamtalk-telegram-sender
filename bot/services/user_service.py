@@ -1,10 +1,11 @@
 """Service layer for user-related operations, like profile deletion."""
 
 import gettext
+from gettext import GNUTranslations
 from html import escape
 import logging
-from typing import TYPE_CHECKING
 
+from aiogram import Bot
 import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -17,15 +18,13 @@ from bot.constants import (
 from bot.core.enums import Actor
 from bot.database import crud
 from bot.models import MutedUser, MuteListMode, NotificationSetting, OperationResult, UserSettings
+from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
 from . import _utils
 from ._utils import managed_db_transaction
-
-if TYPE_CHECKING:
-    from bot.services_container import Services
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -181,7 +180,7 @@ async def get_online_users_report(
 async def delete_user_profile(
     session: AsyncSession,
     telegram_id: int,
-    services: "Services",
+    cache: CacheService,
 ) -> bool:
     """Orchestrates the full deletion of a user's profile.
 
@@ -197,7 +196,7 @@ async def delete_user_profile(
         if not user_settings_deleted and not subscribed_user_deleted:
             logger.info("No DB data found for Telegram ID %s to delete.", telegram_id)
 
-        services.cache.remove_user_profile(telegram_id)
+        cache.remove_user_profile(telegram_id)
         logger.info(
             "Full user profile deletion process completed for Telegram ID: %s. "
             "DB changes (if any) committed. Caches cleared via CacheService.",
@@ -208,7 +207,7 @@ async def delete_user_profile(
 
 async def update_mute_mode(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
     user_settings: UserSettings,
     new_mode: MuteListMode,
     actor: Actor = Actor.USER,
@@ -217,7 +216,7 @@ async def update_mute_mode(
     log_context = f" by {actor.value}"
     return await _utils._update_user_setting_field(
         session=session,
-        services=services,
+        cache=cache,
         settings_to_update=user_settings,
         field_name="mute_list_mode",
         new_value=new_mode,
@@ -227,7 +226,9 @@ async def update_mute_mode(
 
 async def update_language(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
+    bot: Bot,
+    translator: GNUTranslations,
     user_settings: UserSettings,
     new_lang_code: str,
     actor: Actor = Actor.USER,
@@ -236,7 +237,7 @@ async def update_language(
     log_context = f" by {actor.value}"
     updated_settings = await _utils._update_user_setting_field(
         session=session,
-        services=services,
+        cache=cache,
         settings_to_update=user_settings,
         field_name="language_code",
         new_value=new_lang_code,
@@ -244,14 +245,18 @@ async def update_language(
     )
     if updated_settings:
         await _utils.update_user_bot_commands(
-            telegram_id=user_settings.telegram_id, new_lang_code=new_lang_code, services=services
+            telegram_id=user_settings.telegram_id,
+            new_lang_code=new_lang_code,
+            cache=cache,
+            bot=bot,
+            translator=translator,
         )
     return updated_settings
 
 
 async def update_noon_setting(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
     user_settings: UserSettings,
     actor: Actor = Actor.USER,
 ) -> UserSettings | None:
@@ -268,7 +273,7 @@ async def update_noon_setting(
     # Update the 'not_on_online_enabled' field
     updated_settings_noon_toggle = await _utils._update_user_setting_field(
         session=session,
-        services=services,
+        cache=cache,
         settings_to_update=user_settings,
         field_name="not_on_online_enabled",
         new_value=new_noon_enabled_value,
@@ -284,7 +289,7 @@ async def update_noon_setting(
     if updated_settings_noon_toggle.not_on_online_enabled and not updated_settings_noon_toggle.not_on_online_confirmed:
         confirmed_settings = await _utils._update_user_setting_field(
             session=session,
-            services=services,
+            cache=cache,
             settings_to_update=updated_settings_noon_toggle,  # Use the already updated object
             field_name="not_on_online_confirmed",
             new_value=True,
@@ -312,7 +317,7 @@ async def update_noon_setting(
 
 async def update_notification_preference(
     session: AsyncSession,
-    services: "Services",
+    cache: CacheService,
     user_settings: UserSettings,
     new_pref: "NotificationSetting",
     actor: Actor = Actor.USER,
@@ -321,7 +326,7 @@ async def update_notification_preference(
     log_context = f" by {actor.value}"
     return await _utils._update_user_setting_field(
         session=session,
-        services=services,
+        cache=cache,
         settings_to_update=user_settings,
         field_name="notification_settings",
         new_value=new_pref,
@@ -333,7 +338,7 @@ async def create_subscription(
     session: AsyncSession,
     user_settings: UserSettings,
     tt_username: str,
-    services: "Services",
+    cache: CacheService,
 ) -> bool:
     """Handles all DB and cache operations for a new subscription via deeplink."""
     async with managed_db_transaction(session, logger) as transaction_success:
@@ -345,12 +350,12 @@ async def create_subscription(
             logger.info("User %s newly subscribed via deeplink.", user_settings.telegram_id)
         else:
             logger.info("User %s re-confirmed subscription via deeplink.", user_settings.telegram_id)
-        if not services.cache.is_subscribed(user_settings.telegram_id):
-            services.cache.add_subscriber(user_settings.telegram_id)
+        if not cache.is_subscribed(user_settings.telegram_id):
+            cache.add_subscriber(user_settings.telegram_id)
 
         settings_after_tt_update = await _utils._update_user_setting_field(
             session=session,
-            services=services,
+            cache=cache,
             settings_to_update=user_settings,
             field_name="teamtalk_username",
             new_value=tt_username,
@@ -361,7 +366,7 @@ async def create_subscription(
 
         settings_after_noon_confirm = await _utils._update_user_setting_field(
             session=session,
-            services=services,
+            cache=cache,
             settings_to_update=settings_after_tt_update,
             field_name="not_on_online_confirmed",
             new_value=True,
@@ -374,7 +379,7 @@ async def toggle_mute_status_for_tt_user(
     session: AsyncSession,
     user_settings: UserSettings,
     tt_username_to_toggle: str,
-    services: "Services",
+    cache: CacheService,
     translator: "gettext.GNUTranslations",
 ) -> OperationResult:
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
@@ -411,7 +416,7 @@ async def toggle_mute_status_for_tt_user(
 
     # This block executes only if the transaction was successful
     await session.refresh(user_settings, attribute_names=["muted_users_list"])
-    services.cache.update_user_settings(user_settings)
+    cache.update_user_settings(user_settings)
     logger.info(
         "Successfully toggled mute for '%s' for user %s to '%s'. Cache updated.",
         tt_username_to_toggle,
