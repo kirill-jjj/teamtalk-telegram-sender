@@ -8,6 +8,8 @@ from gettext import GNUTranslations, NullTranslations
 import logging
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
 from dishka import FromDishka, Provider, Scope, provide
 import pytalk
@@ -59,6 +61,12 @@ class AppProvider(Provider):
     def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
         """Creates a session factory, depends on the config."""
         return create_session_factory(settings)
+
+    @provide
+    def get_bot_event(self, settings: Settings) -> Bot:
+        """Creates the main Bot instance for handling events."""
+        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
+        return Bot(token=settings.telegram.event_token, default=default_props)
 
     # Cache providers
     @provide
