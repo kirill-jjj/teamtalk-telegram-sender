@@ -28,9 +28,10 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:  # noqa: ANN401
+    ) -> Any:
         """Executes the middleware."""
-        connections: dict[str, TeamTalkConnection] = data["connections"]
+        container = data["dishka_container"]
+        connections: dict[str, TeamTalkConnection] = await container.get(dict[str, TeamTalkConnection])
         determined_connection: TeamTalkConnection | None = None
 
         if not connections:

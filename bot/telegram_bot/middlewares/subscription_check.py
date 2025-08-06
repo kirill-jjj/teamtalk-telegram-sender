@@ -24,7 +24,8 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
     ) -> Any:  # noqa: ANN401
         """Executes the middleware."""
         user: AiogramUser | None = data.get("event_from_user")
-        cache: CacheService = data["cache"]
+        container = data["dishka_container"]
+        cache: CacheService = await container.get(CacheService)
 
         if not user:
             logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
