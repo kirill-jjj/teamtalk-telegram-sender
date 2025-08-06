@@ -31,7 +31,7 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware."""
         connections: dict[str, TeamTalkConnection] = data["connections"]
         determined_connection: TeamTalkConnection | None = None
@@ -77,7 +77,7 @@ class TeamTalkConnectionCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         """Executes the middleware."""
         tt_connection: TeamTalkConnection | None = data.get("tt_connection")
         translator: GNUTranslations = data["translator"]

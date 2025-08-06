@@ -10,7 +10,7 @@ from aiogram.types import ErrorEvent
 from aiogram.types import Message as AiogramMessage
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from dishka import make_async_container
-from dishka.integrations.aiogram import FromDishka, setup_dishka
+from dishka.integrations.aiogram import AiogramProvider, FromDishka, setup_dishka
 
 from bot.config import Settings
 from bot.core.languages import DEFAULT_LANGUAGE_CODE
@@ -115,7 +115,7 @@ def setup_telegram_dispatcher(dp: Dispatcher) -> None:
 
     app_provider = AppProvider()
     app_provider.dispatcher = dp
-    container = make_async_container(app_provider, RequestProvider())
+    container = make_async_container(app_provider, RequestProvider(), AiogramProvider())
     setup_dishka(container, router=dp)
 
     dp.include_router(user_commands_router)

@@ -6,6 +6,7 @@ from collections.abc import Callable
 import functools
 import gettext
 from gettext import GNUTranslations
+import importlib
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -17,6 +18,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.core.enums import DeeplinkAction
+from bot.core.exceptions import AdminAuthError
 from bot.core.utils import build_help_message
 from bot.database.crud import create_deeplink
 from bot.services import user_service
@@ -64,11 +66,11 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:  # noqa: ANN401
         settings = kwargs.get("settings")
         if not isinstance(settings, Settings):
-            raise TypeError("Settings not found or of incorrect type in kwargs for is_tt_admin.")
+            raise AdminAuthError("Settings not found or of incorrect type in kwargs for is_tt_admin.")
 
         translator = kwargs.get("translator")
-        if not translator or not isinstance(translator, gettext.GNUTranslations):
-            raise TypeError("Translator not in kwargs.")  # noqa: TRY003
+        if not translator or not isinstance(translator, GNUTranslations):
+            raise AdminAuthError("Translator not in kwargs.")
         _ = translator.gettext
 
         username = ttstr(tt_message.user.username)
@@ -161,7 +163,6 @@ async def _manage_admin_ids(
     success_count = 0
     failed_action_ids = []
 
-    import importlib
     module_name, func_name = action_config["service_func"].rsplit(".", 1)
     service_func = getattr(importlib.import_module(module_name), func_name)
 

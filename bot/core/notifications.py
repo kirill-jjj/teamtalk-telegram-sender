@@ -188,7 +188,6 @@ async def send_join_leave_notification(
         username_to_check=user_username,
         event_type=event_type,
         session_factory=session_factory,
-        cache=cache,
         settings=settings,
         tt_user=tt_user,
         tt_instance=tt_instance,

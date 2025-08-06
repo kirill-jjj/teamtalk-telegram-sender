@@ -3,7 +3,7 @@ import functools
 import gettext
 from gettext import GNUTranslations
 import logging
-from typing import Any, TypeAlias, cast
+from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
@@ -56,7 +56,7 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            callback_data: Any,
+            callback_data: Any,  # noqa: ANN401
             session: AsyncSession,
             translator: GNUTranslations,
             bot: Bot,
@@ -138,14 +138,12 @@ def ensure_message_context(
                 await query.answer(error_message_for_missing_context, show_alert=True)
             except TelegramAPIError:
                 logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
-            return None
+            return
 
-        return await func(query, translator=translator, *args, **kwargs)
+        await func(query, translator=translator, *args, **kwargs)
 
     return wrapper
 
-
-from typing import Protocol, TypeVar
 
 def ensure_tt_user_exists(
     func: Callable[..., Awaitable[Any | None]],
@@ -170,12 +168,12 @@ def ensure_tt_user_exists(
         if not hasattr(callback_data, "user_id"):
             logger.error("Handler '%s': could not find callback_data with user_id.", func.__name__)
             await query.answer(_("Error processing command: Invalid callback data."), show_alert=True)
-            return None
+            return
 
         if not tt_connection.instance:
             logger.error("Handler '%s': tt_connection has no instance.", func.__name__)
             await query.answer(_("Error: No active TeamTalk connection."), show_alert=True)
-            return None
+            return
 
         server_host = tt_connection.server_info.host
         user_to_act_on = tt_connection.instance.get_user(callback_data.user_id)
@@ -193,10 +191,17 @@ def ensure_tt_user_exists(
                     callback_data.user_id,
                     server_host,
                 )
-            return None
+            return
 
         kwargs["tt_user"] = user_to_act_on
-        return await func(query, callback_data, translator=translator, tt_connection=tt_connection, *args, **kwargs)
+        await func(
+            query,
+            callback_data,
+            translator=translator,
+            tt_connection=tt_connection,
+            *args,
+            **kwargs,
+        )
 
     return wrapper
 

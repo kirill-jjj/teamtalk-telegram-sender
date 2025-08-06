@@ -27,7 +27,12 @@ ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-async def _handle_telegram_api_error(error: TelegramAPIError, chat_id: int, session_factory: AsyncSessionFactoryType, cache: CacheService) -> None:
+async def _handle_telegram_api_error(
+    error: TelegramAPIError,
+    chat_id: int,
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
+) -> None:
     """Handles specific Telegram API errors using structural pattern matching."""
     logger.debug("Handling Telegram API error '%s' for chat_id %d", type(error).__name__, chat_id)
 

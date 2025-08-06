@@ -50,7 +50,7 @@ async def toggle_noon_setting(
     translator: FromDishka[GNUTranslations],
     user_settings: FromDishka[UserSettings],
     cache: FromDishka[CacheService],
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext

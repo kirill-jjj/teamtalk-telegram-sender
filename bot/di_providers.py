@@ -1,3 +1,5 @@
+"""Dishka providers for dependency injection."""
+
 # bot/di_providers.py
 
 import asyncio

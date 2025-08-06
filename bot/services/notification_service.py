@@ -40,7 +40,6 @@ async def filter_recipients_for_noon(
     event_user: TeamTalkUser,
     tt_instance: TeamTalkInstance,
     online_users_cache: dict[int, TeamTalkUser],
-    cache: CacheService,
     settings: Settings,
 ) -> list[tuple[int, str | None]]:
     """Filters recipients based on NOON logic and returns them with their language code."""
