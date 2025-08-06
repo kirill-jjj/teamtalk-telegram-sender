@@ -30,6 +30,12 @@ from bot.telegram_bot.commands import set_telegram_commands as set_telegram_comm
 class AppProvider(Provider):
     scope = Scope.APP
 
+    dispatcher: Dispatcher
+
+    @provide
+    def get_dispatcher(self) -> Dispatcher:
+        return self.dispatcher
+
     @provide
     def get_settings(self) -> Settings:
         """Загружает конфигурацию один раз при старте"""

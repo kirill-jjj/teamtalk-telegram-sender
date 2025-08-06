@@ -113,7 +113,9 @@ def setup_telegram_dispatcher(dp: Dispatcher) -> None:
     # Specific middleware for callback queries only
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    container = make_async_container(AppProvider(), RequestProvider())
+    app_provider = AppProvider()
+    app_provider.dispatcher = dp
+    container = make_async_container(app_provider, RequestProvider())
     setup_dishka(container, router=dp)
 
     dp.include_router(user_commands_router)
