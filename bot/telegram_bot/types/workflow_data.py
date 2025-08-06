@@ -1,6 +1,6 @@
 """TypedDict for middleware and handler workflow data."""
 
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from typing import TypedDict
 
 from aiogram.types import User

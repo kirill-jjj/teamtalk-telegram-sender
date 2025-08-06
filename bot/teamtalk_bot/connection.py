@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Callable
 import datetime as dt
 from datetime import datetime
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any
 

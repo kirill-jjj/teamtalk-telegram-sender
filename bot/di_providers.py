@@ -4,7 +4,7 @@
 
 from collections.abc import AsyncGenerator, Callable
 import gettext
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import cast
 

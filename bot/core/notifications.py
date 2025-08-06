@@ -4,7 +4,7 @@ from collections.abc import Callable
 import datetime as dt
 from datetime import datetime, timedelta
 import gettext
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 from html import escape
 import logging
 from typing import cast

@@ -1,7 +1,7 @@
 """Callback query handlers for language settings."""
 
 from collections.abc import Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 
 from aiogram import F, Router

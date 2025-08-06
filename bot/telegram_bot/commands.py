@@ -1,7 +1,7 @@
 """Functions for setting and managing Telegram bot commands."""
 
 from collections.abc import Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 
 from aiogram.exceptions import TelegramAPIError

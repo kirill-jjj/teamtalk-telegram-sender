@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 import functools
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any
 

@@ -3,7 +3,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import Any
 
