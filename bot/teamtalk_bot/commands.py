@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import functools
-import gettext
-from gettext import GNUTranslations
+from gettext import NullTranslations
 import importlib
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -72,7 +71,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
             raise MissingSettingsError()
 
         translator = kwargs.get("translator")
-        if not translator or not isinstance(translator, GNUTranslations):
+        if not translator or not isinstance(translator, NullTranslations):
             raise MissingTranslatorError()
         _ = translator.gettext
 
@@ -92,7 +91,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
 
 
 def _create_admin_action_report(
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     success_count: int,
     failed_ids: list[int],
     invalid_entries: list[str],
@@ -142,7 +141,7 @@ async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: str | None,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     action_type: str,  # "add" or "remove"
     prompt_msg_key: str,
     error_msg_key: str,
@@ -224,7 +223,7 @@ async def _manage_admin_ids(
 async def reply_with_deeplink(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    translator: gettext.GNUTranslations,
+    translator: NullTranslations,
     action: DeeplinkAction,
     success_log_message: str,
     reply_text_source: str,
@@ -257,7 +256,7 @@ async def reply_with_deeplink(
 async def on_subscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     settings: Settings,
     bot: Bot,
     _connection: TeamTalkConnection,
@@ -284,7 +283,7 @@ async def on_subscribe(
 async def on_unsubscribe(
     tt_message: TeamTalkMessage,
     session: AsyncSession,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     settings: Settings,
     bot: Bot,
     _connection: TeamTalkConnection,
@@ -310,7 +309,7 @@ async def on_unsubscribe(
 @is_tt_admin
 async def on_add_admin(
     tt_message: TeamTalkMessage,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     session: AsyncSession,
     settings: Settings,
     cache: CacheService,
@@ -344,7 +343,7 @@ async def on_add_admin(
 @is_tt_admin
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     session: AsyncSession,
     settings: Settings,
     cache: CacheService,
@@ -377,7 +376,7 @@ async def on_remove_admin(
 
 async def on_help(
     tt_message: TeamTalkMessage,
-    translator: GNUTranslations,
+    translator: NullTranslations,
     settings: Settings,
     _connection: TeamTalkConnection,
 ) -> None:
@@ -400,7 +399,7 @@ async def on_help(
 
 async def on_unknown(
     tt_message: TeamTalkMessage,
-    translator: gettext.GNUTranslations | gettext.NullTranslations,
+    translator: NullTranslations,
     connection: TeamTalkConnection,
 ) -> None:
     """Handles unknown commands received from a TeamTalk user."""
