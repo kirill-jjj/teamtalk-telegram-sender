@@ -50,13 +50,6 @@ class AppProvider(Provider):
 
     scope = Scope.APP
 
-    dispatcher: Dispatcher
-
-    @provide
-    def get_dispatcher(self) -> Dispatcher:
-        """Get the application's dispatcher."""
-        return self.dispatcher
-
     @provide
     def get_settings(self) -> Settings:
         """Загружает конфигурацию один раз при старте."""

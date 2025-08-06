@@ -53,7 +53,9 @@ class Application:
         self.logger.info("Application starting...")
 
         # Create and set up dishka container
-        container = make_async_container(AppProvider(), RequestProvider(), AiogramProvider())
+        container = make_async_container(
+            AppProvider(), RequestProvider(), AiogramProvider(dispatcher=self.dp)
+        )
         self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
