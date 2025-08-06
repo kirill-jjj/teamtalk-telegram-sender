@@ -52,9 +52,9 @@ class Application:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
-        # Register middlewares
         # Create and set up dishka container
         container = make_async_container(AppProvider(), RequestProvider(), AiogramProvider())
+        self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
         self.dp.update.middleware.register(SubscriptionCheckMiddleware())
