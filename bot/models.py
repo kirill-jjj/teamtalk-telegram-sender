@@ -40,7 +40,11 @@ class UserSettings(SQLModel, table=True):
     not_on_online_confirmed: bool = Field(default=False, nullable=False)
 
     # Relationship to MutedUser table
-    muted_users_list: list["MutedUser"] = Relationship(back_populates="user_settings")
+    muted_users_list: list["MutedUser"] = Relationship(
+        back_populates="user_settings",
+        cascade_delete=True,
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
 class MutedUser(SQLModel, table=True):
