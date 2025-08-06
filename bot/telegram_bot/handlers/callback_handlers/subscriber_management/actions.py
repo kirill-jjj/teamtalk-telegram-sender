@@ -2,6 +2,7 @@
 
 from gettext import NullTranslations
 import logging
+from typing import Optional
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
@@ -56,7 +57,7 @@ async def on_ban_subscriber_confirm(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection | None,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -69,7 +70,7 @@ async def on_ban_subscriber_confirm(
         logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
-    return result.success, short_message
+    return result.success, short_message, None
 
 
 @actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.DELETE))
@@ -80,7 +81,7 @@ async def delete_subscriber(
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, None]:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -92,7 +93,7 @@ async def delete_subscriber(
     else:
         message = _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id)
 
-    return success, message
+    return success, message, None
 
 
 async def _refresh_and_display_subscriber_list(

@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
+from typing import Optional
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
@@ -56,21 +57,21 @@ async def set_language(
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
     translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, Optional[UserSettings]]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
     if not user_settings:
         logger.warning("Cannot set language for event without a user, user_settings is None.")
-        return False, _("An error occurred. Please try again later.")
+        return False, _("An error occurred. Please try again later."), None
 
     new_lang_code = callback_data.lang_code
 
     if not new_lang_code:
         logger.warning("LanguageCallback received with lang_code=None for user %s", query.from_user.id)
-        return False, _("Invalid language selection.")
+        return False, _("Invalid language selection."), None
 
     if new_lang_code == user_settings.language_code:
-        return True, ""
+        return True, "", None
 
     updated_settings = await user_service.update_language(
         session=session,
@@ -84,5 +85,5 @@ async def set_language(
 
     if updated_settings:
         new_translator = translator_factory(new_lang_code)
-        return True, new_translator.gettext("Language has been changed.")
-    return False, _("Failed to change language. Please try again.")
+        return True, new_translator.gettext("Language has been changed."), updated_settings
+    return False, _("Failed to change language. Please try again."), None

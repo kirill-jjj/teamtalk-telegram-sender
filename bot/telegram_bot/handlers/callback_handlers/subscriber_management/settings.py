@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypedDict, cast
+from typing import Any, Optional, TypedDict, cast
 
 from aiogram import Bot, F, Router
 from aiogram.filters.callback_data import CallbackData
@@ -157,7 +157,7 @@ async def admin_toggle_noon(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, Optional[UserSettings]]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -171,9 +171,9 @@ async def admin_toggle_noon(
         message = _("NOON status for subscriber {tg_id} set to: {status}").format(
             tg_id=target_telegram_id, status=new_status_text
         )
-        return True, message
+        return True, message, updated_user_settings
     message = _("Failed to toggle NOON status. Please try again.")
-    return False, message
+    return False, message, None
 
 
 async def _fetch_mute_list_data(
@@ -358,13 +358,13 @@ async def admin_set_any_subscriber_setting(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, Optional[UserSettings]]:
     """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
     _ = translator.gettext
     config = SETTING_HANDLERS_CONFIG.get(type(callback_data))
     if not config:
         logger.error("No handler config found for callback data type: %s", type(callback_data).__name__)
-        return False, _("An unexpected error occurred.")
+        return False, _("An unexpected error occurred."), None
 
     target_telegram_id = callback_data.target_telegram_id
     param_name = config["param_name"]
@@ -382,6 +382,6 @@ async def admin_set_any_subscriber_setting(
 
     if updated_user_settings:
         message = _(config["success_msg_formatter"]).format(tg_id=target_telegram_id, value=value_to_set)
-        return True, message
+        return True, message, updated_user_settings
 
-    return False, _(config["failure_msg"])
+    return False, _(config["failure_msg"]), None

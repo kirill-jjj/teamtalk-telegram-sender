@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated
+from typing import Annotated, Optional
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
@@ -51,14 +51,14 @@ async def unban_subscriber(
     session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
-) -> tuple[bool, str]:
+) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
     result = await admin_service.unban_subscriber(session, tt_connection, target_telegram_id)
     message = _(result.message_key).format(**(result.message_args or {}))
-    return result.success, message
+    return result.success, message, None
 
 
 async def refresh_subscriber_list_view(
@@ -88,7 +88,7 @@ async def ban_subscriber(
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
-) -> tuple[bool, str]:
+) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -101,4 +101,4 @@ async def ban_subscriber(
         logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
-    return result.success, short_message
+    return result.success, short_message, None

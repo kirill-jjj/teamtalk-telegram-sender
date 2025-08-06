@@ -10,7 +10,6 @@ from aiogram.types import CallbackQuery, Message
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.models import MuteListMode, NotificationSetting, UserSettings
-from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -46,41 +45,39 @@ ViewRefresher: TypeAlias = Callable[..., Awaitable[None]]
 
 def with_view_refresh(
     view_refresher: ViewRefresher,
-) -> Callable[[Callable[..., Awaitable[tuple[bool, str]]]], Callable[..., Awaitable[None]]]:
-    """Decorator factory for actions that result in refreshing a view."""
+) -> Callable[
+    [Callable[..., Awaitable[tuple[bool, str, Any | None]]]],
+    Callable[..., Awaitable[None]],
+]:
+    """Decorator factory for actions that result in refreshing a view.
+
+    The decorated function MUST return a tuple: (success, message, updated_object).
+    """
 
     def decorator(
-        func: Callable[..., Awaitable[tuple[bool, str]]],
+        func: Callable[..., Awaitable[tuple[bool, str, Any | None]]],
     ) -> Callable[..., Awaitable[None]]:
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            callback_data: Any,  # noqa: ANN401
-            session: AsyncSession,
-            translator: NullTranslations,
-            bot: Bot,
-            cache: CacheService,
-            **kwargs: object,
+            **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            success, message = await func(
-                query=query,
-                callback_data=callback_data,
-                session=session,
-                translator=translator,
-                bot=bot,
-                cache=cache,
-                **kwargs,
-            )
+            # 1. Execute the main logic and get the result
+            success, message, updated_object = await func(query=query, **kwargs)
 
+            # 2. Show a toast notification
             await query.answer(message, show_alert=not success)
 
+            # 3. KEY CHANGE: Update kwargs for the refresher function
+            #    If the decorated function returned an updated UserSettings object,
+            #    we substitute it for the old object that dishka originally injected.
+            if updated_object and isinstance(updated_object, UserSettings):
+                kwargs["user_settings"] = updated_object
+
+            # 4. Call the refresher with the updated data
             await view_refresher(
                 query=query,
-                callback_data=callback_data,
-                session=session,
-                translator=translator,
-                bot=bot,
                 **kwargs,
             )
 

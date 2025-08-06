@@ -56,12 +56,12 @@ async def toggle_noon_setting(
     user_settings: FromDishka[UserSettings | None],
     cache: FromDishka[CacheService],
     **kwargs: Any,  # noqa: ANN401
-) -> tuple[bool, str]:
+) -> tuple[bool, str, UserSettings | None]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
+
     if not user_settings:
-        logger.warning("Cannot toggle NOON setting for event without a user, user_settings is None.")
-        return False, _("An error occurred. Please try again later.")
+        return False, _("User settings not found."), None
 
     updated_settings = await user_service.update_noon_setting(
         session=session,
@@ -71,7 +71,9 @@ async def toggle_noon_setting(
     )
 
     if not updated_settings:
-        return False, _("Failed to update NOON setting. Please try again.")
+        return False, _("Failed to update NOON setting. Please try again."), None
 
     new_status_display_text = _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
-    return True, _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
+    message = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
+
+    return True, message, updated_settings
