@@ -219,7 +219,6 @@ async def send_join_leave_notification(
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
             tt_user, server_name, event_type, lang_code, get_translator_func=translator_factory
         ),
-        settings=settings,
         cache=cache,
         session_factory=session_factory,
         online_users_cache_for_instance=online_users_cache_for_instance,

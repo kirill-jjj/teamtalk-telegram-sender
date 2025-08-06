@@ -24,6 +24,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
 from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
+from bot.database.engine import AsyncSessionFactoryType
+from bot.services.cache_service import CacheService
 from bot.telegram_bot.utils import send_telegram_message
 
 if TYPE_CHECKING:
@@ -235,6 +237,8 @@ async def forward_tt_message_to_telegram_admin(
     settings: Settings,
     bot: Bot,
     translator: gettext.GNUTranslations | gettext.NullTranslations,
+    session_factory: AsyncSessionFactoryType,
+    cache: CacheService,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""
     _ = translator.gettext
@@ -261,7 +265,8 @@ async def forward_tt_message_to_telegram_admin(
     was_sent: bool = await send_telegram_message(
         bot_instance=bot,
         chat_id=admin_chat_id,
-        settings=settings,
+        session_factory=session_factory,
+        cache=cache,
         **content.as_kwargs(),
     )
 

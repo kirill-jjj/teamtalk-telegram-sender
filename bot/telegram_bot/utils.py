@@ -14,7 +14,6 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError
 
-from bot.config import Settings
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
@@ -149,7 +148,6 @@ async def broadcast_to_users(
     bot_instance_to_use: AiogramBot,
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
-    settings: Settings,
     cache: CacheService,
     session_factory: AsyncSessionFactoryType,
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
@@ -184,7 +182,6 @@ async def broadcast_to_users(
                         session_factory=session_factory,
                         reply_markup=current_reply_markup,
                         tt_user_is_online=individual_tt_user_is_online,
-                        settings=settings,
                         cache=cache,
                         text=text,
                     )

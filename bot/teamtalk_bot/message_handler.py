@@ -75,6 +75,8 @@ class MessageHandler:
                     settings=self.settings,
                     bot=self.bot,
                     translator=translator,
+                    session_factory=self.session_factory,
+                    cache=self.cache,
                 )
 
     def _get_translator(self) -> GNUTranslations | NullTranslations:

@@ -21,7 +21,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-    ) -> Any:  # noqa: ANN401
+    ) -> Any:
         """Executes the middleware."""
         user: AiogramUser | None = data.get("event_from_user")
         container = data["dishka_container"]
