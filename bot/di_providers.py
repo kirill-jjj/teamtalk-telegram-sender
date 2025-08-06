@@ -54,12 +54,15 @@ def create_translator_factory(
 
 
 class AppProvider(Provider):
+    """Provides application-scoped dependencies."""
+
     scope = Scope.APP
 
     dispatcher: Dispatcher
 
     @provide
     def get_dispatcher(self) -> Dispatcher:
+        """Get the application's dispatcher."""
         return self.dispatcher
 
     @provide
@@ -81,36 +84,44 @@ class AppProvider(Provider):
     # Провайдеры для кэшей
     @provide
     def get_user_settings_cache(self) -> dict[int, UserSettings]:
+        """Provides a cache for user settings."""
         return {}
 
     @provide
     def get_teamtalk_bot(self, settings: Settings) -> pytalk.TeamTalkBot:
+        """Provides the TeamTalk bot instance."""
         return pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
 
     @provide
     def get_admin_ids_cache(self) -> set[int]:
+        """Provides a cache for admin IDs."""
         return set()
 
     @provide
     def get_subscribed_users_cache(self) -> set[int]:
+        """Provides a cache for subscribed user IDs."""
         return set()
 
     @provide
     def get_translator_cache(self) -> dict[str, GNUTranslations | NullTranslations]:
+        """Provides a cache for translators."""
         return {}
 
     @provide
     def get_connections_dict(self) -> dict[str, TeamTalkConnection]:
+        """Provides a dictionary of TeamTalk connections."""
         return {}
 
     @provide
     def get_available_languages(self) -> list[LanguageInfo]:
+        """Provides a list of available languages."""
         return discover_languages()
 
     @provide
     def get_translator_factory(
         self, translator_cache: dict[str, GNUTranslations | NullTranslations]
     ) -> Callable[[str], GNUTranslations | NullTranslations]:
+        """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
     # Провайдер для CacheService, который зависит от кэшей
@@ -121,6 +132,7 @@ class AppProvider(Provider):
         admin_ids_cache: set[int],
         subscribed_users_cache: set[int],
     ) -> CacheService:
+        """Provides the cache service."""
         return CacheService(
             user_settings_cache=user_settings_cache,
             admin_ids_cache=admin_ids_cache,
@@ -140,6 +152,7 @@ class AppProvider(Provider):
         available_languages: list[LanguageInfo],
         connections: dict[str, TeamTalkConnection],
     ) -> None:
+        """Application startup handler."""
         logger = logging.getLogger(__name__)
         logger.info("Application startup...")
 
@@ -183,7 +196,10 @@ class AppProvider(Provider):
                 logger.info("Configured admin %s not found in cache, ensuring presence.", tg_admin_chat_id)
                 user_settings = await session.get(UserSettings, tg_admin_chat_id)
                 if not user_settings:
-                    user_settings = UserSettings(telegram_id=tg_admin_chat_id, language_code=settings.general.default_lang)
+                    user_settings = UserSettings(
+                        telegram_id=tg_admin_chat_id,
+                        language_code=settings.general.default_lang,
+                    )
                     session.add(user_settings)
                     await session.commit()
                     await session.refresh(user_settings)
@@ -201,6 +217,8 @@ class AppProvider(Provider):
 # --- Провайдер для компонентов, живущих в рамках одного запроса (Scope.REQUEST) ---
 
 class RequestProvider(Provider):
+    """Provides request-scoped dependencies."""
+
     scope = Scope.REQUEST
 
     @provide

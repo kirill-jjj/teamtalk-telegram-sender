@@ -63,6 +63,7 @@ def with_view_refresh(
             cache: CacheService,
             **kwargs: object,
         ) -> None:
+            """Wrapper function for the with_view_refresh decorator."""
             success, message = await func(
                 query=query,
                 callback_data=callback_data,
@@ -120,9 +121,9 @@ def ensure_message_context(
     async def wrapper(
         query: CallbackQuery,
         translator: GNUTranslations,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Any | None:
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
         _ = translator.gettext
         error_message_for_missing_context = _("Error processing command.")
 
@@ -144,20 +145,27 @@ def ensure_message_context(
     return wrapper
 
 
+from typing import Protocol, TypeVar
+
 def ensure_tt_user_exists(
     func: Callable[..., Awaitable[Any | None]],
 ) -> Callable[..., Awaitable[Any | None]]:
     """Decorator to ensure that a TeamTalk user from a callback query exists."""
 
+    class CallbackWithUserId(Protocol):
+        user_id: int
+
+    T = TypeVar("T", bound=CallbackWithUserId)
+
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        callback_data: Any,
+        callback_data: T,
         translator: GNUTranslations,
         tt_connection: TeamTalkConnection,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Any | None:
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
         _ = translator.gettext
         if not hasattr(callback_data, "user_id"):
             logger.error("Handler '%s': could not find callback_data with user_id.", func.__name__)

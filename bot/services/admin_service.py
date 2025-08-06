@@ -292,53 +292,43 @@ def format_ban_result(
 ) -> OperationResult:
     """Formats a consolidated message based on the outcomes of ban and delete operations."""
     _ = translator.gettext if translator else lambda s: s
-    parts = []
-
-    if tg_banned:
-        parts.append(_("✅ Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id))
-    else:
-        parts.append(_("❌ Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id))
+    parts = [
+        _("✅ Telegram ID {telegram_id} has been banned.").format(telegram_id=telegram_id)
+        if tg_banned
+        else _("❌ Failed to ban Telegram ID {telegram_id}.").format(telegram_id=telegram_id)
+    ]
 
     if tt_username:
-        if tt_db_banned:
-            parts.append(
-                _("✅ TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
+        parts.append(
+            _("✅ TeamTalk username {tt_username} has been banned in the database.").format(tt_username=tt_username)
+            if tt_db_banned
+            else _("❌ Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
+        )
+        parts.append(
+            _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(tt_username=tt_username)
+            if tt_server_banned
+            else _("⚠️ Conceptual TeamTalk server ban for {tt_username} encountered an issue.").format(
+                tt_username=tt_username
             )
-        else:
-            parts.append(
-                _("❌ Failed to ban TeamTalk username {tt_username} in the database.").format(tt_username=tt_username)
-            )
-        if tt_server_banned:
-            parts.append(
-                _("✅ Conceptual TeamTalk server ban for {tt_username} was processed.").format(tt_username=tt_username)
-            )
-        else:
-            parts.append(
-                _("⚠️ Conceptual TeamTalk server ban for {tt_username} encountered an issue.").format(
-                    tt_username=tt_username
-                )
-            )
+        )
     else:
         parts.append(_("ℹ️ No TeamTalk username was linked; TeamTalk ban steps skipped."))
 
     if tg_banned:
-        if profile_deleted:
-            parts.append(_("✅ User profile and data have been deleted."))
-        else:
-            parts.append(_("❌ Failed to delete user profile and data after banning."))
+        parts.append(
+            _("✅ User profile and data have been deleted.")
+            if profile_deleted
+            else _("❌ Failed to delete user profile and data after banning.")
+        )
     else:
         parts.append(_("ℹ️ User profile deletion was skipped due to Telegram ban failure."))
 
     fully_successful = tg_banned and (tt_db_banned if tt_username else True) and profile_deleted
-    message_key = ""
-    message_args = {"telegram_id": telegram_id, "tt_username": tt_username or ""}
-
+    message_key = "ban_critical_failure"
     if fully_successful:
         message_key = "ban_success_full"
     elif tg_banned:
         message_key = "ban_partial_success"
-    else:
-        message_key = "ban_critical_failure"
 
     long_message_header = _("Banning process report for user {telegram_id}:").format(telegram_id=telegram_id)
     long_message = f"{long_message_header}\n\n" + "\n".join(parts)
@@ -346,7 +336,7 @@ def format_ban_result(
     return OperationResult(
         success=fully_successful,
         message_key=message_key,
-        message_args=message_args,
+        message_args={"telegram_id": telegram_id, "tt_username": tt_username or ""},
         long_message=long_message,
     )
 
@@ -361,7 +351,7 @@ async def _admin_update_user_setting(
     translator: GNUTranslations | NullTranslations,
     target_telegram_id: int,
     update_function: UpdateFunc,
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401
 ) -> UserSettings | None:
     """Generic helper to update a user setting for a target user by an admin."""
     target_user_settings = await session.get(UserSettings, target_telegram_id)
