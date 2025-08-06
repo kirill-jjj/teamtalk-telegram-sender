@@ -35,9 +35,6 @@ async def on_startup(
     cache: FromDishka[CacheService],
     session_factory: FromDishka[AsyncSessionFactoryType],
     settings: FromDishka[Settings],
-    admin_repo: FromDishka[AdminRepository],
-    subscriber_repo: FromDishka[SubscriberRepository],
-    user_repo: FromDishka[UserRepository],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
     _tt_event_handler: FromDishka[TeamTalkEventHandler],
@@ -46,8 +43,6 @@ async def on_startup(
     logger = logging.getLogger(__name__)
     logger.info("Application startup...")
 
-    # The TeamTalkEventHandler is now managed by dishka.
-    # Simply requesting it (`_tt_event_handler`) is enough to initialize it.
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
         await tt_bot._async_setup_hook()
@@ -60,7 +55,10 @@ async def on_startup(
 
     logger.info("Loading all caches from database...")
     async with session_factory() as session:
-        # Re-implement cache loading with repositories
+        admin_repo = AdminRepository(session)
+        subscriber_repo = SubscriberRepository(session)
+        user_repo = UserRepository(session)
+
         db_admin_ids = await admin_repo.get_all_ids()
         cache.load_admins_from_db(db_admin_ids)
 
@@ -77,13 +75,16 @@ async def on_startup(
                 "Configured admin %s not found in cache, ensuring presence.",
                 tg_admin_chat_id,
             )
-            # Re-implement admin creation logic
-            await admin_repo.add(Admin(telegram_id=tg_admin_chat_id))
-            cache.add_admin(tg_admin_chat_id)
+
+            if not await admin_repo.get_by_id(tg_admin_chat_id):
+                await admin_repo.add(Admin(telegram_id=tg_admin_chat_id))
+
             user_settings = await user_repo.get_or_create(
                 tg_admin_chat_id,
                 defaults={"language_code": settings.general.default_lang},
             )
+            cache.add_admin(tg_admin_chat_id)
+
             translator = translator_factory(user_settings.language_code)
             await update_user_bot_commands(
                 telegram_id=tg_admin_chat_id,
@@ -92,9 +93,12 @@ async def on_startup(
                 bot=bot,
                 translator=translator,
             )
+        await session.commit()
 
     logger.info("Setting Telegram bot commands...")
-    await set_telegram_commands_for_bot(bot, cache, translator_factory, available_languages, settings)
+    await set_telegram_commands_for_bot(
+        bot, cache, translator_factory, available_languages, settings
+    )
     logger.info("Telegram bot commands set.")
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())
