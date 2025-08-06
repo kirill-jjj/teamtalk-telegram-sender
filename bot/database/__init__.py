@@ -1,44 +1,19 @@
-"""Initialize the database module and export key components."""
+"""Database package."""
 
-from .crud import (
-    Admin,
-    add_admin,
-    add_record,
-    add_subscriber,
-    add_to_ban_list,
-    create_deeplink,
-    delete_deeplink_by_token,
-    get_all_admins_ids,
-    get_all_subscribers_ids,
-    get_ban_entries_for_teamtalk_username,
-    get_ban_entries_for_telegram_id,
-    get_deeplink,
-    is_teamtalk_username_banned,
-    is_telegram_id_banned,
-    remove_admin_db,
-    remove_from_ban_list_by_id,
-    remove_record,
-)
-from .engine import AsyncSessionFactoryType, create_session_factory
+from .engine import create_session_factory
+from .repositories.admin_repository import AdminRepository
+from .repositories.ban_repository import BanRepository
+from .repositories.base import BaseRepository
+from .repositories.deeplink_repository import DeeplinkRepository
+from .repositories.subscriber_repository import SubscriberRepository
+from .repositories.user_repository import UserRepository
 
 __all__ = [
-    "Admin",
-    "AsyncSessionFactoryType",
-    "add_admin",
-    "add_record",
-    "add_subscriber",
-    "add_to_ban_list",
-    "create_deeplink",
     "create_session_factory",
-    "delete_deeplink_by_token",
-    "get_all_admins_ids",
-    "get_all_subscribers_ids",
-    "get_ban_entries_for_teamtalk_username",
-    "get_ban_entries_for_telegram_id",
-    "get_deeplink",
-    "is_teamtalk_username_banned",
-    "is_telegram_id_banned",
-    "remove_admin_db",
-    "remove_from_ban_list_by_id",
-    "remove_record",
+    "AdminRepository",
+    "BanRepository",
+    "BaseRepository",
+    "DeeplinkRepository",
+    "SubscriberRepository",
+    "UserRepository",
 ]

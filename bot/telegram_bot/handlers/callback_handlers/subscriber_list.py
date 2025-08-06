@@ -6,11 +6,11 @@ import logging
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import SubscriberListAction
-from bot.services import user_service
-from bot.services.cache_service import CacheService
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
+from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.telegram_bot.types.bots import EventBot
 
@@ -27,10 +27,11 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 async def on_subscriber_list_callback(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    cache: FromDishka[CacheService],
     bot: FromDishka[EventBot],
+    subscription_service: FromDishka[SubscriptionService],
+    user_repo: FromDishka[UserRepository],
+    subscriber_repo: FromDishka[SubscriberRepository],
 ) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
     _ = translator.gettext
@@ -43,7 +44,7 @@ async def on_subscriber_list_callback(
             return
 
         telegram_id_to_delete = callback_data.telegram_id
-        success = await user_service.delete_user_profile(session, telegram_id_to_delete, cache=cache)
+        success = await subscription_service.delete_profile(telegram_id_to_delete)
 
         if success:
             await query.answer(
@@ -55,7 +56,9 @@ async def on_subscriber_list_callback(
                 show_alert=True,
             )
 
-        await _show_subscriber_list_page(query, session, bot, translator, page=page_from_callback)
+        await _show_subscriber_list_page(
+            query, user_repo, subscriber_repo, bot, translator, page=page_from_callback
+        )
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -63,7 +66,9 @@ async def on_subscriber_list_callback(
             await query.answer(_("Error: Page number missing."), show_alert=True)
             return
 
-        await _show_subscriber_list_page(query, session, bot, translator, page=requested_page)
+        await _show_subscriber_list_page(
+            query, user_repo, subscriber_repo, bot, translator, page=requested_page
+        )
     else:
         logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
         await query.answer(_("An error occurred. Please try again later."), show_alert=True)

@@ -7,13 +7,11 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
-from bot.services import user_service
-from bot.services.cache_service import CacheService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
@@ -50,20 +48,15 @@ async def show_language_menu(
 @with_view_refresh(refresh_main_settings_view)
 async def set_language(
     query: CallbackQuery,
-    session: FromDishka[AsyncSession],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[UserSettings],
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,
-    cache: FromDishka[CacheService],
     bot: FromDishka[EventBot],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> tuple[bool, str, UserSettings | None]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
-    if not user_settings:
-        logger.warning("Cannot set language for event without a user, user_settings is None.")
-        return False, _("An error occurred. Please try again later."), None
-
     new_lang_code = callback_data.lang_code
 
     if not new_lang_code:
@@ -73,11 +66,8 @@ async def set_language(
     if new_lang_code == user_settings.language_code:
         return True, "", None
 
-    updated_settings = await user_service.update_language(
-        session=session,
-        cache=cache,
+    updated_settings = await user_settings_service.update_language(
         bot=bot,
-        translator=translator,
         user_settings=user_settings,
         new_lang_code=new_lang_code,
         translator_factory=translator_factory,

@@ -5,28 +5,24 @@ or interactions with external services (like the TeamTalk server API, database e
 but are not directly part of the Telegram or TeamTalk bot handlers/commands.
 """
 
-from . import deeplink_service, notification_service, user_service
-from .deeplink_service import (
-    execute_deeplink,
-    execute_subscribe_deeplink,
-    execute_unsubscribe_deeplink,
-)
+from .cache_service import CacheService
+from .deeplink_service import DeeplinkService
+from .moderation_service import ModerationService
 from .notification_service import (
     is_linked_user_online,
     is_user_subject_to_noon_check,
 )
-from .user_service import (
-    delete_user_profile,
-)
+from .report_service import ReportService
+from .subscription_service import SubscriptionService
+from .user_settings_service import UserSettingsService
 
 __all__ = [
-    "deeplink_service",
-    "delete_user_profile",
-    "execute_deeplink",
-    "execute_subscribe_deeplink",
-    "execute_unsubscribe_deeplink",
+    "CacheService",
+    "DeeplinkService",
+    "ModerationService",
     "is_linked_user_online",
     "is_user_subject_to_noon_check",
-    "notification_service",
-    "user_service",
+    "ReportService",
+    "SubscriptionService",
+    "UserSettingsService",
 ]

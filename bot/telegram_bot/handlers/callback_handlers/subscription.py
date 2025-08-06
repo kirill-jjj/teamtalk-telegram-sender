@@ -9,12 +9,10 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from pydantic import BaseModel, Field, ValidationError
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
 from bot.models import NotificationSetting, UserSettings
-from bot.services import user_service
-from bot.services.cache_service import CacheService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 
@@ -70,19 +68,13 @@ async def show_subscriptions_menu(
 @ensure_message_context
 async def set_subscription_setting(
     callback_query: CallbackQuery,
-    session: FromDishka[SQLModelAsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[UserSettings],
     callback_data: SubscriptionCallback,
-    cache: FromDishka[CacheService],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
-    if not user_settings:
-        logger.warning("set_subscription_setting called for an event without a user.")
-        await callback_query.answer(_("An error occurred. User data not found."), show_alert=True)
-        return
-
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
@@ -104,9 +96,7 @@ async def set_subscription_setting(
 
     # Call the dedicated service function to update the preference.
     # This encapsulates business logic and makes the handler cleaner.
-    updated_settings = await user_service.update_notification_preference(
-        session=session,
-        cache=cache,
+    updated_settings = await user_settings_service.update_notification_preference(
         user_settings=user_settings,
         new_pref=new_setting_enum,
         actor=Actor.USER,

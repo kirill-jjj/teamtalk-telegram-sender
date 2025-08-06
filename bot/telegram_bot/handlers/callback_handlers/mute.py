@@ -10,8 +10,6 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 import pytalk
-from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import (
@@ -19,9 +17,9 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
-from bot.models import MutedUser, MuteListMode, UserSettings
-from bot.services import user_service
-from bot.services.cache_service import CacheService
+from bot.models import MuteListMode, UserSettings
+from bot.services.moderation_service import ModerationService
+from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
@@ -94,20 +92,12 @@ async def _display_internal_user_list(
     user_settings: UserSettings,
     list_type: UserListAction,
     page: int = 0,
-    session: AsyncSession | None = None,
 ) -> None:
     _ = translator.gettext
-    if not session:
-        logger.error("Session not provided to _display_internal_user_list")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
 
     async def fetcher() -> list[str]:
-        statement = select(MutedUser.muted_teamtalk_username).where(
-            MutedUser.user_settings_telegram_id == user_settings.telegram_id
-        )
-        results = await session.exec(statement)
-        return [str(username) for username in results.all()]
+        # The user_settings object from the DI container now has this preloaded.
+        return [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
 
     header_text_str, empty_list_text_str = "", ""
     if user_settings.mute_list_mode == MuteListMode.blacklist:
@@ -195,17 +185,15 @@ async def _get_username_from_all_accounts(
     return None
 
 
-async def _get_username_from_muted_list(
+def _get_username_from_muted_list(
     callback_data: ToggleMuteCallback,
     user_settings: UserSettings,
-    session: AsyncSession,
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
-    statement = select(MutedUser.muted_teamtalk_username).where(
-        MutedUser.user_settings_telegram_id == user_settings.telegram_id
+    # The user_settings object from the DI container now has this preloaded.
+    relevant_usernames = sorted(
+        [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
     )
-    results = await session.exec(statement)
-    relevant_usernames = sorted([str(uname) for uname in results.all()])
     page_items, _, _ = paginate_list(relevant_usernames, callback_data.current_page, USERS_PER_PAGE)
 
     if 0 <= callback_data.user_idx < len(page_items):
@@ -236,20 +224,14 @@ async def _refresh_mute_related_ui(
     user_settings: UserSettings,
     tt_connection: TeamTalkConnection | None,
     callback_data: ToggleMuteCallback,
-    session: AsyncSession,
 ) -> None:
     """Refreshes the mute list UI after an action."""
     _ = translator.gettext
     list_type_user_was_on = callback_data.list_type
     current_page_for_refresh = callback_data.current_page
 
-    try:
-        await session.refresh(user_settings, attribute_names=["muted_users_list"])
-        logger.debug("Refreshed muted_users_list for user %s before UI refresh.", user_settings.telegram_id)
-    except Exception:
-        logger.exception("Failed to refresh user_settings relations for %s.", user_settings.telegram_id)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
+    # The user_settings object passed in is already the updated one from the service.
+    # No need to refresh it from the session.
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_connection and tt_connection.is_ready:
@@ -269,7 +251,6 @@ async def _refresh_mute_related_ui(
             user_settings,
             list_type_user_was_on,
             current_page_for_refresh,
-            session,
         )
 
 
@@ -309,23 +290,17 @@ async def show_manage_muted_menu(
 @ensure_message_context
 async def set_mute_mode(
     callback_query: CallbackQuery,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[UserSettings],
     callback_data: SetMuteModeCallback,
-    cache: FromDishka[CacheService],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
-    if not user_settings:
-        logger.warning("Cannot set mute mode for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
-
     new_mode = callback_data.mode
 
-    updated_user_settings = await user_service.update_mute_mode(
-        session, cache, user_settings, new_mode, actor=Actor.USER
+    updated_user_settings = await user_settings_service.update_mute_mode(
+        user_settings, new_mode, actor=Actor.USER
     )
 
     if not updated_user_settings:
@@ -362,25 +337,17 @@ async def set_mute_mode(
 @ensure_message_context
 async def display_internal_user_list(
     callback_query: CallbackQuery,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[UserSettings],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
-    if not user_settings:
-        _ = translator.gettext
-        logger.warning("Cannot display internal user list for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
-
     await _display_internal_user_list(
         callback_query,
         translator,
         user_settings,
         callback_data.list_type,
         callback_data.page,
-        session,
     )
 
 
@@ -413,20 +380,14 @@ async def display_all_accounts_list(
 @ensure_message_context
 async def toggle_user_mute(
     callback_query: CallbackQuery,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[UserSettings],
     tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: ToggleMuteCallback,
-    cache: FromDishka[CacheService],
+    moderation_service: FromDishka[ModerationService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
-    if not user_settings:
-        logger.warning("Cannot toggle mute for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
-        return
-
     username_to_toggle = None
     list_type = callback_data.list_type
 
@@ -434,7 +395,7 @@ async def toggle_user_mute(
         if tt_connection:
             username_to_toggle = await _get_username_from_all_accounts(callback_data, tt_connection)
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-        username_to_toggle = await _get_username_from_muted_list(callback_data, user_settings, session)
+        username_to_toggle = _get_username_from_muted_list(callback_data, user_settings)
 
     if not username_to_toggle:
         logger.warning(
@@ -445,8 +406,8 @@ async def toggle_user_mute(
         await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
         return
 
-    result = await user_service.toggle_mute_status_for_tt_user(
-        session, user_settings, username_to_toggle, cache, translator
+    result = await moderation_service.toggle_mute_status(
+        user_settings, username_to_toggle, translator
     )
 
     toast_message = translator.gettext(result.message_key).format(**(result.message_args or {}))
@@ -454,5 +415,5 @@ async def toggle_user_mute(
 
     if result.success and result.user_settings:
         await _refresh_mute_related_ui(
-            callback_query, translator, result.user_settings, tt_connection, callback_data, session
+            callback_query, translator, result.user_settings, tt_connection, callback_data
         )

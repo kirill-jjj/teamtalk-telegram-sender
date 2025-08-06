@@ -13,16 +13,18 @@ from sqlmodel import select
 
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
-from bot.database import crud
 from bot.database.engine import AsyncSessionFactoryType
-from bot.models import UserSettings
-from bot.services import admin_service
+from bot.database.repositories.admin_repository import AdminRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
+from bot.models import Admin, UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
 from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.utils import update_user_bot_commands
 
 
 @inject
@@ -33,6 +35,9 @@ async def on_startup(
     cache: FromDishka[CacheService],
     session_factory: FromDishka[AsyncSessionFactoryType],
     settings: FromDishka[Settings],
+    admin_repo: FromDishka[AdminRepository],
+    subscriber_repo: FromDishka[SubscriberRepository],
+    user_repo: FromDishka[UserRepository],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
     _tt_event_handler: FromDishka[TeamTalkEventHandler],
@@ -55,16 +60,15 @@ async def on_startup(
 
     logger.info("Loading all caches from database...")
     async with session_factory() as session:
-        db_admin_ids = await crud.get_all_admins_ids(session)
+        # Re-implement cache loading with repositories
+        db_admin_ids = await admin_repo.get_all_ids()
         cache.load_admins_from_db(db_admin_ids)
-        db_subscriber_ids = await crud.get_all_subscribers_ids(session)
+
+        db_subscriber_ids = await subscriber_repo.get_all_ids()
         cache.load_subscribers_from_db(db_subscriber_ids)
-        all_settings_result = await session.execute(
-            select(UserSettings).options(
-                selectinload(UserSettings.muted_users_list)  # type: ignore[arg-type]
-            )
-        )
-        cache.load_all_user_settings(list(all_settings_result.scalars().all()))
+
+        all_settings = await user_repo.get_all()
+        cache.load_all_user_settings(all_settings)
         logger.info("All caches have been loaded.")
 
         tg_admin_chat_id = settings.telegram.admin_chat_id
@@ -73,17 +77,21 @@ async def on_startup(
                 "Configured admin %s not found in cache, ensuring presence.",
                 tg_admin_chat_id,
             )
-            user_settings = await session.get(UserSettings, tg_admin_chat_id)
-            if not user_settings:
-                user_settings = UserSettings(
-                    telegram_id=tg_admin_chat_id,
-                    language_code=settings.general.default_lang,
-                )
-                session.add(user_settings)
-                await session.commit()
-                await session.refresh(user_settings)
+            # Re-implement admin creation logic
+            await admin_repo.add(Admin(telegram_id=tg_admin_chat_id))
+            cache.add_admin(tg_admin_chat_id)
+            user_settings = await user_repo.get_or_create(
+                tg_admin_chat_id,
+                defaults={"language_code": settings.general.default_lang},
+            )
             translator = translator_factory(user_settings.language_code)
-            await admin_service.add_admin(session, tg_admin_chat_id, user_settings, cache, bot, translator)
+            await update_user_bot_commands(
+                telegram_id=tg_admin_chat_id,
+                new_lang_code=user_settings.language_code,
+                cache=cache,
+                bot=bot,
+                translator=translator,
+            )
 
     logger.info("Setting Telegram bot commands...")
     await set_telegram_commands_for_bot(bot, cache, translator_factory, available_languages, settings)

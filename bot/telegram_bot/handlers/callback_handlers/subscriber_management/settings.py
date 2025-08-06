@@ -3,28 +3,22 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from aiogram import F, Router
-from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from dishka.integrations.aiogram import FromDishka
-from sqlalchemy.orm import selectinload
-from sqlalchemy.orm.attributes import QueryableAttribute
-from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
-from bot.core.enums import SubscriberCommand
+from bot.core.enums import Actor, SubscriberCommand
 from bot.core.languages import LanguageInfo
+from bot.database.repositories.user_repository import UserRepository
 from bot.models import (
-    MutedUser,
     MuteListMode,
     NotificationSetting,
     UserSettings,
 )
-from bot.services import admin_service
-from bot.services.cache_service import CacheService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
@@ -67,9 +61,10 @@ async def _present_subscriber_setting_choice(
     keyboard_factory_kwargs: dict[str, object],
 ) -> None:
     """A generic helper to present a settings choice menu to an admin for a subscriber."""
-    keyboard = await keyboard_factory(**keyboard_factory_kwargs)
-    await cast(Message, query.message).edit_text(message_text, reply_markup=keyboard)
-    await query.answer()
+    if isinstance(query.message, Message):
+        keyboard = await keyboard_factory(**keyboard_factory_kwargs)
+        await query.message.edit_text(message_text, reply_markup=keyboard)
+        await query.answer()
 
 
 @settings_router.callback_query(
@@ -87,8 +82,8 @@ async def _present_subscriber_setting_choice(
 async def admin_set_setting_choice(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
+    user_repo: FromDishka[UserRepository],
     available_languages: FromDishka[list[LanguageInfo]],
 ) -> None:
     """Handles showing the choice menu for various subscriber settings to an admin."""
@@ -96,43 +91,40 @@ async def admin_set_setting_choice(
     target_telegram_id = callback_data.target_telegram_id
     action = callback_data.action
 
-    user_settings = None
-    if action in [
-        SubscriberCommand.ADMIN_SET_NOTIF_PREF,
-        SubscriberCommand.ADMIN_SET_MUTE_MODE,
-    ]:
-        user_settings = await session.get(UserSettings, target_telegram_id)
-        if not user_settings:
-            await query.answer(_("Subscriber settings not found."), show_alert=True)
-            return
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    if not user_settings:
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        return
 
-    setting_choice_config: dict[SubscriberCommand, SettingChoiceConfig] = {
+    config_map: dict[SubscriberCommand, SettingChoiceConfig] = {
         SubscriberCommand.ADMIN_SET_LANGUAGE: {
-            "message_text": _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+            "message_text": _("Select new language for subscriber {tg_id}:").format(
+                tg_id=target_telegram_id
+            ),
             "keyboard_factory": create_admin_subscriber_lang_keyboard,
             "keyboard_factory_kwargs": {"available_languages": available_languages},
         },
         SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
-            "message_text": _("Select notification preference for subscriber {tg_id}:").format(
-                tg_id=target_telegram_id
-            ),
+            "message_text": _(
+                "Select notification preference for subscriber {tg_id}:"
+            ).format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_notification_pref_keyboard,
             "keyboard_factory_kwargs": {
-                "current_setting": user_settings.notification_settings if user_settings else None,
+                "current_setting": user_settings.notification_settings
             },
         },
         SubscriberCommand.ADMIN_SET_MUTE_MODE: {
-            "message_text": _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+            "message_text": _("Select mute list mode for subscriber {tg_id}:").format(
+                tg_id=target_telegram_id
+            ),
             "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
-            "keyboard_factory_kwargs": {
-                "current_mode": user_settings.mute_list_mode if user_settings else None,
-            },
+            "keyboard_factory_kwargs": {"current_mode": user_settings.mute_list_mode},
         },
     }
 
-    config = setting_choice_config.get(action)
+    config = config_map.get(action)
     if not config:
-        logger.error("No config found for action %s in handle_admin_set_setting_choice", action)
+        logger.error("No config for action %s in admin_set_setting_choice", action)
         return
 
     common_kwargs = {
@@ -140,67 +132,61 @@ async def admin_set_setting_choice(
         "target_telegram_id": target_telegram_id,
         "subscriber_page_context": callback_data.page,
     }
-
     await _present_subscriber_setting_choice(
-        query=query,
-        message_text=config["message_text"],
-        keyboard_factory=config["keyboard_factory"],
-        keyboard_factory_kwargs={**config["keyboard_factory_kwargs"], **common_kwargs},
+        query,
+        config["message_text"],
+        config["keyboard_factory"],
+        {**config["keyboard_factory_kwargs"], **common_kwargs},
     )
 
 
-@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON))
+@settings_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON)
+)
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
     callback_data: SubscriberCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    cache: FromDishka[CacheService],
-    bot: FromDishka[EventBot],
+    user_repo: FromDishka[UserRepository],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    updated_user_settings = await admin_service.admin_toggle_noon_setting(
-        session, cache, bot, translator, target_telegram_id
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    if not user_settings:
+        return False, _("Subscriber settings not found."), None
+
+    updated_settings = await user_settings_service.toggle_noon_setting(
+        user_settings, actor=Actor.ADMIN
     )
 
-    if updated_user_settings:
-        new_status_text = _("Enabled") if updated_user_settings.not_on_online_enabled else _("Disabled")
-        message = _("NOON status for subscriber {tg_id} set to: {status}").format(
-            tg_id=target_telegram_id, status=new_status_text
+    if updated_settings:
+        status = (
+            _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
         )
-        return True, message, updated_user_settings
-    message = _("Failed to toggle NOON status. Please try again.")
-    return False, message, None
+        msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
+            tg_id=target_telegram_id, status=status
+        )
+        return True, msg, updated_settings
+    return False, _("Failed to toggle NOON status."), None
 
 
 async def _fetch_mute_list_data(
-    session: AsyncSession, target_telegram_id: int, bot: EventBot
+    user_repo: UserRepository, target_telegram_id: int, bot: EventBot
 ) -> tuple[UserSettings | None, str]:
     """Fetches user settings and their display name for the mute list view."""
-    statement = (
-        select(UserSettings)
-        .where(UserSettings.telegram_id == target_telegram_id)
-        .options(selectinload(cast(QueryableAttribute[list[MutedUser]], UserSettings.muted_users_list)))
-    )
-    target_user_settings = await session.scalar(statement)
-
-    subscriber_display_name = str(target_telegram_id)
-    if target_user_settings:
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    display_name = str(target_telegram_id)
+    if user_settings:
         try:
             chat_info = await bot.get_chat(target_telegram_id)
-            if chat_info:
-                subscriber_display_name = format_telegram_user_display_name(chat_info)
+            display_name = format_telegram_user_display_name(chat_info)
         except Exception:
-            logger.warning(
-                "Could not fetch display name for %s in view_mute_list",
-                target_telegram_id,
-                exc_info=True,
-            )
-    return target_user_settings, subscriber_display_name
+            logger.warning("Could not fetch display name for %s", target_telegram_id)
+    return user_settings, display_name
 
 
 def _build_mute_list_title(
@@ -210,31 +196,34 @@ def _build_mute_list_title(
 ) -> str:
     """Builds the title for the mute list view."""
     _ = translator.gettext
-    mode_text = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
-    title_text_parts = [
-        _("Mute list for subscriber: {subscriber_name} (ID: {subscriber_id})").format(
-            subscriber_name=subscriber_display_name, subscriber_id=user_settings.telegram_id
-        ),
-        _("Mute Mode: {mode}").format(mode=mode_text),
-    ]
-    return "\n".join(title_text_parts)
+    mode = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+    return "\n".join(
+        [
+            _("Mute list for: {name} (ID: {id})").format(
+                name=subscriber_display_name, id=user_settings.telegram_id
+            ),
+            _("Mute Mode: {mode}").format(mode=mode),
+        ]
+    )
 
 
-@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_VIEW_MUTE_LIST))
+@settings_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_VIEW_MUTE_LIST)
+)
 @ensure_message_context
 async def admin_view_mute_list(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
+    user_repo: FromDishka[UserRepository],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
     await _display_subscriber_mute_list_page(
         query=query,
-        session=session,
         translator=translator,
         bot=bot,
+        user_repo=user_repo,
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_list_return_page=callback_data.page,
         mute_list_page_num=0,
@@ -243,39 +232,34 @@ async def admin_view_mute_list(
 
 async def _display_subscriber_mute_list_page(
     query: CallbackQuery,
-    session: AsyncSession,
     translator: NullTranslations,
     bot: EventBot,
+    user_repo: UserRepository,
     target_telegram_id: int,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    target_user_settings, subscriber_display_name = await _fetch_mute_list_data(session, target_telegram_id, bot)
-
-    if not target_user_settings:
+    user_settings, display_name = await _fetch_mute_list_data(
+        user_repo, target_telegram_id, bot
+    )
+    if not user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
-        logger.info("Subscriber settings not found for %s when viewing mute list.", target_telegram_id)
         return
-
-    if query.bot is None:
-        logger.error("handle_admin_view_mute_list: query.bot is None. Cannot display list.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
+    if not query.bot:
         return
-
-    all_muted_usernames = sorted([mu.muted_teamtalk_username for mu in target_user_settings.muted_users_list])
-    title_text = _build_mute_list_title(translator, target_user_settings, subscriber_display_name)
-    empty_list_text = _("The mute list is currently empty.")
 
     await display_paginated_list(
         target=query,
         bot=query.bot,
         translator=translator,
-        items=all_muted_usernames,
+        items=sorted(
+            [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
+        ),
         page=mute_list_page_num,
-        title_text=title_text,
-        empty_list_text=empty_list_text,
+        title_text=_build_mute_list_title(translator, user_settings, display_name),
+        empty_list_text=_("The mute list is currently empty."),
         keyboard_factory=create_view_mute_list_keyboard,
         keyboard_factory_kwargs={
             "target_telegram_id": target_telegram_id,
@@ -290,16 +274,16 @@ async def _display_subscriber_mute_list_page(
 async def paginate_mute_list(
     query: CallbackQuery,
     callback_data: PaginateMuteListCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
+    user_repo: FromDishka[UserRepository],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
     await _display_subscriber_mute_list_page(
         query=query,
-        session=session,
         translator=translator,
         bot=bot,
+        user_repo=user_repo,
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_list_return_page=callback_data.subscriber_context_page,
         mute_list_page_num=callback_data.mute_list_page,
@@ -307,88 +291,58 @@ async def paginate_mute_list(
     await query.answer()
 
 
-class AdminSettingHandlerConfig(TypedDict):
-    """A type hint for the admin setting handler configuration dictionary."""
-
-    service_func: Callable[..., Awaitable[UserSettings | None]]
-    param_name: str
-    value_extractor: Callable[[Any], Any]
-    success_msg_formatter: str
-    failure_msg: str
-
-
-SETTING_HANDLERS_CONFIG: dict[type[CallbackData], AdminSettingHandlerConfig] = {
-    AdminSetSubscriberLanguageCallback: {
-        "service_func": admin_service.admin_set_user_language,
-        "param_name": "new_lang_code",
-        "value_extractor": lambda cb: cb.lang_code,
-        "success_msg_formatter": "Language for subscriber {tg_id} changed to {value}.",
-        "failure_msg": "Failed to change language. Subscriber settings might be missing or an error occurred.",
-    },
-    AdminSetSubscriberNotificationPrefCallback: {
-        "service_func": admin_service.admin_set_user_notification_preference,
-        "param_name": "new_pref_enum",
-        "value_extractor": lambda cb: NotificationSetting(cb.setting_value),
-        "success_msg_formatter": "Notification preference for subscriber {tg_id} set to: {value}.",
-        "failure_msg": "Failed to change notification preference. Please check logs or try again.",
-    },
-    AdminSetSubscriberMuteModeCallback: {
-        "service_func": admin_service.admin_set_user_mute_mode,
-        "param_name": "new_mode",
-        "value_extractor": lambda cb: cb.mode,
-        "success_msg_formatter": "Mute list mode for subscriber {tg_id} set to: {value}.",
-        "failure_msg": "Failed to change mute mode. Subscriber settings might be missing or an error occurred.",
-    },
-}
-
-
-@settings_router.callback_query(
-    AdminSetSubscriberLanguageCallback.filter(),
-    AdminSetSubscriberNotificationPrefCallback.filter(),
-    AdminSetSubscriberMuteModeCallback.filter(),
-)
+@settings_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
+@settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
+@settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
-    callback_data: (
-        AdminSetSubscriberLanguageCallback
-        | AdminSetSubscriberNotificationPrefCallback
-        | AdminSetSubscriberMuteModeCallback
-    ),
-    session: FromDishka[AsyncSession],
+    callback_data: Any,
     translator: FromDishka[NullTranslations],
-    cache: FromDishka[CacheService],
     bot: FromDishka[EventBot],
-    translator_factory: FromDishka[Callable[[str], NullTranslations]],  # Добавлено
+    user_repo: FromDishka[UserRepository],
+    user_settings_service: FromDishka[UserSettingsService],
+    translator_factory: FromDishka[Callable[[str], NullTranslations]],
 ) -> tuple[bool, str, UserSettings | None]:
-    """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
+    """Handles an admin setting a specific subscriber's setting."""
     _ = translator.gettext
-    config = SETTING_HANDLERS_CONFIG.get(type(callback_data))
-    if not config:
-        logger.error("No handler config found for callback data type: %s", type(callback_data).__name__)
-        return False, _("An unexpected error occurred."), None
-
     target_telegram_id = callback_data.target_telegram_id
-    param_name = config["param_name"]
-    value_to_set = config["value_extractor"](callback_data)
 
-    service_kwargs = {
-        "session": session,
-        "cache": cache,
-        "bot": bot,
-        "translator": translator,
-        "target_telegram_id": target_telegram_id,
-        param_name: value_to_set,
-    }
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    if not user_settings:
+        return False, _("Subscriber settings not found."), None
 
-    # Добавляем translator_factory только для нужной функции
+    updated_settings: UserSettings | None = None
+    success_msg = ""
+
     if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
-        service_kwargs["translator_factory"] = translator_factory
+        updated_settings = await user_settings_service.update_language(
+            bot,
+            user_settings,
+            callback_data.lang_code,
+            translator_factory,
+            Actor.ADMIN,
+        )
+        success_msg = _("Language for subscriber {tg_id} changed to {value}.").format(
+            tg_id=target_telegram_id, value=callback_data.lang_code
+        )
+    elif isinstance(callback_data, AdminSetSubscriberNotificationPrefCallback):
+        new_pref = NotificationSetting(callback_data.setting_value)
+        updated_settings = await user_settings_service.update_notification_preference(
+            user_settings, new_pref, Actor.ADMIN
+        )
+        success_msg = _(
+            "Notification preference for subscriber {tg_id} set to: {value}."
+        ).format(tg_id=target_telegram_id, value=new_pref.value)
+    elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
+        updated_settings = await user_settings_service.update_mute_mode(
+            user_settings, callback_data.mode, Actor.ADMIN
+        )
+        success_msg = _("Mute list mode for subscriber {tg_id} set to: {value}.").format(
+            tg_id=target_telegram_id, value=callback_data.mode.value
+        )
 
-    updated_user_settings = await config["service_func"](**service_kwargs)
+    if updated_settings:
+        return True, success_msg, updated_settings
 
-    if updated_user_settings:
-        message = _(config["success_msg_formatter"]).format(tg_id=target_telegram_id, value=value_to_set)
-        return True, message, updated_user_settings
-
-    return False, _(config["failure_msg"]), None
+    return False, _("Failed to update setting. Please try again."), None

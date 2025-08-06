@@ -53,6 +53,7 @@ class MessageHandler:
             cache=cache,
             translator_factory=translator_factory,
             connection=connection,
+            bot=bot_for_admin_pm,
         )
 
     async def route_message(self, tt_message: TeamTalkMessage) -> None:

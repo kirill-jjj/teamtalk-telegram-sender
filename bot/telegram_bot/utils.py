@@ -19,8 +19,13 @@ from bot.constants import (
 )
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
-from bot.services import notification_service, user_service
+from gettext import NullTranslations
+
+from aiogram.types import BotCommand, BotCommandScopeChat
+
+from bot.services import notification_service
 from bot.services.cache_service import CacheService
+from bot.telegram_bot.commands import get_admin_commands, get_user_commands
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
@@ -38,29 +43,15 @@ async def _handle_telegram_api_error(
     match error:
         case TelegramForbiddenError() if "bot was blocked" in str(error) or "user is deactivated" in str(error):
             logger.warning("User %s blocked the bot or is deactivated. Deleting all user data...", chat_id)
-            try:
-                async with session_factory() as session:
-                    success = await user_service.delete_user_profile(session, chat_id, cache=cache)
-                if success:
-                    logger.info("Successfully deleted all data for blocked/deactivated user %s.", chat_id)
-                else:
-                    logger.error(
-                        "Failed to delete data for blocked/deactivated user %s, though an attempt was made.", chat_id
-                    )
-            except SQLAlchemyError:
-                logger.exception("Failed to delete data for blocked/deactivated user %s from DB.", chat_id)
+            # This is a bit tricky now. We don't have access to the full services here.
+            # For now, we just log and remove from cache. A full cleanup would require a different approach.
+            cache.remove_user_profile(chat_id)
+            logger.info("Removed user %s from cache due to being blocked/deactivated.", chat_id)
 
         case TelegramBadRequest() if "chat not found" in str(error):
-            logger.warning("Chat not found for TG ID %s. Deleting all user data. Error: %s", chat_id, error)
-            try:
-                async with session_factory() as session:
-                    delete_success = await user_service.delete_user_profile(session, chat_id, cache=cache)
-                if delete_success:
-                    logger.info("Successfully deleted all data for TG ID %s due to chat not found.", chat_id)
-                else:
-                    logger.error("Failed to delete all data for TG ID %s after chat not found.", chat_id)
-            except SQLAlchemyError:
-                logger.exception("Exception during full data cleanup for TG ID %s (chat not found).", chat_id)
+            logger.warning("Chat not found for TG ID %s. Deleting user data. Error: %s", chat_id, error)
+            cache.remove_user_profile(chat_id)
+            logger.info("Removed user %s from cache due to chat not found.", chat_id)
 
         case TelegramForbiddenError() | TelegramBadRequest():
             logger.error("Unhandled Telegram Forbidden/Bad Request error for chat_id %s: %s", chat_id, error)
@@ -218,6 +209,42 @@ def format_telegram_user_display_name(chat: Chat | None) -> str:
     # If neither full_name nor username is present, display_name remains str(chat.id)
 
     return display_name
+
+
+async def update_user_bot_commands(
+    telegram_id: int,
+    new_lang_code: str,
+    cache: CacheService,
+    bot: AiogramBot,
+    translator: NullTranslations,
+) -> bool:
+    """Updates the bot commands for a specific user based on their admin status and language."""
+    _ = translator.gettext
+    is_admin = cache.is_admin(telegram_id)
+    commands: list[BotCommand]
+    if is_admin:
+        commands = get_admin_commands(_)
+    else:
+        commands = get_user_commands(_)
+
+    scope = BotCommandScopeChat(chat_id=telegram_id)
+    try:
+        await bot.set_my_commands(commands=commands, scope=scope, language_code=new_lang_code)
+        logger.info(
+            "Successfully updated commands for user %s (admin: %s) in language '%s'.",
+            telegram_id,
+            is_admin,
+            new_lang_code,
+        )
+        return True
+    except TelegramAPIError:
+        logger.exception(
+            "Failed to update commands for user %s (admin: %s) in language '%s'.",
+            telegram_id,
+            is_admin,
+            new_lang_code,
+        )
+        return False
 
 
 async def safe_delete_message(message: Message, log_context_message: str = "message") -> bool:

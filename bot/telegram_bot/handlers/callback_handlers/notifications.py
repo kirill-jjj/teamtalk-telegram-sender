@@ -7,12 +7,10 @@ from typing import Any
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
 from bot.models import UserSettings
-from bot.services import user_service
-from bot.services.cache_service import CacheService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 
@@ -51,23 +49,16 @@ async def show_notifications_menu(
 @ensure_message_context
 @with_view_refresh(refresh_notification_settings_view)
 async def toggle_noon_setting(
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
-    cache: FromDishka[CacheService],
+    user_settings: FromDishka[UserSettings],
+    user_settings_service: FromDishka[UserSettingsService],
     **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
 
-    if not user_settings:
-        return False, _("User settings not found."), None
-
-    updated_settings = await user_service.update_noon_setting(
-        session=session,
-        cache=cache,
-        user_settings=user_settings,
-        actor=Actor.USER,
+    updated_settings = await user_settings_service.toggle_noon_setting(
+        user_settings=user_settings, actor=Actor.USER
     )
 
     if not updated_settings:

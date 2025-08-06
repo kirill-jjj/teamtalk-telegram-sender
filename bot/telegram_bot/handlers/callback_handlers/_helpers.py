@@ -6,8 +6,8 @@ from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.repositories.user_repository import UserRepository
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
@@ -89,20 +89,25 @@ def with_view_refresh(
 async def refresh_subscriber_view(
     query: CallbackQuery,
     callback_data: RefreshableViewCallback,
-    session: AsyncSession,
     translator: NullTranslations,
     bot: "EventBot",
+    user_repo: UserRepository,
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
     target_telegram_id = callback_data.target_telegram_id
     page_context = getattr(callback_data, "subscriber_page_context", getattr(callback_data, "page", 0))
 
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    if not user_settings:
+        await query.answer("User not found.", show_alert=True)
+        return
+
     await _display_subscriber_view(
         query=query,
         target_telegram_id=target_telegram_id,
         page_context=page_context,
-        session=session,
+        user_settings=user_settings,
         translator=translator,
         bot=bot,
     )
@@ -206,7 +211,7 @@ async def _display_subscriber_view(
     query: CallbackQuery,
     target_telegram_id: int,
     page_context: int,
-    session: AsyncSession,
+    user_settings: UserSettings,
     translator: NullTranslations,
     bot: "EventBot",
 ) -> None:
@@ -216,40 +221,43 @@ async def _display_subscriber_view(
     keyboard = await create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
-    user_to_view = await session.get(UserSettings, target_telegram_id)
     display_name = str(target_telegram_id)
 
-    if user_to_view and user_to_view.telegram_id:
-        try:
-            chat_info = await bot.get_chat(user_to_view.telegram_id)
-            display_name = format_telegram_user_display_name(chat_info)
-        except TelegramAPIError:
-            logger.exception("Could not fetch chat info for %s via Telegram API.", user_to_view.telegram_id)
-        except Exception:
-            logger.exception("Unexpected error fetching chat info for %s.", user_to_view.telegram_id)
+    try:
+        chat_info = await bot.get_chat(user_settings.telegram_id)
+        display_name = format_telegram_user_display_name(chat_info)
+    except TelegramAPIError:
+        logger.exception("Could not fetch chat info for %s via Telegram API.", user_settings.telegram_id)
+    except Exception:
+        logger.exception("Unexpected error fetching chat info for %s.", user_settings.telegram_id)
 
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
-    if user_to_view:
-        details_parts.append(
-            _("Linked TT Account: {tt_username}").format(tt_username=user_to_view.teamtalk_username or _("None"))
+    details_parts.append(
+        _("Linked TT Account: {tt_username}").format(
+            tt_username=user_settings.teamtalk_username or _("None")
         )
-        details_parts.append(_("Language: {lang}").format(lang=user_to_view.language_code))
-        noon_status = _("Enabled") if user_to_view.not_on_online_enabled else _("Disabled")
-        details_parts.append(_("NOON (Not on Online): {status}").format(status=noon_status))
-        notif_setting_map = {
-            NotificationSetting.ALL.value: _("All (Join & Leave)"),
-            NotificationSetting.LEAVE_OFF.value: _("Join Only"),
-            NotificationSetting.JOIN_OFF.value: _("Leave Only"),
-            NotificationSetting.NONE.value: _("None"),
-        }
-        notif_setting_str = user_to_view.notification_settings.value
-        details_parts.append(
-            _("Notifications: {setting}").format(setting=notif_setting_map.get(notif_setting_str, notif_setting_str))
+    )
+    details_parts.append(_("Language: {lang}").format(lang=user_settings.language_code))
+    noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
+    details_parts.append(_("NOON (Not on Online): {status}").format(status=noon_status))
+    notif_setting_map = {
+        NotificationSetting.ALL.value: _("All (Join & Leave)"),
+        NotificationSetting.LEAVE_OFF.value: _("Join Only"),
+        NotificationSetting.JOIN_OFF.value: _("Leave Only"),
+        NotificationSetting.NONE.value: _("None"),
+    }
+    notif_setting_str = user_settings.notification_settings.value
+    details_parts.append(
+        _("Notifications: {setting}").format(
+            setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
         )
-        mute_mode_str = _("Blacklist") if user_to_view.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
-        details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
-    else:
-        details_parts.append(_("Subscriber settings not found."))
+    )
+    mute_mode_str = (
+        _("Blacklist")
+        if user_settings.mute_list_mode == MuteListMode.blacklist
+        else _("Whitelist")
+    )
+    details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
 
     text = "\n".join(details_parts)
     # This assumes query.message is a Message, which is guaranteed by @ensure_message_context

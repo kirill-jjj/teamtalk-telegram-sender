@@ -8,12 +8,11 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 import pytalk
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.core.enums import ManageTTAccountAction, SubscriberCommand
-from bot.models import OperationResult, UserSettings
-from bot.services import admin_service
-from bot.services.cache_service import CacheService
+from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
+from bot.database.repositories.user_repository import UserRepository
+from bot.models import OperationResult
+from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     LinkTTAccountChosenCallback,
@@ -38,15 +37,15 @@ tt_account_router = Router(name="subscriber_management.tt_account_router")
 async def manage_tt_account(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
+    user_repo: FromDishka[UserRepository],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    user_settings = await session.get(UserSettings, target_telegram_id)
+    user_settings = await user_repo.get_by_id(target_telegram_id)
     current_tt_username = user_settings.teamtalk_username if user_settings else None
 
     keyboard = await create_manage_tt_account_keyboard(
@@ -180,9 +179,9 @@ async def paginate_linkable_accounts(
 async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    cache: FromDishka[CacheService],
+    user_repo: FromDishka[UserRepository],
+    subscription_service: FromDishka[SubscriptionService],
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
     _ = translator.gettext
@@ -190,8 +189,13 @@ async def link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    operation_result: OperationResult = await admin_service.admin_link_tt_account(
-        session, cache, target_telegram_id, tt_username_to_link, translator
+    user_settings = await user_repo.get_by_id(target_telegram_id)
+    if not user_settings:
+        await query.answer(_("Subscriber not found."), show_alert=True)
+        return
+
+    operation_result: OperationResult = await subscription_service.link_tt_account(
+        user_settings, tt_username_to_link
     )
 
     alert_message_args = operation_result.message_args or {}
@@ -207,7 +211,7 @@ async def link_tt_account_chosen(
     if operation_result.success and operation_result.user_settings:
         final_tt_username_for_keyboard = operation_result.user_settings.teamtalk_username
     else:
-        user_s_for_kb = await session.get(UserSettings, target_telegram_id)
+        user_s_for_kb = await user_repo.get_by_id(target_telegram_id)
         final_tt_username_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
 
     updated_keyboard = await create_manage_tt_account_keyboard(

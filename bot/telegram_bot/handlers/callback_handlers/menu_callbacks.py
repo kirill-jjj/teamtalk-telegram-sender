@@ -6,9 +6,11 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import AdminCommand
+from bot.database.repositories.ban_repository import BanRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
@@ -105,12 +107,15 @@ async def menu_ban_handler(
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
+    user_repo: FromDishka[UserRepository],
+    subscriber_repo: FromDishka[SubscriberRepository],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    await _show_subscriber_list_page(query.message, session, bot, translator, page=0)  # type: ignore[arg-type]
+    await _show_subscriber_list_page(
+        query.message, user_repo, subscriber_repo, bot, translator, page=0  # type: ignore[arg-type]
+    )
     await query.answer()
 
 
@@ -118,14 +123,14 @@ async def menu_subscribers_handler(
 @ensure_message_context
 async def menu_unban_handler(
     query: CallbackQuery,
-    session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
+    ban_repo: FromDishka[BanRepository],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
         target=query.message,  # type: ignore[arg-type]
-        session=session,
+        ban_repo=ban_repo,
         bot=bot,
         page=0,
         translator=translator,

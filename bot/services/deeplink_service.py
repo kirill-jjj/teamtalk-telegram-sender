@@ -1,168 +1,98 @@
 """Service layer for handling deeplink actions."""
 
-from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import TypeGuard
-
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.database import crud
+from bot.database.repositories.admin_repository import AdminRepository
+from bot.database.repositories.ban_repository import BanRepository
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
-from bot.services import user_service
-from bot.services._utils import managed_db_transaction
 from bot.services.cache_service import CacheService
+from bot.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
 
 
-async def execute_subscribe_deeplink(
-    session: AsyncSession,
-    telegram_id: int,
-    translator: NullTranslations,
-    payload: str | None,
-    user_settings: UserSettings,
-    cache: CacheService,
-) -> str:
-    """Handles the logic for a subscribe deeplink."""
-    _ = translator.gettext
-    if await crud.is_telegram_id_banned(session, telegram_id):
-        logger.warning("Subscription attempt by banned Telegram ID: %s", telegram_id)
-        return _("Your Telegram account is banned from using this service.")
+class DeeplinkService:
+    """Service for executing actions associated with deeplinks."""
 
-    tt_username_from_payload = payload
-    if not tt_username_from_payload:  # Payload (TT username) is essential for subscription
-        logger.error(
-            "Deeplink for '%s' missing TeamTalk username in payload for user %s.",
-            DeeplinkAction.SUBSCRIBE,
-            telegram_id,
+    def __init__(
+        self,
+        subscription_service: SubscriptionService,
+        ban_repo: BanRepository,
+        admin_repo: AdminRepository,
+        cache: CacheService,
+    ) -> None:
+        """Initializes the deeplink service."""
+        self._subscription_service = subscription_service
+        self._ban_repo = ban_repo
+        self._admin_repo = admin_repo
+        self._cache = cache
+
+    async def _execute_subscribe(
+        self,
+        telegram_id: int,
+        translator: NullTranslations,
+        payload: str | None,
+        user_settings: UserSettings,
+    ) -> str:
+        """Handles the logic for a subscribe deeplink."""
+        _ = translator.gettext
+        if await self._ban_repo.is_telegram_id_banned(telegram_id):
+            logger.warning("Subscription attempt by banned Telegram ID: %s", telegram_id)
+            return _("Your Telegram account is banned from using this service.")
+
+        if not payload:
+            logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
+            return _("Error: Missing required information for subscription.")
+
+        if await self._ban_repo.is_teamtalk_username_banned(payload):
+            logger.warning(
+                "Subscription attempt with banned TT username: %s by TG ID: %s",
+                payload,
+                telegram_id,
+            )
+            return _("The TeamTalk username '{tt_username}' is banned.").format(
+                tt_username=payload
+            )
+
+        success = await self._subscription_service.create_subscription(
+            user_settings, payload
         )
-        return _("Error: Missing required information for subscription. Please try the link again or contact support.")
+        if not success:
+            return _("An error occurred. Please try again later.")
 
-    if await crud.is_teamtalk_username_banned(session, tt_username_from_payload):
-        logger.warning(
-            "Subscription attempt with banned TeamTalk username: %s by Telegram ID: %s",
-            tt_username_from_payload,
-            telegram_id,
-        )
-        return _("The TeamTalk username '{tt_username}' is banned and cannot be linked.").format(
-            tt_username=tt_username_from_payload
-        )
+        if await self._admin_repo.get_by_id(telegram_id):
+            self._cache.add_admin(telegram_id)
 
-    # Call the user_service function to create the subscription and update settings
-    subscription_created = await user_service.create_subscription(
-        session, user_settings, tt_username_from_payload, cache
-    )
+        return _("You have successfully subscribed to notifications.")
 
-    if not subscription_created:
-        logger.error(
-            "Failed to create subscription for user %s with TT username '%s' via user_service.",
-            telegram_id,
-            tt_username_from_payload,
-        )
-        # The user_service.create_subscription should log specifics.
-        # Provide a generic error to the user.
-        return _("An error occurred. Please try again later.")
+    async def _execute_unsubscribe(
+        self, telegram_id: int, translator: NullTranslations
+    ) -> str:
+        """Handles the logic for an unsubscribe deeplink."""
+        _ = translator.gettext
+        if await self._subscription_service.delete_profile(telegram_id):
+            return _("You have successfully unsubscribed from notifications.")
+        return _("You were not subscribed to notifications.")
 
-    # If user is also an admin, ensure admin cache is updated.
-    # This check is done after successful subscription processing.
-    admin_record = await session.get(crud.Admin, telegram_id)
-    if admin_record:
-        if not cache.is_admin(telegram_id):  # Check before adding to avoid redundant logs if already cached
-            cache.add_admin(telegram_id)
-            logger.info("User %s (subscriber) is also an admin, added to admin_ids_cache.", telegram_id)
-        else:
-            logger.info("User %s (subscriber) is also an admin, already in admin_ids_cache.", telegram_id)
+    async def execute_deeplink(
+        self,
+        deeplink: DeeplinkModel,
+        user_settings: UserSettings,
+        translator: NullTranslations,
+    ) -> str:
+        """Selects and executes the correct deeplink processing function."""
+        telegram_id = user_settings.telegram_id
+        action = deeplink.action
 
-    logger.info(
-        "User %s successfully subscribed/settings updated with TT username '%s' via deeplink.",
-        telegram_id,
-        tt_username_from_payload,
-    )
-    return _("You have successfully subscribed to notifications.")
+        if action == DeeplinkAction.SUBSCRIBE:
+            return await self._execute_subscribe(
+                telegram_id, translator, deeplink.payload, user_settings
+            )
+        if action == DeeplinkAction.UNSUBSCRIBE:
+            return await self._execute_unsubscribe(telegram_id, translator)
 
-
-async def execute_unsubscribe_deeplink(
-    session: AsyncSession,
-    telegram_id: int,
-    translator: NullTranslations,
-    cache: CacheService,
-) -> str:
-    """Handles the logic for an unsubscribe deeplink."""
-    _ = translator.gettext
-    if await user_service.delete_user_profile(session=session, telegram_id=telegram_id, cache=cache):
-        logger.info("User %s unsubscribed and all data was deleted via deeplink (using user_service).", telegram_id)
-        return _("You have successfully unsubscribed from notifications.")
-    logger.warning(
-        "Attempted to unsubscribe user %s via deeplink, but user was not found or data deletion otherwise failed.",
-        telegram_id,
-    )
-    return _("You were not subscribed to notifications.")
-
-
-# Define the expected signature for handler functions
-# This is a simplified version; you might need to use a Protocol or more complex Callable
-# if the signatures vary significantly and you want stricter checking for all.
-SubscribeDeeplinkHandlerType = Callable[
-    [AsyncSession, int, NullTranslations, str | None, UserSettings, CacheService],
-    Awaitable[str],
-]
-UnsubscribeDeeplinkHandlerType = Callable[[AsyncSession, int, NullTranslations, CacheService], Awaitable[str]]
-
-# Using a Union for the handler type to accommodate different signatures
-DeeplinkHandler = SubscribeDeeplinkHandlerType | UnsubscribeDeeplinkHandlerType
-
-
-def is_subscribe_handler(_handler: DeeplinkHandler, action: DeeplinkAction) -> TypeGuard[SubscribeDeeplinkHandlerType]:
-    """Checks if the handler is for a subscribe action."""
-    return action == DeeplinkAction.SUBSCRIBE
-
-
-def is_unsubscribe_handler(
-    _handler: DeeplinkHandler, action: DeeplinkAction
-) -> TypeGuard[UnsubscribeDeeplinkHandlerType]:
-    """Checks if the handler is for an unsubscribe action."""
-    return action == DeeplinkAction.UNSUBSCRIBE
-
-
-DEEPLINK_ACTION_HANDLERS: dict[DeeplinkAction, DeeplinkHandler] = {
-    DeeplinkAction.SUBSCRIBE: execute_subscribe_deeplink,
-    DeeplinkAction.UNSUBSCRIBE: execute_unsubscribe_deeplink,
-}
-
-
-async def execute_deeplink(
-    deeplink_obj: DeeplinkModel,
-    session: AsyncSession,
-    telegram_id: int,
-    translator: NullTranslations,
-    user_settings: UserSettings,  # Needed for subscribe
-    cache: CacheService,
-) -> str:
-    """Selects and executes the correct deeplink processing function."""
-    _ = translator.gettext  # For the "Invalid deeplink action" message
-    action_enum_member = deeplink_obj.action
-    return_message = ""
-
-    if not isinstance(action_enum_member, DeeplinkAction):
-        logger.warning("Action '%s' from token is not a valid DeeplinkAction member.", action_enum_member)
-        return_message = _("Invalid deeplink action.")
-    else:
-        handler = DEEPLINK_ACTION_HANDLERS.get(action_enum_member)
-        if not handler:
-            logger.warning("No handler for deeplink action: %s", action_enum_member)
-            return_message = _("Invalid deeplink action.")
-        else:
-            async with managed_db_transaction(session, logger) as transaction_success:
-                if not transaction_success:
-                    return _("An error occurred. Please try again later.")
-
-                if is_unsubscribe_handler(handler, action_enum_member):
-                    return_message = await handler(session, telegram_id, translator, cache)
-                elif is_subscribe_handler(handler, action_enum_member):
-                    return_message = await handler(
-                        session, telegram_id, translator, deeplink_obj.payload, user_settings, cache
-                    )
-    return return_message
+        logger.warning("No handler for deeplink action: %s", action)
+        return translator.gettext("Invalid deeplink action.")

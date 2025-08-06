@@ -10,12 +10,13 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.utils import build_help_message
 from bot.models import UserSettings
-from bot.services import user_service
 from bot.services.cache_service import CacheService
+from bot.database.repositories.deeplink_repository import DeeplinkRepository
+from bot.services.deeplink_service import DeeplinkService
+from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
@@ -42,22 +43,20 @@ async def on_start_command(
 async def on_start_with_payload(
     message: Message,
     token: str,
-    session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
-    user_settings: Annotated[UserSettings | None, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
+    user_settings: Annotated[UserSettings, FromDishka()],
+    deeplink_repo: Annotated[DeeplinkRepository, FromDishka()],
+    deeplink_service: Annotated[DeeplinkService, FromDishka()],
 ) -> None:
     """Handles the /start command with a deeplink, extracting the token via a magic filter."""
-    if not message.from_user:
-        return
-
-    if not user_settings:
-        _ = translator.gettext
-        logger.warning("Cannot handle deeplink for event without a user, user_settings is None.")
-        await message.reply(_("An error occurred. Please try again later."))
-        return
-
-    await handle_deeplink(message, token, session, translator, user_settings, cache)
+    await handle_deeplink(
+        message,
+        token,
+        translator,
+        user_settings,
+        deeplink_repo=deeplink_repo,
+        deeplink_service=deeplink_service,
+    )
 
 
 @user_commands_router.message(Command("who"))
@@ -67,6 +66,7 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     if not message.from_user:
@@ -80,7 +80,7 @@ async def on_who_command(
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
         is_admin = cache.is_admin(message.from_user.id)
 
-        report_text = await user_service.get_online_users_report(
+        report_text = report_service.get_online_users_report(
             tt_connection=tt_connection, is_caller_admin=is_admin, translator=translator
         )
 

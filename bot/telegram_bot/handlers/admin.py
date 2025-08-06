@@ -8,9 +8,11 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import AdminCommand
+from bot.database.repositories.ban_repository import BanRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
@@ -107,25 +109,33 @@ async def on_ban_command(
 @admin_router.message(Command("subscribers"), IsAdmin())
 async def on_subscribers_command(
     message: Message,
-    session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
+    user_repo: Annotated[UserRepository, FromDishka()],
+    subscriber_repo: Annotated[SubscriberRepository, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(message, session, bot, translator, page=0)
+    await _show_subscriber_list_page(
+        target=message,
+        user_repo=user_repo,
+        subscriber_repo=subscriber_repo,
+        bot=bot,
+        translator=translator,
+        page=0,
+    )
 
 
 @admin_router.message(Command("unban"), IsAdmin())
 async def on_unban_command(
     message: Message,
-    session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
+    ban_repo: Annotated[BanRepository, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
     await _show_banned_list_page(
         target=message,
-        session=session,
+        ban_repo=ban_repo,
         bot=bot,
         page=0,
         translator=translator,
