@@ -12,7 +12,6 @@ from .deeplink_service import (
     execute_unsubscribe_deeplink,
 )
 from .notification_service import (
-    filter_recipients_for_noon,
     is_linked_user_online,
     is_user_subject_to_noon_check,
 )
@@ -26,7 +25,6 @@ __all__ = [
     "execute_deeplink",
     "execute_subscribe_deeplink",
     "execute_unsubscribe_deeplink",
-    "filter_recipients_for_noon",
     "is_linked_user_online",
     "is_user_subject_to_noon_check",
     "notification_service",
