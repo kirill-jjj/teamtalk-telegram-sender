@@ -15,6 +15,7 @@ from bot.database.engine import AsyncSessionFactoryType
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.utils import forward_tt_message_to_telegram_admin
+from bot.telegram_bot.types.bots import MessageBot
 
 if TYPE_CHECKING:
     from pytalk.message import Message as TeamTalkMessage
@@ -37,6 +38,7 @@ class MessageHandler:
         cache: CacheService,
         translator_factory: Callable[[str], GNUTranslations | NullTranslations],
         connection: TeamTalkConnection,
+        bot_for_admin_pm: MessageBot,
     ) -> None:
         """Initializes the message handler."""
         self.settings = settings
@@ -44,7 +46,7 @@ class MessageHandler:
         self.cache = cache
         self.translator_factory = translator_factory
         self.connection = connection
-        self.bot = connection.bot
+        self.bot = bot_for_admin_pm
         self.command_router = CommandRouter(
             settings=settings,
             session_factory=session_factory,

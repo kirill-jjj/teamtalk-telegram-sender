@@ -6,7 +6,6 @@ from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any
 
-from aiogram import Bot
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.message import Message as TeamTalkMessage
@@ -18,6 +17,7 @@ from bot.constants import INVALID_CHANNEL_ID
 from bot.database.engine import AsyncSessionFactoryType
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,8 @@ class TeamTalkEventHandler:
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
         translator_factory: Callable[[str], GNUTranslations | NullTranslations],
-        bot: Bot,
+        event_bot: EventBot,
+        message_bot: MessageBot,
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         logger: logging.Logger,
@@ -180,7 +181,8 @@ class TeamTalkEventHandler:
         self.session_factory = session_factory
         self.cache = cache
         self.translator_factory = translator_factory
-        self.bot = bot
+        self.event_bot = event_bot
+        self.message_bot = message_bot
         self.tt_bot = tt_bot
         self.connections = connections
         self.logger = logger
@@ -248,7 +250,8 @@ class TeamTalkEventHandler:
                 self.session_factory,
                 self.cache,
                 self.translator_factory,
-                self.bot,
+                self.event_bot,
+                self.message_bot,
             )
             self.connections[server_key] = connection
 

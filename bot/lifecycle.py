@@ -5,7 +5,7 @@ from collections.abc import Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
 from sqlalchemy.orm import selectinload
@@ -22,12 +22,13 @@ from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
+from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
 async def on_startup(
     dispatcher: FromDishka[Dispatcher],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
     cache: FromDishka[CacheService],
     session_factory: FromDishka[AsyncSessionFactoryType],

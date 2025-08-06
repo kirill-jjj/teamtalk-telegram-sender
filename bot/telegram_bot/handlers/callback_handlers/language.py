@@ -4,7 +4,7 @@ from collections.abc import Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -16,6 +16,7 @@ from bot.services import user_service
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.keyboards import create_language_selection_keyboard
+from bot.telegram_bot.types.bots import EventBot
 
 from ._helpers import ensure_message_context, safe_edit_text, with_view_refresh
 from .settings_view import refresh_main_settings_view
@@ -54,7 +55,7 @@ async def set_language(
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,
     cache: FromDishka[CacheService],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
     translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
 ) -> tuple[bool, str, UserSettings | None]:
     """Sets the user's language preference and refreshes the settings view."""

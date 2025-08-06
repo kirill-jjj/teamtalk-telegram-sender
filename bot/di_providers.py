@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator, Callable
 import gettext
 from gettext import GNUTranslations, NullTranslations
 import logging
+from typing import cast
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -22,6 +23,7 @@ from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
+from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 
 # 1. Isolate the factory creation logic into a separate function
@@ -62,11 +64,17 @@ class AppProvider(Provider):
         """Creates a session factory, depends on the config."""
         return create_session_factory(settings)
 
-    @provide
-    def get_bot_event(self, settings: Settings) -> Bot:
+    @provide(provides=EventBot)
+    def get_bot_event(self, settings: Settings) -> EventBot:
         """Creates the main Bot instance for handling events."""
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return Bot(token=settings.telegram.event_token, default=default_props)
+        return cast(EventBot, Bot(token=settings.telegram.event_token, default=default_props))
+
+    @provide(provides=MessageBot)
+    def get_bot_message(self, settings: Settings) -> MessageBot:
+        """Creates the Bot instance for sending messages to admin."""
+        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
+        return cast(MessageBot, Bot(token=settings.telegram.message_token, default=default_props))
 
     @provide
     def get_dispatcher(self) -> Dispatcher:
@@ -116,7 +124,8 @@ class AppProvider(Provider):
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
         translator_factory: Callable[[str], GNUTranslations | NullTranslations],
-        bot: Bot,
+        event_bot: EventBot,
+        message_bot: MessageBot,
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
     ) -> "TeamTalkEventHandler":
@@ -127,7 +136,8 @@ class AppProvider(Provider):
             session_factory=session_factory,
             cache=cache,
             translator_factory=translator_factory,
-            bot=bot,
+            event_bot=event_bot,
+            message_bot=message_bot,
             tt_bot=tt_bot,
             connections=connections,
             logger=logging.getLogger(TeamTalkEventHandler.__module__),

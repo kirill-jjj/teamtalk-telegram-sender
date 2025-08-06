@@ -5,7 +5,6 @@ from gettext import NullTranslations
 import logging
 from typing import Any, Literal
 
-from aiogram import Bot
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -14,6 +13,7 @@ from bot.database import crud
 from bot.models import MuteListMode, NotificationSetting, OperationResult, UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.telegram_bot.types.bots import EventBot
 
 from . import _utils, user_service
 from ._utils import managed_db_transaction
@@ -26,7 +26,7 @@ async def _add_or_remove_admin(
     telegram_id: int,
     user_settings: UserSettings,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     action: Literal["add", "remove"],
 ) -> bool:
@@ -79,7 +79,7 @@ async def add_admin(
     telegram_id: int,
     user_settings: UserSettings,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
 ) -> bool:
     """Adds an admin to the DB, updates cache, and refreshes bot commands."""
@@ -91,7 +91,7 @@ async def remove_admin(
     telegram_id: int,
     user_settings: UserSettings,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
 ) -> bool:
     """Removes an admin from the DB, updates cache, and refreshes bot commands."""
@@ -347,7 +347,7 @@ UpdateFunc = Callable[..., Awaitable[UserSettings | None]]
 async def _admin_update_user_setting(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     target_telegram_id: int,
     update_function: UpdateFunc,
@@ -377,7 +377,7 @@ async def _admin_update_user_setting(
 async def admin_toggle_noon_setting(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     target_telegram_id: int,
 ) -> UserSettings | None:
@@ -390,7 +390,7 @@ async def admin_toggle_noon_setting(
 async def admin_set_user_mute_mode(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     target_telegram_id: int,
     new_mode: "MuteListMode",
@@ -404,7 +404,7 @@ async def admin_set_user_mute_mode(
 async def admin_set_user_notification_preference(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     target_telegram_id: int,
     new_pref_enum: "NotificationSetting",
@@ -537,7 +537,7 @@ async def unban_subscriber(
 async def admin_set_user_language(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     target_telegram_id: int,
     new_lang_code: str,

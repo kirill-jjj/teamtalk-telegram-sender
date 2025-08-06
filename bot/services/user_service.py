@@ -4,7 +4,6 @@ from gettext import NullTranslations
 from html import escape
 import logging
 
-from aiogram import Bot
 import pytalk
 from pytalk.user import User as TeamTalkUser
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,6 +21,7 @@ from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
+from bot.telegram_bot.types.bots import EventBot
 
 from . import _utils
 from ._utils import managed_db_transaction
@@ -227,7 +227,7 @@ async def update_mute_mode(
 async def update_language(
     session: AsyncSession,
     cache: CacheService,
-    bot: Bot,
+    bot: EventBot,
     translator: NullTranslations,
     user_settings: UserSettings,
     new_lang_code: str,

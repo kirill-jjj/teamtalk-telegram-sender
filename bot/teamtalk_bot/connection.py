@@ -8,7 +8,6 @@ from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any
 
-from aiogram import Bot
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import Status as PytalkStatus
@@ -28,6 +27,7 @@ from bot.core.notifications import send_join_leave_notification
 from bot.database.engine import AsyncSessionFactoryType
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ class TeamTalkConnection:
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
         translator_factory: Callable[[str], GNUTranslations | NullTranslations],
-        bot: Bot,
+        event_bot: EventBot,
+        message_bot: MessageBot,
     ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
@@ -52,7 +53,8 @@ class TeamTalkConnection:
         self.session_factory = session_factory
         self.cache = cache
         self.translator_factory = translator_factory
-        self.bot = bot
+        self.event_bot = event_bot
+        self.message_bot = message_bot
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
         self.online_users_cache: dict[int, PytalkUser] = {}
@@ -67,6 +69,7 @@ class TeamTalkConnection:
             cache=cache,
             translator_factory=translator_factory,
             connection=self,
+            bot_for_admin_pm=self.message_bot,
         )
 
     async def connect(self) -> bool:
@@ -474,7 +477,7 @@ class TeamTalkConnection:
             session_factory=self.session_factory,
             cache=self.cache,
             translator_factory=self.translator_factory,
-            bot=self.bot,
+            bot=self.event_bot,
         )
 
     async def on_user_logout(self, user: PytalkUser) -> None:
@@ -492,7 +495,7 @@ class TeamTalkConnection:
             session_factory=self.session_factory,
             cache=self.cache,
             translator_factory=self.translator_factory,
-            bot=self.bot,
+            bot=self.event_bot,
         )
 
     async def on_user_update(self, user: PytalkUser) -> None:

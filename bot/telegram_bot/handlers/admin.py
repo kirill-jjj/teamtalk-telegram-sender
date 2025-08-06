@@ -4,7 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-from aiogram import Bot, Router
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
@@ -15,6 +15,7 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
+from bot.telegram_bot.types.bots import EventBot
 
 from .callback_handlers.list_utils import (
     _show_banned_list_page,
@@ -108,7 +109,7 @@ async def on_subscribers_command(
     message: Message,
     session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
-    bot: Annotated[Bot, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
     await _show_subscriber_list_page(message, session, bot, translator, page=0)
@@ -119,7 +120,7 @@ async def on_unban_command(
     message: Message,
     session: Annotated[AsyncSession, FromDishka()],
     translator: Annotated[NullTranslations, FromDishka()],
-    bot: Annotated[Bot, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
     await _show_banned_list_page(

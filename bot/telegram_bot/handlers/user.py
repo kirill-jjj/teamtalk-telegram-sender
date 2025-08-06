@@ -4,7 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
@@ -20,6 +20,7 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.utils import safe_delete_message
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ async def on_who_command(
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
-    bot: Annotated[Bot, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     if not message.from_user:

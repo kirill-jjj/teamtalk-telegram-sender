@@ -4,13 +4,13 @@ from collections.abc import Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
 
-from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.services.cache_service import CacheService
+from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
 
 
 async def set_telegram_commands(
-    bot: Bot,
+    bot: EventBot,
     cache: CacheService,
     translator_factory: Callable[[str], GNUTranslations | NullTranslations],
     available_languages: list[LanguageInfo],
@@ -82,7 +82,7 @@ async def set_telegram_commands(
             logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
 
 
-async def clear_telegram_commands_for_chat(bot: Bot, chat_id: int) -> None:
+async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:
     """Clears all custom commands for a specific chat."""
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))

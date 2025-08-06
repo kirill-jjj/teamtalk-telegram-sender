@@ -5,7 +5,7 @@ from gettext import NullTranslations
 import logging
 from typing import Any, TypedDict, cast
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from dishka.integrations.aiogram import FromDishka
@@ -43,6 +43,7 @@ from bot.telegram_bot.keyboards import (
     create_admin_subscriber_notification_pref_keyboard,
     create_view_mute_list_keyboard,
 )
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import display_paginated_list
 from bot.telegram_bot.utils import format_telegram_user_display_name
 
@@ -156,7 +157,7 @@ async def admin_toggle_noon(
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
@@ -177,7 +178,7 @@ async def admin_toggle_noon(
 
 
 async def _fetch_mute_list_data(
-    session: AsyncSession, target_telegram_id: int, bot: Bot
+    session: AsyncSession, target_telegram_id: int, bot: EventBot
 ) -> tuple[UserSettings | None, str]:
     """Fetches user settings and their display name for the mute list view."""
     statement = (
@@ -226,7 +227,7 @@ async def admin_view_mute_list(
     callback_data: SubscriberCallback,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
     await _display_subscriber_mute_list_page(
@@ -244,7 +245,7 @@ async def _display_subscriber_mute_list_page(
     query: CallbackQuery,
     session: AsyncSession,
     translator: NullTranslations,
-    bot: Bot,
+    bot: EventBot,
     target_telegram_id: int,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
@@ -291,7 +292,7 @@ async def paginate_mute_list(
     callback_data: PaginateMuteListCallback,
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
     await _display_subscriber_mute_list_page(
@@ -357,7 +358,7 @@ async def admin_set_any_subscriber_setting(
     session: FromDishka[AsyncSession],
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
-    bot: FromDishka[Bot],
+    bot: FromDishka[EventBot],
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
     _ = translator.gettext

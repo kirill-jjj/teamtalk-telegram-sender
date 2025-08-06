@@ -7,7 +7,6 @@ from gettext import GNUTranslations, NullTranslations
 import logging
 from typing import Any
 
-from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommandScopeChat
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,6 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
+from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def update_user_bot_commands(
     telegram_id: int,
     new_lang_code: str,
     cache: "CacheService",
-    bot: "Bot",
+    bot: "EventBot",
     translator: "GNUTranslations | NullTranslations",
 ) -> bool:
     """Updates bot commands for a user based on their new language and admin status."""
