@@ -3,7 +3,6 @@
 from collections.abc import Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import Optional
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery
@@ -57,7 +56,7 @@ async def set_language(
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
     translator_factory: FromDishka[Callable[[str], GNUTranslations | NullTranslations]],
-) -> tuple[bool, str, Optional[UserSettings]]:
+) -> tuple[bool, str, UserSettings | None]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
     if not user_settings:

@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery

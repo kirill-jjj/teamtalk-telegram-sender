@@ -2,7 +2,6 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Optional
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery

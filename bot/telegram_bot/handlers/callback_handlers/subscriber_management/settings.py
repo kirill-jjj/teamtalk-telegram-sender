@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, Optional, TypedDict, cast
+from typing import Any, TypedDict, cast
 
 from aiogram import Bot, F, Router
 from aiogram.filters.callback_data import CallbackData
@@ -157,7 +157,7 @@ async def admin_toggle_noon(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
-) -> tuple[bool, str, Optional[UserSettings]]:
+) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -358,7 +358,7 @@ async def admin_set_any_subscriber_setting(
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
     bot: FromDishka[Bot],
-) -> tuple[bool, str, Optional[UserSettings]]:
+) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin setting a specific subscriber's setting using a data-driven approach."""
     _ = translator.gettext
     config = SETTING_HANDLERS_CONFIG.get(type(callback_data))
