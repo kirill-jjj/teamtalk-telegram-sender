@@ -11,7 +11,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import Update, User
+from aiogram.types import TelegramObject, Update, User
 from dishka import Provider, Scope, provide
 import pytalk
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -232,9 +232,9 @@ class RequestProvider(Provider):
             yield session
 
     @provide
-    def get_event_user(self, update: Update) -> User | None:
+    def get_event_user(self, event: TelegramObject) -> User | None:
         """Извлекает пользователя из события."""
-        return getattr(update.event, "from_user", None)
+        return getattr(event, "from_user", None)
 
     @provide
     async def get_user_settings(
