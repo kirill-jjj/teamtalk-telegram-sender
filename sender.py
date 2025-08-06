@@ -6,7 +6,7 @@ import logging
 import traceback
 from types import ModuleType  # For uvloop typing
 
-from aiogram import Dispatcher
+from aiogram import Bot, Dispatcher
 
 from bot.config import Settings
 from bot.logging_setup import setup_logging
@@ -42,12 +42,19 @@ class Application:
 
         self.dp = create_telegram_dispatcher()
 
+        # This function sets up dishka and attaches the container to the dispatcher
         setup_telegram_dispatcher(dp=self.dp)
+
+        # Retrieve the container that dishka created and attached
+        container = self.dp["dishka_container"]
 
         self.logger.info("Starting Telegram polling...")
         try:
-            await self.dp.start_polling()
+            # Resolve the Bot instance from the container and pass it to start_polling
+            bot = await container.get(Bot)
+            await self.dp.start_polling(bot)
         finally:
+            await container.close()
             self.logger.info("Application finished.")
 
 
