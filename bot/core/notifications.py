@@ -20,7 +20,6 @@ from bot.config import Settings
 from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
-from bot.services import notification_service
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.utils import broadcast_to_users
@@ -63,10 +62,6 @@ async def _get_recipients_for_notification(
     event_type: str,
     session_factory: AsyncSessionFactoryType,
     cache: CacheService,
-    settings: Settings,
-    tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance,
-    online_users_cache: dict[int, "pytalk.user.User"],
 ) -> list[tuple[int, str | None]]:
     subscriber_ids = list(cache.get_all_subscriber_ids())
     if not subscriber_ids:
@@ -184,10 +179,6 @@ async def send_join_leave_notification(
         event_type=event_type,
         session_factory=session_factory,
         cache=cache,
-        settings=settings,
-        tt_user=tt_user,
-        tt_instance=tt_instance,
-        online_users_cache=online_users_cache_for_instance,
     )
 
     if not final_recipients:
@@ -219,63 +210,3 @@ async def send_join_leave_notification(
         session_factory=session_factory,
         online_users_cache_for_instance=online_users_cache_for_instance,
     )
-
-
-async def _get_recipients_for_notification(
-    username_to_check: str,
-    event_type: str,
-    session_factory: AsyncSessionFactoryType,
-    cache: CacheService,
-    settings: Settings,
-    tt_user: TeamTalkUser,
-    tt_instance: TeamTalkInstance,
-    online_users_cache: dict[int, "pytalk.user.User"],
-) -> list[tuple[int, str | None]]:
-    subscriber_ids = list(cache.get_all_subscriber_ids())
-    if not subscriber_ids:
-        return []
-
-    async with session_factory() as session:
-        # Now selecting telegram_id and language_code along with NOON flags
-        stmt = select(
-            UserSettings.telegram_id,
-            UserSettings.not_on_online_enabled,
-            UserSettings.not_on_online_confirmed,
-            UserSettings.language_code,
-        )
-
-        # The rest of the query remains the same
-        stmt = stmt.join(
-            MutedUser,
-            and_(
-                UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
-                MutedUser.muted_teamtalk_username == username_to_check,
-            ),
-            isouter=True,
-        )
-
-        filters = [
-            UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
-            UserSettings.notification_settings != NotificationSetting.NONE,
-        ]
-        if event_type == NOTIFICATION_EVENT_JOIN:
-            filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
-        elif event_type == NOTIFICATION_EVENT_LEAVE:
-            filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
-
-        mute_logic = or_(
-            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
-            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
-        )
-        filters.append(mute_logic)  # type: ignore[arg-type]
-
-        stmt = stmt.where(and_(*filters))
-
-        result = await session.execute(stmt)
-        # The result now includes the language code
-        recipients_data = cast(list[tuple[int, bool, bool, str | None]], result.all())
-
-    # We no longer filter here. Instead, we pass all recipients to the sender,
-    # which will decide whether to send a notification silently based on NOON settings.
-    # The data is transformed from (id, noon_enabled, noon_confirmed, lang) to (id, lang).
-    return [(tg_id, lang_code) for tg_id, _, _, lang_code in recipients_data]

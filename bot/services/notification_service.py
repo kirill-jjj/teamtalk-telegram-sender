@@ -3,10 +3,8 @@
 import logging
 
 import pytalk  # Required for ttstr
-from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
-from bot.config import Settings
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 

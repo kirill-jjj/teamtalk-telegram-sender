@@ -385,15 +385,14 @@ async def toggle_mute_status_for_tt_user(
     """Toggles the mute status of a TeamTalk user using a managed transaction."""
     _ = translator.gettext
 
-    # --- FIX STARTS HERE ---
-    # Attach the cached object to the current session
+    # Attach the cached object to the current session to prevent
+    # `DetachedInstanceError` when accessing relationships.
     try:
         managed_user_settings = await session.merge(user_settings)
         await session.refresh(managed_user_settings, attribute_names=["muted_users_list"])
     except Exception:
         logger.exception("Failed to merge or refresh user_settings for TG ID %s", user_settings.telegram_id)
         return OperationResult(success=False, message_key=_("An error occurred. Please try again."))
-    # --- FIX ENDS HERE ---
 
     # Now work with the object that is definitely in the current session
     existing_entry = next(

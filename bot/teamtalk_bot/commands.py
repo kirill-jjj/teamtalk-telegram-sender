@@ -87,9 +87,6 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     return wrapper
 
 
-# Removed _execute_admin_action_for_id as its logic is now in admin_service
-
-
 def _create_admin_action_report(
     translator: NullTranslations,
     success_count: int,
