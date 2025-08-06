@@ -60,7 +60,7 @@ class CommandRouter:
         cmd: str,
         args: str | None,
         tt_message: TeamTalkMessage,
-        translator: GNUTranslations | NullTranslations,
+        translator: NullTranslations,
         session: AsyncSession,
     ) -> None:
         """Routes a command to the appropriate handler."""

@@ -22,7 +22,7 @@ class WorkflowData(TypedDict, total=False):
 
     session: AsyncSession
     user_settings: UserSettings
-    translator: GNUTranslations | NullTranslations
+    translator: NullTranslations
     tt_connection: TeamTalkConnection | None
     event_from_user: User
     config: Settings
