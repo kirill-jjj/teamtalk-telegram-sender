@@ -7,7 +7,6 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 
 from bot.constants import (
-    WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
@@ -33,7 +32,6 @@ def _get_user_display_channel_name(
     )
 
     server_root_ids = [
-        WHO_CHANNEL_ID_ROOT,
         WHO_CHANNEL_ID_SERVER_ROOT_ALT,
         WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
     ]
