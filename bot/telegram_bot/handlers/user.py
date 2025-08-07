@@ -45,6 +45,9 @@ async def on_start_with_payload(
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
+    if not message.from_user:
+        return
+
     async with uow:
         user_settings = await uow.users.get_or_create(
             message.from_user.id,
