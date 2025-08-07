@@ -64,7 +64,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     @functools.wraps(func)
     async def wrapper(
         tt_message: TeamTalkMessage,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> Any | None:  # noqa: ANN401
         settings = kwargs.get("settings")

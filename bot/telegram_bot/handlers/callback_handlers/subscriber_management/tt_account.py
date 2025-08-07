@@ -10,7 +10,7 @@ from dishka.integrations.aiogram import FromDishka
 import pytalk
 
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import OperationResult
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -40,31 +40,32 @@ async def manage_tt_account(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    current_tt_username = user_settings.teamtalk_username if user_settings else None
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        current_tt_username = user_settings.teamtalk_username if user_settings else None
 
-    keyboard = await create_manage_tt_account_keyboard(
-        translator,
-        target_telegram_id=target_telegram_id,
-        current_tt_username=current_tt_username,
-        page=return_page,
-    )
-    message_text = _(
-        "Manage TeamTalk account link for subscriber {telegram_id}:"
-    ).format(telegram_id=target_telegram_id)
+        keyboard = await create_manage_tt_account_keyboard(
+            translator,
+            target_telegram_id=target_telegram_id,
+            current_tt_username=current_tt_username,
+            page=return_page,
+        )
+        message_text = _(
+            "Manage TeamTalk account link for subscriber {telegram_id}:"
+        ).format(telegram_id=target_telegram_id)
 
-    await safe_edit_text(
-        message_to_edit=cast(Message, query.message),
-        text=message_text,
-        reply_markup=keyboard,
-    )
+        await safe_edit_text(
+            message_to_edit=cast(Message, query.message),
+            text=message_text,
+            reply_markup=keyboard,
+        )
     await query.answer()
 
 
@@ -198,7 +199,7 @@ async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
     translator: FromDishka[NullTranslations],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
     subscription_service: FromDishka[SubscriptionService],
 ) -> None:
     """Handles linking a chosen TeamTalk account to a subscriber."""
@@ -207,44 +208,45 @@ async def link_tt_account_chosen(
     tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    if not user_settings:
-        await query.answer(_("Subscriber not found."), show_alert=True)
-        return
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        if not user_settings:
+            await query.answer(_("Subscriber not found."), show_alert=True)
+            return
 
-    operation_result: OperationResult = await subscription_service.link_tt_account(
-        user_settings, tt_username_to_link
-    )
-
-    alert_message_args = operation_result.message_args or {}
-    if "tt_username" not in alert_message_args:
-        alert_message_args["tt_username"] = tt_username_to_link
-    if "new_tt_username" not in alert_message_args:
-        alert_message_args["new_tt_username"] = tt_username_to_link
-
-    alert_message = _(operation_result.message_key).format(**alert_message_args)
-    await query.answer(alert_message, show_alert=True)
-
-    final_tt_username_for_keyboard: str | None
-    if operation_result.success and operation_result.user_settings:
-        final_tt_username_for_keyboard = (
-            operation_result.user_settings.teamtalk_username
-        )
-    else:
-        user_s_for_kb = await user_repo.get_by_id(target_telegram_id)
-        final_tt_username_for_keyboard = (
-            user_s_for_kb.teamtalk_username if user_s_for_kb else None
+        operation_result: OperationResult = await subscription_service.link_tt_account(
+            user_settings, tt_username_to_link
         )
 
-    updated_keyboard = await create_manage_tt_account_keyboard(
-        translator,
-        target_telegram_id=target_telegram_id,
-        current_tt_username=final_tt_username_for_keyboard,
-        page=return_page,
-    )
-    await cast(Message, query.message).edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-            telegram_id=target_telegram_id
-        ),
-        reply_markup=updated_keyboard,
-    )
+        alert_message_args = operation_result.message_args or {}
+        if "tt_username" not in alert_message_args:
+            alert_message_args["tt_username"] = tt_username_to_link
+        if "new_tt_username" not in alert_message_args:
+            alert_message_args["new_tt_username"] = tt_username_to_link
+
+        alert_message = _(operation_result.message_key).format(**alert_message_args)
+        await query.answer(alert_message, show_alert=True)
+
+        final_tt_username_for_keyboard: str | None
+        if operation_result.success and operation_result.user_settings:
+            final_tt_username_for_keyboard = (
+                operation_result.user_settings.teamtalk_username
+            )
+        else:
+            user_s_for_kb = await uow.users.get_by_id(target_telegram_id)
+            final_tt_username_for_keyboard = (
+                user_s_for_kb.teamtalk_username if user_s_for_kb else None
+            )
+
+        updated_keyboard = await create_manage_tt_account_keyboard(
+            translator,
+            target_telegram_id=target_telegram_id,
+            current_tt_username=final_tt_username_for_keyboard,
+            page=return_page,
+        )
+        await cast(Message, query.message).edit_text(
+            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
+                telegram_id=target_telegram_id
+            ),
+            reply_markup=updated_keyboard,
+        )

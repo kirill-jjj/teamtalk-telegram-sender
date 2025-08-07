@@ -138,19 +138,20 @@ async def view_subscriber(
     callback_data: ViewSubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handle viewing details and actions for a subscriber via the display helper."""
-    user_settings = await user_repo.get_by_id(callback_data.telegram_id)
-    if not user_settings:
-        await query.answer("User not found.", show_alert=True)
-        return
+    async with uow:
+        user_settings = await uow.users.get_by_id(callback_data.telegram_id)
+        if not user_settings:
+            await query.answer("User not found.", show_alert=True)
+            return
 
-    await _display_subscriber_view(
-        query=query,
-        target_telegram_id=callback_data.telegram_id,
-        page_context=callback_data.page,
-        user_settings=user_settings,
-        translator=translator,
-        bot=bot,
-    )
+        await _display_subscriber_view(
+            query=query,
+            target_telegram_id=callback_data.telegram_id,
+            page_context=callback_data.page,
+            user_settings=user_settings,
+            translator=translator,
+            bot=bot,
+        )

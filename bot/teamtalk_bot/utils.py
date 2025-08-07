@@ -338,7 +338,7 @@ def handle_command_errors(
         @functools.wraps(func)
         async def wrapper(
             tt_message: TeamTalkMessage,
-            *args: Any,
+            *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             try:
