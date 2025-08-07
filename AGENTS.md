@@ -14,6 +14,7 @@ This document is the single source of truth for any agent contributing to this c
 **Primary Technologies:**
 *   Python 3.11+
 *   Aiogram 3
+*   Dishka (Dependency Injection)
 *   py-talk-ex
 *   SQLModel (ORM) & Alembic (Migrations)
 *   Pydantic (Configuration)
@@ -23,71 +24,63 @@ This document is the single source of truth for any agent contributing to this c
 The architecture is designed to be modular, testable, and maintainable. Any changes or new features must align with these principles.
 
 ### 2.1. Dependency Injection (DI)
-This is the central architectural pattern of the application. Shared state, services, and resources are managed through a central `Services` container.
+This is the central architectural pattern of the application. Dependencies are managed by the `dishka` library and defined in `bot/di_providers.py`.
 
 *   **No Global State:** Do not instantiate global clients (like `Bot` or `Dispatcher`) or session factories outside the main application setup.
-*   **Use the `Services` Container:** Handlers and other components receive necessary dependencies (like database sessions, bot instances, or caches) from the `workflow_data` of the `aiogram` Dispatcher, which is populated with the `Services` instance and its components at startup.
-*   **Explicit is Better than Implicit:** Functions should receive their dependencies as explicit arguments.
+*   **Use `dishka` Providers:** Handlers and services receive necessary dependencies (like database sessions, repositories, other services, or caches) via `dishka`'s injection mechanism.
+*   **Explicit is Better than Implicit:** Functions should receive their dependencies as explicit arguments, type-hinted with `FromDishka[...]`.
 
 ### 2.2. Separation of Concerns (SoC)
 The codebase is organized into distinct layers and modules, each with a single responsibility.
 *   `bot/core`: Cross-cutting concerns, core enums, and business logic not tied to a specific platform.
-*   `bot/database`: Database models (`models.py`), access logic (`crud.py`), and engine/session setup (`engine.py`).
+*   `bot/database`: Contains the data access layer.
+    *   `models.py`: Defines the `SQLModel` database tables.
+    *   `engine.py`: Sets up the database engine and session factory.
+    *   `repositories/`: Implements the **Repository Pattern**. Each file contains a class responsible for all database operations for a specific model or group of related models (e.g., `UserRepository`).
+*   `bot/services`: Contains the application's business logic. Each service is a focused class responsible for a single business capability (e.g., `UserSettingsService`, `ModerationService`). Services use repositories to interact with the database and can depend on other services.
 *   `bot/telegram_bot`: All components specific to the Telegram bot, including `handlers`, `keyboards`, and `middlewares`.
 *   `bot/teamtalk_bot`: All components specific to the TeamTalk client.
 *   `scripts`: Standalone utility scripts for development and maintenance.
 
-## 3. Key Components and State Management
-
-### 3.1. The `Services` Container
-Located at `bot/services_container.py`, the `Services` class is the single source of truth for shared application components. It holds:
-*   `services.config`: The typed application configuration, loaded from `config.toml`.
-*   `services.session_factory`: The SQLAlchemy session factory for database access.
-*   `services.bot_event` & `services.bot_message`: `aiogram.Bot` instances.
-*   `services.tt_bot`: The `pytalk.TeamTalkBot` instance.
-*   `services.connections`: A dictionary of active `TeamTalkConnection` objects.
-*   **Caches:** In-memory caches for performance, including `user_settings_cache`, `admin_ids_cache`, and `subscribed_users_cache`.
-*   `services.get_translator()`: A method to retrieve a `gettext` translator for a given language.
-
-### 3.2. Database and Migrations
+## 3. Database and Migrations
 *   **Models:** All database tables are defined as `SQLModel` classes in `bot/models.py`.
 *   **Migrations:** Database schema changes are managed by `Alembic`. Any modification to `bot/models.py` requires a new migration.
 *   **Migrations Must Be Non-Destructive:** **The paramount principle of database migration is that existing user data must NEVER be lost.** `autogenerate` is a tool, not a source of truth. It can misinterpret changes like column renames as "drop and add," leading to catastrophic data loss. All generated scripts require careful manual inspection and, if necessary, correction.
 
-### 3.3. Internationalization (i18n)
+## 4. Internationalization (i18n)
 *   All user-facing strings **must** be wrapped in a `_()` call for translation.
 *   The workflow is managed by `Babel` via `uv run i18n [update|compile]`.
 
-## 4. Code Quality and Contribution Guidelines
+## 5. Code Quality and Contribution Guidelines
 
 These rules are enforced by the `ruff` configuration in `pyproject.toml` and must be followed.
 
-### 4.1. Core Principles
+### 5.1. Core Principles
 *   **Embrace Modern Python:** This project targets Python 3.11+. All new code should leverage modern syntax and features (e.g., `|` for union types, structural pattern matching where appropriate) from the outset. Do not write legacy code with the expectation that tooling will fix it.
 *   **Single Responsibility Principle (SRP):** A function or class should do one thing and do it well. Handlers should delegate complex logic to service functions.
 *   **Don't Repeat Yourself (DRY):** If you write the same code block more than once, refactor it into a reusable utility function. Check `bot/core/utils.py` before creating a new one.
 *   **Simplicity and The Zen of Python:** Prefer simple, clear, and explicit code over complex, clever, and implicit solutions.
 
-### 4.2. Integrating External Code
+### 5.2. Integrating External Code
 Before integrating any code from external sources (e.g., web snippets, other AI outputs), it **must** be rigorously sanitized. This process involves:
 1.  Stripping all non-essential comments, especially AI-generated artifacts (`# changed here`, `# from my knowledge`).
 2.  Formatting and linting the code against the project's `ruff` configuration (`uv run ruff format .` and `uv run ruff check --fix .`).
 3.  Thoroughly reviewing the code for logic, security, and adherence to project architecture before integration.
 
-### 4.3. Commenting
+### 5.3. Commenting
 *   **English-Only:** All comments, docstrings, and variable names must be written in English to ensure universal understanding.
 *   **No Historical Comments:** Do not add comments like `# added`, `# changed`, or `# refactored`. Git history serves this purpose.
 *   **No Obvious Comments:** Do not explain *what* the code is doing (e.g., `# increment counter`). The code should be clear enough to explain itself.
 *   **Use Comments to Explain *Why*:** Comments should only be used to explain complex logic, trade-offs, or the reasoning behind a non-obvious implementation choice.
 
-### 4.4. Code Maintenance
+### 5.4. Code Maintenance
 *   **Dead Code Must Be Removed:** Do not comment out unused imports, functions, or blocks of code. Delete them. Version control is your safety net.
 
-### 4.5. Naming Conventions
+### 5.5. Naming Conventions
 
 Clear and predictable naming is critical for code readability and maintainability. Names must reflect the **essence** of a component (what it does), not its technical implementation (how it does it) or its trigger mechanism. All names must be concise and free of redundancy.
 
-#### 4.5.1. Avoid Redundant Prefixes and Suffixes
+#### 5.5.1. Avoid Redundant Prefixes and Suffixes
 
 Prefixes and suffixes that state the obvious, such as `handle_`, `process_`, `cq_`, or `_action`, should be avoided. The context of a component is typically clear from its location, decorators, or usage. Adding these terms often creates unnecessary clutter.
 
@@ -103,7 +96,7 @@ Prefixes and suffixes that state the obvious, such as `handle_`, `process_`, `cq
     *   `show_language_menu`.
     *   `SubscriberCallback`.
 
-#### 4.5.2. Eliminate Superfluous Words
+#### 5.5.2. Eliminate Superfluous Words
 
 Words like `specific`, `full`, `generic`, `data`, and `info` are often implied and can be omitted. A function or class name should be as concise as possible without losing its meaning.
 
@@ -119,7 +112,7 @@ Words like `specific`, `full`, `generic`, `data`, and `info` are often implied a
     *   `create_paginated_keyboard`.
     *   `WorkflowContext`, `SubscriberView` (or simply `Subscriber` if it represents a data model).
 
-#### 4.5.3. Focus on Purpose, Not Implementation
+#### 5.5.3. Focus on Purpose, Not Implementation
 
 A function's name should communicate its primary purpose, not summarize its implementation steps.
 
@@ -133,7 +126,7 @@ A function's name should communicate its primary purpose, not summarize its impl
     *   `is_muted`.
     *   `apply_ban` or `ban_user`.
 
-#### 4.5.4. Use Verbs for Actions and Nouns for Data
+#### 5.5.4. Use Verbs for Actions and Nouns for Data
 
 Adherence to this fundamental principle is essential for clarity.
 
@@ -141,7 +134,7 @@ Adherence to this fundamental principle is essential for clarity.
 *   **Classes, variables, and data structures** must be nouns that describe the entity they represent (e.g., `User`, `Settings`, `main_menu_keyboard`).
 *   **Boolean variables or functions** should be named to read like a question (e.g., `is_admin`, `is_ready`, `has_permissions`).
 
-### 4.6. Linting and Formatting
+### 5.6. Linting and Formatting
 All code must be validated against `ruff` before committing. The key commands are `uv run ruff check --fix .` and `uv run ruff format .`. Key enforced rules include:
 *   **`D` (pydocstyle):** All public modules, functions, classes, and methods **must** have a docstring in the Google convention. This is non-negotiable.
 *   **`SIM` (flake8-simplify):** Code must be simplified where possible. `ruff --fix` will handle most of this.
@@ -149,7 +142,7 @@ All code must be validated against `ruff` before committing. The key commands ar
 *   **`A` (flake8-builtins):** Do not shadow built-in names like `list`, `dict`, or `id`.
 *   **`UP` (pyupgrade):** Code must conform to modern Python 3.11+ syntax.
 
-## 5. Development Workflow
+## 6. Development Workflow
 
 Before starting, ensure your environment is set up and all dependencies are installed by running `uv sync --all-extras`.
 
