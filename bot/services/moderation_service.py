@@ -79,14 +79,21 @@ class ModerationService:
         """Unbans a subscriber by removing all their ban entries."""
         active_uow = uow or self._uow
 
-        user_settings = await active_uow.users.get_by_id(telegram_id)
-        tt_username = user_settings.teamtalk_username if user_settings else None
+        # 1. Find all bans associated with this Telegram ID
+        bans_by_tg_id = await active_uow.bans.get_by_telegram_id(telegram_id)
 
-        # Remove bans by Telegram ID
+        # 2. Collect all associated TeamTalk usernames from these bans
+        associated_tt_usernames = {
+            ban.teamtalk_username
+            for ban in bans_by_tg_id
+            if ban.teamtalk_username
+        }
+
+        # 3. Remove all bans by Telegram ID
         await active_uow.bans.remove_by_telegram_id(telegram_id)
 
-        # Remove bans by TeamTalk username
-        if tt_username:
+        # 4. Remove all bans for each found TeamTalk username
+        for tt_username in associated_tt_usernames:
             tt_bans = await active_uow.bans.get_by_teamtalk_username(tt_username)
             for ban in tt_bans:
                 await active_uow.bans.delete(ban)
