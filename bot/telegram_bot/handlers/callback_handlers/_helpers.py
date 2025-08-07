@@ -128,8 +128,8 @@ def ensure_message_context(
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())

@@ -5,6 +5,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
@@ -57,6 +58,8 @@ async def refresh_subscriber_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     moderation_service: FromDishka[ModerationService],
@@ -85,6 +88,8 @@ async def on_ban_subscriber_confirm(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],

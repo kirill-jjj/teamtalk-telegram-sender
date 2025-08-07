@@ -2,10 +2,10 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Any
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
@@ -60,10 +60,11 @@ async def show_notifications_menu(
 @ensure_message_context
 @with_view_refresh(refresh_notification_settings_view)
 async def toggle_noon_setting(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     user_settings_service: FromDishka[UserSettingsService],
-    **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext

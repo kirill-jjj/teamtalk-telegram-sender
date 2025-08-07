@@ -7,12 +7,14 @@ from typing import TypeAlias, TypedDict
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE
 from bot.core.enums import Actor, SubscriberCommand
 from bot.core.languages import LanguageInfo
 from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import (
     MuteListMode,
     NotificationSetting,
@@ -83,7 +85,7 @@ async def admin_set_setting_choice(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
     available_languages: FromDishka[list[LanguageInfo]],
 ) -> None:
     """Handles showing the choice menu for various subscriber settings to an admin."""
@@ -91,53 +93,56 @@ async def admin_set_setting_choice(
     target_telegram_id = callback_data.target_telegram_id
     action = callback_data.action
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    if not user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        if not user_settings:
+            await query.answer(_("Subscriber settings not found."), show_alert=True)
+            return
 
-    config_map: dict[SubscriberCommand, SettingChoiceConfig] = {
-        SubscriberCommand.ADMIN_SET_LANGUAGE: {
-            "message_text": _("Select new language for subscriber {tg_id}:").format(
-                tg_id=target_telegram_id
-            ),
-            "keyboard_factory": create_admin_subscriber_lang_keyboard,
-            "keyboard_factory_kwargs": {"available_languages": available_languages},
-        },
-        SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
-            "message_text": _(
-                "Select notification preference for subscriber {tg_id}:"
-            ).format(tg_id=target_telegram_id),
-            "keyboard_factory": create_admin_subscriber_notification_pref_keyboard,
-            "keyboard_factory_kwargs": {
-                "current_setting": user_settings.notification_settings
+        config_map: dict[SubscriberCommand, SettingChoiceConfig] = {
+            SubscriberCommand.ADMIN_SET_LANGUAGE: {
+                "message_text": _("Select new language for subscriber {tg_id}:").format(
+                    tg_id=target_telegram_id
+                ),
+                "keyboard_factory": create_admin_subscriber_lang_keyboard,
+                "keyboard_factory_kwargs": {"available_languages": available_languages},
             },
-        },
-        SubscriberCommand.ADMIN_SET_MUTE_MODE: {
-            "message_text": _("Select mute list mode for subscriber {tg_id}:").format(
-                tg_id=target_telegram_id
-            ),
-            "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
-            "keyboard_factory_kwargs": {"current_mode": user_settings.mute_list_mode},
-        },
-    }
+            SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
+                "message_text": _(
+                    "Select notification preference for subscriber {tg_id}:"
+                ).format(tg_id=target_telegram_id),
+                "keyboard_factory": create_admin_subscriber_notification_pref_keyboard,
+                "keyboard_factory_kwargs": {
+                    "current_setting": user_settings.notification_settings
+                },
+            },
+            SubscriberCommand.ADMIN_SET_MUTE_MODE: {
+                "message_text": _(
+                    "Select mute list mode for subscriber {tg_id}:"
+                ).format(tg_id=target_telegram_id),
+                "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
+                "keyboard_factory_kwargs": {
+                    "current_mode": user_settings.mute_list_mode
+                },
+            },
+        }
 
-    config = config_map.get(action)
-    if not config:
-        logger.error("No config for action %s in admin_set_setting_choice", action)
-        return
+        config = config_map.get(action)
+        if not config:
+            logger.error("No config for action %s in admin_set_setting_choice", action)
+            return
 
-    common_kwargs = {
-        "translator": translator,
-        "target_telegram_id": target_telegram_id,
-        "subscriber_page_context": callback_data.page,
-    }
-    await _present_subscriber_setting_choice(
-        query,
-        config["message_text"],
-        config["keyboard_factory"],
-        {**config["keyboard_factory_kwargs"], **common_kwargs},
-    )
+        common_kwargs = {
+            "translator": translator,
+            "target_telegram_id": target_telegram_id,
+            "subscriber_page_context": callback_data.page,
+        }
+        await _present_subscriber_setting_choice(
+            query,
+            config["message_text"],
+            config["keyboard_factory"],
+            {**config["keyboard_factory_kwargs"], **common_kwargs},
+        )
 
 
 @settings_router.callback_query(
@@ -146,6 +151,8 @@ async def admin_set_setting_choice(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     user_repo: FromDishka[UserRepository],
@@ -220,18 +227,19 @@ async def admin_view_mute_list(
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
-    await _display_subscriber_mute_list_page(
-        query=query,
-        translator=translator,
-        bot=bot,
-        user_repo=user_repo,
-        target_telegram_id=callback_data.target_telegram_id,
-        subscriber_list_return_page=callback_data.page,
-        mute_list_page_num=0,
-    )
+    async with uow:
+        await _display_subscriber_mute_list_page(
+            query=query,
+            translator=translator,
+            bot=bot,
+            user_repo=uow.users,
+            target_telegram_id=callback_data.target_telegram_id,
+            subscriber_list_return_page=callback_data.page,
+            mute_list_page_num=0,
+        )
 
 
 async def _display_subscriber_mute_list_page(
@@ -280,18 +288,19 @@ async def paginate_mute_list(
     callback_data: PaginateMuteListCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
-    await _display_subscriber_mute_list_page(
-        query=query,
-        translator=translator,
-        bot=bot,
-        user_repo=user_repo,
-        target_telegram_id=callback_data.target_telegram_id,
-        subscriber_list_return_page=callback_data.subscriber_context_page,
-        mute_list_page_num=callback_data.mute_list_page,
-    )
+    async with uow:
+        await _display_subscriber_mute_list_page(
+            query=query,
+            translator=translator,
+            bot=bot,
+            user_repo=uow.users,
+            target_telegram_id=callback_data.target_telegram_id,
+            subscriber_list_return_page=callback_data.subscriber_context_page,
+            mute_list_page_num=callback_data.mute_list_page,
+        )
     await query.answer()
 
 
@@ -308,6 +317,8 @@ AnySettingCallback: TypeAlias = (
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: AnySettingCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
