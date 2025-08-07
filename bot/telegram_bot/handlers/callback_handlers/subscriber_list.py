@@ -8,7 +8,6 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import SubscriberListAction
 from bot.database.uow import IUnitOfWork
 from bot.services.subscription_service import SubscriptionService

@@ -2,6 +2,9 @@
 
 from gettext import NullTranslations
 import logging
+from typing import Annotated
+
+from pydantic import Field, validate_call
 
 from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, OperationResult, UserSettings
@@ -26,9 +29,10 @@ class ModerationService:
         self._subscription_service = subscription_service
         self._cache = cache
 
+    @validate_call
     async def ban_and_delete_subscriber(
         self,
-        telegram_id: int,
+        telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
         tt_connection: TeamTalkConnection | None,
         uow: IUnitOfWork | None = None,
@@ -66,8 +70,11 @@ class ModerationService:
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 
+    @validate_call
     async def unban_subscriber(
-        self, telegram_id: int, uow: IUnitOfWork | None = None
+        self,
+        telegram_id: Annotated[int, Field(gt=0)],
+        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Unbans a subscriber by removing all their ban entries."""
         active_uow = uow or self._uow
@@ -91,6 +98,7 @@ class ModerationService:
             message_args={"telegram_id": telegram_id},
         )
 
+    @validate_call
     async def toggle_mute_status(
         self,
         user_settings: UserSettings,

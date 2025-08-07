@@ -129,6 +129,13 @@ class AdminActionConfig(TypedDict):
     success_msg: tuple[str, str]
 
 
+class DeeplinkConfig(TypedDict):
+    """Configuration for a deeplink action."""
+
+    get_payload: Callable[[TeamTalkMessage], str | None]
+    reply_text_key: str
+
+
 async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: str | None,
@@ -231,7 +238,7 @@ async def reply_with_deeplink(
     tt_message.reply(_(reply_text_source).format(deeplink_url=deeplink_url))
 
 
-DEEPLINK_CONFIG = {
+DEEPLINK_CONFIG: dict[DeeplinkAction, DeeplinkConfig] = {
     DeeplinkAction.SUBSCRIBE: {
         "get_payload": lambda msg: ttstr(msg.user.username),
         "reply_text_key": (
@@ -240,7 +247,7 @@ DEEPLINK_CONFIG = {
         ),
     },
     DeeplinkAction.UNSUBSCRIBE: {
-        "get_payload": lambda msg: None,
+        "get_payload": lambda _: None,
         "reply_text_key": (
             "Click this link to unsubscribe from notifications "
             "(link valid for 5 minutes):\n{deeplink_url}"

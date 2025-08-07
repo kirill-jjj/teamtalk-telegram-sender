@@ -1,7 +1,6 @@
 """Keyboards for user-facing settings menus."""
 
 from gettext import NullTranslations
-from typing import cast
 
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -26,7 +25,6 @@ from bot.telegram_bot.callback_data import (
 )
 
 from .shared import (
-    _build_user_toggle_keyboard,
     _create_back_button_text,
     _create_option_selection_keyboard,
 )
@@ -207,5 +205,3 @@ async def create_manage_muted_users_keyboard(
     )
     builder.adjust(1)
     return builder
-
-

@@ -28,7 +28,6 @@ from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )
-from bot.database.engine import AsyncSessionFactoryType
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.utils import send_telegram_message
 
@@ -266,7 +265,6 @@ async def forward_tt_message_to_telegram_admin(
     settings: Settings,
     bot: Bot,
     translator: gettext.NullTranslations,
-    session_factory: AsyncSessionFactoryType,
     cache: CacheService,
 ) -> None:
     """Forwards a private TeamTalk message to the configured Telegram admin."""

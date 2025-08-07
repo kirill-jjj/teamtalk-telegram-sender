@@ -1,6 +1,9 @@
 """Service for managing user subscriptions."""
 
 import logging
+from typing import Annotated
+
+from pydantic import Field, validate_call
 
 from bot.database.uow import IUnitOfWork
 from bot.models import OperationResult, SubscribedUser, UserSettings
@@ -22,6 +25,7 @@ class SubscriptionService:
         self._uow = uow
         self._cache = cache
 
+    @validate_call
     async def create_subscription(
         self,
         user_settings: UserSettings,
@@ -53,8 +57,11 @@ class SubscriptionService:
         )
         return True
 
+    @validate_call
     async def delete_profile(
-        self, telegram_id: int, uow: IUnitOfWork | None = None
+        self,
+        telegram_id: Annotated[int, Field(gt=0)],
+        uow: IUnitOfWork | None = None,
     ) -> bool:
         """Orchestrates the full deletion of a user's profile from DB and cache."""
         logger.info("Deleting full user profile for Telegram ID: %s", telegram_id)
@@ -76,6 +83,7 @@ class SubscriptionService:
         )
         return True
 
+    @validate_call
     async def link_tt_account(
         self,
         user_settings: UserSettings,
