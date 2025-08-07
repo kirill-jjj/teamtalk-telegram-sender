@@ -59,12 +59,14 @@ def with_view_refresh(
     ) -> Callable[..., Awaitable[None]]:
         @functools.wraps(func)
         async def wrapper(
+            query: CallbackQuery,
+            *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
             callback_answer = kwargs.pop("callback_answer")
 
-            success, message, updated_object = await func(**kwargs)
+            success, message, updated_object = await func(query, *args, **kwargs)
 
             callback_answer.text = message
             callback_answer.show_alert = not success
@@ -73,6 +75,8 @@ def with_view_refresh(
                 kwargs["user_settings"] = updated_object
 
             await view_refresher(
+                query,
+                *args,
                 **kwargs,
             )
 
