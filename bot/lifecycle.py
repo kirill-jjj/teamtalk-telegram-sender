@@ -53,9 +53,12 @@ async def on_startup(
 
     logger.info("Loading all caches from database...")
     async with session_factory() as session:
-        admin_repo = AdminRepository(session)
-        subscriber_repo = SubscriberRepository(session)
-        user_repo = UserRepository(session)
+        admin_repo = AdminRepository()
+        admin_repo._session = session
+        subscriber_repo = SubscriberRepository()
+        subscriber_repo._session = session
+        user_repo = UserRepository()
+        user_repo._session = session
 
         db_admin_ids = await admin_repo.get_all_ids()
         cache.load_admins_from_db(db_admin_ids)

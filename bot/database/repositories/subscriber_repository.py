@@ -1,7 +1,6 @@
 """Repository for managing subscribed users."""
 
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.repositories.base import BaseRepository
 from bot.models import SubscribedUser
@@ -10,9 +9,9 @@ from bot.models import SubscribedUser
 class SubscriberRepository(BaseRepository[SubscribedUser]):
     """Repository for managing SubscribedUsers."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self) -> None:
         """Initializes the subscriber repository."""
-        super().__init__(session, SubscribedUser)
+        super().__init__(SubscribedUser)
 
     async def get_all_ids(self) -> list[int]:
         """Retrieves the Telegram IDs of all subscribers.

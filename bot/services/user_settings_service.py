@@ -3,10 +3,10 @@
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
-from typing import Any
+from typing import TypeVar
 
 from bot.core.enums import Actor
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.types.bots import EventBot
@@ -14,37 +14,34 @@ from bot.telegram_bot.utils import update_user_bot_commands
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
+
 
 class UserSettingsService:
     """Service for managing user settings."""
 
-    def __init__(self, user_repo: UserRepository, cache: CacheService) -> None:
+    def __init__(self, uow: IUnitOfWork, cache: CacheService) -> None:
         """Initializes the user settings service.
 
         Args:
-            user_repo: The user repository.
+            uow: The unit of work.
             cache: The cache service.
         """
-        self._user_repo = user_repo
+        self._uow = uow
         self._cache = cache
 
     async def get_or_create(self, telegram_id: int, default_lang: str) -> UserSettings:
-        """Gets user settings from cache or DB, or creates them if they don't exist.
-
-        Args:
-            telegram_id: The Telegram ID of the user.
-            default_lang: The default language code to use for new users.
-
-        Returns:
-            The UserSettings for the given user.
-        """
+        """Gets user settings from cache or DB, or creates them if they don't exist."""
         user_settings = self._cache.get_user_settings(telegram_id)
         if user_settings:
             return user_settings
 
-        user_settings = await self._user_repo.get_or_create(
-            telegram_id, defaults={"language_code": default_lang}
-        )
+        async with self._uow:
+            user_settings = await self._uow.users.get_or_create(
+                telegram_id, defaults={"language_code": default_lang}
+            )
+            await self._uow.commit()
+
         self._cache.update_user_settings(user_settings)
         return user_settings
 
@@ -52,7 +49,7 @@ class UserSettingsService:
         self,
         user_settings: UserSettings,
         field_name: str,
-        new_value: Any,
+        new_value: T,
         log_context: str,
     ) -> UserSettings | None:
         """A generic helper to update a field on the UserSettings model."""
@@ -71,7 +68,10 @@ class UserSettingsService:
 
         setattr(user_settings, field_name, new_value)
         try:
-            await self._user_repo.save(user_settings)
+            async with self._uow:
+                await self._uow.users.save(user_settings)
+                await self._uow.commit()
+
             self._cache.update_user_settings(user_settings)
             logger.info(
                 "Successfully updated %s for user %s to '%s'%s.",

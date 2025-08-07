@@ -1,6 +1,6 @@
 """Dishka providers for dependency injection."""
 
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable
 import gettext
 from gettext import NullTranslations
 import logging
@@ -12,16 +12,11 @@ from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
 from dishka import FromDishka, Provider, Scope, provide
 import pytalk
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
-from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
@@ -163,82 +158,45 @@ class RequestProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_db_session(
-        self, factory: AsyncSessionFactoryType
-    ) -> AsyncGenerator[AsyncSession, None]:
-        """Provides a transaction-managed database session."""
-        async with factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    @provide
-    def get_user_repository(self, session: AsyncSession) -> UserRepository:
-        """Provides a UserRepository."""
-        return UserRepository(session)
-
-    @provide
-    def get_ban_repository(self, session: AsyncSession) -> BanRepository:
-        """Provides a BanRepository."""
-        return BanRepository(session)
-
-    @provide
-    def get_deeplink_repository(self, session: AsyncSession) -> DeeplinkRepository:
-        """Provides a DeeplinkRepository."""
-        return DeeplinkRepository(session)
-
-    @provide
-    def get_admin_repository(self, session: AsyncSession) -> AdminRepository:
-        """Provides an AdminRepository."""
-        return AdminRepository(session)
-
-    @provide
-    def get_subscriber_repository(self, session: AsyncSession) -> SubscriberRepository:
-        """Provides a SubscriberRepository."""
-        return SubscriberRepository(session)
+    def get_uow(self, factory: AsyncSessionFactoryType) -> IUnitOfWork:
+        """Provides the Unit of Work."""
+        return SqlModelUnitOfWork(factory)
 
     @provide
     def get_deeplink_service(
         self,
-        subscription_service: SubscriptionService,
-        ban_repo: BanRepository,
-        admin_repo: AdminRepository,
-        cache: CacheService,
+        uow: FromDishka[IUnitOfWork],
+        subscription_service: FromDishka[SubscriptionService],
+        cache: FromDishka[CacheService],
     ) -> DeeplinkService:
         """Provides a DeeplinkService."""
-        return DeeplinkService(subscription_service, ban_repo, admin_repo, cache)
+        return DeeplinkService(uow, subscription_service, cache)
 
     @provide
     def get_user_settings_service(
-        self, user_repo: UserRepository, cache: CacheService
+        self, uow: FromDishka[IUnitOfWork], cache: FromDishka[CacheService]
     ) -> UserSettingsService:
         """Provides a UserSettingsService."""
-        return UserSettingsService(user_repo, cache)
+        return UserSettingsService(uow, cache)
 
     @provide
     def get_subscription_service(
         self,
-        user_repo: UserRepository,
-        subscriber_repo: SubscriberRepository,
-        ban_repo: BanRepository,
-        cache: CacheService,
+        uow: FromDishka[IUnitOfWork],
+        cache: FromDishka[CacheService],
     ) -> SubscriptionService:
         """Provides a SubscriptionService."""
-        return SubscriptionService(user_repo, subscriber_repo, ban_repo, cache)
+        return SubscriptionService(uow, cache)
 
     @provide
     def get_moderation_service(
         self,
-        ban_repo: BanRepository,
-        user_repo: UserRepository,
-        subscription_service: SubscriptionService,
-        cache: CacheService,
+        uow: FromDishka[IUnitOfWork],
+        subscription_service: FromDishka[SubscriptionService],
+        cache: FromDishka[CacheService],
     ) -> ModerationService:
         """Provides a ModerationService."""
-        return ModerationService(ban_repo, user_repo, subscription_service, cache)
+        return ModerationService(uow, subscription_service, cache)
 
     @provide
     def get_report_service(self) -> ReportService:

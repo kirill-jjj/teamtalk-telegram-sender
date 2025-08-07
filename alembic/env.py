@@ -17,7 +17,13 @@ from sqlmodel import SQLModel
 from bot.config import Settings
 
 # Import models here for Alembic 'autogenerate' support
-from bot.models import Admin, Deeplink, MutedUser, SubscribedUser, UserSettings  # noqa: F401
+from bot.models import (  # noqa: F401
+    Admin,
+    Deeplink,
+    MutedUser,
+    SubscribedUser,
+    UserSettings,
+)
 
 config = context.config
 

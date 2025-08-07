@@ -4,8 +4,7 @@ from gettext import NullTranslations
 import logging
 
 from bot.core.enums import DeeplinkAction
-from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.ban_repository import BanRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import Deeplink as DeeplinkModel
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
@@ -19,15 +18,13 @@ class DeeplinkService:
 
     def __init__(
         self,
+        uow: IUnitOfWork,
         subscription_service: SubscriptionService,
-        ban_repo: BanRepository,
-        admin_repo: AdminRepository,
         cache: CacheService,
     ) -> None:
         """Initializes the deeplink service."""
+        self._uow = uow
         self._subscription_service = subscription_service
-        self._ban_repo = ban_repo
-        self._admin_repo = admin_repo
         self._cache = cache
 
     async def _execute_subscribe(
@@ -39,34 +36,37 @@ class DeeplinkService:
     ) -> str:
         """Handles the logic for a subscribe deeplink."""
         _ = translator.gettext
-        if await self._ban_repo.is_telegram_id_banned(telegram_id):
-            logger.warning(
-                "Subscription attempt by banned Telegram ID: %s", telegram_id
+        async with self._uow:
+            if await self._uow.bans.is_telegram_id_banned(telegram_id):
+                logger.warning(
+                    "Subscription attempt by banned Telegram ID: %s", telegram_id
+                )
+                return _("Your Telegram account is banned from using this service.")
+
+            if not payload:
+                logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
+                return _("Error: Missing required information for subscription.")
+
+            if await self._uow.bans.is_teamtalk_username_banned(payload):
+                logger.warning(
+                    "Subscription attempt with banned TT username: %s by TG ID: %s",
+                    payload,
+                    telegram_id,
+                )
+                return _("The TeamTalk username '{tt_username}' is banned.").format(
+                    tt_username=payload
+                )
+
+            success = await self._subscription_service.create_subscription(
+                user_settings, payload
             )
-            return _("Your Telegram account is banned from using this service.")
+            if not success:
+                return _("An error occurred. Please try again later.")
 
-        if not payload:
-            logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
-            return _("Error: Missing required information for subscription.")
+            if await self._uow.admins.get_by_id(telegram_id):
+                self._cache.add_admin(telegram_id)
 
-        if await self._ban_repo.is_teamtalk_username_banned(payload):
-            logger.warning(
-                "Subscription attempt with banned TT username: %s by TG ID: %s",
-                payload,
-                telegram_id,
-            )
-            return _("The TeamTalk username '{tt_username}' is banned.").format(
-                tt_username=payload
-            )
-
-        success = await self._subscription_service.create_subscription(
-            user_settings, payload
-        )
-        if not success:
-            return _("An error occurred. Please try again later.")
-
-        if await self._admin_repo.get_by_id(telegram_id):
-            self._cache.add_admin(telegram_id)
+            await self._uow.commit()
 
         return _("You have successfully subscribed to notifications.")
 

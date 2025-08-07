@@ -4,7 +4,6 @@ from typing import Any
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.repositories.base import BaseRepository
 from bot.models import UserSettings
@@ -13,9 +12,9 @@ from bot.models import UserSettings
 class UserRepository(BaseRepository[UserSettings]):
     """Repository for managing UserSettings."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self) -> None:
         """Initializes the user repository."""
-        super().__init__(session, UserSettings)
+        super().__init__(UserSettings)
 
     async def get_by_id(self, pk: int | str) -> UserSettings | None:
         """Retrieves a UserSettings instance by its Telegram ID, preloading muted users."""

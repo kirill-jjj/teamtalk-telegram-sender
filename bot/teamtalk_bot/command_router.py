@@ -77,16 +77,19 @@ class CommandRouter:
             await on_unknown(tt_message, translator, connection=self.connection)
             return
 
-        # Создаем все возможные зависимости один раз
-        user_repo = UserRepository(session)
-        admin_repo = AdminRepository(session)
-        deeplink_repo = DeeplinkRepository(session)
-        # ban_repo и subscriber_repo не используются напрямую в текущих TT-командах,
-        # но могут понадобиться в будущем. Оставим их создание для полноты.
-        _ = BanRepository(session)
-        _ = SubscriberRepository(session)
+        # Create all possible dependencies once
+        user_repo = UserRepository()
+        user_repo._session = session
+        admin_repo = AdminRepository()
+        admin_repo._session = session
+        deeplink_repo = DeeplinkRepository()
+        deeplink_repo._session = session
+        ban_repo = BanRepository()
+        ban_repo._session = session
+        subscriber_repo = SubscriberRepository()
+        subscriber_repo._session = session
 
-        # Пул всех доступных зависимостей
+        # Pool of all available dependencies
         dependencies_pool: dict[str, Any] = {
             "tt_message": tt_message,
             "translator": translator,
@@ -96,6 +99,8 @@ class CommandRouter:
             "user_repo": user_repo,
             "admin_repo": admin_repo,
             "deeplink_repo": deeplink_repo,
+            "ban_repo": ban_repo,
+            "subscriber_repo": subscriber_repo,
             "args_str": args,
         }
 

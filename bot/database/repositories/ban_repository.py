@@ -1,7 +1,6 @@
 """Repository for managing ban list entries."""
 
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.repositories.base import BaseRepository
 from bot.models import BanList
@@ -10,9 +9,9 @@ from bot.models import BanList
 class BanRepository(BaseRepository[BanList]):
     """Repository for managing BanList entries."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self) -> None:
         """Initializes the ban repository."""
-        super().__init__(session, BanList)
+        super().__init__(BanList)
 
     async def add_ban(
         self,
