@@ -194,6 +194,17 @@ class RequestProvider(Provider):
         return SubscriberRepository(session)
 
     @provide
+    def get_deeplink_service(
+        self,
+        subscription_service: SubscriptionService,
+        ban_repo: BanRepository,
+        admin_repo: AdminRepository,
+        cache: CacheService,
+    ) -> DeeplinkService:
+        """Provides a DeeplinkService."""
+        return DeeplinkService(subscription_service, ban_repo, admin_repo, cache)
+
+    @provide
     def get_user_settings_service(
         self, user_repo: UserRepository, cache: CacheService
     ) -> UserSettingsService:
