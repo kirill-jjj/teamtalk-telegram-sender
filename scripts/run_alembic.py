@@ -15,7 +15,10 @@ def main() -> None:
     """
     parser = argparse.ArgumentParser(
         description="Run Alembic commands with a specific TOML configuration file.",
-        usage="migrate [--config CONFIG_FILE.toml] [alembic_command] [alembic_options...]",
+        usage=(
+            "migrate [--config CONFIG_FILE.toml] [alembic_command] "
+            "[alembic_options...]"
+        ),
     )
     parser.add_argument(
         "--config",
@@ -31,11 +34,14 @@ def main() -> None:
     project_root = Path(__file__).resolve().parent.parent
 
     # Resolve the config file path relative to the project root
-    # If args.config is absolute, project_root part is ignored by os.path.join or Path resolution.
-    # However, Path resolution with / operator requires the right side to be relative if left is absolute.
+    # If args.config is absolute, project_root part is ignored by
+    # os.path.join or Path resolution.
+    # However, Path resolution with / operator requires the right side to be
+    # relative if left is absolute.
     # Safest is to resolve project_root first, then join.
     config_file_on_disk = project_root / args.config
-    # Ensure the path is absolute for the environment variable, though not strictly necessary
+    # Ensure the path is absolute for the environment variable, though not
+    # strictly necessary
     # as env.py also resolves it. But good for clarity in logs.
     absolute_config_path = config_file_on_disk.resolve()
 
@@ -48,7 +54,8 @@ def main() -> None:
     )
 
     # Determine Alembic executable.
-    # Prefer 'alembic' directly, assuming PATH is correctly set up by `uv run` or similar.
+    # Prefer 'alembic' directly, assuming PATH is correctly set up by
+    # `uv run` or similar.
     alembic_executable = "alembic"
     command = [alembic_executable, *alembic_cli_args]
 
@@ -62,13 +69,15 @@ def main() -> None:
         subprocess.run(command, check=True, env=env_vars, cwd=project_root)  # noqa: S603
     except FileNotFoundError:
         print(
-            f"Error: '{alembic_executable}' command not found. "
-            f"Make sure Alembic is installed and in your PATH, or the virtual environment is active.",
+            f"Error: '{alembic_executable}' command not found. \n"
+            f"Make sure Alembic is installed and in your PATH, or the virtual "
+            f"environment is active.",
             file=sys.stderr,
         )
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        # Alembic usually provides good error messages, so just exit with its return code.
+        # Alembic usually provides good error messages, so just exit with
+        # its return code.
         sys.exit(e.returncode)
 
 

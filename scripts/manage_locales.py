@@ -51,7 +51,6 @@ def get_project_version() -> str:
         )
         return "0.0.0"  # Fallback version
     else:
-        # This path is reached if 'version' is None after data.get("project", {}).get("version")
         # and no exception occurred.
         return "0.0.0"  # Fallback version
 
@@ -74,13 +73,14 @@ def extract() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(
+        subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         print(f"✅ Messages extracted to '{POT_FILE.relative_to(BASE_DIR)}'")
     except FileNotFoundError:
         print(
-            "❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.",
+            "❌ Error: Command 'pybabel' not found. "
+            "Make sure Babel is installed and in your PATH.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -105,7 +105,7 @@ def update() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(
+        subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         print("✅ Translation catalogs (.po) successfully updated by pybabel.")
@@ -130,7 +130,7 @@ def compile_cmd() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         if result.stdout:

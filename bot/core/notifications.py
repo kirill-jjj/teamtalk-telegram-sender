@@ -236,6 +236,5 @@ async def send_join_leave_notification(
             get_translator_func=translator_factory,
         ),
         cache=cache,
-        session_factory=session_factory,
         online_users_cache_for_instance=online_users_cache_for_instance,
     )

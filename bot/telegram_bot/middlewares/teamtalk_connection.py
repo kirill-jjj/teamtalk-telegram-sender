@@ -49,8 +49,8 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
             determined_connection = next(iter(connections.values()), None)
             if self.default_server_key and not determined_connection:
                 logger.warning(
-                    "ActiveTeamTalkConnectionMiddleware: Default server key "
-                    "'%s' not found. Falling back to first available connection if any.",
+                    "ActiveTeamTalkConnectionMiddleware: Default server key '%s' "
+                    "not found. Falling back to first available connection if any.",
                     self.default_server_key,
                 )
             elif determined_connection:

@@ -27,7 +27,6 @@ from pytalk.user import User as TeamTalkUser
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
@@ -184,7 +183,6 @@ async def broadcast_to_users(
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
     cache: CacheService,
-    session_factory: AsyncSessionFactoryType,
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
     | None = None,

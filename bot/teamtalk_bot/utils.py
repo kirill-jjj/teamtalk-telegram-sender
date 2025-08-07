@@ -106,7 +106,7 @@ def get_tt_user_display_name(
 
 
 def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> str:
-    """Extract username as a string from a TeamTalkUser or TeamTalkUserAccount."""
+    """Extract username as a string from a TeamTalkUser or TeamTalkUserAccount.
 
     Args:
         user_or_account: The TeamTalk user or account object.

@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeAlias, TypedDict
+from typing import TypeAlias, TypedDict
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message

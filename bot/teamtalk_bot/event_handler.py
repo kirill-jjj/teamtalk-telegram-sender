@@ -343,4 +343,4 @@ class TeamTalkEventHandler:
 
     @route_event_to_connection
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
-        """Route a removed user account event. Instance/broadcast handled by decorator."""
+        """Route a removed user account event. Handled by decorator."""
