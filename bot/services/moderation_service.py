@@ -4,7 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-from pydantic import Field, validate_call
+from pydantic import ConfigDict, Field, validate_call
 
 from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, OperationResult, UserSettings
@@ -29,7 +29,7 @@ class ModerationService:
         self._subscription_service = subscription_service
         self._cache = cache
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_and_delete_subscriber(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
@@ -70,7 +70,7 @@ class ModerationService:
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def unban_subscriber(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
@@ -98,7 +98,7 @@ class ModerationService:
             message_args={"telegram_id": telegram_id},
         )
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_mute_status(
         self,
         user_settings: UserSettings,

@@ -5,7 +5,7 @@ from gettext import NullTranslations
 import logging
 from typing import TypeVar
 
-from pydantic import validate_call
+from pydantic import ConfigDict, validate_call
 
 from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
@@ -32,7 +32,7 @@ class UserSettingsService:
         self._uow = uow
         self._cache = cache
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def get_or_create(self, telegram_id: int, default_lang: str) -> UserSettings:
         """Gets user settings from cache or DB, or creates them if they don't exist."""
         user_settings = self._cache.get_user_settings(telegram_id)
@@ -97,7 +97,7 @@ class UserSettingsService:
         else:
             return user_settings
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_language(
         self,
         bot: EventBot,
@@ -123,7 +123,7 @@ class UserSettingsService:
             )
         return updated_settings
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_mute_mode(
         self,
         user_settings: UserSettings,
@@ -137,7 +137,7 @@ class UserSettingsService:
             user_settings, "mute_list_mode", new_mode, log_context, uow=uow
         )
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_notification_preference(
         self,
         user_settings: UserSettings,
@@ -151,7 +151,7 @@ class UserSettingsService:
             user_settings, "notification_settings", new_pref, log_context, uow=uow
         )
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_noon_setting(
         self,
         user_settings: UserSettings,

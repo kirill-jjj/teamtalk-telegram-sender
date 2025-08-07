@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated
 
-from pydantic import Field, validate_call
+from pydantic import ConfigDict, Field, validate_call
 
 from bot.database.uow import IUnitOfWork
 from bot.models import OperationResult, SubscribedUser, UserSettings
@@ -25,7 +25,7 @@ class SubscriptionService:
         self._uow = uow
         self._cache = cache
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def create_subscription(
         self,
         user_settings: UserSettings,
@@ -57,7 +57,7 @@ class SubscriptionService:
         )
         return True
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def delete_profile(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
@@ -83,7 +83,7 @@ class SubscriptionService:
         )
         return True
 
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def link_tt_account(
         self,
         user_settings: UserSettings,
