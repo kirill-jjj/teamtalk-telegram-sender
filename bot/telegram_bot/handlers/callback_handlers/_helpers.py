@@ -75,6 +75,10 @@ def with_view_refresh(
 
             if updated_object and isinstance(updated_object, UserSettings):
                 kwargs["user_settings"] = updated_object
+                if "translator_factory" in kwargs:
+                    translator_factory = kwargs["translator_factory"]
+                    new_translator = translator_factory(updated_object.language_code)
+                    kwargs["translator"] = new_translator
 
             await view_refresher(
                 query,
