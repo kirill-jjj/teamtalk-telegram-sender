@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, TelegramObject
+from aiogram.types import Message, TelegramObject, Update
 from aiogram.types import User as AiogramUser
 
 from bot.services.cache_service import CacheService
@@ -28,13 +28,15 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         cache: CacheService = await container.get(CacheService)
 
         if not user:
-            logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
+            logger.warning(
+                "SubscriptionCheckMiddleware: No user found in event data."
+            )
             return await handler(event, data)
 
         telegram_id = user.id
 
-        if isinstance(event, Message) and event.text:
-            command_parts = event.text.split()
+        if isinstance(event, Update) and event.message and event.message.text:
+            command_parts = event.message.text.split()
             if command_parts[0].lower() == "/start" and len(command_parts) > 1:
                 logger.debug(
                     "SubscriptionCheckMiddleware: Allowing /start command with potential token for user %s.",
