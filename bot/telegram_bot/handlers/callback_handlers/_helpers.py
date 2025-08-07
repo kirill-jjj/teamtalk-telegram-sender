@@ -4,9 +4,9 @@ from gettext import NullTranslations
 import logging
 from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
-from aiogram.dispatcher.middlewares.callback_answer import CallbackAnswer
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.callback_answer import CallbackAnswer
 
 from bot.database.repositories.user_repository import UserRepository
 from bot.models import MuteListMode, NotificationSetting, UserSettings
