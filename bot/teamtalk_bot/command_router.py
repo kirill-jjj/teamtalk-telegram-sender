@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from bot.config import Settings
 from bot.database.engine import AsyncSessionFactoryType
@@ -129,7 +129,7 @@ class CommandRouter:
         required_deps_names = handler_dependencies.get(handler)
 
         if required_deps_names:
-            # Собираем kwargs только с нужными зависимостями
+            # Cобираем kwargs только с нужными зависимостями
             kwargs_for_handler = {dep: dependencies_pool[dep] for dep in required_deps_names}
             await handler(**kwargs_for_handler)
         else:

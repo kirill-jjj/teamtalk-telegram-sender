@@ -53,13 +53,9 @@ class DeeplinkService:
                 payload,
                 telegram_id,
             )
-            return _("The TeamTalk username '{tt_username}' is banned.").format(
-                tt_username=payload
-            )
+            return _("The TeamTalk username '{tt_username}' is banned.").format(tt_username=payload)
 
-        success = await self._subscription_service.create_subscription(
-            user_settings, payload
-        )
+        success = await self._subscription_service.create_subscription(user_settings, payload)
         if not success:
             return _("An error occurred. Please try again later.")
 
@@ -68,9 +64,7 @@ class DeeplinkService:
 
         return _("You have successfully subscribed to notifications.")
 
-    async def _execute_unsubscribe(
-        self, telegram_id: int, translator: NullTranslations
-    ) -> str:
+    async def _execute_unsubscribe(self, telegram_id: int, translator: NullTranslations) -> str:
         """Handles the logic for an unsubscribe deeplink."""
         _ = translator.gettext
         if await self._subscription_service.delete_profile(telegram_id):
@@ -88,9 +82,7 @@ class DeeplinkService:
         action = deeplink.action
 
         if action == DeeplinkAction.SUBSCRIBE:
-            return await self._execute_subscribe(
-                telegram_id, translator, deeplink.payload, user_settings
-            )
+            return await self._execute_subscribe(telegram_id, translator, deeplink.payload, user_settings)
         if action == DeeplinkAction.UNSUBSCRIBE:
             return await self._execute_unsubscribe(telegram_id, translator)
 

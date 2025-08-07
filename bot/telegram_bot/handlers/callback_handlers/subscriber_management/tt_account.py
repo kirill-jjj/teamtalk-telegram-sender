@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 import pytalk
 
-from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
+from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.database.repositories.user_repository import UserRepository
 from bot.models import OperationResult
 from bot.services.subscription_service import SubscriptionService
@@ -194,9 +194,7 @@ async def link_tt_account_chosen(
         await query.answer(_("Subscriber not found."), show_alert=True)
         return
 
-    operation_result: OperationResult = await subscription_service.link_tt_account(
-        user_settings, tt_username_to_link
-    )
+    operation_result: OperationResult = await subscription_service.link_tt_account(user_settings, tt_username_to_link)
 
     alert_message_args = operation_result.message_args or {}
     if "tt_username" not in alert_message_args:

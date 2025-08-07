@@ -64,7 +64,7 @@ def with_view_refresh(
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
             # 1. Execute the main logic and get the result
-            success, message, updated_object = await func(query=query, **kwargs)
+            success, message, updated_object = await func(**kwargs)
 
             # 2. Show a toast notification
             await query.answer(message, show_alert=not success)
@@ -233,9 +233,7 @@ async def _display_subscriber_view(
 
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
     details_parts.append(
-        _("Linked TT Account: {tt_username}").format(
-            tt_username=user_settings.teamtalk_username or _("None")
-        )
+        _("Linked TT Account: {tt_username}").format(tt_username=user_settings.teamtalk_username or _("None"))
     )
     details_parts.append(_("Language: {lang}").format(lang=user_settings.language_code))
     noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
@@ -248,15 +246,9 @@ async def _display_subscriber_view(
     }
     notif_setting_str = user_settings.notification_settings.value
     details_parts.append(
-        _("Notifications: {setting}").format(
-            setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
-        )
+        _("Notifications: {setting}").format(setting=notif_setting_map.get(notif_setting_str, notif_setting_str))
     )
-    mute_mode_str = (
-        _("Blacklist")
-        if user_settings.mute_list_mode == MuteListMode.blacklist
-        else _("Whitelist")
-    )
+    mute_mode_str = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
     details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
 
     text = "\n".join(details_parts)

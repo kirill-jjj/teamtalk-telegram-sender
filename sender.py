@@ -62,9 +62,7 @@ class Application:
 
         # Register middlewares
         self.dp.update.middleware.register(SubscriptionCheckMiddleware())
-        self.dp.update.middleware.register(
-            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-        )
+        self.dp.update.middleware.register(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
         self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         # Include routers

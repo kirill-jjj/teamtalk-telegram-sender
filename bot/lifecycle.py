@@ -8,8 +8,6 @@ import logging
 from aiogram import Dispatcher
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
 
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
@@ -17,7 +15,7 @@ from bot.database.engine import AsyncSessionFactoryType
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
-from bot.models import Admin, UserSettings
+from bot.models import Admin
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
 from bot.telegram_bot.commands import (
@@ -96,9 +94,7 @@ async def on_startup(
         await session.commit()
 
     logger.info("Setting Telegram bot commands...")
-    await set_telegram_commands_for_bot(
-        bot, cache, translator_factory, available_languages, settings
-    )
+    await set_telegram_commands_for_bot(bot, cache, translator_factory, available_languages, settings)
     logger.info("Telegram bot commands set.")
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())

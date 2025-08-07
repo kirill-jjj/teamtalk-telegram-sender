@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, TelegramObject, Update
+from aiogram.types import TelegramObject, Update
 from aiogram.types import User as AiogramUser
 
 from bot.services.cache_service import CacheService
@@ -28,9 +28,7 @@ class SubscriptionCheckMiddleware(BaseMiddleware):
         cache: CacheService = await container.get(CacheService)
 
         if not user:
-            logger.warning(
-                "SubscriptionCheckMiddleware: No user found in event data."
-            )
+            logger.warning("SubscriptionCheckMiddleware: No user found in event data.")
             return await handler(event, data)
 
         telegram_id = user.id

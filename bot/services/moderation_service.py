@@ -50,9 +50,7 @@ class ModerationService:
         tt_username = user_settings.teamtalk_username if user_settings else None
 
         # Ban Telegram ID
-        await self._ban_repo.add_ban(
-            telegram_id=telegram_id, reason="Banned by admin"
-        )
+        await self._ban_repo.add_ban(telegram_id=telegram_id, reason="Banned by admin")
         # Ban TeamTalk username if it exists
         if tt_username:
             await self._ban_repo.add_ban(
@@ -151,11 +149,7 @@ class ModerationService:
             tt_username_to_toggle,
             user_settings.telegram_id,
         )
-        message_key = (
-            _("mute_toggle_success_muted")
-            if action == "muted"
-            else _("mute_toggle_success_unmuted")
-        )
+        message_key = _("mute_toggle_success_muted") if action == "muted" else _("mute_toggle_success_unmuted")
         return OperationResult(
             success=True,
             message_key=message_key,

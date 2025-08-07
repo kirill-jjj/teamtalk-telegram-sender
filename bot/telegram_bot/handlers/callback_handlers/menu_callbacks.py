@@ -2,9 +2,10 @@
 
 from gettext import NullTranslations
 import logging
+from typing import cast
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import AdminCommand
@@ -114,7 +115,12 @@ async def menu_subscribers_handler(
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     await _show_subscriber_list_page(
-        query.message, user_repo, subscriber_repo, bot, translator, page=0  # type: ignore[arg-type]
+        cast(Message, query.message),
+        user_repo,
+        subscriber_repo,
+        bot,
+        translator,
+        page=0,
     )
     await query.answer()
 
@@ -129,7 +135,7 @@ async def menu_unban_handler(
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
-        target=query.message,  # type: ignore[arg-type]
+        target=cast(Message, query.message),
         ban_repo=ban_repo,
         bot=bot,
         page=0,

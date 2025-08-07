@@ -31,7 +31,7 @@ class BanRepository(BaseRepository[BanList]):
             The created BanList instance.
         """
         if not telegram_id and not teamtalk_username:
-            raise ValueError("Either telegram_id or teamtalk_username must be provided.")
+            raise ValueError
         ban_entry = BanList(
             telegram_id=telegram_id,
             teamtalk_username=teamtalk_username,

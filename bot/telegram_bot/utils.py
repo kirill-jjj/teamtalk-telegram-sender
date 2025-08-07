@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+from gettext import NullTranslations
 import logging
 
 # For type hinting Services
@@ -9,20 +10,15 @@ from typing import Any
 
 from aiogram import Bot as AiogramBot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
-from aiogram.types import Chat, InlineKeyboardMarkup, Message
+from aiogram.types import BotCommand, BotCommandScopeChat, Chat, InlineKeyboardMarkup, Message
 import pytalk
 from pytalk.user import User as TeamTalkUser
-from sqlalchemy.exc import SQLAlchemyError
 
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import UserSettings
-from gettext import NullTranslations
-
-from aiogram.types import BotCommand, BotCommandScopeChat
-
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.commands import get_admin_commands, get_user_commands
@@ -34,7 +30,6 @@ logger = logging.getLogger(__name__)
 async def _handle_telegram_api_error(
     error: TelegramAPIError,
     chat_id: int,
-    session_factory: AsyncSessionFactoryType,
     cache: CacheService,
 ) -> None:
     """Handles specific Telegram API errors using structural pattern matching."""
@@ -94,7 +89,7 @@ async def send_telegram_message(
         )
         logger.debug("Message sent to %s. Silent: %s, kwargs used: %s", chat_id, send_silently, kwargs)
     except TelegramAPIError as e:
-        await _handle_telegram_api_error(e, chat_id, session_factory=session_factory, cache=cache)
+        await _handle_telegram_api_error(e, chat_id, cache=cache)
         return False
     else:
         return True
@@ -221,11 +216,9 @@ async def update_user_bot_commands(
     """Updates the bot commands for a specific user based on their admin status and language."""
     _ = translator.gettext
     is_admin = cache.is_admin(telegram_id)
-    commands: list[BotCommand]
-    if is_admin:
-        commands = get_admin_commands(_)
-    else:
-        commands = get_user_commands(_)
+    commands: list[BotCommand] = (
+        get_admin_commands(_) if is_admin else get_user_commands(_)
+    )
 
     scope = BotCommandScopeChat(chat_id=telegram_id)
     try:
@@ -237,6 +230,22 @@ async def update_user_bot_commands(
             new_lang_code,
         )
         return True
+    except TelegramBadRequest as e:
+        if "chat not found" in str(e).lower():
+            logger.warning(
+                "Could not set commands for user %s (admin: %s): "
+                "chat not found. This is expected if the user hasn't "
+                "started the bot.",
+                telegram_id,
+                is_admin,
+            )
+        else:
+            logger.exception(
+                "TelegramBadRequest while updating commands for user %s (admin: %s).",
+                telegram_id,
+                is_admin,
+            )
+        return False
     except TelegramAPIError:
         logger.exception(
             "Failed to update commands for user %s (admin: %s) in language '%s'.",

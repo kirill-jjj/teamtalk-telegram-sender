@@ -57,9 +57,7 @@ async def toggle_noon_setting(
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
 
-    updated_settings = await user_settings_service.toggle_noon_setting(
-        user_settings=user_settings, actor=Actor.USER
-    )
+    updated_settings = await user_settings_service.toggle_noon_setting(user_settings=user_settings, actor=Actor.USER)
 
     if not updated_settings:
         return False, _("Failed to update NOON setting. Please try again."), None

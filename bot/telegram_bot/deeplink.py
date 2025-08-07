@@ -43,18 +43,11 @@ async def handle_deeplink(
         await message.reply(_("Invalid or expired deeplink."))
         return
 
-    if (
-        deeplink.expected_telegram_id
-        and deeplink.expected_telegram_id != message.from_user.id
-    ):
-        await message.reply(
-            _("This confirmation link was intended for a different Telegram account.")
-        )
+    if deeplink.expected_telegram_id and deeplink.expected_telegram_id != message.from_user.id:
+        await message.reply(_("This confirmation link was intended for a different Telegram account."))
         return
 
-    reply_text = await deeplink_service.execute_deeplink(
-        deeplink, user_settings, translator
-    )
+    reply_text = await deeplink_service.execute_deeplink(deeplink, user_settings, translator)
     await message.reply(reply_text)
 
     # The token is now used, so we should delete it.

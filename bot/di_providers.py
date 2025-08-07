@@ -121,9 +121,7 @@ class AppProvider(Provider):
     @provide
     def get_cache_service(self) -> CacheService:
         """Provides the application-wide cache service."""
-        return CacheService(
-            user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
-        )
+        return CacheService(user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set())
 
     @provide
     def get_teamtalk_event_handler(
@@ -157,9 +155,7 @@ class RequestProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_db_session(
-        self, factory: AsyncSessionFactoryType
-    ) -> AsyncGenerator[AsyncSession, None]:
+    async def get_db_session(self, factory: AsyncSessionFactoryType) -> AsyncGenerator[AsyncSession, None]:
         """Provides a transaction-managed database session."""
         async with factory() as session:
             try:
@@ -206,9 +202,7 @@ class RequestProvider(Provider):
         return DeeplinkService(subscription_service, ban_repo, admin_repo, cache)
 
     @provide
-    def get_user_settings_service(
-        self, user_repo: UserRepository, cache: CacheService
-    ) -> UserSettingsService:
+    def get_user_settings_service(self, user_repo: UserRepository, cache: CacheService) -> UserSettingsService:
         """Provides a UserSettingsService."""
         return UserSettingsService(user_repo, cache)
 
@@ -254,25 +248,21 @@ class RequestProvider(Provider):
         """Provides UserSettings if a user is present in the event."""
         if not user:
             return None
-        return await user_settings_service.get_or_create(
-            user.id, settings.general.default_lang
-        )
+        return await user_settings_service.get_or_create(user.id, settings.general.default_lang)
 
     @provide
     def get_user_settings_guaranteed(
         self,
         user_settings: UserSettings | None,
     ) -> UserSettings:
-        """
-        Provides a guaranteed UserSettings object.
+        """Provides a guaranteed UserSettings object.
+
         Raises:
             ValueError: If UserSettings cannot be provided because no user
                         is present in the event context.
         """
         if user_settings is None:
-            raise ValueError(
-                "Cannot provide UserSettings because no user is present in the event."
-            )
+            raise ValueError
         return user_settings
 
     @provide(provides=NullTranslations)
@@ -283,17 +273,11 @@ class RequestProvider(Provider):
         translator_factory: Callable[[str], NullTranslations],
     ) -> NullTranslations:
         """Provides a translator for the current user's language."""
-        lang_code = (
-            user_settings.language_code
-            if user_settings
-            else settings.general.default_lang
-        )
+        lang_code = user_settings.language_code if user_settings else settings.general.default_lang
         return translator_factory(lang_code)
 
     @provide(provides=TeamTalkConnection | None)
-    def get_tt_connection(
-        self, connections: FromDishka[dict[str, TeamTalkConnection]]
-    ) -> TeamTalkConnection | None:
+    def get_tt_connection(self, connections: FromDishka[dict[str, TeamTalkConnection]]) -> TeamTalkConnection | None:
         """Provides the active TeamTalk connection."""
         if not connections:
             return None

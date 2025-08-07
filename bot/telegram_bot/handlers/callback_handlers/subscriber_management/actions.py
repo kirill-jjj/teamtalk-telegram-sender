@@ -64,9 +64,7 @@ async def on_ban_subscriber_confirm(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(
-        target_telegram_id, translator, tt_connection
-    )
+    result = await moderation_service.ban_and_delete_subscriber(target_telegram_id, translator, tt_connection)
 
     if result.long_message:
         logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)

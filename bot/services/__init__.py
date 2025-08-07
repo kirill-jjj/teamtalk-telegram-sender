@@ -20,9 +20,9 @@ __all__ = [
     "CacheService",
     "DeeplinkService",
     "ModerationService",
-    "is_linked_user_online",
-    "is_user_subject_to_noon_check",
     "ReportService",
     "SubscriptionService",
     "UserSettingsService",
+    "is_linked_user_online",
+    "is_user_subject_to_noon_check",
 ]

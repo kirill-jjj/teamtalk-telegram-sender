@@ -191,9 +191,7 @@ def _get_username_from_muted_list(
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
     # The user_settings object from the DI container now has this preloaded.
-    relevant_usernames = sorted(
-        [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
-    )
+    relevant_usernames = sorted([muted.muted_teamtalk_username for muted in user_settings.muted_users_list])
     page_items, _, _ = paginate_list(relevant_usernames, callback_data.current_page, USERS_PER_PAGE)
 
     if 0 <= callback_data.user_idx < len(page_items):
@@ -299,9 +297,7 @@ async def set_mute_mode(
     _ = translator.gettext
     new_mode = callback_data.mode
 
-    updated_user_settings = await user_settings_service.update_mute_mode(
-        user_settings, new_mode, actor=Actor.USER
-    )
+    updated_user_settings = await user_settings_service.update_mute_mode(user_settings, new_mode, actor=Actor.USER)
 
     if not updated_user_settings:
         await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
@@ -406,14 +402,10 @@ async def toggle_user_mute(
         await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
         return
 
-    result = await moderation_service.toggle_mute_status(
-        user_settings, username_to_toggle, translator
-    )
+    result = await moderation_service.toggle_mute_status(user_settings, username_to_toggle, translator)
 
     toast_message = translator.gettext(result.message_key).format(**(result.message_args or {}))
     await callback_query.answer(toast_message, show_alert=not result.success)
 
     if result.success and result.user_settings:
-        await _refresh_mute_related_ui(
-            callback_query, translator, result.user_settings, tt_connection, callback_data
-        )
+        await _refresh_mute_related_ui(callback_query, translator, result.user_settings, tt_connection, callback_data)

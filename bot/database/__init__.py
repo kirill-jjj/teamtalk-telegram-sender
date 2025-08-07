@@ -9,11 +9,11 @@ from .repositories.subscriber_repository import SubscriberRepository
 from .repositories.user_repository import UserRepository
 
 __all__ = [
-    "create_session_factory",
     "AdminRepository",
     "BanRepository",
     "BaseRepository",
     "DeeplinkRepository",
     "SubscriberRepository",
     "UserRepository",
+    "create_session_factory",
 ]

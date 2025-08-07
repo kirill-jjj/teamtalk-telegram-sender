@@ -5,7 +5,7 @@ import logging
 from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
-from bot.models import OperationResult, UserSettings
+from bot.models import OperationResult, SubscribedUser, UserSettings
 from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
@@ -34,9 +34,7 @@ class SubscriptionService:
         self._ban_repo = ban_repo
         self._cache = cache
 
-    async def create_subscription(
-        self, user_settings: UserSettings, tt_username: str
-    ) -> bool:
+    async def create_subscription(self, user_settings: UserSettings, tt_username: str) -> bool:
         """Handles all DB and cache operations for a new subscription.
 
         Args:
@@ -50,6 +48,7 @@ class SubscriptionService:
         subscriber = await self._subscriber_repo.get_by_id(telegram_id)
         if not subscriber:
             from bot.models import SubscribedUser
+
             new_subscriber = SubscribedUser(telegram_id=telegram_id)
             await self._subscriber_repo.add(new_subscriber)
             logger.info("User %s newly subscribed.", telegram_id)
@@ -93,9 +92,7 @@ class SubscriptionService:
         )
         return True
 
-    async def link_tt_account(
-        self, user_settings: UserSettings, tt_username: str
-    ) -> OperationResult:
+    async def link_tt_account(self, user_settings: UserSettings, tt_username: str) -> OperationResult:
         """Links a TeamTalk account to a subscriber.
 
         Args:
@@ -129,11 +126,7 @@ class SubscriptionService:
         )
 
         is_relink = bool(original_tt_username and original_tt_username != tt_username)
-        message_key = (
-            "link_tt_account_success_relinked"
-            if is_relink
-            else "link_tt_account_success_linked"
-        )
+        message_key = "link_tt_account_success_relinked" if is_relink else "link_tt_account_success_linked"
         return OperationResult(
             success=True,
             message_key=message_key,

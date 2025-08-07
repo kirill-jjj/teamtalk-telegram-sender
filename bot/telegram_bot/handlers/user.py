@@ -29,9 +29,7 @@ from bot.telegram_bot.utils import safe_delete_message
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
-user_commands_router.message.middleware(
-    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-)
+user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
 
 
 @user_commands_router.message(CommandStart(deep_link=True, magic=F.args.as_("token")))
@@ -104,9 +102,7 @@ async def on_help_command(
         return
 
     is_telegram_admin = cache.is_admin(message.from_user.id)
-    help_text = build_help_message(
-        translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False
-    )
+    help_text = build_help_message(translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
     await message.reply(help_text)
 
 

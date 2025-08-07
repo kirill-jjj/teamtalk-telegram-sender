@@ -42,9 +42,7 @@ class UserSettingsService:
         if user_settings:
             return user_settings
 
-        user_settings = await self._user_repo.get_or_create(
-            telegram_id, defaults={"language_code": default_lang}
-        )
+        user_settings = await self._user_repo.get_or_create(telegram_id, defaults={"language_code": default_lang})
         self._cache.update_user_settings(user_settings)
         return user_settings
 
@@ -80,7 +78,6 @@ class UserSettingsService:
                 new_value,
                 log_context,
             )
-            return user_settings
         except Exception:
             logger.exception(
                 "Failed to update %s for user %s to '%s'%s.",
@@ -92,6 +89,8 @@ class UserSettingsService:
             # Revert in-memory change on failure
             setattr(user_settings, field_name, current_value)
             return None
+        else:
+            return user_settings
 
     async def update_language(
         self,
@@ -103,9 +102,7 @@ class UserSettingsService:
     ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
-        updated_settings = await self._update_setting(
-            user_settings, "language_code", new_lang_code, log_context
-        )
+        updated_settings = await self._update_setting(user_settings, "language_code", new_lang_code, log_context)
         if updated_settings:
             new_translator = translator_factory(new_lang_code)
             await update_user_bot_commands(
@@ -122,9 +119,7 @@ class UserSettingsService:
     ) -> UserSettings | None:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
-        return await self._update_setting(
-            user_settings, "mute_list_mode", new_mode, log_context
-        )
+        return await self._update_setting(user_settings, "mute_list_mode", new_mode, log_context)
 
     async def update_notification_preference(
         self,
@@ -134,13 +129,9 @@ class UserSettingsService:
     ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
-        return await self._update_setting(
-            user_settings, "notification_settings", new_pref, log_context
-        )
+        return await self._update_setting(user_settings, "notification_settings", new_pref, log_context)
 
-    async def toggle_noon_setting(
-        self, user_settings: UserSettings, actor: Actor = Actor.USER
-    ) -> UserSettings | None:
+    async def toggle_noon_setting(self, user_settings: UserSettings, actor: Actor = Actor.USER) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         new_noon_value = not user_settings.not_on_online_enabled
         log_context = f" by {actor.value} (toggle NOON)"

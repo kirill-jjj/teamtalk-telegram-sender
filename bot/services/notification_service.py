@@ -31,5 +31,3 @@ async def is_linked_user_online(
 
     linked_tt_username = user_settings.teamtalk_username
     return any(ttstr(tt_user_obj.username) == linked_tt_username for tt_user_obj in online_users_cache.values())
-
-
