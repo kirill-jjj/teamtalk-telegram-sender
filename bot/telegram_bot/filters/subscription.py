@@ -1,8 +1,10 @@
 """Custom filter to check if a user is a subscribed."""
 
+from typing import Any
+
 from aiogram.filters import Filter
 from aiogram.types import CallbackQuery, Message
-from dishka.integrations.aiogram import FromDishka
+from dishka import AsyncContainer
 
 from bot.services.cache_service import CacheService
 
@@ -13,11 +15,17 @@ class IsSubscribed(Filter):
     async def __call__(
         self,
         event: Message | CallbackQuery,
-        cache: FromDishka[CacheService],
+        **data: Any,
     ) -> bool:
         """Filter logic."""
         if not event.from_user:
             return False
+
+        container: AsyncContainer = data["dishka_container"]
+        if not container:
+            return False
+
+        cache: CacheService = await container.get(CacheService)
 
         # Allow /start commands with a deeplink payload to pass through
         # for new user registration.

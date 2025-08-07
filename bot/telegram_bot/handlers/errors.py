@@ -5,6 +5,7 @@ import logging
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types.error_event import ErrorEvent
+from aiogram.utils.formatting import Bold, Text
 from dishka.integrations.aiogram import FromDishka
 
 from bot.config import Settings
@@ -21,42 +22,51 @@ async def universal_error_handler(
     settings: FromDishka[Settings],
 ) -> bool:
     """Catches all exceptions that were not handled in other handlers."""
+    def _(s: str) -> str:  # Placeholder for future gettext integration
+        return s
+
     logger.exception(
         "An error occurred while processing an update: %s",
         event.exception,
         exc_info=event.exception,
     )
 
-    # Attempt to notify the user about the problem
     update_dict = event.update.model_dump(exclude_unset=True)
-    chat_id = update_dict.get("message", {}).get("chat", {}).get(
-        "id"
-    ) or update_dict.get("callback_query", {}).get("from", {}).get("id")
+    chat_id = update_dict.get("message", {}).get("chat", {}).get("id") or update_dict.get(
+        "callback_query", {}
+    ).get("from", {}).get("id")
 
     if chat_id:
         try:
-            # Send a generic error message to the user
-            await bot.send_message(
-                chat_id,
-                text="An unexpected error occurred. We are already working on fixing it. Please try again later.",
+            user_error_message = _(
+                "An unexpected error occurred. We are already working on fixing it. Please try again later."
             )
+            await bot.send_message(chat_id, text=user_error_message)
         except TelegramAPIError:
             logger.exception("Failed to send the error message to user %s", chat_id)
 
-    # Also, send a notification to the administrator
     admin_id = settings.telegram.admin_chat_id
     if admin_id:
+        content = Text(
+            Bold("Critical Error!"),
+            "\n\n",
+            Bold("Type: "),
+            type(event.exception).__name__,
+            "\n",
+            Bold("Error: "),
+            str(event.exception),
+            "\n\n",
+            Bold("Update ID: "),
+            event.update.update_id,
+            "\n",
+            Bold("Chat ID: "),
+            str(chat_id or "N/A"),
+        )
         try:
-            await bot.send_message(
-                admin_id,
-                f"<b>Critical Error!</b>\n"
-                f"Type: {type(event.exception).__name__}\n"
-                f"Error: {event.exception}\n"
-                f"Update: <code>{event.update}</code>",
-            )
+            await bot.send_message(admin_id, **content.as_kwargs())
         except TelegramAPIError:
             logger.exception(
                 "Failed to send the critical error message to admin %s", admin_id
             )
 
-    return True  # Tell the dispatcher that the error has been handled
+    return True
