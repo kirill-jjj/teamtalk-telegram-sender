@@ -4,6 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
+from aiogram.dispatcher.middlewares.callback_answer import CallbackAnswer
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 
@@ -60,12 +61,11 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
+            callback_answer: CallbackAnswer,
             *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            callback_answer = kwargs.pop("callback_answer")
-
             success, message, updated_object = await func(query, *args, **kwargs)
 
             callback_answer.text = message
