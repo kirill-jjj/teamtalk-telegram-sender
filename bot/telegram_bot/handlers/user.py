@@ -12,31 +12,26 @@ from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.utils import build_help_message
+from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.deeplink import handle_deeplink
-from bot.telegram_bot.keyboards import create_main_menu_keyboard, create_main_settings_keyboard
+from bot.telegram_bot.keyboards import (
+    create_main_menu_keyboard,
+    create_main_settings_keyboard,
+)
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.utils import safe_delete_message
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
-user_commands_router.message.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
-
-
-@user_commands_router.message(CommandStart(deep_link=False))
-async def on_start_command(
-    message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-) -> None:
-    """Handles the /start command without a deeplink."""
-    _ = translator.gettext
-    await message.reply(_("Hello! Use /help to see available commands."))
+user_commands_router.message.middleware(
+    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+)
 
 
 @user_commands_router.message(CommandStart(deep_link=True, magic=F.args.as_("token")))
@@ -57,6 +52,16 @@ async def on_start_with_payload(
         deeplink_repo=deeplink_repo,
         deeplink_service=deeplink_service,
     )
+
+
+@user_commands_router.message(CommandStart(deep_link=False))
+async def on_start_command(
+    message: Message,
+    translator: Annotated[NullTranslations, FromDishka()],
+) -> None:
+    """Handles the /start command without a deeplink."""
+    _ = translator.gettext
+    await message.reply(_("Hello! Use /help to see available commands."))
 
 
 @user_commands_router.message(Command("who"))
@@ -99,7 +104,9 @@ async def on_help_command(
         return
 
     is_telegram_admin = cache.is_admin(message.from_user.id)
-    help_text = build_help_message(translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False)
+    help_text = build_help_message(
+        translator, "telegram", is_telegram_admin=is_telegram_admin, is_teamtalk_admin=False
+    )
     await message.reply(help_text)
 
 
