@@ -19,6 +19,7 @@ from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.deeplink import handle_deeplink
+from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
     create_main_settings_keyboard,
@@ -62,7 +63,7 @@ async def on_start_command(
     await message.reply(_("Hello! Use /help to see available commands."))
 
 
-@user_commands_router.message(Command("who"))
+@user_commands_router.message(Command("who"), IsSubscribed())
 async def on_who_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
@@ -90,7 +91,7 @@ async def on_who_command(
         await message.reply(report_text)
 
 
-@user_commands_router.message(Command("help"))
+@user_commands_router.message(Command("help"), IsSubscribed())
 async def on_help_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
@@ -106,7 +107,7 @@ async def on_help_command(
     await message.reply(help_text)
 
 
-@user_commands_router.message(Command("settings"))
+@user_commands_router.message(Command("settings"), IsSubscribed())
 async def on_settings_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
@@ -124,7 +125,7 @@ async def on_settings_command(
         logger.exception("Could not send settings menu.")
 
 
-@user_commands_router.message(Command("menu"))
+@user_commands_router.message(Command("menu"), IsSubscribed())
 async def on_menu_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],

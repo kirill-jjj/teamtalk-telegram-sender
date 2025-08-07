@@ -4,6 +4,7 @@ from aiogram import Router
 
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 
+from ..filters.subscription import IsSubscribed
 from .callback_handlers.admin import admin_actions_router
 from .callback_handlers.banned_user_actions import banned_user_actions_router
 from .callback_handlers.language import language_router
@@ -28,6 +29,7 @@ tt_connected_router.include_router(subscriber_management_router)
 
 # Main router that aggregates all callback handlers
 callback_router = Router(name="main_callback_router")
+callback_router.callback_query.filter(IsSubscribed())
 
 # Include the parent router for TT-connected handlers
 callback_router.include_router(tt_connected_router)
