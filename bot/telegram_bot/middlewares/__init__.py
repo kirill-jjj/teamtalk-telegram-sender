@@ -2,7 +2,6 @@
 # Order of imports can matter if middlewares depend on each other's injected data,
 # though for simple imports like these, it's mostly for organization.
 
-from .subscription_check import SubscriptionCheckMiddleware
 from .teamtalk_connection import (
     ActiveTeamTalkConnectionMiddleware,
 )
@@ -11,5 +10,4 @@ from .teamtalk_connection import (
 # when `from .middlewares import *` is used, though explicit imports are better.
 __all__ = [
     "ActiveTeamTalkConnectionMiddleware",
-    "SubscriptionCheckMiddleware",
 ]
