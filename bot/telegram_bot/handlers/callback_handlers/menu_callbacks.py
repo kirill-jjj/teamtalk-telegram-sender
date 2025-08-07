@@ -47,7 +47,6 @@ async def menu_who_handler(
         tt_connection=tt_connection,
         bot=bot,
     )
-    await query.answer()
 
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "help"))
@@ -63,7 +62,6 @@ async def menu_help_handler(
         translator=translator,
         cache=cache,
     )
-    await query.answer()
 
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "settings"))
@@ -77,7 +75,6 @@ async def menu_settings_handler(
         message=query.message,
         translator=translator,
     )
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
@@ -89,7 +86,6 @@ async def menu_kick_handler(
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
     await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)  # type: ignore[arg-type]
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"))
@@ -101,7 +97,6 @@ async def menu_ban_handler(
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
     await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)  # type: ignore[arg-type]
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"))
@@ -122,7 +117,6 @@ async def menu_subscribers_handler(
         translator,
         page=0,
     )
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "unban"))
@@ -141,4 +135,3 @@ async def menu_unban_handler(
         page=0,
         translator=translator,
     )
-    await query.answer()

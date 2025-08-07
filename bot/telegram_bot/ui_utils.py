@@ -105,10 +105,6 @@ async def display_paginated_list(
             logger_instance=logger,
             log_context=f"display_paginated_list (edit) for {title_text}",
         )
-        try:
-            await target.answer()  # Acknowledge callback if not already done by safe_edit_text
-        except TelegramAPIError:  # Can happen if already answered or expired
-            logger.debug("Failed to answer callback, possibly already answered or expired for %s", title_text)
 
     elif isinstance(target, Message):
         # Send new message

@@ -6,6 +6,7 @@ from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.callback_answer import CallbackAnswer
 
 from bot.database.repositories.user_repository import UserRepository
 from bot.models import MuteListMode, NotificationSetting, UserSettings
@@ -60,14 +61,17 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
+            callback_answer: CallbackAnswer,
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            # 1. Execute the main logic and get the result
-            success, message, updated_object = await func(**kwargs)
+            # The decorated function does not receive `callback_answer`.
+            # We pass `query` and the other arguments.
+            success, message, updated_object = await func(query, **kwargs)
 
-            # 2. Show a toast notification
-            await query.answer(message, show_alert=not success)
+            # 2. Configure the toast notification via the middleware
+            callback_answer.text = message
+            callback_answer.show_alert = not success
 
             # 3. KEY CHANGE: Update kwargs for the refresher function
             #    If the decorated function returned an updated UserSettings object,

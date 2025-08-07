@@ -44,9 +44,7 @@ def create_translator_factory(
             return translator_cache[lang_code]
         translation: NullTranslations
         try:
-            translation = gettext.translation(
-                DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code]
-            )
+            translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
         except FileNotFoundError:
             translation = gettext.NullTranslations()
         translator_cache[lang_code] = translation

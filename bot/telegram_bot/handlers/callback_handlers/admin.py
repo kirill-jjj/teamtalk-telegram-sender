@@ -7,6 +7,7 @@ from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
@@ -119,6 +120,7 @@ async def _apply_user_moderation(
 async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
+    callback_answer: CallbackAnswer,
     translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: TeamTalkConnection,
     tt_user: pytalk.user.User,
@@ -135,8 +137,10 @@ async def on_moderation_confirm(
         server_host=server_host_for_display,
     )
 
+    callback_answer.text = message_text
+    callback_answer.show_alert = not success  # Show alert on failure
+
     if success:
-        await callback_query.answer(_("Success!"), show_alert=False)
         await safe_edit_text(
             message_to_edit=callback_query.message,  # type: ignore[arg-type]
             text=message_text,
@@ -144,5 +148,3 @@ async def on_moderation_confirm(
             logger_instance=logger,
             log_context=f"process_user_action_selection ({callback_data.action.value}) on {server_host_for_display}",
         )
-    else:
-        await callback_query.answer(message_text, show_alert=True)
