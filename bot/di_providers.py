@@ -9,7 +9,7 @@ from typing import cast
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import User
+from aiogram.types import TelegramObject, User
 from dishka import FromDishka, Provider, Scope, provide
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -231,6 +231,15 @@ class RequestProvider(Provider):
     def get_report_service(self) -> ReportService:
         """Provides a ReportService."""
         return ReportService()
+
+    @provide
+    def get_user_from_event(self, event: TelegramObject) -> User | None:
+        """
+        Extracts the User object from the incoming event, if it exists.
+        AiogramProvider provides the `event: TelegramObject`.
+        This provider makes the `User` available for other dependencies.
+        """
+        return getattr(event, "from_user", None)
 
     @provide(provides=UserSettings | None)
     async def get_user_settings_optional(
