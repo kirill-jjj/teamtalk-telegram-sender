@@ -9,7 +9,7 @@ version = "0.1.0"
 description = "A bot that bridges TeamTalk 5 server events (user join/leave) to Telegram notifications and forwards PMs."
 readme = "README.md"
 requires-python = ">=3.11, <3.13"
-license = {file = "LICENSE"}
+license = "GPL-3.0-or-later"
 authors = [
     {name = "kirill-jjj", email = "kirillkolovi@gmail.com"},
 ]
@@ -19,7 +19,6 @@ classifiers = [
     "Environment :: Console",
     "Framework :: AsyncIO",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Natural Language :: English",
     "Natural Language :: Russian",
     "Operating System :: OS Independent",
