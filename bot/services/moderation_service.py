@@ -37,26 +37,20 @@ class ModerationService:
         _ = translator.gettext
         active_uow = uow or self._uow
 
-        async with active_uow:
-            user_settings = await active_uow.users.get_by_id(telegram_id)
-            tt_username = user_settings.teamtalk_username if user_settings else None
+        user_settings = await active_uow.users.get_by_id(telegram_id)
+        tt_username = user_settings.teamtalk_username if user_settings else None
 
-            # Ban Telegram ID
+        # Ban Telegram ID
+        await active_uow.bans.add_ban(telegram_id=telegram_id, reason="Banned by admin")
+        # Ban TeamTalk username if it exists
+        if tt_username:
             await active_uow.bans.add_ban(
-                telegram_id=telegram_id, reason="Banned by admin"
+                teamtalk_username=tt_username,
+                reason=f"Linked to banned TG ID {telegram_id}",
             )
-            # Ban TeamTalk username if it exists
-            if tt_username:
-                await active_uow.bans.add_ban(
-                    teamtalk_username=tt_username,
-                    reason=f"Linked to banned TG ID {telegram_id}",
-                )
 
-            # Delete profile within the same transaction
-            await self._subscription_service.delete_profile(telegram_id, uow=active_uow)
-
-            if not uow:
-                await active_uow.commit()
+        # Delete profile within the same transaction
+        await self._subscription_service.delete_profile(telegram_id, uow=active_uow)
 
         # Conceptual server moderation
         if tt_username and tt_connection:
@@ -77,21 +71,18 @@ class ModerationService:
     ) -> OperationResult:
         """Unbans a subscriber by removing all their ban entries."""
         active_uow = uow or self._uow
-        async with active_uow:
-            user_settings = await active_uow.users.get_by_id(telegram_id)
-            tt_username = user_settings.teamtalk_username if user_settings else None
 
-            # Remove bans by Telegram ID
-            await active_uow.bans.remove_by_telegram_id(telegram_id)
+        user_settings = await active_uow.users.get_by_id(telegram_id)
+        tt_username = user_settings.teamtalk_username if user_settings else None
 
-            # Remove bans by TeamTalk username
-            if tt_username:
-                tt_bans = await active_uow.bans.get_by_teamtalk_username(tt_username)
-                for ban in tt_bans:
-                    await active_uow.bans.delete(ban)
+        # Remove bans by Telegram ID
+        await active_uow.bans.remove_by_telegram_id(telegram_id)
 
-            if not uow:
-                await active_uow.commit()
+        # Remove bans by TeamTalk username
+        if tt_username:
+            tt_bans = await active_uow.bans.get_by_teamtalk_username(tt_username)
+            for ban in tt_bans:
+                await active_uow.bans.delete(ban)
 
         logger.info("Successfully unbanned user %s.", telegram_id)
         return OperationResult(
@@ -130,10 +121,7 @@ class ModerationService:
             user_settings.muted_users_list.append(new_entry)
             action = "muted"
 
-        async with active_uow:
-            await active_uow.users.save(user_settings)
-            if not uow:
-                await active_uow.commit()
+        await active_uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
 
