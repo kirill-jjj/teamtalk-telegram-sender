@@ -73,7 +73,9 @@ class UserSettingsService:
         setattr(user_settings, field_name, new_value)
         active_uow = uow or self._uow
         try:
-            await active_uow.users.save(user_settings)
+            async with active_uow as transaction:
+                await transaction.users.save(user_settings)
+                await transaction.commit()
 
             self._cache.update_user_settings(user_settings)
             logger.info(

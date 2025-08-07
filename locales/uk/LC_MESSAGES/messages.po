@@ -340,13 +340,11 @@ msgstr "Виберіть користувача:"
 msgid "TeamTalk connection is not active."
 msgstr "З'єднання з TeamTalk неактивне."
 
-# | msgid "An error occurred. Please try again later."
 #: bot/telegram_bot/handlers/errors.py:45
-#, fuzzy
 msgid ""
 "An unexpected error occurred. We are already working on fixing it. Please"
 " try again later."
-msgstr "Сталася помилка. Будь ласка, спробуйте ще раз пізніше."
+msgstr "Сталася непередбачена помилка. Ми вже працюємо над її виправленням. Будь ласка, спробуйте пізніше."
 
 #: bot/telegram_bot/handlers/errors.py:55
 msgid "Critical Error!"
