@@ -298,7 +298,7 @@ async def create_manage_tt_account_keyboard(
 
 async def create_view_mute_list_keyboard(
     translator: NullTranslations,
-    _page_items: list[Any],
+    page_items: list[Any],  # noqa: ARG001
     current_page: int,
     total_pages: int,
     target_telegram_id: int,

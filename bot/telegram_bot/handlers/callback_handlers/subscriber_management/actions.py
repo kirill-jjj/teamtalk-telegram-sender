@@ -103,16 +103,16 @@ async def delete_subscriber(
     target_telegram_id = callback_data.target_telegram_id
 
     async with uow:
-        success = await subscription_service.delete_profile(target_telegram_id)
+        success = await subscription_service.delete_profile(target_telegram_id, uow=uow)
 
-        if success:
-            message = _("Subscriber {telegram_id} deleted successfully.").format(
-                telegram_id=target_telegram_id
-            )
-        else:
-            message = _("Error deleting subscriber {telegram_id}.").format(
-                telegram_id=target_telegram_id
-            )
+    if success:
+        message = _("Subscriber {telegram_id} deleted successfully.").format(
+            telegram_id=target_telegram_id
+        )
+    else:
+        message = _("Error deleting subscriber {telegram_id}.").format(
+            telegram_id=target_telegram_id
+        )
 
     return success, message, None
 
