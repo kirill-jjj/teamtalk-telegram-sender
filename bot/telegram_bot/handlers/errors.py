@@ -9,7 +9,7 @@ from aiogram.utils.formatting import Bold, Text
 from dishka.integrations.aiogram import FromDishka
 
 from bot.config import Settings
-from bot.telegram_bot.types.bots import MessageBot
+from bot.telegram_bot.types.bots import EventBot
 
 error_router = Router(name="error_router")
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @error_router.errors()
 async def universal_error_handler(
     event: ErrorEvent,
-    bot: FromDishka[MessageBot],
+    bot: FromDishka[EventBot],
     settings: FromDishka[Settings],
 ) -> bool:
     """Catches all exceptions that were not handled in other handlers."""
