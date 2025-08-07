@@ -4,7 +4,7 @@ from pathlib import Path
 import tomllib  # Requires Python 3.11+
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from pydantic_settings import BaseSettings  # Still useful for model features
 
 # Type for gender, can be expanded if needed
@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     operational_parameters: OperationalParameters = Field(
         default_factory=OperationalParameters
     )
+    _config_dir: Path = PrivateAttr()
 
     @classmethod
     def from_toml(cls, path_str: str) -> "Settings":
@@ -122,12 +123,6 @@ class Settings(BaseSettings):
             # Consider defining a custom exception
             raise ValueError("TOML decode error") from e  # noqa: TRY003
 
-        # Adjust db_file path if it's relative
-        if "database" in data and "db_file" in data["database"]:
-            db_file_path = Path(data["database"]["db_file"])
-            if not db_file_path.is_absolute():
-                # path is the Path object for the TOML file itself
-                absolute_db_file_path = path.parent / db_file_path
-                data["database"]["db_file"] = str(absolute_db_file_path.resolve())
-
-        return cls(**data)
+        instance = cls(**data)
+        instance._config_dir = path.parent.resolve()
+        return instance
