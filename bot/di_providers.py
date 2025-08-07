@@ -16,6 +16,11 @@ import pytalk
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
+from bot.database.repositories.admin_repository import AdminRepository
+from bot.database.repositories.ban_repository import BanRepository
+from bot.database.repositories.deeplink_repository import DeeplinkRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
@@ -161,6 +166,31 @@ class RequestProvider(Provider):
     def get_uow(self, factory: AsyncSessionFactoryType) -> IUnitOfWork:
         """Provides the Unit of Work."""
         return SqlModelUnitOfWork(factory)
+
+    @provide
+    def get_user_repo(self, uow: FromDishka[IUnitOfWork]) -> UserRepository:
+        """Provides the UserRepository from the Unit of Work."""
+        return uow.users
+
+    @provide
+    def get_ban_repo(self, uow: FromDishka[IUnitOfWork]) -> BanRepository:
+        """Provides the BanRepository from the Unit of Work."""
+        return uow.bans
+
+    @provide
+    def get_admin_repo(self, uow: FromDishka[IUnitOfWork]) -> AdminRepository:
+        """Provides the AdminRepository from the Unit of Work."""
+        return uow.admins
+
+    @provide
+    def get_subscriber_repo(self, uow: FromDishka[IUnitOfWork]) -> SubscriberRepository:
+        """Provides the SubscriberRepository from the Unit of Work."""
+        return uow.subscribers
+
+    @provide
+    def get_deeplink_repo(self, uow: FromDishka[IUnitOfWork]) -> DeeplinkRepository:
+        """Provides the DeeplinkRepository from the Unit of Work."""
+        return uow.deeplinks
 
     @provide
     def get_deeplink_service(
