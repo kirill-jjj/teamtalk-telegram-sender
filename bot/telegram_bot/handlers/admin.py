@@ -39,7 +39,8 @@ async def _show_user_buttons(
     tt_instance = tt_connection.instance
     if not tt_instance:
         logger.error(
-            "[%s] Could not get own user ID in _show_user_buttons: tt_instance is None.",
+            "[%s] Could not get own user ID in _show_user_buttons: "
+            "tt_instance is None.",
             tt_connection.server_info.host,
         )
         await message.reply(_("An error occurred. Please try again later."))

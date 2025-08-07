@@ -103,9 +103,11 @@ class BanList(SQLModel, table=True):
     telegram_id: int | None = Field(default=None, index=True, unique=False)
     # A TT username can be banned independently
     teamtalk_username: str | None = Field(default=None, index=True, unique=False)
-    # We might have multiple entries if a user is banned by TG ID and then their TT username
-    # is also banned separately, or if one TT user is linked to multiple TG accounts that get banned.
-    # `unique=False` allows this. Consider composite unique constraints if specific rules are needed.
+    # We might have multiple entries if a user is banned by TG ID and then their
+    # TT username is also banned separately, or if one TT user is linked to
+    # multiple TG accounts that get banned.
+    # `unique=False` allows this. Consider composite unique constraints if
+    # specific rules are needed.
 
     ban_reason: str | None = Field(default=None)
     banned_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

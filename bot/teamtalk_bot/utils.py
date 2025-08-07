@@ -106,7 +106,7 @@ def get_tt_user_display_name(
 
 
 def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> str:
-    """Extracts the username as a string from a TeamTalkUser or TeamTalkUserAccount object.
+    """Extract username as a string from a TeamTalkUser or TeamTalkUserAccount."""
 
     Args:
         user_or_account: The TeamTalk user or account object.
@@ -317,7 +317,7 @@ P = ParamSpec(
 )  # ParamSpec might not be used with ... but kept for potential future refinement
 R = TypeVar(
     "R"
-)  # TypeVar for the return type of the original function (though simplified to Any below)
+)  # TypeVar for the original function's return type (simplified to Any)
 
 
 # Type for the original function that will be decorated.
@@ -339,7 +339,7 @@ def handle_command_errors(
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
         async def wrapper(
-            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
+            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any  # noqa: ANN401
         ) -> None:
             try:
                 await func(tt_message, *args, **kwargs)
@@ -374,7 +374,8 @@ def handle_command_errors(
                         Exception
                     ):  # Removed reply_exc as it's not used in log for TRY401
                         logger.exception(
-                            "Failed to send error reply to TT user %s after command '%s' failed.",
+                            "Failed to send error reply to TT user %s "
+                            "after command '%s' failed.",
                             ttstr(tt_message.user.username)
                             if tt_message and tt_message.user
                             else "Unknown TT User",

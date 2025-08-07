@@ -1,4 +1,4 @@
-"""Utility functions for Telegram bot operations, like sending messages and handling API errors."""
+"""Utility functions for Telegram bot operations, like sending messages."""
 
 import asyncio
 from collections.abc import Callable
@@ -56,7 +56,8 @@ async def _handle_telegram_api_error(
                 chat_id,
             )
             # This is a bit tricky now. We don't have access to the full services here.
-            # For now, we just log and remove from cache. A full cleanup would require a different approach.
+            # For now, we just log and remove from cache. A full cleanup would
+            # require a different approach.
             cache.remove_user_profile(chat_id)
             logger.info(
                 "Removed user %s from cache due to being blocked/deactivated.", chat_id
@@ -95,8 +96,8 @@ def _should_send_silently(
         and tt_user_is_online
     ):
         logger.debug(
-            "Message to %s will be silent: linked user is online and NOON is subject to check "
-            "(via notification_service).",
+            "Message to %s will be silent: linked user is online and NOON is "
+            "subject to check (via notification_service).",
             chat_id,
         )
         return True
@@ -107,7 +108,6 @@ def _should_send_silently(
 async def send_telegram_message(
     bot_instance: AiogramBot,
     chat_id: int,
-    session_factory: AsyncSessionFactoryType,
     cache: CacheService,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
@@ -157,7 +157,8 @@ async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int
     except* TelegramAPIError as eg:
         for error in eg.exceptions:
             # The specific user ID isn't easily available from the exception group,
-            # so we log a general warning. The logic below will handle individual failures.
+            # so we log a general warning. The logic below will handle individual
+            # failures.
             logger.warning("Could not fetch chat info for at least one user: %s", error)
 
     display_names: dict[int, str] = {}
@@ -188,7 +189,7 @@ async def broadcast_to_users(
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
     | None = None,
 ) -> None:
-    """Sends localized messages to a list of recipients using a TaskGroup for robustness."""
+    """Send localized messages to a list of recipients using a TaskGroup."""
     if not bot_instance_to_use:
         logger.error("No Telegram bot instance provided to broadcast_to_users.")
         return
@@ -220,7 +221,6 @@ async def broadcast_to_users(
                     send_telegram_message(
                         bot_instance=bot_instance_to_use,
                         chat_id=chat_id,
-                        session_factory=session_factory,
                         reply_markup=current_reply_markup,
                         tt_user_is_online=individual_tt_user_is_online,
                         cache=cache,
@@ -232,7 +232,8 @@ async def broadcast_to_users(
             "Some messages failed to send. Total errors: %d", len(eg.exceptions)
         )
         for error in eg.exceptions:
-            # The individual error handler is already called inside send_telegram_message_individual
+            # The individual error handler is already called inside
+            # send_telegram_message
             # So we just log the summary here.
             logger.debug("Failed to send a message (handled individually): %s", error)
 
@@ -240,7 +241,8 @@ async def broadcast_to_users(
 def format_telegram_user_display_name(chat: Chat | None) -> str:
     """Formats a Telegram user's display name from a Chat object.
 
-    Returns the Telegram ID as a string if chat object is None or no other info is available.
+    Returns the Telegram ID as a string if chat object is None or no other
+    info is available.
     """
     if not chat:
         # This function expects a Chat object.
@@ -270,7 +272,7 @@ async def update_user_bot_commands(
     bot: AiogramBot,
     translator: NullTranslations,
 ) -> bool:
-    """Updates the bot commands for a specific user based on their admin status and language."""
+    """Update the bot commands for a user based on their admin status and language."""
     _ = translator.gettext
     is_admin = cache.is_admin(telegram_id)
     commands: list[BotCommand] = (
@@ -288,7 +290,6 @@ async def update_user_bot_commands(
             is_admin,
             new_lang_code,
         )
-        return True
     except TelegramBadRequest as e:
         if "chat not found" in str(e).lower():
             logger.warning(
@@ -313,6 +314,8 @@ async def update_user_bot_commands(
             new_lang_code,
         )
         return False
+    else:
+        return True
 
 
 async def safe_delete_message(
@@ -323,14 +326,16 @@ async def safe_delete_message(
     :param message: The aiogram.types.Message object to delete.
     :param log_context_message: A string to include in the log message for context
                                 (e.g., "user settings command", "user menu command").
-    :return: True if deletion was successful or if the message was already deleted/not found,
-             False if another TelegramAPIError occurred.
+    :return: True if deletion was successful or if the message was already
+        deleted/not found, False if another TelegramAPIError occurred.
     """
     try:
         await message.delete()
     except TelegramBadRequest as e:
-        # Specific check for errors indicating the message can't be deleted because it's too old,
-        # doesn't exist, or the bot doesn't have rights. These are often not critical failures
+        # Specific check for errors indicating the message can't be deleted
+        # because it's too old,
+        # doesn't exist, or the bot doesn't have rights. These are often not
+        # critical failures
         # for the calling function's flow.
         if (
             "message to delete not found" in str(e).lower()
@@ -338,7 +343,8 @@ async def safe_delete_message(
             or "message identifier is not specified" in str(e).lower()
         ):  # Should not happen with Message obj
             logger.info(
-                "Could not delete %s (message likely already gone or permissions issue): %s",
+                "Could not delete %s (message likely already gone or "
+                "permissions issue): %s",
                 log_context_message,
                 e,
             )

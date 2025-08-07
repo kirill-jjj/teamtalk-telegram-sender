@@ -156,14 +156,14 @@ class LinkTTAccountChosenCallback(CallbackData, prefix=CB_PREFIX_LINK_TT_CHOSEN)
 
     tt_username: str  # The TeamTalk username chosen for linking
     target_telegram_id: int  # The Telegram user to link to
-    page: int  # Page of the subscriber list to return to, or page of TT user list if that's paginated
+    page: int  # Page of subscriber list to return to, or paginated TT user list page.
 
 
 # For paginating the list of linkable TT accounts
 class PaginateLinkableAccountsCallback(
     CallbackData, prefix=CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS
 ):
-    """Callback data for paginating the list of TeamTalk accounts available for linking."""
+    """Paginates the list of TeamTalk accounts available for linking."""
 
     subscriber_context_page: (
         int  # Original page of the subscriber list (context to return to)
@@ -182,7 +182,7 @@ class AdminSetSubscriberLanguageCallback(
 
     target_telegram_id: int  # The subscriber whose language is being changed
     lang_code: str  # The language code to set (e.g., "en", "ru")
-    # Page of the subscriber list to return to after action, passed through ViewSubscriberCallback
+    # Page of subscriber list to return to after action, via ViewSubscriberCallback
     subscriber_page_context: int
 
 
@@ -190,7 +190,7 @@ class AdminSetSubscriberLanguageCallback(
 class AdminSetSubscriberNotificationPrefCallback(
     CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF
 ):
-    """Callback data for an admin setting a specific subscriber's notification preferences."""
+    """Admin setting a specific subscriber's notification preferences."""
 
     target_telegram_id: int  # The subscriber whose setting is being changed
     setting_value: str  # The notification setting value (e.g., "all", "none")

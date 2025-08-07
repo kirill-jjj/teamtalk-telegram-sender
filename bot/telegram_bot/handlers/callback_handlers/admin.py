@@ -1,4 +1,4 @@
-"""Callback query handlers for administrator actions originating from inline keyboards."""
+"""Callback query handlers for admin actions from inline keyboards."""
 
 from gettext import NullTranslations
 from html import escape
@@ -35,12 +35,13 @@ def _handle_pytalk_error(
     *,
     is_critical: bool = False,
 ) -> tuple[bool, str]:
-    """Handles common exceptions for Pytalk actions, logs, and returns a standardized error tuple."""
+    """Handle common exceptions for Pytalk actions, log, and return standard error."""
     _ = translator.gettext
     log_message = "Error during '%s' on TT user (ID: %s) on server %s."
     if is_critical:
         logger.critical(
-            "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on server %s: %s",
+            "CRITICAL: Network/OS error during '%s' on TT user (ID: %s) on "
+            "server %s: %s",
             action,
             user_id_to_log,
             server_host,
@@ -160,5 +161,8 @@ async def on_moderation_confirm(
             text=message_text,
             reply_markup=None,
             logger_instance=logger,
-            log_context=f"process_user_action_selection ({callback_data.action.value}) on {server_host_for_display}",
+            log_context=(
+                f"process_user_action_selection ({callback_data.action.value}) on "
+                f"{server_host_for_display}"
+            ),
         )

@@ -40,7 +40,9 @@ class ModerationService:
             tt_username = user_settings.teamtalk_username if user_settings else None
 
             # Ban Telegram ID
-            await self._uow.bans.add_ban(telegram_id=telegram_id, reason="Banned by admin")
+            await self._uow.bans.add_ban(
+                telegram_id=telegram_id, reason="Banned by admin"
+            )
             # Ban TeamTalk username if it exists
             if tt_username:
                 await self._uow.bans.add_ban(

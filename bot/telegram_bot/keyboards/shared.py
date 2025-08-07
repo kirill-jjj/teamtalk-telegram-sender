@@ -112,7 +112,8 @@ async def create_paginated_keyboard(
     page_items: list[Any],
     current_page: int,
     total_pages: int,
-    item_button_former: "Callable[[Any, int, Callable[[str], str]], InlineKeyboardButton | list[InlineKeyboardButton]]",
+    item_button_former: "Callable[[Any, int, Callable[[str], str]], "
+    "InlineKeyboardButton | list[InlineKeyboardButton]]",
     pagination_callback_factory: "Callable[..., Any]",
     pagination_factory_kwargs: dict[str, Any] | None = None,
     additional_buttons_top: list[list[InlineKeyboardButton]] | None = None,
@@ -198,7 +199,7 @@ async def _build_user_toggle_keyboard(
     back_button_callback_data: str,
     back_button_text_key: str,
 ) -> InlineKeyboardMarkup:
-    """Generic helper to create a keyboard for a paginated list of users with mute/unmute toggle buttons."""
+    """Generic helper for a paginated list of users with mute/unmute toggle buttons."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
     muted_usernames_from_relationship = {

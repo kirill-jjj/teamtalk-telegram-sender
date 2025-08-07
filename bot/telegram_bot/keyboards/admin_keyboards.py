@@ -304,7 +304,7 @@ async def create_view_mute_list_keyboard(
     target_telegram_id: int,
     subscriber_context_page: int,
 ) -> InlineKeyboardMarkup:
-    """Creates the keyboard for viewing a paginated mute list for a specific subscriber."""
+    """Create the keyboard for viewing a paginated mute list for a subscriber."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
 

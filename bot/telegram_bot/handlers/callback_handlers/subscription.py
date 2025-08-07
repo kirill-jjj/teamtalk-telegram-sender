@@ -89,7 +89,8 @@ async def set_subscription_setting(
 
     except ValidationError:
         logger.exception(
-            "Invalid subscription setting value received in callback for user %s. Raw value: %s",
+            "Invalid subscription setting value received in callback for user %s. "
+            "Raw value: %s",
             callback_query.from_user.id,
             callback_data.setting_value,
         )
@@ -136,7 +137,8 @@ async def set_subscription_setting(
     await callback_query.answer(success_toast_text, show_alert=False)
 
     menu_text = _("Subscription Settings")
-    # Use updated_settings (which is user_settings after in-place modification by helper) for keyboard
+    # Use updated_settings (which is user_settings after in-place modification
+    # by helper) for keyboard
     updated_keyboard_markup = await create_subscription_settings_keyboard(
         translator, updated_settings.notification_settings
     )

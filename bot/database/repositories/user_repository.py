@@ -17,7 +17,7 @@ class UserRepository(BaseRepository[UserSettings]):
         super().__init__(UserSettings)
 
     async def get_by_id(self, pk: int | str) -> UserSettings | None:
-        """Retrieves a UserSettings instance by its Telegram ID, preloading muted users."""
+        """Get a UserSettings instance by Telegram ID, preloading muted users."""
         statement = (
             select(UserSettings)
             .where(UserSettings.telegram_id == pk)
@@ -29,7 +29,7 @@ class UserRepository(BaseRepository[UserSettings]):
     async def get_or_create(
         self, telegram_id: int, defaults: dict[str, Any] | None = None
     ) -> UserSettings:
-        """Retrieves a UserSettings instance, or creates a new one if it does not exist."""
+        """Get or create a UserSettings instance."""
         user_settings = await self.get_by_id(telegram_id)
         if user_settings:
             return user_settings

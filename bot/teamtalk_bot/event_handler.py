@@ -1,4 +1,4 @@
-"""Handles events received from the Pytalk (TeamTalk) library by routing them to the appropriate TeamTalkConnection."""
+"""Route Pytalk (TeamTalk) events to the correct TeamTalkConnection."""
 
 from collections.abc import Awaitable, Callable
 import functools
@@ -29,7 +29,8 @@ def route_event_to_connection(
     """Decorator for TeamTalkEventHandler methods to route events.
 
     Routes to the appropriate TeamTalkConnection instance.
-    It assumes the decorated method's first arg after 'self' is the primary Pytalk event object.
+    It assumes the decorated method's first arg after 'self' is the primary
+    Pytalk event object.
     """
 
     @functools.wraps(handler_method_on_event_handler_class)
@@ -111,7 +112,8 @@ def route_event_to_connection(
                 await actual_connection_method(event_primary_obj, *args, **kwargs)
             else:
                 logger.error(
-                    "Decorator: Method '%s' not found/callable on TTConnection for Pytalk evt '%s'.",
+                    "Decorator: Method '%s' not found/callable on TTConnection "
+                    "for Pytalk evt '%s'.",
                     method_name_on_connection,
                     handler_name_for_logs,
                 )
@@ -163,7 +165,8 @@ async def _broadcast_event_to_all_connections(
                 broadcast_count += 1
             except Exception:
                 logger.exception(
-                    "Broadcast: Error during call of method '%s' to conn for key '%s' for evt '%s'.",
+                    "Broadcast: Error during call of method '%s' to conn "
+                    "for key '%s' for evt '%s'.",
                     method_name_on_connection,
                     conn_key,
                     handler_name_for_logs,
@@ -239,7 +242,7 @@ class TeamTalkEventHandler:
     def _get_connection_by_instance(
         self, tt_instance: pytalk.instance.TeamTalkInstance
     ) -> TeamTalkConnection | None:
-        """Retrieves an active TeamTalkConnection associated with the given Pytalk instance."""
+        """Get an active TeamTalkConnection for the given Pytalk instance."""
         for conn in self.connections.values():
             if conn.instance is tt_instance:
                 return conn
@@ -256,7 +259,7 @@ class TeamTalkEventHandler:
         return self.connections.get(server_key)
 
     async def on_pytalk_ready(self) -> None:
-        """Handles PytalkBot on_ready; initializes primary TeamTalk server connection."""
+        """Handle PytalkBot on_ready; init primary TeamTalk server connection."""
         self.logger.info("Pytalk Bot ready. Initializing TT connections...")
         tt_config = self.settings.teamtalk
 
@@ -300,7 +303,7 @@ class TeamTalkEventHandler:
 
     @route_event_to_connection
     async def on_pytalk_my_login(self, server: PytalkServer) -> None:
-        """Routes the bot's own login event to the appropriate connection via decorator."""
+        """Route the bot's own login event to the correct connection via decorator."""
 
     @route_event_to_connection
     async def on_pytalk_user_join(
@@ -310,17 +313,17 @@ class TeamTalkEventHandler:
 
     @route_event_to_connection
     async def on_pytalk_my_connection_lost(self, server: PytalkServer) -> None:
-        """Routes a connection lost event for the bot to the appropriate connection via decorator."""
+        """Route a connection lost event for the bot to the correct connection."""
 
     @route_event_to_connection
     async def on_pytalk_my_kicked_from_channel(
         self, channel_obj: PytalkChannel
     ) -> None:
-        """Routes a kicked from channel event for the bot to the appropriate connection via decorator."""
+        """Route a kicked from channel event for the bot to the correct connection."""
 
     @route_event_to_connection
     async def on_pytalk_message(self, message: TeamTalkMessage) -> None:
-        """Routes an incoming message event to the appropriate connection via decorator."""
+        """Route an incoming message event to the correct connection via decorator."""
 
     @route_event_to_connection
     async def on_pytalk_user_login(self, user: PytalkUser) -> None:
@@ -336,8 +339,8 @@ class TeamTalkEventHandler:
 
     @route_event_to_connection
     async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
-        """Routes a new user account event. Specific instance or broadcast handled by decorator."""
+        """Route a new user account event. Instance/broadcast handled by decorator."""
 
     @route_event_to_connection
     async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
-        """Routes a removed user account event. Specific instance or broadcast handled by decorator."""
+        """Route a removed user account event. Instance/broadcast handled by decorator."""

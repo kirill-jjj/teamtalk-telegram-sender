@@ -153,6 +153,7 @@ class CommandRouter:
             await handler(**kwargs_for_handler)
         else:
             logger.error(
-                "Handler for command '%s' found but its dependencies are not defined in command_router.",
+                    "Handler for command '%s' found but its dependencies are not "
+                    "defined in command_router.",
                 cmd,
             )

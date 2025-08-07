@@ -73,7 +73,8 @@ async def _display_user_list_generic(
 
     if callback_query.bot is None:
         logger.error(
-            "_display_user_list_generic: callback_query.bot is None. Cannot display list."
+            "_display_user_list_generic: callback_query.bot is None. "
+            "Cannot display list."
         )
         await callback_query.answer(
             _("An error occurred. Please try again later."), show_alert=True
@@ -152,7 +153,8 @@ async def _display_all_server_accounts_list(
         try:
             await cast(Message, callback_query.message).edit_text(
                 _(
-                    "Server user accounts are not loaded yet for {server_host}. Please try again in a moment."
+                    "Server user accounts are not loaded yet for {server_host}. "
+                    "Please try again in a moment."
                 ).format(server_host=tt_connection.server_info.host)
             )
         except TelegramAPIError:
@@ -310,7 +312,8 @@ async def show_manage_muted_menu(
     _ = translator.gettext
     if not user_settings:
         logger.warning(
-            "Cannot show manage muted menu for event without a user, user_settings is None."
+            "Cannot show manage muted menu for event without a user, "
+            "user_settings is None."
         )
         await callback_query.answer(
             _("An error occurred. Please try again later."), show_alert=True
@@ -322,11 +325,13 @@ async def show_manage_muted_menu(
     )
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
-            "Current mode is Blacklist. You receive notifications from everyone except those on the list."
+            "Current mode is Blacklist. You receive notifications from everyone "
+            "except those on the list."
         )
     else:
         current_mode_text = _(
-            "Current mode is Whitelist. You only receive notifications from users on the list."
+            "Current mode is Whitelist. You only receive notifications "
+            "from users on the list."
         )
     full_text = _("Manage Mute List\n\n{current_mode_description}").format(
         current_mode_description=current_mode_text
@@ -375,11 +380,13 @@ async def set_mute_mode(
 
     if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist:
         current_mode_desc = _(
-            "Current mode is Blacklist. You receive notifications from everyone except those on the list."
+            "Current mode is Blacklist. You receive notifications from everyone "
+            "except those on the list."
         )
     else:
         current_mode_desc = _(
-            "Current mode is Whitelist. You only receive notifications from users on the list."
+            "Current mode is Whitelist. You only receive notifications "
+            "from users on the list."
         )
 
     menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
@@ -435,7 +442,8 @@ async def display_all_accounts_list(
     if not user_settings:
         _ = translator.gettext
         logger.warning(
-            "Cannot display all accounts list for event without a user, user_settings is None."
+            "Cannot display all accounts list for event without a user, "
+            "user_settings is None."
         )
         await callback_query.answer(
             _("An error occurred. Please try again later."), show_alert=True
@@ -478,7 +486,8 @@ async def toggle_user_mute(
 
     if not username_to_toggle:
         logger.warning(
-            "Could not determine username to toggle mute for user %s. Callback data: %s",
+            "Could not determine username to toggle mute for user %s. "
+            "Callback data: %s",
             callback_query.from_user.id,
             callback_data,
         )

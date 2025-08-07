@@ -78,7 +78,7 @@ async def link_new_tt_account_choice(
     translator: FromDishka[NullTranslations],
     tt_connection: TeamTalkConnection,
 ) -> None:
-    """Handles the 'Link/Change TeamTalk Account' action by showing a list of linkable accounts."""
+    """Handle 'Link/Change TeamTalk Account' action by showing linkable accounts."""
     await _display_linkable_tt_accounts_page(
         query=query,
         target_telegram_id=callback_data.target_telegram_id,
@@ -102,12 +102,14 @@ async def _display_linkable_tt_accounts_page(
 
     if not tt_connection.is_ready or not tt_connection.user_accounts_cache:
         logger.warning(
-            "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for displaying linkable accounts. User %s.",
+            "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for "
+            "displaying linkable accounts. User %s.",
             query.from_user.id,
         )
         await query.answer(
             _(
-                "TeamTalk server accounts are currently unavailable. Please try again later."
+                "TeamTalk server accounts are currently unavailable. "
+                "Please try again later."
             ),
             show_alert=True,
         )
@@ -133,7 +135,8 @@ async def _display_linkable_tt_accounts_page(
         )
 
     title_text = _(
-        "Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:"
+        "Select a TeamTalk account from {server_host} to link to subscriber "
+        "{telegram_id}:"
     ).format(server_host=tt_connection.server_info.host, telegram_id=target_telegram_id)
     empty_list_text = _("No TeamTalk server accounts found on {server_host}.").format(
         server_host=tt_connection.server_info.host
@@ -144,7 +147,8 @@ async def _display_linkable_tt_accounts_page(
         ).format(server_host=tt_connection.server_info.host)
     if query.bot is None:
         logger.error(
-            "_display_linkable_tt_accounts_page: query.bot is None. Cannot display list."
+            "_display_linkable_tt_accounts_page: query.bot is None. "
+            "Cannot display list."
         )
         await query.answer(
             _("An error occurred. Please try again later."), show_alert=True

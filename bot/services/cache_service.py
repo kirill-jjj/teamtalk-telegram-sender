@@ -72,7 +72,7 @@ class CacheService:
         return telegram_id in self._subscribed_users_cache
 
     def load_subscribers_from_db(self, subscriber_ids: list[int]) -> None:
-        """Loads subscriber IDs from the database into the cache, clearing existing ones."""
+        """Load subscriber IDs from DB into cache, clearing existing ones."""
         self._subscribed_users_cache.clear()  # Clear before loading
         self._subscribed_users_cache.update(subscriber_ids)
         logger.info("Subscriber cache populated with %d IDs.", len(subscriber_ids))
@@ -109,7 +109,7 @@ class CacheService:
             )
 
     def load_all_user_settings(self, all_settings: list[UserSettings]) -> None:
-        """Loads all user settings from a list into the cache, clearing existing ones."""
+        """Load all user settings from a list into the cache, clearing existing ones."""
         self._user_settings_cache.clear()  # Clear before loading
         for setting in all_settings:
             if not isinstance(setting, UserSettings):

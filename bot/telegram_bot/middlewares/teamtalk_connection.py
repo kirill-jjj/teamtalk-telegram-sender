@@ -49,24 +49,27 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
             determined_connection = next(iter(connections.values()), None)
             if self.default_server_key and not determined_connection:
                 logger.warning(
-                    "ActiveTeamTalkConnectionMiddleware: Default server key '%s' not found. "
-                    "Falling back to first available connection if any.",
+                    "ActiveTeamTalkConnectionMiddleware: Default server key "
+                    "'%s' not found. Falling back to first available connection if any.",
                     self.default_server_key,
                 )
             elif determined_connection:
                 logger.debug(
-                    "ActiveTeamTalkConnectionMiddleware: Using first available connection for %s.",
+                    "ActiveTeamTalkConnectionMiddleware: Using first available "
+                    "connection for %s.",
                     determined_connection.server_info.host,
                 )
 
         if determined_connection:
             logger.debug(
-                "ActiveTeamTalkConnectionMiddleware: Providing connection for %s to handler.",
+                "ActiveTeamTalkConnectionMiddleware: Providing connection for "
+                "%s to handler.",
                 determined_connection.server_info.host,
             )
         else:
             logger.warning(
-                "ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk connection to provide."
+                "ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk "
+                "connection to provide."
             )
 
         data["tt_connection"] = determined_connection

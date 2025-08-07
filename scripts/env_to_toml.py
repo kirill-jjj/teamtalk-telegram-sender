@@ -97,7 +97,8 @@ DEFAULT_EXCLUDE_DIRS = [
 
 def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:  # noqa: ANN401
     """Applies the specified conversion rule to the raw value from .env."""
-    # dotenv_values typically returns None if the key exists but has no value (e.g. KEY=)
+    # dotenv_values typically returns None if the key exists but has no value
+    # (e.g. KEY=)
     # or if the key is not in the file at all when iterating its result.
     # However, we iterate items from dotenv_values, so raw_value is what's after '='.
     # An empty value (KEY=) results in raw_value being an empty string.
@@ -121,7 +122,8 @@ def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str)
         # So, if value is empty and not one of above, we skip it (return None).
         # This print is acceptable for a CLI script's direct feedback.
         print(
-            f"Info: Empty value for '{env_key}' in .env, will be omitted from TOML. Pydantic defaults may apply.",
+            f"Info: Empty value for '{env_key}' in .env, will be omitted from TOML. "
+            f"Pydantic defaults may apply.",
             file=sys.stderr,
         )
         return None
@@ -131,7 +133,8 @@ def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str)
         # or a custom lambda/function) as per ENV_TO_TOML_MAPPING definition.
         return conversion_rule(raw_value)
     except ValueError as e:
-        # Attempt to get a meaningful name for the conversion rule for the warning message.
+        # Attempt to get a meaningful name for the conversion rule for the
+        # warning message.
         # For built-in types like int, str, bool, __name__ gives the type name.
         # For functions (including lambdas), __name__ gives the function name.
         conversion_name = getattr(conversion_rule, "__name__", str(conversion_rule))
@@ -178,7 +181,8 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
                 toml_data[section][toml_key] = converted_value
         else:
             print(
-                f"Warning: Unmapped key '{env_key}' from '{input_env_path}' will be ignored.",
+                f"Warning: Unmapped key '{env_key}' from '{input_env_path}' "
+                f"will be ignored.",
                 file=sys.stderr,
             )
 
@@ -203,7 +207,8 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 def _process_all_env_files(project_root: Path, exclude_dirs_str: str) -> None:
     """Scans and converts all found .env files in the project directory."""
     print(
-        f"Searching for .env files in '{project_root}' and subdirectories (excluding: {exclude_dirs_str})..."
+        f"Searching for .env files in '{project_root}' and subdirectories "
+        f"(excluding: {exclude_dirs_str})..."
     )
     excluded_dir_parts = {
         Path(d.strip()).name for d in exclude_dirs_str.split(",") if d.strip()
@@ -261,7 +266,7 @@ def _process_specific_env_file(config_path: Path, output_path_arg: Path | None) 
 
 
 def main() -> None:
-    """Main function to handle CLI arguments and orchestrate .env to .toml conversion."""
+    """Main function to handle CLI args and orchestrate .env to .toml conversion."""
     parser = argparse.ArgumentParser(
         description="Convert .env file(s) to structured TOML format.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -276,15 +281,20 @@ def main() -> None:
     group.add_argument(
         "--all",
         action="store_true",
-        help="Convert all *.env files found in the project root and subdirectories (respects --exclude-dirs).",
+        help=(
+            "Convert all *.env files found in the project root and subdirectories "
+            "(respects --exclude-dirs)."
+        ),
     )
     parser.add_argument(
         "--output",
         type=Path,
         metavar="<path_to_toml_file>",
-        help="Path for the output .toml file (only applicable if --config is specified).\n"
-        "Defaults to the input filename with .toml extension in the same directory, "
-        "or 'config.toml' if input is '.env'.",
+        help=(
+            "Path for the output .toml file (only applicable if --config is "
+            "specified).\nDefaults to the input filename with .toml extension in "
+            "the same directory, or 'config.toml' if input is '.env'."
+        ),
     )
     parser.add_argument(
         "--exclude-dirs",
@@ -299,7 +309,10 @@ def main() -> None:
         "--project-root",
         type=Path,
         default=Path.cwd(),
-        help="Project root directory for --all scan. Default: current working directory.",
+        help=(
+            "Project root directory for --all scan. Default: current working "
+            "directory."
+        ),
     )
 
     args = parser.parse_args()

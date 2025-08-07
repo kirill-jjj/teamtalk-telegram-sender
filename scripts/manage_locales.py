@@ -1,4 +1,4 @@
-"""Manages localization files using pybabel for string extraction, updates, and compilation."""
+"""Manage localization files using pybabel for extraction, updates, and compilation."""
 
 #!/usr/bin/env python3
 from pathlib import Path
@@ -38,7 +38,8 @@ def get_project_version() -> str:
         )
     except FileNotFoundError:
         print(
-            f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. Cannot determine project version.",
+            f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. "
+            f"Cannot determine project version.",
             file=sys.stderr,
         )
         return "0.0.0"  # Fallback version

@@ -38,7 +38,9 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
 
 
 def prevent_empty_revisions(
-    context: MigrationContext, revision: str | Iterable[str | None], directives: list[MigrationScript]
+    context: MigrationContext,
+    revision: str | Iterable[str | None],
+    directives: list[MigrationScript],
 ) -> None:
     """This hook prevents Alembic from creating empty migration files.
 
@@ -57,7 +59,9 @@ def prevent_empty_revisions(
         and directives[0].upgrade_ops.is_empty()
     ):
         directives[:] = []
-        logging.info("INFO  [alembic.autogenerate.compare] No structural changes detected.")
+        logging.info(
+            "INFO  [alembic.autogenerate.compare] No structural changes detected."
+        )
 
 
 def get_db_url() -> str:
@@ -86,15 +90,24 @@ def get_db_url() -> str:
     db_file_name = settings.database.db_file
 
     if not isinstance(db_file_name, str) or not db_file_name.strip():
-        error_message = f"'database.db_file' in '{config_file}' must be a non-empty string. Found: '{db_file_name}'"
+        error_message = (
+            f"'database.db_file' in '{config_file}' must be a non-empty string. "
+            f"Found: '{db_file_name}'"
+        )
         logging.error(error_message)
         raise ValueError(error_message)
 
     db_path_obj = Path(db_file_name)
-    db_path = (PROJECT_ROOT / db_file_name).resolve() if not db_path_obj.is_absolute() else db_path_obj.resolve()
+    db_path = (
+        (PROJECT_ROOT / db_file_name).resolve()
+        if not db_path_obj.is_absolute()
+        else db_path_obj.resolve()
+    )
 
     db_url = f"sqlite+aiosqlite:///{db_path}"  # f-string for URL construction is fine
-    logging.info("Using database URL: %s (from 'database.db_file' in '%s')", db_url, config_file)
+    logging.info(
+        "Using database URL: %s (from 'database.db_file' in '%s')", db_url, config_file
+    )
     return db_url
 
 

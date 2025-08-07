@@ -45,7 +45,7 @@ class AdminIdArgs(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def parse_str_to_dict(cls, data: str | None) -> dict[str, list[int] | list[str]]:
-        """Parses a string of space-separated arguments into valid IDs and invalid entries."""
+        """Parse a string of space-separated args into valid IDs and invalid entries."""
         if not isinstance(data, str) or not (command_args_str := data.strip()):
             return {"valid_ids": [], "invalid_entries": []}
         valid_ids = []
@@ -63,8 +63,8 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
 
     @functools.wraps(func)
     async def wrapper(
-        tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
-    ) -> Any | None:
+        tt_message: TeamTalkMessage, *args: Any, **kwargs: Any  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
         settings = kwargs.get("settings")
         if not isinstance(settings, Settings):
             raise MissingSettingsError
@@ -207,7 +207,6 @@ async def reply_with_deeplink(
     deeplink_repo: DeeplinkRepository,
     translator: NullTranslations,
     action: DeeplinkAction,
-    success_log_message: str,
     reply_text_source: str,
     settings: Settings,
     bot: Bot,
@@ -245,9 +244,9 @@ async def on_subscribe(
         translator=translator,
         action=DeeplinkAction.SUBSCRIBE,
         payload=ttstr(tt_message.user.username),
-        success_log_message="Generated subscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_(
-            "Click this link to subscribe to notifications (link valid for 5 minutes):\n{deeplink_url}"
+            "Click this link to subscribe to notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
         ),
         settings=settings,
         bot=bot,
@@ -269,9 +268,9 @@ async def on_unsubscribe(
         translator=translator,
         action=DeeplinkAction.UNSUBSCRIBE,
         payload=None,
-        success_log_message="Generated unsubscribe deeplink {token} for TT user {sender_username}",
         reply_text_source=_(
-            "Click this link to unsubscribe from notifications (link valid for 5 minutes):\n{deeplink_url}"
+            "Click this link to unsubscribe from notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
         ),
         settings=settings,
         bot=bot,
@@ -348,7 +347,7 @@ async def on_help(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
     settings: Settings,
-    **_kwargs: Any,
+    **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Handles the /help command from a TeamTalk user."""
     tt_username_str = ttstr(tt_message.user.username)

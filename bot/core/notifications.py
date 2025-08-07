@@ -125,7 +125,8 @@ async def _get_recipients_for_notification(
 
     # We no longer filter here. Instead, we pass all recipients to the sender,
     # which will decide whether to send a notification silently based on NOON settings.
-    # The data is transformed from (id, noon_enabled, noon_confirmed, lang) to (id, lang).
+    # The data is transformed from (id, noon_enabled, noon_confirmed, lang)
+    # to (id, lang).
     return [(tg_id, lang_code) for tg_id, _, _, lang_code in recipients_data]
 
 
@@ -172,7 +173,8 @@ async def send_join_leave_notification(
 
     if not user_username:
         logger.warning(
-            "User %s with empty username (Nickname: %s, ID: %s) on server %s. Skipping.",
+            "User %s with empty username (Nickname: %s, ID: %s) on server %s. "
+            "Skipping.",
             event_type,
             user_nickname,
             user_id,
@@ -203,7 +205,8 @@ async def send_join_leave_notification(
 
     if not final_recipients:
         logger.debug(
-            "No recipients found for %s event for user %s on server %s after all filtering.",
+            "No recipients found for %s event for user %s on server %s "
+            "after all filtering.",
             event_type,
             user_username,
             tt_instance.server_info.host,

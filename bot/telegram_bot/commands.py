@@ -53,7 +53,7 @@ async def set_telegram_commands(
     available_languages: list[LanguageInfo],
     settings: Settings,
 ) -> None:
-    """Sets bot commands globally for all supported languages and individually for administrators."""
+    """Set bot commands globally for all languages and individually for admins."""
     logger.info("Setting up global and admin-specific Telegram commands...")
 
     for lang_info in available_languages:

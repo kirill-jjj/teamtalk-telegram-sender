@@ -22,6 +22,7 @@ async def universal_error_handler(
     settings: FromDishka[Settings],
 ) -> bool:
     """Catches all exceptions that were not handled in other handlers."""
+
     def _(s: str) -> str:  # Placeholder for future gettext integration
         return s
 
@@ -32,14 +33,15 @@ async def universal_error_handler(
     )
 
     update_dict = event.update.model_dump(exclude_unset=True)
-    chat_id = update_dict.get("message", {}).get("chat", {}).get("id") or update_dict.get(
-        "callback_query", {}
-    ).get("from", {}).get("id")
+    chat_id = update_dict.get("message", {}).get("chat", {}).get(
+        "id"
+    ) or update_dict.get("callback_query", {}).get("from", {}).get("id")
 
     if chat_id:
         try:
             user_error_message = _(
-                "An unexpected error occurred. We are already working on fixing it. Please try again later."
+                "An unexpected error occurred. We are already working on fixing it. "
+                "Please try again later."
             )
             await bot.send_message(chat_id, text=user_error_message)
         except TelegramAPIError:

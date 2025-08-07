@@ -69,7 +69,7 @@ class DeeplinkAction(Enum):
 
 
 class SubscriberCommand(str, Enum):
-    """Actions that can be performed on a specific subscriber from their details menu."""
+    """Actions on a subscriber from their details menu."""
 
     DELETE = "delete"
     BAN = "ban"

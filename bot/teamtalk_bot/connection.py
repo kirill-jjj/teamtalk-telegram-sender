@@ -463,7 +463,8 @@ class TeamTalkConnection:
                 self.instance.join_channel_by_id(final_chan_id, password=chan_pass)
             else:
                 logger.warning(
-                    "[%s] No valid target channel found/configured. Staying in default channel.",
+                    "[%s] No valid target channel found/configured. "
+                    "Staying in default channel.",
                     self.server_info.host,
                 )
                 # If not joining a specific channel, finalize with the current one.
@@ -481,11 +482,13 @@ class TeamTalkConnection:
 
         except pytalk.exceptions.PermissionError:
             logger.exception(
-                "[%s] PermissionError joining '%s'. Will try to finalize in current/default channel.",
+                "[%s] PermissionError joining '%s'. Will try to finalize in "
+                "current/default channel.",
                 self.server_info.host,
                 target_chan_name,
             )
-            # Attempt to finalize in the current channel if join failed due to permissions
+            # Attempt to finalize in the current channel if join failed
+            # due to permissions
             curr_chan_id_after_fail = self.instance.getMyCurrentChannelID()
             ch_id_to_get = (
                 curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
@@ -494,8 +497,9 @@ class TeamTalkConnection:
             if ch_to_finalize_after_fail:
                 await self._finalize_bot_login_sequence(ch_to_finalize_after_fail)
             else:
-                logger.exception(  # Changed from error to exception as it's in an except block context
-                    "[%s] Could not get current channel (ID: %s) to finalize after permission error.",
+                logger.exception(  # In except block, so changed from error to exception
+                    "[%s] Could not get current channel (ID: %s) to finalize "
+                    "after permission error.",
                     self.server_info.host,
                     ch_id_to_get,
                 )
@@ -644,6 +648,7 @@ class TeamTalkConnection:
         """Returns a string representation of the TeamTalkConnection object."""
         instance_id = id(self.instance) if self.instance else "N/A"
         return (
-            f"<TeamTalkConnection host={self.server_info.host}:{self.server_info.tcp_port} "
+            f"<TeamTalkConnection host={self.server_info.host}:"
+            f"{self.server_info.tcp_port} "
             f"instance_id={instance_id} finalized={self.is_finalized}>"
         )

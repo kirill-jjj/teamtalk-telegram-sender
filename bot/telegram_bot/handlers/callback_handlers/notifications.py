@@ -34,7 +34,8 @@ async def show_notifications_menu(
     _ = translator.gettext
     if not user_settings:
         logger.warning(
-            "Cannot show notifications menu for event without a user, user_settings is None."
+            "Cannot show notifications menu for event without a user, "
+            "user_settings is None."
         )
         await callback_query.answer(
             _("An error occurred. Please try again later."), show_alert=True

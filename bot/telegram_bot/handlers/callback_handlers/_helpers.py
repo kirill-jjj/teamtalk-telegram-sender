@@ -6,7 +6,6 @@ from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.callback_answer import CallbackAnswer
 
 from bot.database.repositories.user_repository import UserRepository
 from bot.models import MuteListMode, NotificationSetting, UserSettings
@@ -60,26 +59,20 @@ def with_view_refresh(
     ) -> Callable[..., Awaitable[None]]:
         @functools.wraps(func)
         async def wrapper(
-            query: CallbackQuery,
-            callback_answer: CallbackAnswer,
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            # The decorated function does not receive `callback_answer`.
-            # We pass `query` and the other arguments.
-            success, message, updated_object = await func(query, **kwargs)
+            query = kwargs.pop("query")
+            callback_answer = kwargs.pop("callback_answer")
 
-            # 2. Configure the toast notification via the middleware
+            success, message, updated_object = await func(**kwargs)
+
             callback_answer.text = message
             callback_answer.show_alert = not success
 
-            # 3. KEY CHANGE: Update kwargs for the refresher function
-            #    If the decorated function returned an updated UserSettings object,
-            #    we substitute it for the old object that dishka originally injected.
             if updated_object and isinstance(updated_object, UserSettings):
                 kwargs["user_settings"] = updated_object
 
-            # 4. Call the refresher with the updated data
             await view_refresher(
                 query=query,
                 **kwargs,
@@ -283,7 +276,8 @@ async def _display_subscriber_view(
     details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
 
     text = "\n".join(details_parts)
-    # This assumes query.message is a Message, which is guaranteed by @ensure_message_context
+    # This assumes query.message is a Message, which is guaranteed by
+    # @ensure_message_context
     await cast(Message, query.message).edit_text(
         text, reply_markup=keyboard, parse_mode="HTML"
     )

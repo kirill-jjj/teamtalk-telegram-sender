@@ -44,7 +44,9 @@ class DeeplinkService:
                 return _("Your Telegram account is banned from using this service.")
 
             if not payload:
-                logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
+                logger.error(
+                    "Subscribe deeplink missing payload for user %s.", telegram_id
+                )
                 return _("Error: Missing required information for subscription.")
 
             if await self._uow.bans.is_teamtalk_username_banned(payload):

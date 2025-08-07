@@ -65,7 +65,8 @@ async def display_paginated_list(
     Can send a new message or edit an existing one based on the target type.
 
     Args:
-        target: The Aiogram CallbackQuery (to edit message) or Message (to send new message / get chat_id).
+        target: The Aiogram CallbackQuery (to edit message) or Message (to send
+            new message / get chat_id).
         bot: The Aiogram Bot instance.
         translator: The gettext NullTranslations object for localization.
         items: The full list of items to display.
@@ -132,15 +133,20 @@ async def display_paginated_list(
                 title_text,
                 target.chat.id,
             )
-    # The case `isinstance(target, CallbackQuery) and target.message is None` is considered unreachable
-    # because all callback handlers that would call this function are decorated with `@ensure_message_context`,
+    # The case `isinstance(target, CallbackQuery) and target.message is None` is
+    # considered unreachable
+    # because all callback handlers that would call this function are decorated
+    # with `@ensure_message_context`,
     # which prevents execution if `query.message` is None.
     else:
-        # This 'else' now catches cases where target is not a CallbackQuery with a message,
-        # nor a direct Message object. This could be an improperly constructed CallbackQuery
+        # This 'else' now catches cases where target is not a CallbackQuery
+        # with a message,
+        # nor a direct Message object. This could be an improperly constructed
+        # CallbackQuery
         # (though unlikely if from Aiogram) or an unexpected type.
         logger.error(
-            "Invalid target type or unexpected state for display_paginated_list for '%s'. Target type: %s",
+            "Invalid target type or unexpected state for display_paginated_list "
+            "for '%s'. Target type: %s",
             title_text,
             type(target).__name__,
         )

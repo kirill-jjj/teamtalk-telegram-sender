@@ -44,7 +44,7 @@ async def on_start_with_payload(
     deeplink_repo: Annotated[DeeplinkRepository, FromDishka()],
     deeplink_service: Annotated[DeeplinkService, FromDishka()],
 ) -> None:
-    """Handles the /start command with a deeplink, extracting the token via a magic filter."""
+    """Handle the /start command with a deeplink, using a magic filter."""
     await handle_deeplink(
         message,
         token,

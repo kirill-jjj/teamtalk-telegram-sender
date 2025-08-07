@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypedDict
+from typing import Any, TypeAlias, TypedDict
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -60,7 +60,7 @@ async def _present_subscriber_setting_choice(
     keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]",
     keyboard_factory_kwargs: dict[str, object],
 ) -> None:
-    """A generic helper to present a settings choice menu to an admin for a subscriber."""
+    """A generic helper to present a settings choice menu to an admin."""
     if isinstance(query.message, Message):
         keyboard = await keyboard_factory(**keyboard_factory_kwargs)
         await query.message.edit_text(message_text, reply_markup=keyboard)
@@ -295,13 +295,20 @@ async def paginate_mute_list(
     await query.answer()
 
 
+AnySettingCallback: TypeAlias = (
+    AdminSetSubscriberLanguageCallback
+    | AdminSetSubscriberMuteModeCallback
+    | AdminSetSubscriberNotificationPrefCallback
+)
+
+
 @settings_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
 @settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 @settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
-    callback_data: Any,
+    callback_data: AnySettingCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_repo: FromDishka[UserRepository],

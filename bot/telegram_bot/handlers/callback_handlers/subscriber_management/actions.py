@@ -115,7 +115,7 @@ async def _refresh_and_display_subscriber_list(
     return_page: int,
     translator: NullTranslations,
 ) -> None:
-    """Refreshes and displays the paginated list of subscribers by calling the central list display function."""
+    """Refresh and display paginated subscribers list via the central display function."""
     await _show_subscriber_list_page(
         target=query,
         user_repo=user_repo,
@@ -135,7 +135,7 @@ async def view_subscriber(
     bot: FromDishka[EventBot],
     user_repo: FromDishka[UserRepository],
 ) -> None:
-    """Handles viewing details and actions for a specific subscriber by calling the display helper."""
+    """Handle viewing details and actions for a subscriber by calling the display helper."""
     user_settings = await user_repo.get_by_id(callback_data.telegram_id)
     if not user_settings:
         await query.answer("User not found.", show_alert=True)

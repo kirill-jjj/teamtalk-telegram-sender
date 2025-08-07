@@ -196,13 +196,13 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
                 usernames = [
                     name.strip() for name in muted_users_str.split(",") if name.strip()
                 ]
-                for username in usernames:
-                    users_to_insert.append(
-                        {
-                            "muted_teamtalk_username": username,
-                            "user_settings_telegram_id": telegram_id,
-                        }
-                    )
+                users_to_insert.extend(
+                    {
+                        "muted_teamtalk_username": username,
+                        "user_settings_telegram_id": telegram_id,
+                    }
+                    for username in usernames
+                )
         if users_to_insert:
             op.bulk_insert(muted_users_table_ref, users_to_insert)
         with op.batch_alter_table("user_settings", schema=None) as batch_op:
@@ -274,7 +274,8 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
 
 def downgrade() -> None:
     """
-    This function rolls back the changes, returning the schema to the 'master' branch state.
+    This function rolls back the changes, returning the schema to the 'master' branch
+    state.
     Useful for testing or in case of problems.
     """
     op.drop_index(op.f("ix_ban_list_teamtalk_username"), table_name="ban_list")
@@ -327,7 +328,8 @@ def downgrade() -> None:
             WHERE muted_users.user_settings_telegram_id = user_settings.telegram_id
         )
         WHERE EXISTS (
-            SELECT 1 FROM muted_users WHERE muted_users.user_settings_telegram_id = user_settings.telegram_id
+            SELECT 1 FROM muted_users
+            WHERE muted_users.user_settings_telegram_id = user_settings.telegram_id
         );
     """)
     conn.execute(query)
