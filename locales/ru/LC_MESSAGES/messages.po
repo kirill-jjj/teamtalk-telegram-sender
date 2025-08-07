@@ -165,25 +165,21 @@ msgstr "На сервере {server_host} нет пользователей он
 msgid "No users found online."
 msgstr "Пользователей онлайн не найдено."
 
-# | msgid "There is {user_count} user on the server {server_host}:\n"
-# | msgid_plural "There are {user_count} users on the server {server_host}:\n"
 #: bot/services/report_service.py:107
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "There is {user_count} user on the server {server_host}:"
 msgid_plural "There are {user_count} users on the server {server_host}:"
-msgstr[0] "На сервере {server_host} сейчас {user_count} пользователь:\n"
-msgstr[1] "На сервере {server_host} сейчас {user_count} пользователя:\n"
-msgstr[2] "На сервере {server_host} сейчас {user_count} пользователей:\n"
+msgstr[0] "На сервере {server_host} сейчас {user_count} пользователь:"
+msgstr[1] "На сервере {server_host} сейчас {user_count} пользователя:"
+msgstr[2] "На сервере {server_host} сейчас {user_count} пользователей:"
 
-# | msgid "There is {user_count} user on the server:\n"
-# | msgid_plural "There are {user_count} users on the server:\n"
 #: bot/services/report_service.py:113
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "There is {user_count} user on the server:"
 msgid_plural "There are {user_count} users on the server:"
-msgstr[0] "На сервере сейчас {user_count} пользователь:\n"
-msgstr[1] "На сервере сейчас {user_count} пользователя:\n"
-msgstr[2] "На сервере сейчас {user_count} пользователей:\n"
+msgstr[0] "На сервере сейчас {user_count} пользователь:"
+msgstr[1] "На сервере сейчас {user_count} пользователя:"
+msgstr[2] "На сервере сейчас {user_count} пользователей:"
 
 #: bot/services/report_service.py:123
 msgid " and "

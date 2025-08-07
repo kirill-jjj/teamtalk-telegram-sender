@@ -167,25 +167,21 @@ msgstr "На сервері {server_host} не знайдено користув
 msgid "No users found online."
 msgstr "Користувачів онлайн не знайдено."
 
-# | msgid "There is {user_count} user on the server {server_host}:\n"
-# | msgid_plural "There are {user_count} users on the server {server_host}:\n"
 #: bot/services/report_service.py:107
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "There is {user_count} user on the server {server_host}:"
 msgid_plural "There are {user_count} users on the server {server_host}:"
-msgstr[0] "На сервері {server_host} {user_count} користувач:\n"
-msgstr[1] "На сервері {server_host} {user_count} користувачі:\n"
-msgstr[2] "На сервері {server_host} {user_count} користувачів:\n"
+msgstr[0] "На сервері {server_host} {user_count} користувач:"
+msgstr[1] "На сервері {server_host} {user_count} користувачі:"
+msgstr[2] "На сервері {server_host} {user_count} користувачів:"
 
-# | msgid "There is {user_count} user on the server:\n"
-# | msgid_plural "There are {user_count} users on the server:\n"
 #: bot/services/report_service.py:113
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "There is {user_count} user on the server:"
 msgid_plural "There are {user_count} users on the server:"
-msgstr[0] "На сервері {user_count} користувач:\n"
-msgstr[1] "На сервері {user_count} користувачі:\n"
-msgstr[2] "На сервері {user_count} користувачів:\n"
+msgstr[0] "На сервері {user_count} користувач:"
+msgstr[1] "На сервері {user_count} користувачі:"
+msgstr[2] "На сервері {user_count} користувачів:"
 
 #: bot/services/report_service.py:123
 msgid " and "

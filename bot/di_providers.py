@@ -230,9 +230,9 @@ class RequestProvider(Provider):
         return ModerationService(uow, subscription_service, cache)
 
     @provide
-    def get_report_service(self) -> ReportService:
+    def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
         """Provides a ReportService."""
-        return ReportService()
+        return ReportService(settings=settings)
 
     @provide
     def get_user_from_event(self, event: TelegramObject) -> User | None:

@@ -6,13 +6,14 @@ from aiogram.utils.formatting import Bold, Text, as_list
 import pytalk
 from pytalk.user import User as TeamTalkUser
 
+from bot.config import Settings
 from bot.constants import (
     WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_tt_user_display_name
+from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -145,6 +146,10 @@ def _format_who_message(
 class ReportService:
     """Service for generating reports."""
 
+    def __init__(self, settings: Settings) -> None:
+        """Initializes the report service."""
+        self._settings = settings
+
     def get_online_users_report(
         self,
         tt_connection: TeamTalkConnection,
@@ -158,7 +163,9 @@ class ReportService:
 
         all_users = list(tt_connection.online_users_cache.values())
         bot_user_id = tt_connection.instance.getMyUserID()
-        server_host = tt_connection.server_info.host
+        server_name = get_effective_server_name(
+            tt_connection.instance, translator, self._settings
+        )
 
         grouped_data, total_users = _group_users_for_who_command(
             all_users,
@@ -168,5 +175,5 @@ class ReportService:
         )
 
         return _format_who_message(
-            grouped_data, total_users, translator=translator, server_host=server_host
+            grouped_data, total_users, translator=translator, server_host=server_name
         )
