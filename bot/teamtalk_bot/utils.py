@@ -298,7 +298,6 @@ async def forward_tt_message_to_telegram_admin(
     was_sent: bool = await send_telegram_message(
         bot_instance=bot,
         chat_id=admin_chat_id,
-        session_factory=session_factory,
         cache=cache,
         **content.as_kwargs(),
     )
