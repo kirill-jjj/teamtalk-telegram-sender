@@ -3,6 +3,7 @@
 from gettext import NullTranslations
 import logging
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
 from bot.models import Deeplink as DeeplinkModel
@@ -61,7 +62,7 @@ class DeeplinkService:
             user_settings, payload, uow=uow
         )
         if not success:
-            return _("An error occurred. Please try again later.")
+            return _(MSG_GENERAL_ERROR)
 
         if await uow.admins.get_by_id(telegram_id):
             self._cache.add_admin(telegram_id)

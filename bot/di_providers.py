@@ -55,6 +55,12 @@ def create_translator_factory(
     return get_translator
 
 
+def _create_bot(token: str) -> Bot:
+    """Creates a Bot instance with default properties."""
+    default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
+    return Bot(token=token, default=default_props)
+
+
 class AppProvider(Provider):
     """Provides application-scoped dependencies."""
 
@@ -78,19 +84,14 @@ class AppProvider(Provider):
     @provide(provides=EventBot)
     def get_bot_event(self, settings: Settings) -> EventBot:
         """Provides the event-handling Bot instance."""
-        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return cast(
-            EventBot, Bot(token=settings.telegram.event_token, default=default_props)
-        )
+        bot = _create_bot(token=settings.telegram.event_token)
+        return cast(EventBot, bot)
 
     @provide(provides=MessageBot)
     def get_bot_message(self, settings: Settings) -> MessageBot:
         """Provides the message-sending Bot instance."""
-        default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return cast(
-            MessageBot,
-            Bot(token=settings.telegram.message_token, default=default_props),
-        )
+        bot = _create_bot(token=settings.telegram.message_token)
+        return cast(MessageBot, bot)
 
     @provide
     def get_dispatcher(self) -> Dispatcher:

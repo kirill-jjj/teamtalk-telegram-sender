@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
 from bot.models import UserSettings
 from bot.services.user_settings_service import UserSettingsService
@@ -38,9 +39,7 @@ async def show_notifications_menu(
             "Cannot show notifications menu for event without a user, "
             "user_settings is None."
         )
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     notification_settings_builder = await create_notification_settings_keyboard(

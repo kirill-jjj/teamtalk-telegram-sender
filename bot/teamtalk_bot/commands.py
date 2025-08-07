@@ -231,6 +231,50 @@ async def reply_with_deeplink(
     tt_message.reply(_(reply_text_source).format(deeplink_url=deeplink_url))
 
 
+DEEPLINK_CONFIG = {
+    DeeplinkAction.SUBSCRIBE: {
+        "get_payload": lambda msg: ttstr(msg.user.username),
+        "reply_text_key": (
+            "Click this link to subscribe to notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
+        ),
+    },
+    DeeplinkAction.UNSUBSCRIBE: {
+        "get_payload": lambda msg: None,
+        "reply_text_key": (
+            "Click this link to unsubscribe from notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
+        ),
+    },
+}
+
+
+async def _handle_deeplink_command(
+    tt_message: TeamTalkMessage,
+    deeplink_repo: DeeplinkRepository,
+    translator: NullTranslations,
+    settings: Settings,
+    bot: Bot,
+    action: DeeplinkAction,
+) -> None:
+    """Generic handler for subscribe/unsubscribe commands."""
+    _ = translator.gettext
+    config = DEEPLINK_CONFIG[action]
+    payload = config["get_payload"](tt_message)
+    reply_text_source = _(config["reply_text_key"])
+
+    await reply_with_deeplink(
+        tt_message=tt_message,
+        deeplink_repo=deeplink_repo,
+        translator=translator,
+        action=action,
+        payload=payload,
+        reply_text_source=reply_text_source,
+        settings=settings,
+        bot=bot,
+    )
+
+
 async def on_subscribe(
     tt_message: TeamTalkMessage,
     deeplink_repo: DeeplinkRepository,
@@ -239,19 +283,8 @@ async def on_subscribe(
     bot: Bot,
 ) -> None:
     """Handles the /sub command from a TeamTalk user."""
-    _ = translator.gettext
-    await reply_with_deeplink(
-        tt_message=tt_message,
-        deeplink_repo=deeplink_repo,
-        translator=translator,
-        action=DeeplinkAction.SUBSCRIBE,
-        payload=ttstr(tt_message.user.username),
-        reply_text_source=_(
-            "Click this link to subscribe to notifications "
-            "(link valid for 5 minutes):\n{deeplink_url}"
-        ),
-        settings=settings,
-        bot=bot,
+    await _handle_deeplink_command(
+        tt_message, deeplink_repo, translator, settings, bot, DeeplinkAction.SUBSCRIBE
     )
 
 
@@ -263,19 +296,8 @@ async def on_unsubscribe(
     bot: Bot,
 ) -> None:
     """Handles the /unsub command from a TeamTalk user."""
-    _ = translator.gettext
-    await reply_with_deeplink(
-        tt_message=tt_message,
-        deeplink_repo=deeplink_repo,
-        translator=translator,
-        action=DeeplinkAction.UNSUBSCRIBE,
-        payload=None,
-        reply_text_source=_(
-            "Click this link to unsubscribe from notifications "
-            "(link valid for 5 minutes):\n{deeplink_url}"
-        ),
-        settings=settings,
-        bot=bot,
+    await _handle_deeplink_command(
+        tt_message, deeplink_repo, translator, settings, bot, DeeplinkAction.UNSUBSCRIBE
     )
 
 

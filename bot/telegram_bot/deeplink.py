@@ -5,6 +5,7 @@ import logging
 
 from aiogram.types import Message
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.deeplink_service import DeeplinkService
@@ -35,7 +36,7 @@ async def handle_deeplink(
     _ = translator.gettext
     if not message.from_user:
         logger.warning("Cannot handle deeplink: message.from_user is None.")
-        await message.reply(_("An error occurred. Please try again later."))
+        await message.reply(_(MSG_GENERAL_ERROR))
         return
 
     deeplink = await uow.deeplinks.get_and_delete_if_expired(token)

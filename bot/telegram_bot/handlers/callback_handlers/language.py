@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.database.uow import IUnitOfWork
@@ -79,7 +80,7 @@ async def set_language(
         user_settings = await uow.users.get_by_id(query.from_user.id)
         if not user_settings:
             logger.error("Could not find user_settings for user %s", query.from_user.id)
-            return False, _("An error occurred. Please try again later."), None
+            return False, _(MSG_GENERAL_ERROR), None
 
         if new_lang_code == user_settings.language_code:
             return True, "", None

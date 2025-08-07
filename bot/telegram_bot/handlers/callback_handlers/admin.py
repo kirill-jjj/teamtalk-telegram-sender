@@ -13,6 +13,7 @@ import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_tt_user_display_name
@@ -51,7 +52,7 @@ def _handle_pytalk_error(
     else:
         logger.exception(log_message, action, user_id_to_log, server_host)
 
-    return False, _("An error occurred. Please try again later.")
+    return False, _(MSG_GENERAL_ERROR)
 
 
 async def _apply_user_moderation(

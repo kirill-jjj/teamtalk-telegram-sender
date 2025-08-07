@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 import pytalk
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.models import OperationResult
@@ -151,9 +152,7 @@ async def _display_linkable_tt_accounts_page(
             "_display_linkable_tt_accounts_page: query.bot is None. "
             "Cannot display list."
         )
-        await query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     await display_paginated_list(

@@ -23,7 +23,11 @@ from pytalk.user_account import UserAccount as TeamTalkUserAccount
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
-from bot.constants import TT_HELP_MESSAGE_PART_DELAY, TT_MAX_MESSAGE_BYTES
+from bot.constants import (
+    MSG_GENERAL_ERROR,
+    TT_HELP_MESSAGE_PART_DELAY,
+    TT_MAX_MESSAGE_BYTES,
+)
 from bot.database.engine import AsyncSessionFactoryType
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.utils import send_telegram_message
@@ -366,9 +370,7 @@ def handle_command_errors(
                 if reply_to_user_on_error:
                     try:
                         # Ensure generic error message is translatable
-                        error_msg_for_user = _(
-                            "An error occurred. Please try again later."
-                        )
+                        error_msg_for_user = _(MSG_GENERAL_ERROR)
                         tt_message.reply(error_msg_for_user)
                     except (
                         Exception

@@ -9,6 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
 
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -41,7 +42,7 @@ async def _show_user_buttons(
             "tt_instance is None.",
             tt_connection.server_info.host,
         )
-        await message.reply(_("An error occurred. Please try again later."))
+        await message.reply(_(MSG_GENERAL_ERROR))
         return
     my_user_id = tt_instance.getMyUserID()
 
@@ -50,7 +51,7 @@ async def _show_user_buttons(
             "[%s] Could not get own user ID in _show_user_buttons.",
             tt_connection.server_info.host,
         )
-        await message.reply(_("An error occurred. Please try again later."))
+        await message.reply(_(MSG_GENERAL_ERROR))
         return
 
     online_users = list(tt_connection.online_users_cache.values())

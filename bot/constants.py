@@ -32,6 +32,11 @@ DEEPLINK_TOKEN_LENGTH_BYTES = 16
 
 # --- Timeouts and Delays ---
 
+# --- UI Message Keys ---
+# Used with gettext _() to provide consistent, translatable user-facing messages.
+MSG_GENERAL_ERROR = "An error occurred. Please try again later."
+
+
 # --- Callback Prefixes ---
 CB_PREFIX_SETTINGS_NAV = "settings_nav"
 CB_PREFIX_LANG_SET = "lang_set"

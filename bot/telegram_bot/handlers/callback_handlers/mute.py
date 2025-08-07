@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 import pytalk
 
-from bot.constants import USERS_PER_PAGE
+from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
     NotificationControl,
@@ -28,10 +28,10 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
-from bot.telegram_bot.keyboards import (
-    create_account_list_keyboard,
-    create_manage_muted_users_keyboard,
-    create_paginated_user_list_keyboard,
+from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
+from bot.telegram_bot.keyboards.shared import (
+    _build_user_toggle_keyboard,
+    _create_back_button_text,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
@@ -67,9 +67,7 @@ async def _display_user_list_generic(
         sorted_items = sorted(items, key=sort_key_extractor)
     except Exception:
         logger.exception("Failed to fetch or sort user list.")
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     if callback_query.bot is None:
@@ -77,9 +75,7 @@ async def _display_user_list_generic(
             "_display_user_list_generic: callback_query.bot is None. "
             "Cannot display list."
         )
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     await display_paginated_list(
@@ -120,9 +116,7 @@ async def _display_internal_user_list(
         empty_list_text_str = _("Your whitelist is empty.")
     else:
         logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     await _display_user_list_generic(
@@ -134,10 +128,18 @@ async def _display_internal_user_list(
         sort_key_extractor=lambda x: x.lower(),
         title_text=header_text_str,
         empty_list_text=empty_list_text_str,
-        keyboard_factory=create_paginated_user_list_keyboard,
+        keyboard_factory=_build_user_toggle_keyboard,
         keyboard_factory_kwargs={
-            "list_type": list_type,
             "user_settings": user_settings,
+            "list_type_for_callback": list_type,
+            "item_username_extractor": lambda item: item,
+            "item_display_name_extractor": lambda item: item,
+            "back_button_callback_data": NotificationCallback(
+                action=NotificationControl.MANAGE_MUTED
+            ).pack(),
+            "back_button_text_key": _create_back_button_text(
+                translator, "Mute Management"
+            ),
         },
     )
 
@@ -168,6 +170,9 @@ async def _display_all_server_accounts_list(
     async def fetcher() -> list[pytalk.UserAccount]:
         return list(tt_connection.user_accounts_cache.values())
 
+    def username_extractor(item: pytalk.UserAccount) -> str:
+        return cast(str, ttstr(item.username))
+
     await _display_user_list_generic(
         callback_query=callback_query,
         translator=translator,
@@ -181,8 +186,19 @@ async def _display_all_server_accounts_list(
         ),
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
-        keyboard_factory=create_account_list_keyboard,
-        keyboard_factory_kwargs={"user_settings": user_settings},
+        keyboard_factory=_build_user_toggle_keyboard,
+        keyboard_factory_kwargs={
+            "user_settings": user_settings,
+            "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
+            "item_username_extractor": username_extractor,
+            "item_display_name_extractor": username_extractor,
+            "back_button_callback_data": NotificationCallback(
+                action=NotificationControl.MANAGE_MUTED
+            ).pack(),
+            "back_button_text_key": _create_back_button_text(
+                translator, "Mute Management"
+            ),
+        },
         server_host_for_display=tt_connection.server_info.host,
     )
 
@@ -316,9 +332,7 @@ async def show_manage_muted_menu(
             "Cannot show manage muted menu for event without a user, "
             "user_settings is None."
         )
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     manage_muted_builder = await create_manage_muted_users_keyboard(
@@ -365,9 +379,7 @@ async def set_mute_mode(
     )
 
     if not updated_user_settings:
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         current_settings_for_keyboard = user_settings
     else:
         mode_text = (
@@ -446,9 +458,7 @@ async def display_all_accounts_list(
             "Cannot display all accounts list for event without a user, "
             "user_settings is None."
         )
-        await callback_query.answer(
-            _("An error occurred. Please try again later."), show_alert=True
-        )
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
     if not tt_connection:
