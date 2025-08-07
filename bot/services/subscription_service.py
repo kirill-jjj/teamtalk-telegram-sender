@@ -23,15 +23,19 @@ class SubscriptionService:
         self._cache = cache
 
     async def create_subscription(
-        self, user_settings: UserSettings, tt_username: str
+        self,
+        user_settings: UserSettings,
+        tt_username: str,
+        uow: IUnitOfWork | None = None,
     ) -> bool:
         """Handles all DB and cache operations for a new subscription."""
         telegram_id = user_settings.telegram_id
-        async with self._uow:
-            subscriber = await self._uow.subscribers.get_by_id(telegram_id)
+        active_uow = uow or self._uow
+        async with active_uow:
+            subscriber = await active_uow.subscribers.get_by_id(telegram_id)
             if not subscriber:
                 new_subscriber = SubscribedUser(telegram_id=telegram_id)
-                await self._uow.subscribers.add(new_subscriber)
+                await active_uow.subscribers.add(new_subscriber)
                 logger.info("User %s newly subscribed.", telegram_id)
                 self._cache.add_subscriber(telegram_id)
             else:
@@ -39,8 +43,9 @@ class SubscriptionService:
 
             user_settings.teamtalk_username = tt_username
             user_settings.not_on_online_confirmed = True
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+            await active_uow.users.save(user_settings)
+            if not uow:
+                await active_uow.commit()
 
         self._cache.update_user_settings(user_settings)
         logger.info(
@@ -79,11 +84,15 @@ class SubscriptionService:
         return True
 
     async def link_tt_account(
-        self, user_settings: UserSettings, tt_username: str
+        self,
+        user_settings: UserSettings,
+        tt_username: str,
+        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Links a TeamTalk account to a subscriber."""
-        async with self._uow:
-            if await self._uow.bans.is_teamtalk_username_banned(tt_username):
+        active_uow = uow or self._uow
+        async with active_uow:
+            if await active_uow.bans.is_teamtalk_username_banned(tt_username):
                 logger.warning(
                     "Attempt to link banned TT username '%s' to user %s.",
                     tt_username,
@@ -98,8 +107,9 @@ class SubscriptionService:
             original_tt_username = user_settings.teamtalk_username
             user_settings.teamtalk_username = tt_username
             user_settings.not_on_online_confirmed = True
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+            await active_uow.users.save(user_settings)
+            if not uow:
+                await active_uow.commit()
 
         self._cache.update_user_settings(user_settings)
         logger.info(

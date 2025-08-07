@@ -6,6 +6,7 @@ from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
@@ -33,13 +34,13 @@ async def refresh_banned_list_view(
     callback_data: SubscriberCallback,
     translator: NullTranslations,
     bot: EventBot,
-    ban_repo: BanRepository,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the banned user list view."""
     await _show_banned_list_page(
         target=query,
-        ban_repo=ban_repo,
+        ban_repo=uow.bans,
         bot=bot,
         page=callback_data.page,
         translator=translator,
@@ -52,9 +53,12 @@ async def refresh_banned_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_banned_list_view)
 async def unban_subscriber(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
+    bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
@@ -62,7 +66,7 @@ async def unban_subscriber(
     target_telegram_id = callback_data.target_telegram_id
 
     async with uow:
-        result = await moderation_service.unban_subscriber(target_telegram_id)
+        result = await moderation_service.unban_subscriber(target_telegram_id, uow=uow)
         message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, message, None
 
@@ -72,15 +76,14 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback,
     translator: NullTranslations,
     bot: EventBot,
-    user_repo: UserRepository,
-    subscriber_repo: SubscriberRepository,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
     await _show_subscriber_list_page(
         target=query,
-        user_repo=user_repo,
-        subscriber_repo=subscriber_repo,
+        user_repo=uow.users,
+        subscriber_repo=uow.subscribers,
         bot=bot,
         translator=translator,
         page=callback_data.page,
@@ -93,10 +96,13 @@ async def refresh_subscriber_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def ban_subscriber(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
+    bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber."""
@@ -105,7 +111,7 @@ async def ban_subscriber(
 
     async with uow:
         result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, tt_connection
+            target_telegram_id, translator, tt_connection, uow=uow
         )
 
         if result.long_message:

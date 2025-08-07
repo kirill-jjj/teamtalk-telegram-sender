@@ -75,7 +75,7 @@ async def on_ban_subscriber_confirm(
 
     async with uow:
         result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, tt_connection
+            target_telegram_id, translator, tt_connection, uow=uow
         )
 
         if result.long_message:

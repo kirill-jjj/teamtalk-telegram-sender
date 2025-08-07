@@ -5,7 +5,7 @@ import logging
 
 from aiogram.types import Message
 
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.deeplink_service import DeeplinkService
 
@@ -17,7 +17,7 @@ async def handle_deeplink(
     token: str,
     translator: NullTranslations,
     user_settings: UserSettings,
-    deeplink_repo: DeeplinkRepository,
+    uow: IUnitOfWork,
     deeplink_service: DeeplinkService,
 ) -> None:
     """Handles a /start command with a deeplink token.
@@ -29,7 +29,7 @@ async def handle_deeplink(
         token: The deeplink token from the command arguments.
         translator: The gettext translator object.
         user_settings: The UserSettings object for the user.
-        deeplink_repo: The deeplink repository.
+        uow: The unit of work.
         deeplink_service: The deeplink service.
     """
     _ = translator.gettext
@@ -38,7 +38,7 @@ async def handle_deeplink(
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    deeplink = await deeplink_repo.get_and_delete_if_expired(token)
+    deeplink = await uow.deeplinks.get_and_delete_if_expired(token)
     if not deeplink:
         await message.reply(_("Invalid or expired deeplink."))
         return
@@ -53,9 +53,9 @@ async def handle_deeplink(
         return
 
     reply_text = await deeplink_service.execute_deeplink(
-        deeplink, user_settings, translator
+        deeplink, user_settings, translator, uow
     )
     await message.reply(reply_text)
 
     # The token is now used, so we should delete it.
-    await deeplink_repo.delete(deeplink)
+    await uow.deeplinks.delete(deeplink)

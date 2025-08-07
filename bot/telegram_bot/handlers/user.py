@@ -51,7 +51,7 @@ async def on_start_with_payload(
             token,
             translator,
             user_settings,
-            deeplink_repo=uow.deeplinks,
+            uow=uow,
             deeplink_service=deeplink_service,
         )
 

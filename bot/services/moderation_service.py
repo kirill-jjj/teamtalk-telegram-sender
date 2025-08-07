@@ -31,29 +31,32 @@ class ModerationService:
         telegram_id: int,
         translator: NullTranslations,
         tt_connection: TeamTalkConnection | None,
+        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Bans a user and deletes their profile within a single transaction."""
         _ = translator.gettext
+        active_uow = uow or self._uow
 
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
+        async with active_uow:
+            user_settings = await active_uow.users.get_by_id(telegram_id)
             tt_username = user_settings.teamtalk_username if user_settings else None
 
             # Ban Telegram ID
-            await self._uow.bans.add_ban(
+            await active_uow.bans.add_ban(
                 telegram_id=telegram_id, reason="Banned by admin"
             )
             # Ban TeamTalk username if it exists
             if tt_username:
-                await self._uow.bans.add_ban(
+                await active_uow.bans.add_ban(
                     teamtalk_username=tt_username,
                     reason=f"Linked to banned TG ID {telegram_id}",
                 )
 
             # Delete profile within the same transaction
-            await self._subscription_service.delete_profile(telegram_id, uow=self._uow)
+            await self._subscription_service.delete_profile(telegram_id, uow=active_uow)
 
-            await self._uow.commit()
+            if not uow:
+                await active_uow.commit()
 
         # Conceptual server moderation
         if tt_username and tt_connection:
@@ -69,22 +72,26 @@ class ModerationService:
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 
-    async def unban_subscriber(self, telegram_id: int) -> OperationResult:
+    async def unban_subscriber(
+        self, telegram_id: int, uow: IUnitOfWork | None = None
+    ) -> OperationResult:
         """Unbans a subscriber by removing all their ban entries."""
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
+        active_uow = uow or self._uow
+        async with active_uow:
+            user_settings = await active_uow.users.get_by_id(telegram_id)
             tt_username = user_settings.teamtalk_username if user_settings else None
 
             # Remove bans by Telegram ID
-            await self._uow.bans.remove_by_telegram_id(telegram_id)
+            await active_uow.bans.remove_by_telegram_id(telegram_id)
 
             # Remove bans by TeamTalk username
             if tt_username:
-                tt_bans = await self._uow.bans.get_by_teamtalk_username(tt_username)
+                tt_bans = await active_uow.bans.get_by_teamtalk_username(tt_username)
                 for ban in tt_bans:
-                    await self._uow.bans.delete(ban)
+                    await active_uow.bans.delete(ban)
 
-            await self._uow.commit()
+            if not uow:
+                await active_uow.commit()
 
         logger.info("Successfully unbanned user %s.", telegram_id)
         return OperationResult(
@@ -98,9 +105,11 @@ class ModerationService:
         user_settings: UserSettings,
         tt_username_to_toggle: str,
         translator: NullTranslations,
+        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Toggles the mute status of a TeamTalk user for a given user."""
         _ = translator.gettext
+        active_uow = uow or self._uow
         existing_entry = next(
             (
                 entry
@@ -121,9 +130,10 @@ class ModerationService:
             user_settings.muted_users_list.append(new_entry)
             action = "muted"
 
-        async with self._uow:
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+        async with active_uow:
+            await active_uow.users.save(user_settings)
+            if not uow:
+                await active_uow.commit()
 
         self._cache.update_user_settings(user_settings)
 

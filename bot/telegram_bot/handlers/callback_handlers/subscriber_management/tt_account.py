@@ -215,7 +215,7 @@ async def link_tt_account_chosen(
             return
 
         operation_result: OperationResult = await subscription_service.link_tt_account(
-            user_settings, tt_username_to_link
+            user_settings, tt_username_to_link, uow=uow
         )
 
         alert_message_args = operation_result.message_args or {}

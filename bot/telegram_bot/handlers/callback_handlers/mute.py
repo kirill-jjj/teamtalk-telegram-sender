@@ -17,6 +17,7 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
+from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.user_settings_service import UserSettingsService
@@ -466,7 +467,7 @@ async def display_all_accounts_list(
 async def toggle_user_mute(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    uow: FromDishka[IUnitOfWork],
     tt_connection: FromDishka[TeamTalkConnection | None],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
@@ -476,40 +477,55 @@ async def toggle_user_mute(
     username_to_toggle = None
     list_type = callback_data.list_type
 
-    if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-        if tt_connection:
-            username_to_toggle = await _get_username_from_all_accounts(
-                callback_data, tt_connection
+    async with uow:
+        user_settings = await uow.users.get_by_id(callback_query.from_user.id)
+        if not user_settings:
+            logger.warning(
+                "Could not get user settings for user %s in toggle_user_mute",
+                callback_query.from_user.id,
             )
-    elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-        username_to_toggle = _get_username_from_muted_list(callback_data, user_settings)
+            await callback_query.answer(
+                _("An error occurred. Please try again."), show_alert=True
+            )
+            return
 
-    if not username_to_toggle:
-        logger.warning(
-            "Could not determine username to toggle mute for user %s. "
-            "Callback data: %s",
-            callback_query.from_user.id,
-            callback_data,
+        if list_type == UserListAction.LIST_ALL_ACCOUNTS:
+            if tt_connection:
+                username_to_toggle = await _get_username_from_all_accounts(
+                    callback_data, tt_connection
+                )
+        elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
+            username_to_toggle = _get_username_from_muted_list(
+                callback_data, user_settings
+            )
+
+        if not username_to_toggle:
+            logger.warning(
+                "Could not determine username to toggle mute for user %s. "
+                "Callback data: %s",
+                callback_query.from_user.id,
+                callback_data,
+            )
+            await callback_query.answer(
+                _("Error determining user to mute/unmute. Try again."),
+                show_alert=True,
+            )
+            return
+
+        result = await moderation_service.toggle_mute_status(
+            user_settings, username_to_toggle, translator, uow=uow
         )
-        await callback_query.answer(
-            _("Error determining user to mute/unmute. Try again."), show_alert=True
+
+        toast_message = translator.gettext(result.message_key).format(
+            **(result.message_args or {})
         )
-        return
+        await callback_query.answer(toast_message, show_alert=not result.success)
 
-    result = await moderation_service.toggle_mute_status(
-        user_settings, username_to_toggle, translator
-    )
-
-    toast_message = translator.gettext(result.message_key).format(
-        **(result.message_args or {})
-    )
-    await callback_query.answer(toast_message, show_alert=not result.success)
-
-    if result.success and result.user_settings:
-        await _refresh_mute_related_ui(
-            callback_query,
-            translator,
-            result.user_settings,
-            tt_connection,
-            callback_data,
-        )
+        if result.success and result.user_settings:
+            await _refresh_mute_related_ui(
+                callback_query,
+                translator,
+                result.user_settings,
+                tt_connection,
+                callback_data,
+            )
