@@ -24,6 +24,7 @@ from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
+from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
