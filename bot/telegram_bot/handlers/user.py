@@ -12,7 +12,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.utils import build_help_message
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
@@ -41,18 +41,19 @@ async def on_start_with_payload(
     token: str,
     translator: Annotated[NullTranslations, FromDishka()],
     user_settings: Annotated[UserSettings, FromDishka()],
-    deeplink_repo: Annotated[DeeplinkRepository, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
     deeplink_service: Annotated[DeeplinkService, FromDishka()],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
-    await handle_deeplink(
-        message,
-        token,
-        translator,
-        user_settings,
-        deeplink_repo=deeplink_repo,
-        deeplink_service=deeplink_service,
-    )
+    async with uow:
+        await handle_deeplink(
+            message,
+            token,
+            translator,
+            user_settings,
+            deeplink_repo=uow.deeplinks,
+            deeplink_service=deeplink_service,
+        )
 
 
 @user_commands_router.message(CommandStart(deep_link=False))
