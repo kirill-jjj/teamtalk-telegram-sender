@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from gettext import GNUTranslations, NullTranslations
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from bot.config import Settings
 from bot.database.engine import AsyncSessionFactoryType
@@ -15,8 +15,6 @@ from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.services.cache_service import CacheService
-from bot.services.deeplink_service import DeeplinkService
-from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
     on_add_admin,
@@ -57,11 +55,11 @@ class CommandRouter:
         self.translator_factory = translator_factory
         self.connection = connection
         self.bot = bot
-        self.handlers = {
+        self.handlers: dict[str, Callable[..., Awaitable[None]]] = {
             tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe,
             tt_cmds.TT_CMD_UNSUBSCRIBE: on_unsubscribe,
-            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin,
-            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin,
+            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin,  # type: ignore[dict-item]
+            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin,  # type: ignore[dict-item]
             tt_cmds.TT_CMD_HELP: on_help,
         }
 
@@ -75,36 +73,67 @@ class CommandRouter:
     ) -> None:
         """Routes a command to the appropriate handler."""
         handler = self.handlers.get(cmd)
-        if handler:
-            # Manually create dependencies for the TT bot command handlers
-            user_repo = UserRepository(session)
-            ban_repo = BanRepository(session)
-            admin_repo = AdminRepository(session)
-            subscriber_repo = SubscriberRepository(session)
-            deeplink_repo = DeeplinkRepository(session)
-            subscription_service = SubscriptionService(
-                user_repo, subscriber_repo, ban_repo, self.cache
-            )
-            deeplink_service = DeeplinkService(
-                subscription_service, ban_repo, admin_repo, self.cache
-            )
-
-            handler_type = Callable[..., Awaitable[None]]
-            typed_handler = cast(handler_type, handler)
-
-            kwargs = {
-                "tt_message": tt_message,
-                "translator": translator,
-                "settings": self.settings,
-                "cache": self.cache,
-                "bot": self.bot,
-                "user_repo": user_repo,
-                "admin_repo": admin_repo,
-                "deeplink_repo": deeplink_repo,
-            }
-            if cmd in [tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN]:
-                kwargs["args_str"] = args
-
-            await typed_handler(**kwargs)
-        else:
+        if not handler:
             await on_unknown(tt_message, translator, connection=self.connection)
+            return
+
+        # Создаем все возможные зависимости один раз
+        user_repo = UserRepository(session)
+        admin_repo = AdminRepository(session)
+        deeplink_repo = DeeplinkRepository(session)
+        # ban_repo и subscriber_repo не используются напрямую в текущих TT-командах,
+        # но могут понадобиться в будущем. Оставим их создание для полноты.
+        _ = BanRepository(session)
+        _ = SubscriberRepository(session)
+
+        # Пул всех доступных зависимостей
+        dependencies_pool: dict[str, Any] = {
+            "tt_message": tt_message,
+            "translator": translator,
+            "settings": self.settings,
+            "cache": self.cache,
+            "bot": self.bot,
+            "user_repo": user_repo,
+            "admin_repo": admin_repo,
+            "deeplink_repo": deeplink_repo,
+            "args_str": args,
+        }
+
+        # Определяем, какие зависимости нужны каждому обработчику
+        handler_dependencies: dict[Callable[..., Any], list[str]] = {
+            on_subscribe: ["tt_message", "deeplink_repo", "translator", "settings", "bot"],
+            on_unsubscribe: ["tt_message", "deeplink_repo", "translator", "settings", "bot"],
+            on_add_admin: [
+                "tt_message",
+                "translator",
+                "settings",
+                "cache",
+                "bot",
+                "admin_repo",
+                "user_repo",
+                "args_str",
+            ],
+            on_remove_admin: [
+                "tt_message",
+                "translator",
+                "settings",
+                "cache",
+                "bot",
+                "admin_repo",
+                "user_repo",
+                "args_str",
+            ],
+            on_help: ["tt_message", "translator", "settings"],
+        }
+
+        required_deps_names = handler_dependencies.get(handler)
+
+        if required_deps_names:
+            # Собираем kwargs только с нужными зависимостями
+            kwargs_for_handler = {dep: dependencies_pool[dep] for dep in required_deps_names}
+            await handler(**kwargs_for_handler)
+        else:
+            logger.error(
+                "Handler for command '%s' found but its dependencies are not defined in command_router.",
+                cmd,
+            )

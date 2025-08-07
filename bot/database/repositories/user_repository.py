@@ -24,7 +24,7 @@ class UserRepository(BaseRepository[UserSettings]):
         statement = (
             select(UserSettings)
             .where(UserSettings.telegram_id == pk)
-            .options(selectinload(UserSettings.muted_users_list))
+            .options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
         )
         result = await self._session.exec(statement)
         return result.first()
@@ -55,7 +55,7 @@ class UserRepository(BaseRepository[UserSettings]):
     async def get_all(self) -> list[UserSettings]:
         """Retrieves all instances of the model, preloading muted users."""
         statement = select(self._model).options(
-            selectinload(UserSettings.muted_users_list)
+            selectinload(UserSettings.muted_users_list)  # type: ignore[arg-type]
         )
         result = await self._session.exec(statement)
         return list(result.all())
@@ -65,7 +65,7 @@ class UserRepository(BaseRepository[UserSettings]):
         statement = (
             select(UserSettings)
             .where(UserSettings.telegram_id.in_(telegram_ids))  # type: ignore[attr-defined]
-            .options(selectinload(UserSettings.muted_users_list))
+            .options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
         )
         result = await self._session.exec(statement)
         return list(result.all())
