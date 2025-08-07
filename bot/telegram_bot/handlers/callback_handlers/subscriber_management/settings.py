@@ -98,19 +98,25 @@ async def admin_set_setting_choice(
 
     config_map: dict[SubscriberCommand, SettingChoiceConfig] = {
         SubscriberCommand.ADMIN_SET_LANGUAGE: {
-            "message_text": _("Select new language for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+            "message_text": _("Select new language for subscriber {tg_id}:").format(
+                tg_id=target_telegram_id
+            ),
             "keyboard_factory": create_admin_subscriber_lang_keyboard,
             "keyboard_factory_kwargs": {"available_languages": available_languages},
         },
         SubscriberCommand.ADMIN_SET_NOTIF_PREF: {
-            "message_text": _("Select notification preference for subscriber {tg_id}:").format(
-                tg_id=target_telegram_id
-            ),
+            "message_text": _(
+                "Select notification preference for subscriber {tg_id}:"
+            ).format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_notification_pref_keyboard,
-            "keyboard_factory_kwargs": {"current_setting": user_settings.notification_settings},
+            "keyboard_factory_kwargs": {
+                "current_setting": user_settings.notification_settings
+            },
         },
         SubscriberCommand.ADMIN_SET_MUTE_MODE: {
-            "message_text": _("Select mute list mode for subscriber {tg_id}:").format(tg_id=target_telegram_id),
+            "message_text": _("Select mute list mode for subscriber {tg_id}:").format(
+                tg_id=target_telegram_id
+            ),
             "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
             "keyboard_factory_kwargs": {"current_mode": user_settings.mute_list_mode},
         },
@@ -134,7 +140,9 @@ async def admin_set_setting_choice(
     )
 
 
-@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON))
+@settings_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON)
+)
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
@@ -151,11 +159,17 @@ async def admin_toggle_noon(
     if not user_settings:
         return False, _("Subscriber settings not found."), None
 
-    updated_settings = await user_settings_service.toggle_noon_setting(user_settings, actor=Actor.ADMIN)
+    updated_settings = await user_settings_service.toggle_noon_setting(
+        user_settings, actor=Actor.ADMIN
+    )
 
     if updated_settings:
-        status = _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
-        msg = _("NOON for subscriber {tg_id} set to: {status}.").format(tg_id=target_telegram_id, status=status)
+        status = (
+            _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
+        )
+        msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
+            tg_id=target_telegram_id, status=status
+        )
         return True, msg, updated_settings
     return False, _("Failed to toggle NOON status."), None
 
@@ -182,16 +196,24 @@ def _build_mute_list_title(
 ) -> str:
     """Builds the title for the mute list view."""
     _ = translator.gettext
-    mode = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+    mode = (
+        _("Blacklist")
+        if user_settings.mute_list_mode == MuteListMode.blacklist
+        else _("Whitelist")
+    )
     return "\n".join(
         [
-            _("Mute list for: {name} (ID: {id})").format(name=subscriber_display_name, id=user_settings.telegram_id),
+            _("Mute list for: {name} (ID: {id})").format(
+                name=subscriber_display_name, id=user_settings.telegram_id
+            ),
             _("Mute Mode: {mode}").format(mode=mode),
         ]
     )
 
 
-@settings_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_VIEW_MUTE_LIST))
+@settings_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_VIEW_MUTE_LIST)
+)
 @ensure_message_context
 async def admin_view_mute_list(
     query: CallbackQuery,
@@ -223,7 +245,9 @@ async def _display_subscriber_mute_list_page(
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    user_settings, display_name = await _fetch_mute_list_data(user_repo, target_telegram_id, bot)
+    user_settings, display_name = await _fetch_mute_list_data(
+        user_repo, target_telegram_id, bot
+    )
     if not user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
@@ -234,7 +258,9 @@ async def _display_subscriber_mute_list_page(
         target=query,
         bot=query.bot,
         translator=translator,
-        items=sorted([mu.muted_teamtalk_username for mu in user_settings.muted_users_list]),
+        items=sorted(
+            [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
+        ),
         page=mute_list_page_num,
         title_text=_build_mute_list_title(translator, user_settings, display_name),
         empty_list_text=_("The mute list is currently empty."),
@@ -309,14 +335,16 @@ async def admin_set_any_subscriber_setting(
         updated_settings = await user_settings_service.update_notification_preference(
             user_settings, new_pref, Actor.ADMIN
         )
-        success_msg = _("Notification preference for subscriber {tg_id} set to: {value}.").format(
-            tg_id=target_telegram_id, value=new_pref.value
-        )
+        success_msg = _(
+            "Notification preference for subscriber {tg_id} set to: {value}."
+        ).format(tg_id=target_telegram_id, value=new_pref.value)
     elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
-        updated_settings = await user_settings_service.update_mute_mode(user_settings, callback_data.mode, Actor.ADMIN)
-        success_msg = _("Mute list mode for subscriber {tg_id} set to: {value}.").format(
-            tg_id=target_telegram_id, value=callback_data.mode.value
+        updated_settings = await user_settings_service.update_mute_mode(
+            user_settings, callback_data.mode, Actor.ADMIN
         )
+        success_msg = _(
+            "Mute list mode for subscriber {tg_id} set to: {value}."
+        ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
 
     if updated_settings:
         return True, success_msg, updated_settings

@@ -33,8 +33,12 @@ class UserSettings(SQLModel, table=True):
 
     telegram_id: int = Field(default=None, primary_key=True, index=True)
     language_code: str = Field(nullable=False)
-    notification_settings: NotificationSetting = Field(default=NotificationSetting.ALL, nullable=False)
-    mute_list_mode: "MuteListMode" = Field(default=MuteListMode.blacklist, nullable=False)
+    notification_settings: NotificationSetting = Field(
+        default=NotificationSetting.ALL, nullable=False
+    )
+    mute_list_mode: "MuteListMode" = Field(
+        default=MuteListMode.blacklist, nullable=False
+    )
     teamtalk_username: str | None = Field(default=None, index=True)
     not_on_online_enabled: bool = Field(default=False, nullable=False)
     not_on_online_confirmed: bool = Field(default=False, nullable=False)
@@ -56,7 +60,9 @@ class MutedUser(SQLModel, table=True):
     muted_teamtalk_username: str = Field(index=True, nullable=False)
 
     # Foreign key to UserSettings table
-    user_settings_telegram_id: int = Field(foreign_key="user_settings.telegram_id", nullable=False)
+    user_settings_telegram_id: int = Field(
+        foreign_key="user_settings.telegram_id", nullable=False
+    )
 
     # Relationship back to UserSettings
     user_settings: "UserSettings" = Relationship(back_populates="muted_users_list")
@@ -107,7 +113,8 @@ class BanList(SQLModel, table=True):
     # Constraint to ensure at least one identifier is present
     __table_args__ = (
         CheckConstraint(
-            "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL", name="ck_ban_list_identifier_not_both_null"
+            "telegram_id IS NOT NULL OR teamtalk_username IS NOT NULL",
+            name="ck_ban_list_identifier_not_both_null",
         ),
     )
 
@@ -120,6 +127,10 @@ class OperationResult(SQLModel):
 
     success: bool
     message_key: str  # For localization key, e.g., "link_tt_account_success_linked"
-    message_args: dict[str, Any] | None = Field(default=None)  # For formatting the localized string
-    user_settings: UserSettings | None = Field(default=None)  # Optional UserSettings object
+    message_args: dict[str, Any] | None = Field(
+        default=None
+    )  # For formatting the localized string
+    user_settings: UserSettings | None = Field(
+        default=None
+    )  # Optional UserSettings object
     long_message: str | None = Field(default=None)  # For detailed reports

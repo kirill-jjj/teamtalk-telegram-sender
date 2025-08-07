@@ -29,9 +29,9 @@ async def universal_error_handler(
 
     # Attempt to notify the user about the problem
     update_dict = event.update.model_dump(exclude_unset=True)
-    chat_id = update_dict.get("message", {}).get("chat", {}).get("id") or update_dict.get("callback_query", {}).get(
-        "from", {}
-    ).get("id")
+    chat_id = update_dict.get("message", {}).get("chat", {}).get(
+        "id"
+    ) or update_dict.get("callback_query", {}).get("from", {}).get("id")
 
     if chat_id:
         try:
@@ -55,6 +55,8 @@ async def universal_error_handler(
                 f"Update: <code>{event.update}</code>",
             )
         except TelegramAPIError:
-            logger.exception("Failed to send the critical error message to admin %s", admin_id)
+            logger.exception(
+                "Failed to send the critical error message to admin %s", admin_id
+            )
 
     return True  # Tell the dispatcher that the error has been handled

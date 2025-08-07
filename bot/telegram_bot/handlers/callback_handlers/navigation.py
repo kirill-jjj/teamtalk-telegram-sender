@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")
 
 
-@navigation_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN))
+@navigation_router.callback_query(
+    SettingsCallback.filter(F.action == SettingsNavAction.BACK_TO_MAIN)
+)
 @ensure_message_context
 async def back_to_main_settings_menu(
     callback_query: CallbackQuery,

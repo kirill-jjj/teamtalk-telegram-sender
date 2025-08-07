@@ -57,13 +57,18 @@ def route_event_to_connection(
         # Special handling for on_my_connection_lost
         if (
             not tt_instance
-            and handler_method_on_event_handler_class.__name__ == "on_pytalk_my_connection_lost"
+            and handler_method_on_event_handler_class.__name__
+            == "on_pytalk_my_connection_lost"
             and isinstance(event_primary_obj, PytalkServer)
             and event_primary_obj.info
         ):
-            connection = self_event_handler._get_connection_by_server_info(event_primary_obj.info)
+            connection = self_event_handler._get_connection_by_server_info(
+                event_primary_obj.info
+            )
             if connection:
-                await connection.on_my_connection_lost(event_primary_obj, *args, **kwargs)
+                await connection.on_my_connection_lost(
+                    event_primary_obj, *args, **kwargs
+                )
             else:
                 logger.error(
                     "Decorator: ConnectionLost: No connection by server_info for %s",
@@ -71,11 +76,16 @@ def route_event_to_connection(
                 )
             return
 
-        method_name_on_connection = handler_method_on_event_handler_class.__name__.replace("on_pytalk_", "on_")
+        method_name_on_connection = (
+            handler_method_on_event_handler_class.__name__.replace("on_pytalk_", "on_")
+        )
         handler_name_for_logs = handler_method_on_event_handler_class.__name__
 
         if not tt_instance:
-            if handler_name_for_logs in ("on_pytalk_user_account_new", "on_pytalk_user_account_remove"):
+            if handler_name_for_logs in (
+                "on_pytalk_user_account_new",
+                "on_pytalk_user_account_remove",
+            ):
                 await _broadcast_event_to_all_connections(
                     self_event_handler,
                     event_primary_obj,
@@ -94,7 +104,9 @@ def route_event_to_connection(
 
         connection = self_event_handler._get_connection_by_instance(tt_instance)
         if connection:
-            actual_connection_method = getattr(connection, method_name_on_connection, None)
+            actual_connection_method = getattr(
+                connection, method_name_on_connection, None
+            )
             if actual_connection_method and callable(actual_connection_method):
                 await actual_connection_method(event_primary_obj, *args, **kwargs)
             else:
@@ -129,14 +141,22 @@ async def _broadcast_event_to_all_connections(
     )
     broadcast_count = 0
     if not hasattr(self_event_handler, "connections"):
-        logger.error("Broadcast: connections unavailable for '%s'.", handler_name_for_logs)
+        logger.error(
+            "Broadcast: connections unavailable for '%s'.", handler_name_for_logs
+        )
         return
 
     for conn_key, connection_obj in self_event_handler.connections.items():
         if not isinstance(connection_obj, TeamTalkConnection):
-            logger.error("Broadcast: Invalid obj for key '%s' (event: '%s'). Skip.", conn_key, handler_name_for_logs)
+            logger.error(
+                "Broadcast: Invalid obj for key '%s' (event: '%s'). Skip.",
+                conn_key,
+                handler_name_for_logs,
+            )
             continue
-        actual_connection_method = getattr(connection_obj, method_name_on_connection, None)
+        actual_connection_method = getattr(
+            connection_obj, method_name_on_connection, None
+        )
         if actual_connection_method and callable(actual_connection_method):
             try:
                 await actual_connection_method(event_primary_obj, *args, **kwargs)
@@ -156,9 +176,16 @@ async def _broadcast_event_to_all_connections(
                 handler_name_for_logs,
             )
     if broadcast_count > 0:
-        logger.info("Broadcast: Event '%s' sent to %d connections.", handler_name_for_logs, broadcast_count)
+        logger.info(
+            "Broadcast: Event '%s' sent to %d connections.",
+            handler_name_for_logs,
+            broadcast_count,
+        )
     else:
-        logger.warning("Broadcast: Evt '%s' for broadcast, not sent to any conns.", handler_name_for_logs)
+        logger.warning(
+            "Broadcast: Evt '%s' for broadcast, not sent to any conns.",
+            handler_name_for_logs,
+        )
 
 
 class TeamTalkEventHandler:
@@ -187,7 +214,9 @@ class TeamTalkEventHandler:
         self.connections = connections
         self.logger = logger
         self._register_pytalk_event_handlers()
-        self.logger.info("TeamTalkEventHandler initialized and Pytalk event handlers registered.")
+        self.logger.info(
+            "TeamTalkEventHandler initialized and Pytalk event handlers registered."
+        )
 
     def _register_pytalk_event_handlers(self) -> None:
         """Registers Pytalk event handlers with the PytalkBot instance."""
@@ -207,15 +236,21 @@ class TeamTalkEventHandler:
         for event_name, handler_method in event_handlers_map.items():
             setattr(self.tt_bot, event_name, self.tt_bot.event(handler_method))
 
-    def _get_connection_by_instance(self, tt_instance: pytalk.instance.TeamTalkInstance) -> TeamTalkConnection | None:
+    def _get_connection_by_instance(
+        self, tt_instance: pytalk.instance.TeamTalkInstance
+    ) -> TeamTalkConnection | None:
         """Retrieves an active TeamTalkConnection associated with the given Pytalk instance."""
         for conn in self.connections.values():
             if conn.instance is tt_instance:
                 return conn
-        self.logger.warning("Could not find active TeamTalkConnection for instance: %s", tt_instance)
+        self.logger.warning(
+            "Could not find active TeamTalkConnection for instance: %s", tt_instance
+        )
         return None
 
-    def _get_connection_by_server_info(self, server_info: pytalk.TeamTalkServerInfo) -> TeamTalkConnection | None:
+    def _get_connection_by_server_info(
+        self, server_info: pytalk.TeamTalkServerInfo
+    ) -> TeamTalkConnection | None:
         """Retrieves an active TeamTalkConnection by server host and port."""
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         return self.connections.get(server_key)
@@ -233,7 +268,9 @@ class TeamTalkEventHandler:
             password=tt_config.password,
             encrypted=tt_config.encrypted,
             nickname=self.settings.teamtalk.nick_name,
-            join_channel_id=int(tt_config.channel) if tt_config.channel.isdigit() else INVALID_CHANNEL_ID,
+            join_channel_id=int(tt_config.channel)
+            if tt_config.channel.isdigit()
+            else INVALID_CHANNEL_ID,
             join_channel_password=tt_config.channel_password or "",
         )
         server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
@@ -266,7 +303,9 @@ class TeamTalkEventHandler:
         """Routes the bot's own login event to the appropriate connection via decorator."""
 
     @route_event_to_connection
-    async def on_pytalk_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
+    async def on_pytalk_user_join(
+        self, user: PytalkUser, channel: PytalkChannel
+    ) -> None:
         """Routes a user join event to the appropriate connection via decorator."""
 
     @route_event_to_connection
@@ -274,7 +313,9 @@ class TeamTalkEventHandler:
         """Routes a connection lost event for the bot to the appropriate connection via decorator."""
 
     @route_event_to_connection
-    async def on_pytalk_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
+    async def on_pytalk_my_kicked_from_channel(
+        self, channel_obj: PytalkChannel
+    ) -> None:
         """Routes a kicked from channel event for the bot to the appropriate connection via decorator."""
 
     @route_event_to_connection

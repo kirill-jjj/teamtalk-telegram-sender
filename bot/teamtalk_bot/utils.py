@@ -82,7 +82,9 @@ def get_effective_server_name(
     return server_name if server_name else _("Unknown Server")
 
 
-def get_tt_user_display_name(user: TeamTalkUser, translator: gettext.NullTranslations) -> str:
+def get_tt_user_display_name(
+    user: TeamTalkUser, translator: gettext.NullTranslations
+) -> str:
     """Gets a display-friendly name for a TeamTalk user.
 
     Prioritizes nickname, then username. Falls back to a localized "unknown user".
@@ -115,7 +117,9 @@ def get_username_as_str(user_or_account: TeamTalkUser | TeamTalkUserAccount) -> 
     username = None
     if hasattr(user_or_account, "username"):
         username = user_or_account.username
-    elif hasattr(user_or_account, "_account") and hasattr(user_or_account._account, "szUsername"):
+    elif hasattr(user_or_account, "_account") and hasattr(
+        user_or_account._account, "szUsername"
+    ):
         username = user_or_account._account.szUsername
     elif hasattr(user_or_account, "szUsername"):
         username = user_or_account.szUsername
@@ -131,7 +135,11 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
     """Safely shuts down a single TeamTalk instance."""
     try:
         host_info = "Unknown Host"
-        if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
+        if (
+            hasattr(instance, "server_info")
+            and instance.server_info
+            and hasattr(instance.server_info, "host")
+        ):
             host_info = ttstr(instance.server_info.host)
 
         if instance.logged_in:
@@ -144,9 +152,18 @@ async def shutdown_tt_instance(instance: TeamTalkInstance) -> None:
             logger.debug("Closing TT instance: %s", host_info)
             instance.closeTeamTalk()
         logger.info("Successfully shut down TT instance for host: %s", host_info)
-    except (pytalk.exceptions.TeamTalkException, TimeoutError, ConnectionError, OSError):
+    except (
+        pytalk.exceptions.TeamTalkException,
+        TimeoutError,
+        ConnectionError,
+        OSError,
+    ):
         host_info_err = "Unknown Host (during error)"
-        if hasattr(instance, "server_info") and instance.server_info and hasattr(instance.server_info, "host"):
+        if (
+            hasattr(instance, "server_info")
+            and instance.server_info
+            and hasattr(instance.server_info, "host")
+        ):
             host_info_err = ttstr(instance.server_info.host)
         logger.exception("Error during TT instance shutdown for %s.", host_info_err)
 
@@ -180,8 +197,12 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
 
             if current_chunk_bytes_len + char_bytes_len > max_len_bytes:
                 if last_safe_split_index_in_chunk != -1:
-                    parts_to_send_list.append(current_chunk_str[:last_safe_split_index_in_chunk])
-                    remaining_text = remaining_text[last_safe_split_index_in_remaining:].lstrip()
+                    parts_to_send_list.append(
+                        current_chunk_str[:last_safe_split_index_in_chunk]
+                    )
+                    remaining_text = remaining_text[
+                        last_safe_split_index_in_remaining:
+                    ].lstrip()
                 else:
                     parts_to_send_list.append(current_chunk_str)
                     remaining_text = remaining_text[i:].lstrip()
@@ -206,13 +227,17 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
 
 
 async def send_long_tt_reply(
-    reply_method: Callable[[str], None], text: str, max_len_bytes: int = TT_MAX_MESSAGE_BYTES
+    reply_method: Callable[[str], None],
+    text: str,
+    max_len_bytes: int = TT_MAX_MESSAGE_BYTES,
 ) -> None:
     """Splits a long text message into parts suitable for TeamTalk and sends them."""
     if not text:
         return
 
-    parts_to_send_list = await asyncio.to_thread(_split_text_for_tt, text, max_len_bytes)
+    parts_to_send_list = await asyncio.to_thread(
+        _split_text_for_tt, text, max_len_bytes
+    )
 
     for part_idx, part_to_send_str in enumerate(parts_to_send_list):
         if part_to_send_str.strip():
@@ -243,11 +268,15 @@ async def forward_tt_message_to_telegram_admin(
     """Forwards a private TeamTalk message to the configured Telegram admin."""
     _ = translator.gettext
     if not settings.telegram.admin_chat_id or not bot:
-        logger.debug("Telegram admin chat ID or message bot not configured. Skipping TT forward.")
+        logger.debug(
+            "Telegram admin chat ID or message bot not configured. Skipping TT forward."
+        )
         return
 
     admin_chat_id = settings.telegram.admin_chat_id
-    server_name_to_display = get_effective_server_name(message.teamtalk_instance, translator, settings)
+    server_name_to_display = get_effective_server_name(
+        message.teamtalk_instance, translator, settings
+    )
     sender_display = get_tt_user_display_name(message.user, translator)
     message_content = message.content
 
@@ -273,14 +302,22 @@ async def forward_tt_message_to_telegram_admin(
     if was_sent:
         message.reply(_("Message sent to Telegram successfully."))
     else:
-        message.reply(_("Failed to send message: {error}").format(error=_("Failed to deliver message to Telegram")))
+        message.reply(
+            _("Failed to send message: {error}").format(
+                error=_("Failed to deliver message to Telegram")
+            )
+        )
 
 
 # --- Error Handling Decorator ---
 
 
-P = ParamSpec("P")  # ParamSpec might not be used with ... but kept for potential future refinement
-R = TypeVar("R")  # TypeVar for the return type of the original function (though simplified to Any below)
+P = ParamSpec(
+    "P"
+)  # ParamSpec might not be used with ... but kept for potential future refinement
+R = TypeVar(
+    "R"
+)  # TypeVar for the return type of the original function (though simplified to Any below)
 
 
 # Type for the original function that will be decorated.
@@ -294,15 +331,23 @@ WrappedFunctionType = Callable[..., Awaitable[None]]
 TTCommandHandlerDecorator = Callable[[OriginalFunctionType], WrappedFunctionType]
 
 
-def handle_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHandlerDecorator:
+def handle_command_errors(
+    *, reply_to_user_on_error: bool = True
+) -> TTCommandHandlerDecorator:
     """Decorator to handle common exceptions for TeamTalk command handlers."""
 
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
-        async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+        async def wrapper(
+            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
+        ) -> None:
             try:
                 await func(tt_message, *args, **kwargs)
-            except (TelegramAPIError, SQLAlchemyError, pytalk.exceptions.TeamTalkException):
+            except (
+                TelegramAPIError,
+                SQLAlchemyError,
+                pytalk.exceptions.TeamTalkException,
+            ):
                 # Try to get translator from kwargs for the error message
                 translator = kwargs.get("translator")
                 _ = (
@@ -314,17 +359,25 @@ def handle_command_errors(*, reply_to_user_on_error: bool = True) -> TTCommandHa
                 logger.exception(
                     "Error in TeamTalk command '%s' for user %s.",
                     func.__name__,
-                    ttstr(tt_message.user.username) if tt_message and tt_message.user else "Unknown TT User",
+                    ttstr(tt_message.user.username)
+                    if tt_message and tt_message.user
+                    else "Unknown TT User",
                 )
                 if reply_to_user_on_error:
                     try:
                         # Ensure generic error message is translatable
-                        error_msg_for_user = _("An error occurred. Please try again later.")
+                        error_msg_for_user = _(
+                            "An error occurred. Please try again later."
+                        )
                         tt_message.reply(error_msg_for_user)
-                    except Exception:  # Removed reply_exc as it's not used in log for TRY401
+                    except (
+                        Exception
+                    ):  # Removed reply_exc as it's not used in log for TRY401
                         logger.exception(
                             "Failed to send error reply to TT user %s after command '%s' failed.",
-                            ttstr(tt_message.user.username) if tt_message and tt_message.user else "Unknown TT User",
+                            ttstr(tt_message.user.username)
+                            if tt_message and tt_message.user
+                            else "Unknown TT User",
                             func.__name__,
                         )
 

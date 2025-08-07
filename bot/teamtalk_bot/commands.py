@@ -62,7 +62,9 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
-    async def wrapper(tt_message: TeamTalkMessage, *args: Any, **kwargs: Any) -> Any | None:
+    async def wrapper(
+        tt_message: TeamTalkMessage, *args: Any, **kwargs: Any
+    ) -> Any | None:
         settings = kwargs.get("settings")
         if not isinstance(settings, Settings):
             raise MissingSettingsError
@@ -70,7 +72,10 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
         if not isinstance(translator, NullTranslations):
             raise MissingTranslatorError
         _ = translator.gettext
-        if not settings.general.admin_username or ttstr(tt_message.user.username) != settings.general.admin_username:
+        if (
+            not settings.general.admin_username
+            or ttstr(tt_message.user.username) != settings.general.admin_username
+        ):
             logger.warning(
                 "Unauthorized admin command by TT user %s for %s.",
                 ttstr(tt_message.user.username),
@@ -97,8 +102,15 @@ def _create_admin_action_report(
     reply_parts = []
     if success_count > 0:
         reply_parts.append(success_message_direct)
-    errors = [_(error_msg_source).format(telegram_id=failed_id) for failed_id in failed_ids]
-    errors.extend([_(invalid_id_msg_source).format(telegram_id_str=invalid_entry) for invalid_entry in invalid_entries])
+    errors = [
+        _(error_msg_source).format(telegram_id=failed_id) for failed_id in failed_ids
+    ]
+    errors.extend(
+        [
+            _(invalid_id_msg_source).format(telegram_id_str=invalid_entry)
+            for invalid_entry in invalid_entries
+        ]
+    )
     if errors:
         header = _(header_source)
         error_list_str = "\n".join(f"- {error}" for error in errors)
@@ -150,9 +162,15 @@ async def _manage_admin_ids(
                 if admin:
                     await admin_repo.delete(admin)
 
-            cache.add_admin(telegram_id) if action_type == "add" else cache.remove_admin(telegram_id)
-            user_settings = await user_repo.get_or_create(telegram_id, {"language_code": settings.general.default_lang})
-            await update_user_bot_commands(telegram_id, user_settings.language_code, cache, bot, translator)
+            cache.add_admin(
+                telegram_id
+            ) if action_type == "add" else cache.remove_admin(telegram_id)
+            user_settings = await user_repo.get_or_create(
+                telegram_id, {"language_code": settings.general.default_lang}
+            )
+            await update_user_bot_commands(
+                telegram_id, user_settings.language_code, cache, bot, translator
+            )
             success_count += 1
         except Exception:
             failed_action_ids.append(telegram_id)
@@ -166,9 +184,9 @@ async def _manage_admin_ids(
             "Successfully removed {count} admins.",
         )
     )
-    success_message = translator.ngettext(success_msg_single, success_msg_plural, success_count).format(
-        count=success_count
-    )
+    success_message = translator.ngettext(
+        success_msg_single, success_msg_plural, success_count
+    ).format(count=success_count)
 
     report = _create_admin_action_report(
         translator,
@@ -279,7 +297,9 @@ async def on_add_admin(
         args_str=args_str,
         translator=translator,
         action_type="add",
-        prompt_msg_key=_("Please provide Telegram IDs. Example: {cmd} 12345678").format(cmd=tt_cmds.TT_CMD_ADD_ADMIN),
+        prompt_msg_key=_("Please provide Telegram IDs. Example: {cmd} 12345678").format(
+            cmd=tt_cmds.TT_CMD_ADD_ADMIN
+        ),
         error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
         invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric ID."),
         header_msg_key=_("Action Results:"),
@@ -332,7 +352,10 @@ async def on_help(
 ) -> None:
     """Handles the /help command from a TeamTalk user."""
     tt_username_str = ttstr(tt_message.user.username)
-    is_main_tt_admin = bool(settings.general.admin_username and tt_username_str == settings.general.admin_username)
+    is_main_tt_admin = bool(
+        settings.general.admin_username
+        and tt_username_str == settings.general.admin_username
+    )
     help_text = build_help_message(
         translator,
         "teamtalk",
@@ -358,7 +381,9 @@ async def on_unknown(
             tt_cmds.TT_CMD_HELP,
         ]
     )
-    reply_text = _("Unknown command. Available commands: {commands}.").format(commands=available_commands)
+    reply_text = _("Unknown command. Available commands: {commands}.").format(
+        commands=available_commands
+    )
     tt_message.reply(reply_text)
     logger.warning(
         "Unknown TT command from %s on %s: %s",

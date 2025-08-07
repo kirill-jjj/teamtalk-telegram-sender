@@ -31,11 +31,15 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
     ) -> Any:  # noqa: ANN401
         """Executes the middleware."""
         container = data["dishka_container"]
-        connections: dict[str, TeamTalkConnection] = await container.get(dict[str, TeamTalkConnection])
+        connections: dict[str, TeamTalkConnection] = await container.get(
+            dict[str, TeamTalkConnection]
+        )
         determined_connection: TeamTalkConnection | None = None
 
         if not connections:
-            logger.warning("ActiveTeamTalkConnectionMiddleware: No TeamTalk connections found.")
+            logger.warning(
+                "ActiveTeamTalkConnectionMiddleware: No TeamTalk connections found."
+            )
             data["tt_connection"] = None
             return await handler(event, data)
 
@@ -61,7 +65,9 @@ class ActiveTeamTalkConnectionMiddleware(BaseMiddleware):
                 determined_connection.server_info.host,
             )
         else:
-            logger.warning("ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk connection to provide.")
+            logger.warning(
+                "ActiveTeamTalkConnectionMiddleware: Could not determine a TeamTalk connection to provide."
+            )
 
         data["tt_connection"] = determined_connection
         return await handler(event, data)

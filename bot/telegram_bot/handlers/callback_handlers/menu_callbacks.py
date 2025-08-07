@@ -89,7 +89,10 @@ async def menu_kick_handler(
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
-    await _show_user_buttons(query.message, AdminCommand.KICK, translator, tt_connection)  # type: ignore[arg-type]
+    if isinstance(query.message, Message):
+        await _show_user_buttons(
+            query.message, AdminCommand.KICK, translator, tt_connection
+        )
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"))
@@ -100,10 +103,15 @@ async def menu_ban_handler(
     tt_connection: TeamTalkConnection,
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
-    await _show_user_buttons(query.message, AdminCommand.BAN, translator, tt_connection)  # type: ignore[arg-type]
+    if isinstance(query.message, Message):
+        await _show_user_buttons(
+            query.message, AdminCommand.BAN, translator, tt_connection
+        )
 
 
-@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "subscribers"))
+@admin_menu_callback_router.callback_query(
+    MenuCallback.filter(F.command == "subscribers")
+)
 @ensure_message_context
 async def menu_subscribers_handler(
     query: CallbackQuery,

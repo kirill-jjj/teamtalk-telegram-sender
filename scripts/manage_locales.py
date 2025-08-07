@@ -32,7 +32,10 @@ def get_project_version() -> str:
         version = data.get("project", {}).get("version")
         if version:
             return str(version)
-        print("⚠️ Warning: Version not found in pyproject.toml under project.version.", file=sys.stderr)
+        print(
+            "⚠️ Warning: Version not found in pyproject.toml under project.version.",
+            file=sys.stderr,
+        )
     except FileNotFoundError:
         print(
             f"⚠️ Warning: pyproject.toml not found at {pyproject_path}. Cannot determine project version.",
@@ -41,7 +44,10 @@ def get_project_version() -> str:
         return "0.0.0"  # Fallback version
     # Broader catch for TOML issues or structure changes
     except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e:
-        print(f"⚠️ Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
+        print(
+            f"⚠️ Warning: Could not read version from pyproject.toml: {e}",
+            file=sys.stderr,
+        )
         return "0.0.0"  # Fallback version
     else:
         # This path is reached if 'version' is None after data.get("project", {}).get("version")
@@ -67,10 +73,15 @@ def extract() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
+        subprocess.run(
+            command, check=True, cwd=BASE_DIR, text=True, capture_output=True
+        )
         print(f"✅ Messages extracted to '{POT_FILE.relative_to(BASE_DIR)}'")
     except FileNotFoundError:
-        print("❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.", file=sys.stderr)
+        print(
+            "❌ Error: Command 'pybabel' not found. Make sure Babel is installed and in your PATH.",
+            file=sys.stderr,
+        )
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel extract': {e.stderr}", file=sys.stderr)
@@ -93,7 +104,9 @@ def update() -> None:
     ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
+        subprocess.run(
+            command, check=True, cwd=BASE_DIR, text=True, capture_output=True
+        )
         print("✅ Translation catalogs (.po) successfully updated by pybabel.")
     except FileNotFoundError:
         print("❌ Error: Command 'pybabel' not found.", file=sys.stderr)
@@ -105,10 +118,20 @@ def update() -> None:
 
 def compile_cmd() -> None:
     """Compiles .po translation files into binary .mo files for runtime use."""
-    command = ["pybabel", "compile", "-d", str(LOCALE_DIR), "-D", LOCALE_DOMAIN, "--statistics"]
+    command = [
+        "pybabel",
+        "compile",
+        "-d",
+        str(LOCALE_DIR),
+        "-D",
+        LOCALE_DOMAIN,
+        "--statistics",
+    ]
     print(f"▶️  Executing: {' '.join(command)}")
     try:
-        result = subprocess.run(command, check=True, cwd=BASE_DIR, text=True, capture_output=True)  # noqa: S603
+        result = subprocess.run(
+            command, check=True, cwd=BASE_DIR, text=True, capture_output=True
+        )
         if result.stdout:
             print(result.stdout.strip())
         print("✅ Translation catalogs (.mo) successfully compiled.")

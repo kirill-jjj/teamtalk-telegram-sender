@@ -24,13 +24,18 @@ def discover_languages(locales_path: Path = LOCALE_DIR) -> list[LanguageInfo]:
     """Scans the locales directory for translated languages and always includes English as the base language."""
     # 1. Start the list with English, which is the source language.
     #    Its native name is not a "translation" but metadata.
-    discovered: list[LanguageInfo] = [{"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}]
+    discovered: list[LanguageInfo] = [
+        {"code": DEFAULT_LANGUAGE_CODE, "native_name": "English"}
+    ]
 
     discovered_codes = {DEFAULT_LANGUAGE_CODE}
 
     locales_path_obj = Path(locales_path)
     if not locales_path_obj.is_dir():
-        logger.warning("Locales directory not found at %s. Only English will be available.", locales_path)
+        logger.warning(
+            "Locales directory not found at %s. Only English will be available.",
+            locales_path,
+        )
         return discovered
 
     # 2. Search for and add all other translated languages.
@@ -44,12 +49,20 @@ def discover_languages(locales_path: Path = LOCALE_DIR) -> list[LanguageInfo]:
         if lang_code_path.is_dir() and mo_file_path.is_file():
             native_name = lang_code
             try:
-                translator = gettext.translation("messages", localedir=str(locales_path_obj), languages=[lang_code])
+                translator = gettext.translation(
+                    "messages", localedir=str(locales_path_obj), languages=[lang_code]
+                )
                 native_name_translated = translator.gettext("language_native_name")
-                if native_name_translated and native_name_translated != "language_native_name":
+                if (
+                    native_name_translated
+                    and native_name_translated != "language_native_name"
+                ):
                     native_name = native_name_translated
                 else:
-                    logger.warning("'language_native_name' not translated for %s, using code as name.", lang_code)
+                    logger.warning(
+                        "'language_native_name' not translated for %s, using code as name.",
+                        lang_code,
+                    )
             except Exception as e:
                 logger.warning("Could not load native name for %s: %s", lang_code, e)
 

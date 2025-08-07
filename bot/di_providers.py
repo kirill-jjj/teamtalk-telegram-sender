@@ -44,7 +44,9 @@ def create_translator_factory(
             return translator_cache[lang_code]
         translation: NullTranslations
         try:
-            translation = gettext.translation(DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code])
+            translation = gettext.translation(
+                DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code]
+            )
         except FileNotFoundError:
             translation = gettext.NullTranslations()
         translator_cache[lang_code] = translation
@@ -77,13 +79,18 @@ class AppProvider(Provider):
     def get_bot_event(self, settings: Settings) -> EventBot:
         """Provides the event-handling Bot instance."""
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return cast(EventBot, Bot(token=settings.telegram.event_token, default=default_props))
+        return cast(
+            EventBot, Bot(token=settings.telegram.event_token, default=default_props)
+        )
 
     @provide(provides=MessageBot)
     def get_bot_message(self, settings: Settings) -> MessageBot:
         """Provides the message-sending Bot instance."""
         default_props = DefaultBotProperties(parse_mode=ParseMode.HTML)
-        return cast(MessageBot, Bot(token=settings.telegram.message_token, default=default_props))
+        return cast(
+            MessageBot,
+            Bot(token=settings.telegram.message_token, default=default_props),
+        )
 
     @provide
     def get_dispatcher(self) -> Dispatcher:
@@ -120,7 +127,9 @@ class AppProvider(Provider):
     @provide
     def get_cache_service(self) -> CacheService:
         """Provides the application-wide cache service."""
-        return CacheService(user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set())
+        return CacheService(
+            user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
+        )
 
     @provide
     def get_teamtalk_event_handler(
@@ -154,7 +163,9 @@ class RequestProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    async def get_db_session(self, factory: AsyncSessionFactoryType) -> AsyncGenerator[AsyncSession, None]:
+    async def get_db_session(
+        self, factory: AsyncSessionFactoryType
+    ) -> AsyncGenerator[AsyncSession, None]:
         """Provides a transaction-managed database session."""
         async with factory() as session:
             try:
@@ -201,7 +212,9 @@ class RequestProvider(Provider):
         return DeeplinkService(subscription_service, ban_repo, admin_repo, cache)
 
     @provide
-    def get_user_settings_service(self, user_repo: UserRepository, cache: CacheService) -> UserSettingsService:
+    def get_user_settings_service(
+        self, user_repo: UserRepository, cache: CacheService
+    ) -> UserSettingsService:
         """Provides a UserSettingsService."""
         return UserSettingsService(user_repo, cache)
 
@@ -251,7 +264,9 @@ class RequestProvider(Provider):
         """Provides UserSettings if a user is present in the event."""
         if not user:
             return None
-        return await user_settings_service.get_or_create(user.id, settings.general.default_lang)
+        return await user_settings_service.get_or_create(
+            user.id, settings.general.default_lang
+        )
 
     @provide
     def get_user_settings_guaranteed(
@@ -276,11 +291,17 @@ class RequestProvider(Provider):
         translator_factory: Callable[[str], NullTranslations],
     ) -> NullTranslations:
         """Provides a translator for the current user's language."""
-        lang_code = user_settings.language_code if user_settings else settings.general.default_lang
+        lang_code = (
+            user_settings.language_code
+            if user_settings
+            else settings.general.default_lang
+        )
         return translator_factory(lang_code)
 
     @provide(provides=TeamTalkConnection | None)
-    def get_tt_connection(self, connections: FromDishka[dict[str, TeamTalkConnection]]) -> TeamTalkConnection | None:
+    def get_tt_connection(
+        self, connections: FromDishka[dict[str, TeamTalkConnection]]
+    ) -> TeamTalkConnection | None:
         """Provides the active TeamTalk connection."""
         if not connections:
             return None

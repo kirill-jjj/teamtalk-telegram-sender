@@ -27,4 +27,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("ban_list", schema=None) as batch_op:
-        batch_op.drop_constraint(constraint_name="ck_ban_list_identifier_not_both_null", type_="check")
+        batch_op.drop_constraint(
+            constraint_name="ck_ban_list_identifier_not_both_null", type_="check"
+        )

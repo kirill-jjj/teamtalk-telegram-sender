@@ -45,7 +45,9 @@ async def refresh_banned_list_view(
     )
 
 
-@banned_user_actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.UNBAN))
+@banned_user_actions_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.UNBAN)
+)
 @ensure_message_context
 @with_view_refresh(refresh_banned_list_view)
 async def unban_subscriber(
@@ -82,7 +84,9 @@ async def refresh_subscriber_list_view(
     )
 
 
-@banned_user_actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.BAN))
+@banned_user_actions_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.BAN)
+)
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def ban_subscriber(
@@ -95,10 +99,14 @@ async def ban_subscriber(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(target_telegram_id, translator, tt_connection)
+    result = await moderation_service.ban_and_delete_subscriber(
+        target_telegram_id, translator, tt_connection
+    )
 
     if result.long_message:
-        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
+        logger.info(
+            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
+        )
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, short_message, None

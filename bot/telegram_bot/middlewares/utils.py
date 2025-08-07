@@ -12,21 +12,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def _send_error_response(event: TelegramObject, text: str, *, show_alert_for_callback: bool = True) -> None:
+async def _send_error_response(
+    event: TelegramObject, text: str, *, show_alert_for_callback: bool = True
+) -> None:
     """Internal helper to send an error response based on event type."""
     if isinstance(event, Message):
         try:
             await event.reply(text)
         except TelegramAPIError:
-            logger.exception("TelegramAPIError replying to message in _send_error_response.")
+            logger.exception(
+                "TelegramAPIError replying to message in _send_error_response."
+            )
         except Exception:  # 'e' is not used in the formatted log string
-            logger.exception("Unexpected error replying to message in _send_error_response.")
+            logger.exception(
+                "Unexpected error replying to message in _send_error_response."
+            )
     elif isinstance(event, CallbackQuery):
         try:
             await event.answer(text, show_alert=show_alert_for_callback)
         except TelegramAPIError:  # Keep 'e' for specific error logging
-            logger.exception("TelegramAPIError answering callback query in _send_error_response.")
+            logger.exception(
+                "TelegramAPIError answering callback query in _send_error_response."
+            )
         except Exception:  # 'e' is not used in the formatted log string
-            logger.exception("Unexpected error answering callback query in _send_error_response.")
+            logger.exception(
+                "Unexpected error answering callback query in _send_error_response."
+            )
     else:
         logger.warning("_send_error_response: Unhandled event type %s", type(event))

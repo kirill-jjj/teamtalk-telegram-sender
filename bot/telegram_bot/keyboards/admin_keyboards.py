@@ -62,7 +62,9 @@ async def create_banned_user_list_keyboard(
         return [
             InlineKeyboardButton(
                 text=button_text,
-                callback_data=ViewSubscriberCallback(telegram_id=user.telegram_id, page=page_num).pack(),
+                callback_data=ViewSubscriberCallback(
+                    telegram_id=user.telegram_id, page=page_num
+                ).pack(),
             ),
             InlineKeyboardButton(
                 text=_("✅ Unban"),
@@ -105,7 +107,9 @@ async def create_subscriber_list_keyboard(
         button_text = ", ".join(user_info_parts)
         return InlineKeyboardButton(
             text=button_text,
-            callback_data=ViewSubscriberCallback(telegram_id=subscriber.telegram_id, page=page_num).pack(),
+            callback_data=ViewSubscriberCallback(
+                telegram_id=subscriber.telegram_id, page=page_num
+            ).pack(),
         )
 
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
@@ -141,17 +145,29 @@ async def create_user_selection_keyboard(
     return builder
 
 
-async def create_main_menu_keyboard(translator: NullTranslations, *, is_admin: bool) -> InlineKeyboardBuilder:
+async def create_main_menu_keyboard(
+    translator: NullTranslations, *, is_admin: bool
+) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    builder.button(text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack())
-    builder.button(text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack())
+    builder.button(
+        text=_("ℹ️ Who is online?"), callback_data=MenuCallback(command="who").pack()
+    )
+    builder.button(
+        text=_("⚙️ Settings"), callback_data=MenuCallback(command="settings").pack()
+    )
     builder.button(text=_("❓ Help"), callback_data=MenuCallback(command="help").pack())
     if is_admin:
-        builder.button(text=_("👢 Kick User"), callback_data=MenuCallback(command="kick").pack())
-        builder.button(text=_("🚫 Ban User"), callback_data=MenuCallback(command="ban").pack())
-        builder.button(text=_("✅ Unban User"), callback_data=MenuCallback(command="unban").pack())
+        builder.button(
+            text=_("👢 Kick User"), callback_data=MenuCallback(command="kick").pack()
+        )
+        builder.button(
+            text=_("🚫 Ban User"), callback_data=MenuCallback(command="ban").pack()
+        )
+        builder.button(
+            text=_("✅ Unban User"), callback_data=MenuCallback(command="unban").pack()
+        )
         builder.button(
             text=_("👥 Subscribers"),
             callback_data=MenuCallback(command="subscribers").pack(),
@@ -177,7 +193,9 @@ async def create_subscriber_action_menu_keyboard(
     builder.button(
         text=_("🚫 Ban User (TG & TT)"),
         callback_data=SubscriberCallback(
-            action=SubscriberCommand.BAN, target_telegram_id=target_telegram_id, page=page
+            action=SubscriberCommand.BAN,
+            target_telegram_id=target_telegram_id,
+            page=page,
         ).pack(),
     )
     builder.button(
@@ -230,7 +248,9 @@ async def create_subscriber_action_menu_keyboard(
     )
     builder.button(
         text=_create_back_button_text(translator, "Subscribers List"),
-        callback_data=SubscriberListCallback(action=SubscriberListAction.PAGE, page=page).pack(),
+        callback_data=SubscriberListCallback(
+            action=SubscriberListAction.PAGE, page=page
+        ).pack(),
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -248,7 +268,9 @@ async def create_manage_tt_account_keyboard(
 
     if current_tt_username:
         builder.button(
-            text=_("➖ Unlink {current_tt_username}").format(current_tt_username=current_tt_username),
+            text=_("➖ Unlink {current_tt_username}").format(
+                current_tt_username=current_tt_username
+            ),
             callback_data=ManageTTAccountCallback(
                 action=ManageTTAccountAction.UNLINK,
                 target_telegram_id=target_telegram_id,
@@ -266,7 +288,9 @@ async def create_manage_tt_account_keyboard(
     )
     builder.button(
         text=_create_back_button_text(translator, "User Actions"),
-        callback_data=ViewSubscriberCallback(telegram_id=target_telegram_id, page=page).pack(),
+        callback_data=ViewSubscriberCallback(
+            telegram_id=target_telegram_id, page=page
+        ).pack(),
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -286,7 +310,9 @@ async def create_view_mute_list_keyboard(
 
     if total_pages > 1:
 
-        def mute_list_pagination_factory_adapter(**kwargs: dict[str, Any]) -> PaginateMuteListCallback:
+        def mute_list_pagination_factory_adapter(
+            **kwargs: dict[str, Any],
+        ) -> PaginateMuteListCallback:
             page_num = kwargs.pop("page")
             return PaginateMuteListCallback(mute_list_page=page_num, **kwargs)
 
@@ -335,7 +361,9 @@ async def create_admin_subscriber_mute_mode_keyboard(
             subscriber_page_context=subscriber_page_context,
         )
 
-    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+    back_button_cb_data = ViewSubscriberCallback(
+        telegram_id=target_telegram_id, page=subscriber_page_context
+    )
 
     return await _create_option_selection_keyboard(
         translator=translator,
@@ -413,7 +441,9 @@ async def create_admin_subscriber_lang_keyboard(
 
     if not available_languages:
         builder = InlineKeyboardBuilder()
-        builder.button(text=_("No languages available"), callback_data="noop_admin_lang_sel")
+        builder.button(
+            text=_("No languages available"), callback_data="noop_admin_lang_sel"
+        )
         builder.row(
             InlineKeyboardButton(
                 text=_create_back_button_text(translator, "User Actions"),
@@ -433,7 +463,9 @@ async def create_admin_subscriber_lang_keyboard(
             subscriber_page_context=subscriber_page_context,
         )
 
-    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+    back_button_cb_data = ViewSubscriberCallback(
+        telegram_id=target_telegram_id, page=subscriber_page_context
+    )
 
     return await _create_option_selection_keyboard(
         translator=translator,
@@ -455,11 +487,20 @@ async def create_admin_subscriber_notification_pref_keyboard(
     """Creates the notification preference selection keyboard for an admin."""
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
-        NotificationSetting.LEAVE_OFF: ("Join Only", NotificationSetting.LEAVE_OFF.value),
-        NotificationSetting.JOIN_OFF: ("Leave Only", NotificationSetting.JOIN_OFF.value),
+        NotificationSetting.LEAVE_OFF: (
+            "Join Only",
+            NotificationSetting.LEAVE_OFF.value,
+        ),
+        NotificationSetting.JOIN_OFF: (
+            "Leave Only",
+            NotificationSetting.JOIN_OFF.value,
+        ),
         NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
     }
-    options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
+    options = [
+        (val_str, text_source)
+        for _setting_enum, (text_source, val_str) in settings_map_source.items()
+    ]
 
     def notif_pref_callback_factory(
         setting_value_str: str,
@@ -470,7 +511,9 @@ async def create_admin_subscriber_notification_pref_keyboard(
             subscriber_page_context=subscriber_page_context,
         )
 
-    back_button_cb_data = ViewSubscriberCallback(telegram_id=target_telegram_id, page=subscriber_page_context)
+    back_button_cb_data = ViewSubscriberCallback(
+        telegram_id=target_telegram_id, page=subscriber_page_context
+    )
 
     return await _create_option_selection_keyboard(
         translator=translator,

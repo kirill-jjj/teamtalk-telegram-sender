@@ -10,7 +10,9 @@ from bot.models import UserSettings
 logger = logging.getLogger(__name__)
 
 
-async def update_user_settings_in_db(session: AsyncSession, settings: UserSettings) -> bool:
+async def update_user_settings_in_db(
+    session: AsyncSession, settings: UserSettings
+) -> bool:
     """Updates user settings in the database.
 
     Cache update is handled by the caller.
@@ -26,7 +28,9 @@ async def update_user_settings_in_db(session: AsyncSession, settings: UserSettin
         await session.refresh(settings, attribute_names=["muted_users_list"])
         logger.debug("Updated settings for user %s in DB.", settings.telegram_id)
     except SQLAlchemyError:
-        logger.exception("Error updating settings for user %s in DB.", settings.telegram_id)
+        logger.exception(
+            "Error updating settings for user %s in DB.", settings.telegram_id
+        )
         return False
     else:
         return True

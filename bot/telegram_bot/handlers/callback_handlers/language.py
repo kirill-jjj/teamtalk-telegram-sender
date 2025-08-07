@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 language_router = Router(name="callback_handlers.language")
 
 
-@language_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE))
+@language_router.callback_query(
+    SettingsCallback.filter(F.action == SettingsNavAction.LANGUAGE)
+)
 @ensure_message_context
 async def show_language_menu(
     callback_query: CallbackQuery,
@@ -32,7 +34,9 @@ async def show_language_menu(
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext
-    language_markup = await create_language_selection_keyboard(translator, available_languages=available_languages)
+    language_markup = await create_language_selection_keyboard(
+        translator, available_languages=available_languages
+    )
 
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
@@ -43,7 +47,9 @@ async def show_language_menu(
     )
 
 
-@language_router.callback_query(LanguageCallback.filter(F.action == LanguageChoice.SET_LANG))
+@language_router.callback_query(
+    LanguageCallback.filter(F.action == LanguageChoice.SET_LANG)
+)
 @ensure_message_context
 @with_view_refresh(refresh_main_settings_view)
 async def set_language(
@@ -60,7 +66,10 @@ async def set_language(
     new_lang_code = callback_data.lang_code
 
     if not new_lang_code:
-        logger.warning("LanguageCallback received with lang_code=None for user %s", query.from_user.id)
+        logger.warning(
+            "LanguageCallback received with lang_code=None for user %s",
+            query.from_user.id,
+        )
         return False, _("Invalid language selection."), None
 
     if new_lang_code == user_settings.language_code:
@@ -76,5 +85,9 @@ async def set_language(
 
     if updated_settings:
         new_translator = translator_factory(new_lang_code)
-        return True, new_translator.gettext("Language has been changed."), updated_settings
+        return (
+            True,
+            new_translator.gettext("Language has been changed."),
+            updated_settings,
+        )
     return False, _("Failed to change language. Please try again."), None

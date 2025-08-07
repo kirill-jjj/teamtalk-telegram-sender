@@ -5,7 +5,11 @@ from gettext import NullTranslations
 import logging
 
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeAllPrivateChats,
+    BotCommandScopeChat,
+)
 
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
@@ -21,7 +25,9 @@ def get_user_commands(_: Callable[[str], str]) -> list[BotCommand]:
         BotCommand(command="menu", description=_("Show main menu with all commands")),
         BotCommand(command="who", description=_("Show online users in TeamTalk")),
         BotCommand(command="help", description=_("Show this help message")),
-        BotCommand(command="settings", description=_("Access interactive settings menu")),
+        BotCommand(
+            command="settings", description=_("Access interactive settings menu")
+        ),
     ]
 
 
@@ -30,8 +36,12 @@ def get_admin_commands(_: Callable[[str], str]) -> list[BotCommand]:
     admin_specific = [
         BotCommand(command="kick", description=_("Kick TT user (admin, via buttons)")),
         BotCommand(command="ban", description=_("Ban TT user (admin, via buttons)")),
-        BotCommand(command="unban", description=_("Unban user (shows a list of banned users)")),
-        BotCommand(command="subscribers", description=_("View and manage subscribed users")),
+        BotCommand(
+            command="unban", description=_("Unban user (shows a list of banned users)")
+        ),
+        BotCommand(
+            command="subscribers", description=_("View and manage subscribed users")
+        ),
     ]
     return get_user_commands(_) + admin_specific
 
@@ -55,11 +65,17 @@ async def set_telegram_commands(
             await bot.set_my_commands(
                 commands=user_commands,
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code if lang_code != settings.general.default_lang else None,
+                language_code=lang_code
+                if lang_code != settings.general.default_lang
+                else None,
             )
-            logger.info("Successfully set global user commands for language: '%s'.", lang_code)
+            logger.info(
+                "Successfully set global user commands for language: '%s'.", lang_code
+            )
         except TelegramAPIError:
-            logger.exception("Failed to set global commands for language '%s'.", lang_code)
+            logger.exception(
+                "Failed to set global commands for language '%s'.", lang_code
+            )
 
     for admin_id in cache.get_all_admin_ids():
         admin_lang_code = settings.general.default_lang
@@ -75,11 +91,21 @@ async def set_telegram_commands(
             await bot.set_my_commands(
                 commands=admin_commands,
                 scope=admin_scope,
-                language_code=admin_lang_code if admin_lang_code != settings.general.default_lang else None,
+                language_code=admin_lang_code
+                if admin_lang_code != settings.general.default_lang
+                else None,
             )
-            logger.info("Successfully set custom commands for admin %s in language '%s'.", admin_id, admin_lang_code)
+            logger.info(
+                "Successfully set custom commands for admin %s in language '%s'.",
+                admin_id,
+                admin_lang_code,
+            )
         except TelegramAPIError:
-            logger.exception("Failed to set commands for admin %s (lang: %s).", admin_id, admin_lang_code)
+            logger.exception(
+                "Failed to set commands for admin %s (lang: %s).",
+                admin_id,
+                admin_lang_code,
+            )
 
 
 async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:
@@ -90,4 +116,7 @@ async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:
     except TelegramAPIError:
         logger.exception("Failed to clear commands for chat_id %s.", chat_id)
     except Exception:
-        logger.exception("An unexpected error occurred while clearing commands for chat_id %s.", chat_id)
+        logger.exception(
+            "An unexpected error occurred while clearing commands for chat_id %s.",
+            chat_id,
+        )

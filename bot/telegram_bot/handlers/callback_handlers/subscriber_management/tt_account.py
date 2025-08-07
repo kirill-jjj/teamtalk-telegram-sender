@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
 
 
-@tt_account_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.MANAGE_TT_ACCOUNT))
+@tt_account_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.MANAGE_TT_ACCOUNT)
+)
 @ensure_message_context
 async def manage_tt_account(
     query: CallbackQuery,
@@ -54,9 +56,9 @@ async def manage_tt_account(
         current_tt_username=current_tt_username,
         page=return_page,
     )
-    message_text = _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-        telegram_id=target_telegram_id
-    )
+    message_text = _(
+        "Manage TeamTalk account link for subscriber {telegram_id}:"
+    ).format(telegram_id=target_telegram_id)
 
     await safe_edit_text(
         message_to_edit=cast(Message, query.message),
@@ -66,7 +68,9 @@ async def manage_tt_account(
     await query.answer()
 
 
-@tt_account_router.callback_query(ManageTTAccountCallback.filter(F.action == ManageTTAccountAction.LINK_NEW))
+@tt_account_router.callback_query(
+    ManageTTAccountCallback.filter(F.action == ManageTTAccountAction.LINK_NEW)
+)
 @ensure_message_context
 async def link_new_tt_account_choice(
     query: CallbackQuery,
@@ -102,18 +106,24 @@ async def _display_linkable_tt_accounts_page(
             query.from_user.id,
         )
         await query.answer(
-            _("TeamTalk server accounts are currently unavailable. Please try again later."),
+            _(
+                "TeamTalk server accounts are currently unavailable. Please try again later."
+            ),
             show_alert=True,
         )
         return
 
-    all_server_accounts: list[pytalk.UserAccount] = list(tt_connection.user_accounts_cache.values())
+    all_server_accounts: list[pytalk.UserAccount] = list(
+        tt_connection.user_accounts_cache.values()
+    )
 
     try:
         sdk_ttstr = pytalk.instance.sdk.ttstr
         all_server_accounts.sort(
             key=lambda acc: (
-                sdk_ttstr(acc.username).lower() if isinstance(acc.username, str | bytes) else str(acc.username).lower()
+                sdk_ttstr(acc.username).lower()
+                if isinstance(acc.username, str | bytes)
+                else str(acc.username).lower()
             )
         )
     except Exception:
@@ -122,19 +132,23 @@ async def _display_linkable_tt_accounts_page(
             query.from_user.id,
         )
 
-    title_text = _("Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:").format(
-        server_host=tt_connection.server_info.host, telegram_id=target_telegram_id
-    )
+    title_text = _(
+        "Select a TeamTalk account from {server_host} to link to subscriber {telegram_id}:"
+    ).format(server_host=tt_connection.server_info.host, telegram_id=target_telegram_id)
     empty_list_text = _("No TeamTalk server accounts found on {server_host}.").format(
         server_host=tt_connection.server_info.host
     )
     if not all_server_accounts:
-        empty_list_text = _("No TeamTalk server accounts found on {server_host} or unable to fetch.").format(
-            server_host=tt_connection.server_info.host
-        )
+        empty_list_text = _(
+            "No TeamTalk server accounts found on {server_host} or unable to fetch."
+        ).format(server_host=tt_connection.server_info.host)
     if query.bot is None:
-        logger.error("_display_linkable_tt_accounts_page: query.bot is None. Cannot display list.")
-        await query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.error(
+            "_display_linkable_tt_accounts_page: query.bot is None. Cannot display list."
+        )
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     await display_paginated_list(
@@ -194,7 +208,9 @@ async def link_tt_account_chosen(
         await query.answer(_("Subscriber not found."), show_alert=True)
         return
 
-    operation_result: OperationResult = await subscription_service.link_tt_account(user_settings, tt_username_to_link)
+    operation_result: OperationResult = await subscription_service.link_tt_account(
+        user_settings, tt_username_to_link
+    )
 
     alert_message_args = operation_result.message_args or {}
     if "tt_username" not in alert_message_args:
@@ -207,10 +223,14 @@ async def link_tt_account_chosen(
 
     final_tt_username_for_keyboard: str | None
     if operation_result.success and operation_result.user_settings:
-        final_tt_username_for_keyboard = operation_result.user_settings.teamtalk_username
+        final_tt_username_for_keyboard = (
+            operation_result.user_settings.teamtalk_username
+        )
     else:
         user_s_for_kb = await user_repo.get_by_id(target_telegram_id)
-        final_tt_username_for_keyboard = user_s_for_kb.teamtalk_username if user_s_for_kb else None
+        final_tt_username_for_keyboard = (
+            user_s_for_kb.teamtalk_username if user_s_for_kb else None
+        )
 
     updated_keyboard = await create_manage_tt_account_keyboard(
         translator,
@@ -219,6 +239,8 @@ async def link_tt_account_chosen(
         page=return_page,
     )
     await cast(Message, query.message).edit_text(
-        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(telegram_id=target_telegram_id),
+        _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
+            telegram_id=target_telegram_id
+        ),
         reply_markup=updated_keyboard,
     )

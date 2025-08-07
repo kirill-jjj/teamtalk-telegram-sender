@@ -64,7 +64,9 @@ async def create_language_selection_keyboard(
     options = [(lang["code"], lang["native_name"]) for lang in available_languages]
 
     def lang_callback_factory(lang_code_value: str) -> LanguageCallback:
-        return LanguageCallback(action=LanguageChoice.SET_LANG, lang_code=lang_code_value)
+        return LanguageCallback(
+            action=LanguageChoice.SET_LANG, lang_code=lang_code_value
+        )
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
@@ -85,14 +87,25 @@ async def create_subscription_settings_keyboard(
     """Creates the subscription settings keyboard using the generic helper."""
     settings_map_source = {
         NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
-        NotificationSetting.LEAVE_OFF: ("Join Only", NotificationSetting.LEAVE_OFF.value),
-        NotificationSetting.JOIN_OFF: ("Leave Only", NotificationSetting.JOIN_OFF.value),
+        NotificationSetting.LEAVE_OFF: (
+            "Join Only",
+            NotificationSetting.LEAVE_OFF.value,
+        ),
+        NotificationSetting.JOIN_OFF: (
+            "Leave Only",
+            NotificationSetting.JOIN_OFF.value,
+        ),
         NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
     }
-    options = [(val_str, text_source) for _setting_enum, (text_source, val_str) in settings_map_source.items()]
+    options = [
+        (val_str, text_source)
+        for _setting_enum, (text_source, val_str) in settings_map_source.items()
+    ]
 
     def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
-        return SubscriptionCallback(action=SubscriptionSetting.SET_SUB, setting_value=setting_value_str)
+        return SubscriptionCallback(
+            action=SubscriptionSetting.SET_SUB, setting_value=setting_value_str
+        )
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
@@ -120,11 +133,15 @@ async def create_notification_settings_keyboard(
 
     builder.button(
         text=noon_button_text,
-        callback_data=NotificationCallback(action=NotificationControl.TOGGLE_NOON).pack(),
+        callback_data=NotificationCallback(
+            action=NotificationControl.TOGGLE_NOON
+        ).pack(),
     )
     builder.button(
         text=_("Manage Mute List"),
-        callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
+        callback_data=NotificationCallback(
+            action=NotificationControl.MANAGE_MUTED
+        ).pack(),
     )
     builder.button(
         text=_create_back_button_text(translator, "Settings"),
@@ -143,8 +160,16 @@ async def create_manage_muted_users_keyboard(
     active_marker = "✅"
     inactive_marker = "⚪️"
 
-    blacklist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.blacklist else inactive_marker
-    whitelist_marker = active_marker if user_settings.mute_list_mode == MuteListMode.whitelist else inactive_marker
+    blacklist_marker = (
+        active_marker
+        if user_settings.mute_list_mode == MuteListMode.blacklist
+        else inactive_marker
+    )
+    whitelist_marker = (
+        active_marker
+        if user_settings.mute_list_mode == MuteListMode.whitelist
+        else inactive_marker
+    )
 
     blacklist_text = _("{marker} Blacklist Mode").format(marker=blacklist_marker)
     whitelist_text = _("{marker} Whitelist Mode").format(marker=whitelist_marker)
@@ -165,12 +190,16 @@ async def create_manage_muted_users_keyboard(
         list_mode_text = _("Manage Whitelist")
     builder.button(
         text=list_mode_text,
-        callback_data=PaginateUsersCallback(list_type=UserListAction.LIST_MUTED, page=0).pack(),
+        callback_data=PaginateUsersCallback(
+            list_type=UserListAction.LIST_MUTED, page=0
+        ).pack(),
     )
 
     builder.button(
         text=_("Mute/Unmute from Server List"),
-        callback_data=PaginateUsersCallback(list_type=UserListAction.LIST_ALL_ACCOUNTS, page=0).pack(),
+        callback_data=PaginateUsersCallback(
+            list_type=UserListAction.LIST_ALL_ACCOUNTS, page=0
+        ).pack(),
     )
     builder.button(
         text=_create_back_button_text(translator, "Notification Settings"),
@@ -205,7 +234,9 @@ async def create_paginated_user_list_keyboard(
         list_type_for_callback=list_type,
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
-        back_button_callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
+        back_button_callback_data=NotificationCallback(
+            action=NotificationControl.MANAGE_MUTED
+        ).pack(),
         back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )
 
@@ -234,6 +265,8 @@ async def create_account_list_keyboard(
         list_type_for_callback=UserListAction.LIST_ALL_ACCOUNTS,
         item_username_extractor=username_extractor,
         item_display_name_extractor=display_name_extractor,
-        back_button_callback_data=NotificationCallback(action=NotificationControl.MANAGE_MUTED).pack(),
+        back_button_callback_data=NotificationCallback(
+            action=NotificationControl.MANAGE_MUTED
+        ).pack(),
         back_button_text_key=_create_back_button_text(translator, "Mute Management"),
     )

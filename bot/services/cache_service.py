@@ -48,7 +48,9 @@ class CacheService:
 
     def get_all_admin_ids(self) -> set[int]:
         """Returns a copy of all admin IDs from the cache."""
-        return self._admin_ids_cache.copy()  # Return a copy to prevent external modification
+        return (
+            self._admin_ids_cache.copy()
+        )  # Return a copy to prevent external modification
 
     def get_admin_count(self) -> int:
         """Returns the count of admin IDs in the cache."""
@@ -87,7 +89,10 @@ class CacheService:
     def update_user_settings(self, settings: UserSettings) -> None:
         """Updates or adds user settings in the cache."""
         if not isinstance(settings, UserSettings):
-            logger.error("Attempted to update cache with non-UserSettings object: %s", type(settings))
+            logger.error(
+                "Attempted to update cache with non-UserSettings object: %s",
+                type(settings),
+            )
             return
         self._user_settings_cache[settings.telegram_id] = settings
         logger.debug("User settings for %s updated in cache.", settings.telegram_id)
@@ -98,17 +103,25 @@ class CacheService:
             del self._user_settings_cache[telegram_id]
             logger.debug("User settings for %s removed from cache.", telegram_id)
         else:
-            logger.debug("Attempted to remove user settings for %s, but user was not in cache.", telegram_id)
+            logger.debug(
+                "Attempted to remove user settings for %s, but user was not in cache.",
+                telegram_id,
+            )
 
     def load_all_user_settings(self, all_settings: list[UserSettings]) -> None:
         """Loads all user settings from a list into the cache, clearing existing ones."""
         self._user_settings_cache.clear()  # Clear before loading
         for setting in all_settings:
             if not isinstance(setting, UserSettings):
-                logger.warning("Skipping non-UserSettings object during bulk load: %s", type(setting))
+                logger.warning(
+                    "Skipping non-UserSettings object during bulk load: %s",
+                    type(setting),
+                )
                 continue
             self._user_settings_cache[setting.telegram_id] = setting
-        logger.info("Loaded %s user settings into cache.", len(self._user_settings_cache))
+        logger.info(
+            "Loaded %s user settings into cache.", len(self._user_settings_cache)
+        )
 
     # --- Comprehensive operations ---
     def remove_user_profile(self, telegram_id: int) -> None:
@@ -116,4 +129,7 @@ class CacheService:
         self.remove_admin(telegram_id)
         self.remove_subscriber(telegram_id)
         self.remove_user_settings(telegram_id)
-        logger.info("Full user profile for %s removed from all caches via CacheService.", telegram_id)
+        logger.info(
+            "Full user profile for %s removed from all caches via CacheService.",
+            telegram_id,
+        )

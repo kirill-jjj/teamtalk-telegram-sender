@@ -27,7 +27,9 @@ class UserRepository(BaseRepository[UserSettings]):
         result = await self._session.exec(statement)
         return result.first()
 
-    async def get_or_create(self, telegram_id: int, defaults: dict[str, Any] | None = None) -> UserSettings:
+    async def get_or_create(
+        self, telegram_id: int, defaults: dict[str, Any] | None = None
+    ) -> UserSettings:
         """Retrieves a UserSettings instance, or creates a new one if it does not exist."""
         user_settings = await self.get_by_id(telegram_id)
         if user_settings:

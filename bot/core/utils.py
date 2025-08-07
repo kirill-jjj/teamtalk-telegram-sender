@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def build_help_message(
-    translator: NullTranslations, platform: str, *, is_telegram_admin: bool, is_teamtalk_admin: bool
+    translator: NullTranslations,
+    platform: str,
+    *,
+    is_telegram_admin: bool,
+    is_teamtalk_admin: bool,
 ) -> str:
     """Builds a help message tailored to the platform and user's admin status.
 

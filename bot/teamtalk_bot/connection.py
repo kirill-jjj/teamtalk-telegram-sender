@@ -74,21 +74,34 @@ class TeamTalkConnection:
 
     async def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
-        logger.info("Adding server %s:%s to PytalkBot.", self.server_info.host, self.server_info.tcp_port)
+        logger.info(
+            "Adding server %s:%s to PytalkBot.",
+            self.server_info.host,
+            self.server_info.tcp_port,
+        )
         try:
             num_instances_before = len(self.pytalk_bot.teamtalks)
             await self.pytalk_bot.add_server(self.server_info)
             num_instances_after = len(self.pytalk_bot.teamtalks)
             if num_instances_after > num_instances_before:
                 self.instance = self.pytalk_bot.teamtalks[-1]
-                logger.info("Added server %s. Instance: %s", self.server_info.host, self.instance)
+                logger.info(
+                    "Added server %s. Instance: %s",
+                    self.server_info.host,
+                    self.instance,
+                )
                 self._is_finalized = False
                 self.login_complete_time = None
             else:
-                logger.error("Failed to add server %s: PytalkBot.teamtalks unchanged.", self.server_info.host)
+                logger.error(
+                    "Failed to add server %s: PytalkBot.teamtalks unchanged.",
+                    self.server_info.host,
+                )
                 return False
         except Exception:
-            logger.exception("Exception during add_server for %s.", self.server_info.host)
+            logger.exception(
+                "Exception during add_server for %s.", self.server_info.host
+            )
             return False
         else:
             return True
@@ -98,7 +111,9 @@ class TeamTalkConnection:
         if not self.instance:
             logger.error("[%s] Sync: No instance.", self.server_info.host)
             return
-        logger.info("[%s] Starting periodic online users cache sync.", self.server_info.host)
+        logger.info(
+            "[%s] Starting periodic online users cache sync.", self.server_info.host
+        )
         cfg_params = self.settings.operational_parameters
         sync_interval = cfg_params.online_users_cache_sync_interval_seconds
         reconnect_check_interval = cfg_params.tt_reconnect_check_interval_seconds
@@ -108,31 +123,49 @@ class TeamTalkConnection:
                 if self.is_ready:
                     logger.debug("[%s] Syncing online users...", self.server_info.host)
                     server_users = self.instance.server.get_users()
-                    new_cache = {user.id: user for user in server_users if hasattr(user, "id")}
+                    new_cache = {
+                        user.id: user for user in server_users if hasattr(user, "id")
+                    }
                     self.online_users_cache.clear()
                     self.online_users_cache.update(new_cache)
                     logger.debug(
-                        "[%s] Online users cache synced: %s users.", self.server_info.host, len(self.online_users_cache)
+                        "[%s] Online users cache synced: %s users.",
+                        self.server_info.host,
+                        len(self.online_users_cache),
                     )
                 else:
-                    logger.warning("[%s] Sync: TT instance not ready.", self.server_info.host)
+                    logger.warning(
+                        "[%s] Sync: TT instance not ready.", self.server_info.host
+                    )
                     await asyncio.sleep(reconnect_check_interval)
                     continue
             except TimeoutError:
-                logger.exception("[%s] Timeout in periodic sync.", self.server_info.host)
+                logger.exception(
+                    "[%s] Timeout in periodic sync.", self.server_info.host
+                )
                 await asyncio.sleep(sync_interval // 2)
             except pytalk.exceptions.TeamTalkException:
-                logger.exception("[%s] Pytalk error in periodic sync.", self.server_info.host)
-                await asyncio.sleep(reconnect_retry_interval if self.is_ready else reconnect_check_interval)
+                logger.exception(
+                    "[%s] Pytalk error in periodic sync.", self.server_info.host
+                )
+                await asyncio.sleep(
+                    reconnect_retry_interval
+                    if self.is_ready
+                    else reconnect_check_interval
+                )
             except Exception:
-                logger.exception("[%s] Unexpected error in periodic sync.", self.server_info.host)
+                logger.exception(
+                    "[%s] Unexpected error in periodic sync.", self.server_info.host
+                )
                 await asyncio.sleep(sync_interval)
             await asyncio.sleep(sync_interval)
 
     async def populate_user_accounts_cache(self) -> None:
         """Populates the cache of user accounts from the TeamTalk server."""
         if not self.is_ready:
-            logger.warning("[%s] Populate accounts: instance not ready.", self.server_info.host)
+            logger.warning(
+                "[%s] Populate accounts: instance not ready.", self.server_info.host
+            )
             return
         logger.info("[%s] Populating user accounts cache...", self.server_info.host)
         try:
@@ -142,21 +175,31 @@ class TeamTalkConnection:
                     self.user_accounts_cache.clear()
                     for acc in all_accounts:
                         username_str = (
-                            self.ttstr(acc.username) if isinstance(acc.username, bytes) else str(acc.username)
+                            self.ttstr(acc.username)
+                            if isinstance(acc.username, bytes)
+                            else str(acc.username)
                         )
                         if username_str:
                             self.user_accounts_cache[username_str] = acc
                 logger.info(
-                    "[%s] Accounts cache populated: %s accounts.", self.server_info.host, len(self.user_accounts_cache)
+                    "[%s] Accounts cache populated: %s accounts.",
+                    self.server_info.host,
+                    len(self.user_accounts_cache),
                 )
         except TimeoutError:
             logger.exception("[%s] Timeout populating accounts.", self.server_info.host)
         except pytalk.exceptions.PermissionError:
-            logger.exception("[%s] PermissionError populating accounts.", self.server_info.host)
+            logger.exception(
+                "[%s] PermissionError populating accounts.", self.server_info.host
+            )
         except pytalk.exceptions.TeamTalkException:
-            logger.exception("[%s] Pytalk error populating accounts.", self.server_info.host)
+            logger.exception(
+                "[%s] Pytalk error populating accounts.", self.server_info.host
+            )
         except Exception:
-            logger.exception("[%s] Unexpected error populating accounts.", self.server_info.host)
+            logger.exception(
+                "[%s] Unexpected error populating accounts.", self.server_info.host
+            )
 
     def start_background_tasks(self) -> None:
         """Starts background tasks for this connection (cache syncs)."""
@@ -167,7 +210,9 @@ class TeamTalkConnection:
             self._periodic_sync_task = asyncio.create_task(self._periodic_cache_sync())
             logger.info("[%s] Online users sync task started.", self.server_info.host)
         if self._populate_accounts_task is None or self._populate_accounts_task.done():
-            self._populate_accounts_task = asyncio.create_task(self.populate_user_accounts_cache())
+            self._populate_accounts_task = asyncio.create_task(
+                self.populate_user_accounts_cache()
+            )
             logger.info("[%s] Accounts cache task started.", self.server_info.host)
 
     async def stop_background_tasks(self) -> None:
@@ -185,7 +230,9 @@ class TeamTalkConnection:
                 except asyncio.CancelledError:
                     logger.info("[%s] Task %s cancelled.", self.server_info.host, name)
                 except Exception:
-                    logger.exception("[%s] Error stopping task %s.", self.server_info.host, name)
+                    logger.exception(
+                        "[%s] Error stopping task %s.", self.server_info.host, name
+                    )
             setattr(self, name, None)
         logger.info("[%s] Background tasks stopped.", self.server_info.host)
 
@@ -201,14 +248,20 @@ class TeamTalkConnection:
                     self.instance.disconnect()
                 logger.info("[%s] Instance disconnected.", self.server_info.host)
             except Exception:
-                logger.exception("[%s] Error during instance disconnect.", self.server_info.host)
+                logger.exception(
+                    "[%s] Error during instance disconnect.", self.server_info.host
+                )
         self._is_finalized = False
         self.login_complete_time = None
 
     @property
     def is_ready(self) -> bool:
         """Checks if instance is connected and logged in."""
-        return self.instance is not None and self.instance.connected and self.instance.logged_in
+        return (
+            self.instance is not None
+            and self.instance.connected
+            and self.instance.logged_in
+        )
 
     @property
     def is_finalized(self) -> bool:
@@ -218,9 +271,15 @@ class TeamTalkConnection:
     def mark_finalized(self, *, status: bool = True) -> None:
         """Marks the login sequence as finalized or not."""
         self._is_finalized = status
-        logger.info("[%s] Connection marked: %s.", self.server_info.host, "finalized" if status else "NOT finalized")
+        logger.info(
+            "[%s] Connection marked: %s.",
+            self.server_info.host,
+            "finalized" if status else "NOT finalized",
+        )
 
-    def update_caches_on_event(self, event_type: str, data: PytalkUser | PytalkUserAccount) -> None:
+    def update_caches_on_event(
+        self, event_type: str, data: PytalkUser | PytalkUserAccount
+    ) -> None:
         """Updates internal caches based on TeamTalk user or account events."""
         user_id = getattr(data, "id", None)
         username_attr = getattr(data, "username", None)
@@ -261,7 +320,9 @@ class TeamTalkConnection:
             )
         elif event_type == "user_account_remove":
             removed_acc: PytalkUserAccount = data
-            acc_username = self.ttstr(removed_acc.username) if removed_acc.username else ""
+            acc_username = (
+                self.ttstr(removed_acc.username) if removed_acc.username else ""
+            )
             if acc_username and acc_username in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username]
             logger.debug(
@@ -274,25 +335,44 @@ class TeamTalkConnection:
     async def _finalize_bot_login_sequence(self, channel: PytalkChannel) -> None:
         """Finalizes the bot's login sequence for this connection."""
         if self.is_finalized:
-            logger.info("[%s] Login sequence already finalized. Skipping.", self.server_info.host)
+            logger.info(
+                "[%s] Login sequence already finalized. Skipping.",
+                self.server_info.host,
+            )
             return
         if not self.instance:
             logger.error("[%s] No instance to finalize login.", self.server_info.host)
             return
 
-        ch_name = self.ttstr(channel.name) if hasattr(channel, "name") and channel.name else "Unknown"
-        logger.info("[%s] Bot in channel: %s. Finalizing login...", self.server_info.host, ch_name)
+        ch_name = (
+            self.ttstr(channel.name)
+            if hasattr(channel, "name") and channel.name
+            else "Unknown"
+        )
+        logger.info(
+            "[%s] Bot in channel: %s. Finalizing login...",
+            self.server_info.host,
+            ch_name,
+        )
 
-        logger.info("[%s] Initial online users cache population...", self.server_info.host)
+        logger.info(
+            "[%s] Initial online users cache population...", self.server_info.host
+        )
         try:
             users = self.instance.server.get_users()
             self.online_users_cache.clear()
             for u in users:
                 if hasattr(u, "id"):
                     self.online_users_cache[u.id] = u
-            logger.info("[%s] Online users cache init: %s users.", self.server_info.host, len(self.online_users_cache))
+            logger.info(
+                "[%s] Online users cache init: %s users.",
+                self.server_info.host,
+                len(self.online_users_cache),
+            )
         except Exception:
-            logger.exception("[%s] Error initial online users cache.", self.server_info.host)
+            logger.exception(
+                "[%s] Error initial online users cache.", self.server_info.host
+            )
 
         self.start_background_tasks()
         try:
@@ -308,10 +388,15 @@ class TeamTalkConnection:
             self.login_complete_time = datetime.now(dt.UTC)
             self.mark_finalized(status=True)
             logger.info(
-                "[%s] Login finalized at %s. Status: '%s'", self.server_info.host, self.login_complete_time, status_text
+                "[%s] Login finalized at %s. Status: '%s'",
+                self.server_info.host,
+                self.login_complete_time,
+                status_text,
             )
         except Exception:
-            logger.exception("[%s] Error finalizing login (status/time).", self.server_info.host)
+            logger.exception(
+                "[%s] Error finalizing login (status/time).", self.server_info.host
+            )
 
     async def _initiate_reconnect(self) -> None:
         """Initiates a reconnection sequence for this connection."""
@@ -340,7 +425,9 @@ class TeamTalkConnection:
             if ch_obj:
                 target_chan_name = self.ttstr(ch_obj.name)
             else:  # Channel ID specified but not found
-                logger.warning("[%s] Channel ID '%s' not found.", self.server_info.host, chan_path)
+                logger.warning(
+                    "[%s] Channel ID '%s' not found.", self.server_info.host, chan_path
+                )
                 final_chan_id = INVALID_CHANNEL_ID  # Reset if not found
         else:
             ch_obj = self.instance.get_channel_from_path(chan_path)
@@ -348,7 +435,11 @@ class TeamTalkConnection:
                 final_chan_id = ch_obj.id
                 target_chan_name = self.ttstr(ch_obj.name)
             else:
-                logger.error("[%s] Channel path '%s' not found.", self.server_info.host, chan_path)
+                logger.error(
+                    "[%s] Channel path '%s' not found.",
+                    self.server_info.host,
+                    chan_path,
+                )
         return final_chan_id, target_chan_name
 
     async def _join_configured_channel(self) -> None:
@@ -363,19 +454,30 @@ class TeamTalkConnection:
 
         try:
             if final_chan_id != INVALID_CHANNEL_ID:
-                logger.info("[%s] Joining chan: '%s' (ID: %s).", self.server_info.host, target_chan_name, final_chan_id)
+                logger.info(
+                    "[%s] Joining chan: '%s' (ID: %s).",
+                    self.server_info.host,
+                    target_chan_name,
+                    final_chan_id,
+                )
                 self.instance.join_channel_by_id(final_chan_id, password=chan_pass)
             else:
                 logger.warning(
-                    "[%s] No valid target channel found/configured. Staying in default channel.", self.server_info.host
+                    "[%s] No valid target channel found/configured. Staying in default channel.",
+                    self.server_info.host,
                 )
                 # If not joining a specific channel, finalize with the current one.
                 curr_chan_id = self.instance.getMyCurrentChannelID()
-                ch_to_finalize = self.instance.get_channel(curr_chan_id if curr_chan_id is not None else 0)
+                ch_to_finalize = self.instance.get_channel(
+                    curr_chan_id if curr_chan_id is not None else 0
+                )
                 if ch_to_finalize:
                     await self._finalize_bot_login_sequence(ch_to_finalize)
                 else:
-                    logger.warning("[%s] Could not get current/root channel to finalize.", self.server_info.host)
+                    logger.warning(
+                        "[%s] Could not get current/root channel to finalize.",
+                        self.server_info.host,
+                    )
 
         except pytalk.exceptions.PermissionError:
             logger.exception(
@@ -385,7 +487,9 @@ class TeamTalkConnection:
             )
             # Attempt to finalize in the current channel if join failed due to permissions
             curr_chan_id_after_fail = self.instance.getMyCurrentChannelID()
-            ch_id_to_get = curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
+            ch_id_to_get = (
+                curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
+            )
             ch_to_finalize_after_fail = self.instance.get_channel(ch_id_to_get)
             if ch_to_finalize_after_fail:
                 await self._finalize_bot_login_sequence(ch_to_finalize_after_fail)
@@ -397,7 +501,9 @@ class TeamTalkConnection:
                 )
 
         except Exception:
-            logger.exception("[%s] Error during channel join/finalization.", self.server_info.host)
+            logger.exception(
+                "[%s] Error during channel join/finalization.", self.server_info.host
+            )
             await self._initiate_reconnect()
 
     async def on_my_login(self, server: PytalkServer) -> None:
@@ -414,13 +520,23 @@ class TeamTalkConnection:
                 if props:
                     server_name_display = self.ttstr(props.server_name)
             except Exception as e:
-                logger.warning("[%s] Error getting server props: %s", self.server_info.host, e)
+                logger.warning(
+                    "[%s] Error getting server props: %s", self.server_info.host, e
+                )
         else:  # Should ideally not happen if connect() succeeded
-            logger.error("[%s] No instance available at start of on_my_login.", self.server_info.host)
+            logger.error(
+                "[%s] No instance available at start of on_my_login.",
+                self.server_info.host,
+            )
             await self._initiate_reconnect()  # Attempt to recover
             return
 
-        logger.info("[%s] Logged in to TT: %s. Instance: %s", self.server_info.host, server_name_display, self.instance)
+        logger.info(
+            "[%s] Logged in to TT: %s. Instance: %s",
+            self.server_info.host,
+            server_name_display,
+            self.instance,
+        )
         await self._join_configured_channel()
 
     async def on_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
@@ -431,13 +547,19 @@ class TeamTalkConnection:
             return
         my_user_id = self.instance.getMyUserID()
         if my_user_id is None:
-            logger.error("[%s] Failed to get bot's ID in on_user_join.", self.server_info.host)
+            logger.error(
+                "[%s] Failed to get bot's ID in on_user_join.", self.server_info.host
+            )
             return
         if user.id == my_user_id:
             if not self.is_finalized:
                 await self._finalize_bot_login_sequence(channel)
             else:
-                logger.info("[%s] Bot re-joined chan %s (finalized).", self.server_info.host, self.ttstr(channel.name))
+                logger.info(
+                    "[%s] Bot re-joined chan %s (finalized).",
+                    self.server_info.host,
+                    self.ttstr(channel.name),
+                )
 
     async def on_my_connection_lost(self, server: PytalkServer) -> None:
         """Handles disconnection from the server for this connection."""
@@ -451,8 +573,16 @@ class TeamTalkConnection:
 
     async def on_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Handles being kicked from a channel on this server connection."""
-        ch_name = self.ttstr(channel_obj.name) if channel_obj and channel_obj.name else "Unknown"
-        logger.warning("[%s] Kicked from chan '%s'. Reconnecting...", self.server_info.host, ch_name)
+        ch_name = (
+            self.ttstr(channel_obj.name)
+            if channel_obj and channel_obj.name
+            else "Unknown"
+        )
+        logger.warning(
+            "[%s] Kicked from chan '%s'. Reconnecting...",
+            self.server_info.host,
+            ch_name,
+        )
         self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.stop_background_tasks()

@@ -64,14 +64,21 @@ class MessageHandler:
         translator = self._get_translator()
         sender = ttstr(tt_message.user.username)
         content = tt_message.content.strip()
-        logger.debug("[%s] Private msg from %s: '%s'", self.connection.server_info.host, sender, content[:50])
+        logger.debug(
+            "[%s] Private msg from %s: '%s'",
+            self.connection.server_info.host,
+            sender,
+            content[:50],
+        )
 
         async with self.session_factory() as session:
             if content.startswith("/"):
                 parts = content.split(maxsplit=1)
                 cmd = parts[0].lower()
                 args = parts[1] if len(parts) > 1 else None
-                await self.command_router.route(cmd, args, tt_message, translator, session)
+                await self.command_router.route(
+                    cmd, args, tt_message, translator, session
+                )
             else:
                 await forward_tt_message_to_telegram_admin(
                     message=tt_message,
@@ -104,4 +111,7 @@ class MessageHandler:
         if tt_message.from_id == my_user_id:
             return False  # Ignore messages from self
 
-        return tt_message.type is not None and tt_message.type == TEAMTALK_PRIVATE_MESSAGE_TYPE
+        return (
+            tt_message.type is not None
+            and tt_message.type == TEAMTALK_PRIVATE_MESSAGE_TYPE
+        )

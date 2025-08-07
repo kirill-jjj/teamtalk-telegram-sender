@@ -33,7 +33,9 @@ class SubscriptionUpdate(BaseModel):
 subscription_router = Router(name="callback_handlers.subscription")
 
 
-@subscription_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS))
+@subscription_router.callback_query(
+    SettingsCallback.filter(F.action == SettingsNavAction.SUBSCRIPTIONS)
+)
 @ensure_message_context
 async def show_subscriptions_menu(
     callback_query: CallbackQuery,
@@ -44,15 +46,19 @@ async def show_subscriptions_menu(
     _ = translator.gettext
     if not user_settings:
         logger.warning("show_subscriptions_menu called for an event without a user.")
-        await callback_query.answer(_("An error occurred. User data not found."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. User data not found."), show_alert=True
+        )
         return
 
     # Callback answering handled by decorator or safe_edit_text.
 
     # Decorator ensures callback_query.message is a Message object.
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_markup = await create_subscription_settings_keyboard(  # Renamed variable
-        translator, current_notification_setting
+    subscription_settings_markup = (
+        await create_subscription_settings_keyboard(  # Renamed variable
+            translator, current_notification_setting
+        )
     )
 
     await safe_edit_text(
@@ -64,7 +70,9 @@ async def show_subscriptions_menu(
     )
 
 
-@subscription_router.callback_query(SubscriptionCallback.filter(F.action == SubscriptionSetting.SET_SUB))
+@subscription_router.callback_query(
+    SubscriptionCallback.filter(F.action == SubscriptionSetting.SET_SUB)
+)
 @ensure_message_context
 async def set_subscription_setting(
     callback_query: CallbackQuery,
@@ -85,7 +93,9 @@ async def set_subscription_setting(
             callback_query.from_user.id,
             callback_data.setting_value,
         )
-        await callback_query.answer(_("Error: Invalid setting value received."), show_alert=True)
+        await callback_query.answer(
+            _("Error: Invalid setting value received."), show_alert=True
+        )
         return
 
     original_setting = user_settings.notification_settings
@@ -103,7 +113,10 @@ async def set_subscription_setting(
     )
 
     if not updated_settings:
-        await callback_query.answer(_("Failed to update subscription setting. Please try again."), show_alert=True)
+        await callback_query.answer(
+            _("Failed to update subscription setting. Please try again."),
+            show_alert=True,
+        )
         return
 
     # UI Update
@@ -114,8 +127,12 @@ async def set_subscription_setting(
         NotificationSetting.NONE: _("None"),
     }
     # Use the value from updated_settings which is confirmed from DB
-    setting_display_name = setting_to_text_map.get(updated_settings.notification_settings, _("unknown setting"))
-    success_toast_text = _("Subscription setting updated to: {setting_name}.").format(setting_name=setting_display_name)
+    setting_display_name = setting_to_text_map.get(
+        updated_settings.notification_settings, _("unknown setting")
+    )
+    success_toast_text = _("Subscription setting updated to: {setting_name}.").format(
+        setting_name=setting_display_name
+    )
     await callback_query.answer(success_toast_text, show_alert=False)
 
     menu_text = _("Subscription Settings")

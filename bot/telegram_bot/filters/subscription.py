@@ -21,7 +21,11 @@ class IsSubscribed(Filter):
 
         # Allow /start commands with a deeplink payload to pass through
         # for new user registration.
-        if isinstance(event, Message) and event.text and event.text.startswith("/start "):
+        if (
+            isinstance(event, Message)
+            and event.text
+            and event.text.startswith("/start ")
+        ):
             return True
 
         return cache.is_subscribed(event.from_user.id)

@@ -51,7 +51,9 @@ async def refresh_subscriber_list_view(
     )
 
 
-@actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.BAN))
+@actions_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.BAN)
+)
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
@@ -64,16 +66,22 @@ async def on_ban_subscriber_confirm(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(target_telegram_id, translator, tt_connection)
+    result = await moderation_service.ban_and_delete_subscriber(
+        target_telegram_id, translator, tt_connection
+    )
 
     if result.long_message:
-        logger.info("Ban/delete report for %s:\n%s", target_telegram_id, result.long_message)
+        logger.info(
+            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
+        )
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, short_message, None
 
 
-@actions_router.callback_query(SubscriberCallback.filter(F.action == SubscriberCommand.DELETE))
+@actions_router.callback_query(
+    SubscriberCallback.filter(F.action == SubscriberCommand.DELETE)
+)
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber(
@@ -88,9 +96,13 @@ async def delete_subscriber(
     success = await subscription_service.delete_profile(target_telegram_id)
 
     if success:
-        message = _("Subscriber {telegram_id} deleted successfully.").format(telegram_id=target_telegram_id)
+        message = _("Subscriber {telegram_id} deleted successfully.").format(
+            telegram_id=target_telegram_id
+        )
     else:
-        message = _("Error deleting subscriber {telegram_id}.").format(telegram_id=target_telegram_id)
+        message = _("Error deleting subscriber {telegram_id}.").format(
+            telegram_id=target_telegram_id
+        )
 
     return success, message, None
 

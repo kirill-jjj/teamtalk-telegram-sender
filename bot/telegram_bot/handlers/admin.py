@@ -58,12 +58,18 @@ async def _show_user_buttons(
 
     if not online_users:
         await message.reply(
-            _("No users found online on server {server_host}.").format(server_host=tt_connection.server_info.host)
+            _("No users found online on server {server_host}.").format(
+                server_host=tt_connection.server_info.host
+            )
         )
         return
 
-    sorted_users = sorted(online_users, key=lambda u: get_tt_user_display_name(u, translator).lower())
-    builder = await create_user_selection_keyboard(translator, sorted_users, command_type)
+    sorted_users = sorted(
+        online_users, key=lambda u: get_tt_user_display_name(u, translator).lower()
+    )
+    builder = await create_user_selection_keyboard(
+        translator, sorted_users, command_type
+    )
 
     command_text_map = {
         AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(

@@ -39,7 +39,9 @@ async def _show_subscriber_list_page(
     all_subscriber_ids = await subscriber_repo.get_all_ids()
     user_settings_list = await user_repo.get_by_ids(all_subscriber_ids)
 
-    display_names = await get_display_names_for_ids(bot, [us.telegram_id for us in user_settings_list])
+    display_names = await get_display_names_for_ids(
+        bot, [us.telegram_id for us in user_settings_list]
+    )
 
     user_infos = [
         SubscriberInfo(
@@ -78,7 +80,9 @@ async def _show_banned_list_page(
     # Filter for entries that have a telegram_id, as we can't display users without it
     banned_with_tg_id = [b for b in banned_entries if b.telegram_id is not None]
 
-    display_names = await get_display_names_for_ids(bot, [b.telegram_id for b in banned_with_tg_id if b.telegram_id])
+    display_names = await get_display_names_for_ids(
+        bot, [b.telegram_id for b in banned_with_tg_id if b.telegram_id]
+    )
 
     user_infos = [
         SubscriberInfo(

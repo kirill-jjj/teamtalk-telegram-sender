@@ -62,7 +62,9 @@ class BanRepository(BaseRepository[BanList]):
         Returns:
             True if the username is banned, False otherwise.
         """
-        statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
+        statement = select(BanList).where(
+            BanList.teamtalk_username == teamtalk_username
+        )
         result = await self._session.exec(statement)
         return result.first() is not None
 
@@ -88,7 +90,9 @@ class BanRepository(BaseRepository[BanList]):
         Returns:
             A list of matching BanList entries.
         """
-        statement = select(BanList).where(BanList.teamtalk_username == teamtalk_username)
+        statement = select(BanList).where(
+            BanList.teamtalk_username == teamtalk_username
+        )
         result = await self._session.exec(statement)
         return list(result.all())
 

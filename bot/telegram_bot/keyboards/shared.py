@@ -21,7 +21,9 @@ def _create_back_button_text(translator: NullTranslations, destination_key: str)
     return f"⬅️ {_('Back to')} {_(destination_key)}"
 
 
-def _is_username_effectively_muted(username: str, user_settings: UserSettings, muted_usernames_set: set[str]) -> bool:
+def _is_username_effectively_muted(
+    username: str, user_settings: UserSettings, muted_usernames_set: set[str]
+) -> bool:
     """Determines if a username is effectively muted based on user settings."""
     is_in_set = username in muted_usernames_set
     if user_settings.mute_list_mode == MuteListMode.whitelist:
@@ -52,7 +54,11 @@ async def _create_option_selection_keyboard(
     active_marker = "✅ "
 
     for value, display_text in options:
-        button_text = f"{active_marker}{_(display_text)}" if value == current_value else _(display_text)
+        button_text = (
+            f"{active_marker}{_(display_text)}"
+            if value == current_value
+            else _(display_text)
+        )
         button_callback_data = callback_data_factory(value)
         builder.button(text=button_text, callback_data=button_callback_data.pack())
 
@@ -83,14 +89,18 @@ def _add_pagination_controls_generic(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("⬅️ Prev"),
-                callback_data=pagination_callback_factory(page=current_page - 1, **factory_kwargs).pack(),
+                callback_data=pagination_callback_factory(
+                    page=current_page - 1, **factory_kwargs
+                ).pack(),
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("Next ➡️"),
-                callback_data=pagination_callback_factory(page=current_page + 1, **factory_kwargs).pack(),
+                callback_data=pagination_callback_factory(
+                    page=current_page + 1, **factory_kwargs
+                ).pack(),
             )
         )
     if pagination_buttons:
@@ -124,7 +134,9 @@ async def create_paginated_keyboard(
             builder.row(button_or_buttons)
 
     if total_pages > 1:
-        factory_kwargs_to_pass = pagination_factory_kwargs if pagination_factory_kwargs is not None else {}
+        factory_kwargs_to_pass = (
+            pagination_factory_kwargs if pagination_factory_kwargs is not None else {}
+        )
         _add_pagination_controls_generic(
             builder,
             translator,
@@ -156,14 +168,18 @@ async def _add_pagination_controls(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("⬅️ Prev"),
-                callback_data=callback_factory(list_type=list_type, page=current_page - 1).pack(),
+                callback_data=callback_factory(
+                    list_type=list_type, page=current_page - 1
+                ).pack(),
             )
         )
     if current_page < total_pages - 1:
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=_("Next ➡️"),
-                callback_data=callback_factory(list_type=list_type, page=current_page + 1).pack(),
+                callback_data=callback_factory(
+                    list_type=list_type, page=current_page + 1
+                ).pack(),
             )
         )
     if pagination_buttons:
@@ -185,7 +201,9 @@ async def _build_user_toggle_keyboard(
     """Generic helper to create a keyboard for a paginated list of users with mute/unmute toggle buttons."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    muted_usernames_from_relationship = {mu.muted_teamtalk_username for mu in user_settings.muted_users_list}
+    muted_usernames_from_relationship = {
+        mu.muted_teamtalk_username for mu in user_settings.muted_users_list
+    }
 
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
@@ -194,9 +212,13 @@ async def _build_user_toggle_keyboard(
             username_str, user_settings, muted_usernames_from_relationship
         )
         if effectively_muted:
-            button_text = _("{item_display_name} (Status: Muted)").format(item_display_name=display_name_on_button)
+            button_text = _("{item_display_name} (Status: Muted)").format(
+                item_display_name=display_name_on_button
+            )
         else:
-            button_text = _("{item_display_name} (Status: Not Muted)").format(item_display_name=display_name_on_button)
+            button_text = _("{item_display_name} (Status: Not Muted)").format(
+                item_display_name=display_name_on_button
+            )
         callback_d = ToggleMuteCallback(
             user_idx=idx,
             current_page=current_page,
@@ -216,5 +238,9 @@ async def _build_user_toggle_keyboard(
         PaginateUsersCallback,
     )
 
-    builder.row(InlineKeyboardButton(text=_(back_button_text_key), callback_data=back_button_callback_data))
+    builder.row(
+        InlineKeyboardButton(
+            text=_(back_button_text_key), callback_data=back_button_callback_data
+        )
+    )
     return builder.as_markup()

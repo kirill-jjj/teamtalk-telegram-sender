@@ -27,7 +27,9 @@ def _table_exists(table_name: str, conn: sa.engine.Connection) -> bool:
 
 
 # Helper function to check if a column exists in a table
-def _column_exists(table_name: str, column_name: str, conn: sa.engine.Connection) -> bool:
+def _column_exists(
+    table_name: str, column_name: str, conn: sa.engine.Connection
+) -> bool:
     if not _table_exists(table_name, conn):
         return False
     inspector = sa.inspect(conn)
@@ -49,16 +51,44 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             "user_settings",
             sa.Column("telegram_id", sa.Integer(), nullable=False),
             sa.Column("language_code", sa.String(), nullable=False),
-            sa.Column("notification_settings", sa.String(), nullable=False, server_default="all"),
-            sa.Column("mute_list_mode", sa.String(), nullable=False, server_default="blacklist"),
+            sa.Column(
+                "notification_settings",
+                sa.String(),
+                nullable=False,
+                server_default="all",
+            ),
+            sa.Column(
+                "mute_list_mode",
+                sa.String(),
+                nullable=False,
+                server_default="blacklist",
+            ),
             sa.Column("teamtalk_username", sa.String(), nullable=True),
-            sa.Column("not_on_online_enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
-            sa.Column("not_on_online_confirmed", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column(
+                "not_on_online_enabled",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.false(),
+            ),
+            sa.Column(
+                "not_on_online_confirmed",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.false(),
+            ),
             sa.PrimaryKeyConstraint("telegram_id"),
         )
-        op.create_index(op.f("ix_user_settings_telegram_id"), "user_settings", ["telegram_id"], unique=False)
         op.create_index(
-            op.f("ix_user_settings_teamtalk_username"), "user_settings", ["teamtalk_username"], unique=False
+            op.f("ix_user_settings_telegram_id"),
+            "user_settings",
+            ["telegram_id"],
+            unique=False,
+        )
+        op.create_index(
+            op.f("ix_user_settings_teamtalk_username"),
+            "user_settings",
+            ["teamtalk_username"],
+            unique=False,
         )
 
     # MutedUser Table
@@ -76,7 +106,10 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             sa.PrimaryKeyConstraint("id"),
         )
         op.create_index(
-            op.f("ix_muted_users_muted_teamtalk_username"), "muted_users", ["muted_teamtalk_username"], unique=False
+            op.f("ix_muted_users_muted_teamtalk_username"),
+            "muted_users",
+            ["muted_teamtalk_username"],
+            unique=False,
         )
 
     # SubscribedUser Table
@@ -86,14 +119,23 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             sa.Column("telegram_id", sa.Integer(), nullable=False),
             sa.PrimaryKeyConstraint("telegram_id"),
         )
-        op.create_index(op.f("ix_subscribed_users_telegram_id"), "subscribed_users", ["telegram_id"], unique=False)
+        op.create_index(
+            op.f("ix_subscribed_users_telegram_id"),
+            "subscribed_users",
+            ["telegram_id"],
+            unique=False,
+        )
 
     # Admin Table
     if not _table_exists("admins", conn):
         op.create_table(
-            "admins", sa.Column("telegram_id", sa.Integer(), nullable=False), sa.PrimaryKeyConstraint("telegram_id")
+            "admins",
+            sa.Column("telegram_id", sa.Integer(), nullable=False),
+            sa.PrimaryKeyConstraint("telegram_id"),
         )
-        op.create_index(op.f("ix_admins_telegram_id"), "admins", ["telegram_id"], unique=False)
+        op.create_index(
+            op.f("ix_admins_telegram_id"), "admins", ["telegram_id"], unique=False
+        )
 
     # Deeplink Table
     if not _table_exists("deeplinks", conn):
@@ -106,7 +148,9 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             sa.Column("expiry_time", sa.DateTime(), nullable=False),
             sa.PrimaryKeyConstraint("token"),
         )
-        op.create_index(op.f("ix_deeplinks_token"), "deeplinks", ["token"], unique=False)
+        op.create_index(
+            op.f("ix_deeplinks_token"), "deeplinks", ["token"], unique=False
+        )
 
     # BanList Table
     if not _table_exists("ban_list", conn):
@@ -119,14 +163,23 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             sa.Column("banned_at", sa.DateTime(), nullable=False),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(op.f("ix_ban_list_telegram_id"), "ban_list", ["telegram_id"], unique=False)
-        op.create_index(op.f("ix_ban_list_teamtalk_username"), "ban_list", ["teamtalk_username"], unique=False)
+        op.create_index(
+            op.f("ix_ban_list_telegram_id"), "ban_list", ["telegram_id"], unique=False
+        )
+        op.create_index(
+            op.f("ix_ban_list_teamtalk_username"),
+            "ban_list",
+            ["teamtalk_username"],
+            unique=False,
+        )
         logging.info("Table 'ban_list' created.")
     else:
         logging.info("Table 'ban_list' already exists.")
 
     # Data Migrations
-    if _table_exists("user_settings", conn) and _column_exists("user_settings", "muted_users", conn):
+    if _table_exists("user_settings", conn) and _column_exists(
+        "user_settings", "muted_users", conn
+    ):
         muted_users_table_ref = sa.Table(
             "muted_users",
             sa.MetaData(),
@@ -134,14 +187,21 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             sa.Column("muted_teamtalk_username", sa.String),
             sa.Column("user_settings_telegram_id", sa.Integer),
         )
-        old_user_settings_data = conn.execute(sa.text("SELECT telegram_id, muted_users FROM user_settings")).fetchall()
+        old_user_settings_data = conn.execute(
+            sa.text("SELECT telegram_id, muted_users FROM user_settings")
+        ).fetchall()
         users_to_insert = []
         for telegram_id, muted_users_str in old_user_settings_data:
             if muted_users_str and muted_users_str.strip():
-                usernames = [name.strip() for name in muted_users_str.split(",") if name.strip()]
+                usernames = [
+                    name.strip() for name in muted_users_str.split(",") if name.strip()
+                ]
                 for username in usernames:
                     users_to_insert.append(
-                        {"muted_teamtalk_username": username, "user_settings_telegram_id": telegram_id}
+                        {
+                            "muted_teamtalk_username": username,
+                            "user_settings_telegram_id": telegram_id,
+                        }
                     )
         if users_to_insert:
             op.bulk_insert(muted_users_table_ref, users_to_insert)
@@ -153,7 +213,12 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             if not _column_exists("user_settings", "mute_list_mode", conn):
                 with op.batch_alter_table("user_settings", schema=None) as batch_op:
                     batch_op.add_column(
-                        sa.Column("mute_list_mode", sa.String(), nullable=False, server_default="blacklist")
+                        sa.Column(
+                            "mute_list_mode",
+                            sa.String(),
+                            nullable=False,
+                            server_default="blacklist",
+                        )
                     )
             user_settings_table_for_mute_all = sa.Table(
                 "user_settings",
@@ -177,7 +242,12 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
         elif not _column_exists("user_settings", "mute_list_mode", conn):
             with op.batch_alter_table("user_settings", schema=None) as batch_op:
                 batch_op.add_column(
-                    sa.Column("mute_list_mode", sa.String(), nullable=False, server_default="blacklist")
+                    sa.Column(
+                        "mute_list_mode",
+                        sa.String(),
+                        nullable=False,
+                        server_default="blacklist",
+                    )
                 )
 
     if _table_exists("user_settings", conn):
@@ -185,10 +255,21 @@ def upgrade() -> None:  # noqa: PLR0912, PLR0915
             "user_settings", "language_code", conn
         ):
             with op.batch_alter_table("user_settings", schema=None) as batch_op:
-                batch_op.alter_column("language", new_column_name="language_code", existing_type=sa.String())
+                batch_op.alter_column(
+                    "language",
+                    new_column_name="language_code",
+                    existing_type=sa.String(),
+                )
         elif not _column_exists("user_settings", "language_code", conn):
             with op.batch_alter_table("user_settings", schema=None) as batch_op:
-                batch_op.add_column(sa.Column("language_code", sa.String(), nullable=False, server_default="en"))
+                batch_op.add_column(
+                    sa.Column(
+                        "language_code",
+                        sa.String(),
+                        nullable=False,
+                        server_default="en",
+                    )
+                )
 
 
 def downgrade() -> None:
@@ -201,13 +282,21 @@ def downgrade() -> None:
     op.drop_table("ban_list")
 
     with op.batch_alter_table("user_settings", schema=None) as batch_op:
-        batch_op.alter_column("language_code", new_column_name="language", existing_type=sa.String())
+        batch_op.alter_column(
+            "language_code", new_column_name="language", existing_type=sa.String()
+        )
 
     with op.batch_alter_table("user_settings", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("mute_all", sa.Boolean(), nullable=False, server_default=sa.false()))
+        batch_op.add_column(
+            sa.Column(
+                "mute_all", sa.Boolean(), nullable=False, server_default=sa.false()
+            )
+        )
 
     user_settings_table_ref = table(
-        "user_settings", column("mute_all", sa.Boolean), column("mute_list_mode", sa.String)
+        "user_settings",
+        column("mute_all", sa.Boolean),
+        column("mute_list_mode", sa.String),
     )
     conn = op.get_bind()
     conn.execute(
@@ -225,7 +314,9 @@ def downgrade() -> None:
         batch_op.drop_column("mute_list_mode")
 
     with op.batch_alter_table("user_settings", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("muted_users", sa.VARCHAR(), nullable=False, server_default=""))
+        batch_op.add_column(
+            sa.Column("muted_users", sa.VARCHAR(), nullable=False, server_default="")
+        )
 
     conn = op.get_bind()
     query = sa.text("""
@@ -241,5 +332,7 @@ def downgrade() -> None:
     """)
     conn.execute(query)
 
-    op.drop_index(op.f("ix_muted_users_muted_teamtalk_username"), table_name="muted_users")
+    op.drop_index(
+        op.f("ix_muted_users_muted_teamtalk_username"), table_name="muted_users"
+    )
     op.drop_table("muted_users")

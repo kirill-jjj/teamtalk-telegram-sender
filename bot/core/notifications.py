@@ -17,7 +17,11 @@ from sqlalchemy import and_, or_
 from sqlmodel import select
 
 from bot.config import Settings
-from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS, NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
+from bot.constants import (
+    INITIAL_LOGIN_IGNORE_DELAY_SECONDS,
+    NOTIFICATION_EVENT_JOIN,
+    NOTIFICATION_EVENT_LEAVE,
+)
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
@@ -34,7 +38,9 @@ def _should_ignore_initial_event(
     reason_for_ignore = ""
     if login_complete_time is None:
         reason_for_ignore = "bot still initializing/reconnecting"
-    elif datetime.now(dt.UTC) < login_complete_time + timedelta(seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS):
+    elif datetime.now(dt.UTC) < login_complete_time + timedelta(
+        seconds=INITIAL_LOGIN_IGNORE_DELAY_SECONDS
+    ):
         reason_for_ignore = "bot login too recent"
     else:
         return False
@@ -91,13 +97,23 @@ async def _get_recipients_for_notification(
             UserSettings.notification_settings != NotificationSetting.NONE,
         ]
         if event_type == NOTIFICATION_EVENT_JOIN:
-            filters.append(UserSettings.notification_settings != NotificationSetting.JOIN_OFF)
+            filters.append(
+                UserSettings.notification_settings != NotificationSetting.JOIN_OFF
+            )
         elif event_type == NOTIFICATION_EVENT_LEAVE:
-            filters.append(UserSettings.notification_settings != NotificationSetting.LEAVE_OFF)
+            filters.append(
+                UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
+            )
 
         mute_logic = or_(
-            and_(UserSettings.mute_list_mode == MuteListMode.blacklist.value, MutedUser.id.is_(None)),
-            and_(UserSettings.mute_list_mode == MuteListMode.whitelist.value, MutedUser.id.is_not(None)),
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.blacklist.value,
+                MutedUser.id.is_(None),
+            ),
+            and_(
+                UserSettings.mute_list_mode == MuteListMode.whitelist.value,
+                MutedUser.id.is_not(None),
+            ),
         )
         filters.append(mute_logic)  # type: ignore[arg-type]
 
@@ -129,7 +145,9 @@ def _generate_join_leave_notification_text(
         notification_template = _("{user_nickname} joined server {server_name}")
     else:
         notification_template = _("{user_nickname} left server {server_name}")
-    return notification_template.format(user_nickname=escape(localized_user_nickname), server_name=escape(server_name))
+    return notification_template.format(
+        user_nickname=escape(localized_user_nickname), server_name=escape(server_name)
+    )
 
 
 async def send_join_leave_notification(
@@ -162,7 +180,9 @@ async def send_join_leave_notification(
         )
         return
 
-    if _should_ignore_initial_event(event_type, user_username, user_id, login_complete_time):
+    if _should_ignore_initial_event(
+        event_type, user_username, user_id, login_complete_time
+    ):
         return
 
     if _is_user_globally_ignored(user_username, settings):
@@ -198,13 +218,19 @@ async def send_join_leave_notification(
         len(final_recipients),
     )
 
-    server_name = get_effective_server_name(tt_instance, default_lang_translator_obj, settings)
+    server_name = get_effective_server_name(
+        tt_instance, default_lang_translator_obj, settings
+    )
     # The list of recipients now includes language codes, so we pass it directly
     await broadcast_to_users(
         bot_instance_to_use=bot,
         recipients_with_lang=final_recipients,
         text_generator=lambda lang_code: _generate_join_leave_notification_text(
-            tt_user, server_name, event_type, lang_code, get_translator_func=translator_factory
+            tt_user,
+            server_name,
+            event_type,
+            lang_code,
+            get_translator_func=translator_factory,
         ),
         cache=cache,
         session_factory=session_factory,

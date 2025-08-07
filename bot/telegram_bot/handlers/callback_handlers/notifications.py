@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 notifications_router = Router(name="callback_handlers.notifications")
 
 
-@notifications_router.callback_query(SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS))
+@notifications_router.callback_query(
+    SettingsCallback.filter(F.action == SettingsNavAction.NOTIFICATIONS)
+)
 @ensure_message_context
 async def show_notifications_menu(
     callback_query: CallbackQuery,
@@ -31,11 +33,17 @@ async def show_notifications_menu(
     """Shows the notification settings menu."""
     _ = translator.gettext
     if not user_settings:
-        logger.warning("Cannot show notifications menu for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.warning(
+            "Cannot show notifications menu for event without a user, user_settings is None."
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
-    notification_settings_builder = await create_notification_settings_keyboard(translator, user_settings)
+    notification_settings_builder = await create_notification_settings_keyboard(
+        translator, user_settings
+    )
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Notification Settings"),
@@ -45,7 +53,9 @@ async def show_notifications_menu(
     )
 
 
-@notifications_router.callback_query(NotificationCallback.filter(F.action == NotificationControl.TOGGLE_NOON))
+@notifications_router.callback_query(
+    NotificationCallback.filter(F.action == NotificationControl.TOGGLE_NOON)
+)
 @ensure_message_context
 @with_view_refresh(refresh_notification_settings_view)
 async def toggle_noon_setting(
@@ -57,12 +67,18 @@ async def toggle_noon_setting(
     """Handles toggling the NOON (Not On Online) setting."""
     _ = translator.gettext
 
-    updated_settings = await user_settings_service.toggle_noon_setting(user_settings=user_settings, actor=Actor.USER)
+    updated_settings = await user_settings_service.toggle_noon_setting(
+        user_settings=user_settings, actor=Actor.USER
+    )
 
     if not updated_settings:
         return False, _("Failed to update NOON setting. Please try again."), None
 
-    new_status_display_text = _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
-    message = _("NOON (Not on Online) is now {status}.").format(status=new_status_display_text)
+    new_status_display_text = (
+        _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
+    )
+    message = _("NOON (Not on Online) is now {status}.").format(
+        status=new_status_display_text
+    )
 
     return True, message, updated_settings

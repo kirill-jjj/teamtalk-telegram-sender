@@ -28,7 +28,8 @@ def _get_user_display_channel_name(
 
     is_channel_hidden = (
         hasattr(pytalk.instance.sdk, "ChannelType")
-        and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN) != 0
+        and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN)
+        != 0
     )
 
     server_root_ids = [
@@ -41,7 +42,9 @@ def _get_user_display_channel_name(
         return translator.gettext("under server")
 
     if is_caller_admin or not is_channel_hidden:
-        return translator.gettext("in {channel_name}").format(channel_name=ttstr(channel_obj.name))
+        return translator.gettext("in {channel_name}").format(
+            channel_name=ttstr(channel_obj.name)
+        )
 
     return translator.gettext("under server")
 
@@ -61,7 +64,9 @@ def _group_users_for_who_command(
         if bot_user_id is not None and user.id == bot_user_id and not is_caller_admin:
             continue
 
-        channel_name = _get_user_display_channel_name(user, is_caller_admin=is_caller_admin, translator=translator)
+        channel_name = _get_user_display_channel_name(
+            user, is_caller_admin=is_caller_admin, translator=translator
+        )
         if channel_name not in channels_data:
             channels_data[channel_name] = []
 
@@ -69,7 +74,9 @@ def _group_users_for_who_command(
         user_count += 1
 
     return [
-        WhoChannelGroup(channel_name=name, users=[WhoUser(nickname=nick) for nick in nicks])
+        WhoChannelGroup(
+            channel_name=name, users=[WhoUser(nickname=nick) for nick in nicks]
+        )
         for name, nicks in channels_data.items()
     ], user_count
 
@@ -86,7 +93,9 @@ def _format_who_message(
 
     if total_users == 0:
         return (
-            _("No users found online on server {server_host}.") if server_host else _("No users found online.")
+            _("No users found online on server {server_host}.")
+            if server_host
+            else _("No users found online.")
         ).format(server_host=server_host)
 
     header_template = (
@@ -102,7 +111,9 @@ def _format_who_message(
             total_users,
         )
     )
-    header = Text(header_template.format(user_count=total_users, server_host=server_host))
+    header = Text(
+        header_template.format(user_count=total_users, server_host=server_host)
+    )
 
     channel_parts = []
     user_separator = translator.gettext(" and ")
@@ -148,7 +159,12 @@ class ReportService:
         server_host = tt_connection.server_info.host
 
         grouped_data, total_users = _group_users_for_who_command(
-            all_users, bot_user_id, is_caller_admin=is_caller_admin, translator=translator
+            all_users,
+            bot_user_id,
+            is_caller_admin=is_caller_admin,
+            translator=translator,
         )
 
-        return _format_who_message(grouped_data, total_users, translator=translator, server_host=server_host)
+        return _format_who_message(
+            grouped_data, total_users, translator=translator, server_host=server_host
+        )

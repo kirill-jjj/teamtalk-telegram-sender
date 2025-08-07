@@ -53,13 +53,17 @@ class Application:
         self.logger.info("Application starting...")
 
         app_provider = AppProvider(settings=self.app_config)
-        container = make_async_container(app_provider, RequestProvider(), AiogramProvider())
+        container = make_async_container(
+            app_provider, RequestProvider(), AiogramProvider()
+        )
 
         self.dp = await container.get(Dispatcher)
         self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
-        self.dp.update.middleware.register(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+        self.dp.update.middleware.register(
+            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+        )
         self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         # Include routers

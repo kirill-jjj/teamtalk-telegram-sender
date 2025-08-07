@@ -149,7 +149,11 @@ class ModerationService:
             tt_username_to_toggle,
             user_settings.telegram_id,
         )
-        message_key = _("mute_toggle_success_muted") if action == "muted" else _("mute_toggle_success_unmuted")
+        message_key = (
+            _("mute_toggle_success_muted")
+            if action == "muted"
+            else _("mute_toggle_success_unmuted")
+        )
         return OperationResult(
             success=True,
             message_key=message_key,

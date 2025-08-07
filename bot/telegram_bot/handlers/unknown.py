@@ -12,13 +12,21 @@ catch_all_router = Router(name="catch_all_router")
 
 
 @catch_all_router.message()
-async def on_unknown_message(message: Message, translator: FromDishka[NullTranslations]) -> None:
+async def on_unknown_message(
+    message: Message, translator: FromDishka[NullTranslations]
+) -> None:
     """Handles any message that isn't caught by other command or message handlers."""
     _ = translator.gettext  # Assign for usage if this was the intent
-    if not message.text or not message.from_user:  # Ignore non-text messages or messages without user
+    if (
+        not message.text or not message.from_user
+    ):  # Ignore non-text messages or messages without user
         return
 
-    logger.debug("Received unknown message/command from user %s: '%s...'", message.from_user.id, message.text[:50])
+    logger.debug(
+        "Received unknown message/command from user %s: '%s...'",
+        message.from_user.id,
+        message.text[:50],
+    )
 
     if message.text.startswith("/"):
         await message.reply(_("Unknown command. Use /help to see available commands."))

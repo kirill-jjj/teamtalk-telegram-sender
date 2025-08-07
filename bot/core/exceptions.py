@@ -16,7 +16,9 @@ class DependencyError(BotError):
 class MissingSettingsError(DependencyError):
     """Raised when settings are not found or of incorrect type."""
 
-    def __init__(self, message: str = "Settings not found or of incorrect type in kwargs.") -> None:
+    def __init__(
+        self, message: str = "Settings not found or of incorrect type in kwargs."
+    ) -> None:
         """Initializes the exception with a default message."""
         super().__init__(message)
 
@@ -24,6 +26,8 @@ class MissingSettingsError(DependencyError):
 class MissingTranslatorError(DependencyError):
     """Raised when the translator is not found or of incorrect type."""
 
-    def __init__(self, message: str = "Translator not found or of incorrect type in kwargs.") -> None:
+    def __init__(
+        self, message: str = "Translator not found or of incorrect type in kwargs."
+    ) -> None:
         """Initializes the exception with a default message."""
         super().__init__(message)

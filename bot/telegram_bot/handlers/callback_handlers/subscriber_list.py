@@ -50,16 +50,18 @@ async def on_subscriber_list_callback(
         success = await subscription_service.delete_profile(telegram_id_to_delete)
 
         if success:
-            callback_answer.text = _("Subscriber {telegram_id} deleted successfully.").format(
-                telegram_id=telegram_id_to_delete
-            )
+            callback_answer.text = _(
+                "Subscriber {telegram_id} deleted successfully."
+            ).format(telegram_id=telegram_id_to_delete)
         else:
             callback_answer.text = _("Error deleting subscriber {telegram_id}.").format(
                 telegram_id=telegram_id_to_delete
             )
             callback_answer.show_alert = True
 
-        await _show_subscriber_list_page(query, user_repo, subscriber_repo, bot, translator, page=page_from_callback)
+        await _show_subscriber_list_page(
+            query, user_repo, subscriber_repo, bot, translator, page=page_from_callback
+        )
 
     elif action == SubscriberListAction.PAGE:
         requested_page = callback_data.page
@@ -68,8 +70,14 @@ async def on_subscriber_list_callback(
             callback_answer.show_alert = True
             return
 
-        await _show_subscriber_list_page(query, user_repo, subscriber_repo, bot, translator, page=requested_page)
+        await _show_subscriber_list_page(
+            query, user_repo, subscriber_repo, bot, translator, page=requested_page
+        )
     else:
-        logger.warning("Unhandled SubscriberListAction: %s from user %s", action, query.from_user.id)
+        logger.warning(
+            "Unhandled SubscriberListAction: %s from user %s",
+            action,
+            query.from_user.id,
+        )
         callback_answer.text = _("An error occurred. Please try again later.")
         callback_answer.show_alert = True

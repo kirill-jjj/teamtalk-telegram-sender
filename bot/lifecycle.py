@@ -94,7 +94,9 @@ async def on_startup(
         await session.commit()
 
     logger.info("Setting Telegram bot commands...")
-    await set_telegram_commands_for_bot(bot, cache, translator_factory, available_languages, settings)
+    await set_telegram_commands_for_bot(
+        bot, cache, translator_factory, available_languages, settings
+    )
     logger.info("Telegram bot commands set.")
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())

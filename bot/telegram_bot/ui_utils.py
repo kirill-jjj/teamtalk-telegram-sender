@@ -7,7 +7,12 @@ from typing import Any, TypeVar
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
-from aiogram.types import CallbackQuery, InaccessibleMessage, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InaccessibleMessage,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 from bot.constants import USERS_PER_PAGE
 
@@ -15,7 +20,9 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-def paginate_list(full_list: list[T], page: int, page_size: int = USERS_PER_PAGE) -> tuple[list[T], int, int]:
+def paginate_list(
+    full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
+) -> tuple[list[T], int, int]:
     """Paginates a given list.
 
     Args:
@@ -81,8 +88,12 @@ async def display_paginated_list(
         current_page=current_page_idx + 1, total_pages=total_pages
     )
 
-    if server_host_for_display and " on {server_host}" not in message_parts[0]:  # SIM102 fix applied here
-        message_parts[0] += _(" on {server_host}").format(server_host=server_host_for_display)
+    if (
+        server_host_for_display and " on {server_host}" not in message_parts[0]
+    ):  # SIM102 fix applied here
+        message_parts[0] += _(" on {server_host}").format(
+            server_host=server_host_for_display
+        )
 
     message_parts.append(f"\n{page_indicator_text}")
     final_message_text = "\n".join(message_parts)
@@ -117,7 +128,9 @@ async def display_paginated_list(
             )
         except TelegramAPIError:
             logger.exception(
-                "TelegramAPIError sending new paginated list for '%s' to chat %s", title_text, target.chat.id
+                "TelegramAPIError sending new paginated list for '%s' to chat %s",
+                title_text,
+                target.chat.id,
             )
     # The case `isinstance(target, CallbackQuery) and target.message is None` is considered unreachable
     # because all callback handlers that would call this function are decorated with `@ensure_message_context`,
@@ -135,7 +148,10 @@ async def display_paginated_list(
             try:
                 await target.answer(_("Error displaying list."), show_alert=True)
             except TelegramAPIError:
-                logger.exception("Failed to answer callback for invalid target type for %s", title_text)
+                logger.exception(
+                    "Failed to answer callback for invalid target type for %s",
+                    title_text,
+                )
 
 
 async def safe_edit_text(
@@ -153,7 +169,9 @@ async def safe_edit_text(
     context_for_log = f" ({log_context})" if log_context else ""
 
     if not isinstance(message_to_edit, Message):
-        current_logger.warning("Attempted to edit an inaccessible message%s.", context_for_log)
+        current_logger.warning(
+            "Attempted to edit an inaccessible message%s.", context_for_log
+        )
         return False
 
     try:
@@ -165,7 +183,9 @@ async def safe_edit_text(
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            current_logger.exception("TelegramBadRequest editing message%s.", context_for_log)
+            current_logger.exception(
+                "TelegramBadRequest editing message%s.", context_for_log
+            )
             return False
         current_logger.debug(
             "Message not modified for %s (chat_id %s), skipping edit. Error: %s",

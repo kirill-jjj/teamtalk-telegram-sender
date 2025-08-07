@@ -43,7 +43,9 @@ class UserListAction(Enum):
 
     LIST_ALLOWED = "list_allowed"
     LIST_MUTED = "list_muted"
-    LIST_ALL_ACCOUNTS = "list_all_accounts"  # For listing all server accounts to mute/unmute
+    LIST_ALL_ACCOUNTS = (
+        "list_all_accounts"  # For listing all server accounts to mute/unmute
+    )
 
 
 class PaginateUsersAction(Enum):

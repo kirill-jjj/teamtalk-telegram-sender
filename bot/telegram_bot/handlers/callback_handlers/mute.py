@@ -39,7 +39,9 @@ from ._helpers import ensure_message_context, safe_edit_text
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
-mute_router.callback_query.middleware(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+mute_router.callback_query.middleware(
+    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+)
 ttstr = pytalk.instance.sdk.ttstr
 
 T = TypeVar("T")
@@ -64,12 +66,18 @@ async def _display_user_list_generic(
         sorted_items = sorted(items, key=sort_key_extractor)
     except Exception:
         logger.exception("Failed to fetch or sort user list.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     if callback_query.bot is None:
-        logger.error("_display_user_list_generic: callback_query.bot is None. Cannot display list.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.error(
+            "_display_user_list_generic: callback_query.bot is None. Cannot display list."
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     await display_paginated_list(
@@ -97,7 +105,9 @@ async def _display_internal_user_list(
 
     async def fetcher() -> list[str]:
         # The user_settings object from the DI container now has this preloaded.
-        return [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
+        return [
+            muted.muted_teamtalk_username for muted in user_settings.muted_users_list
+        ]
 
     header_text_str, empty_list_text_str = "", ""
     if user_settings.mute_list_mode == MuteListMode.blacklist:
@@ -108,7 +118,9 @@ async def _display_internal_user_list(
         empty_list_text_str = _("Your whitelist is empty.")
     else:
         logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     await _display_user_list_generic(
@@ -121,7 +133,10 @@ async def _display_internal_user_list(
         title_text=header_text_str,
         empty_list_text=empty_list_text_str,
         keyboard_factory=create_paginated_user_list_keyboard,
-        keyboard_factory_kwargs={"list_type": list_type, "user_settings": user_settings},
+        keyboard_factory_kwargs={
+            "list_type": list_type,
+            "user_settings": user_settings,
+        },
     )
 
 
@@ -136,12 +151,15 @@ async def _display_all_server_accounts_list(
     if not tt_connection.user_accounts_cache:
         try:
             await cast(Message, callback_query.message).edit_text(
-                _("Server user accounts are not loaded yet for {server_host}. Please try again in a moment.").format(
-                    server_host=tt_connection.server_info.host
-                )
+                _(
+                    "Server user accounts are not loaded yet for {server_host}. Please try again in a moment."
+                ).format(server_host=tt_connection.server_info.host)
             )
         except TelegramAPIError:
-            logger.exception("Error informing user about empty accounts_cache for %s.", tt_connection.server_info.host)
+            logger.exception(
+                "Error informing user about empty accounts_cache for %s.",
+                tt_connection.server_info.host,
+            )
         return
 
     async def fetcher() -> list[pytalk.UserAccount]:
@@ -154,7 +172,9 @@ async def _display_all_server_accounts_list(
         page=page,
         data_fetcher=fetcher,
         sort_key_extractor=lambda acc: (
-            ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()
+            ttstr(acc.username).lower()
+            if isinstance(acc.username, bytes)
+            else str(acc.username).lower()
         ),
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
@@ -175,9 +195,15 @@ async def _get_username_from_all_accounts(
 
     all_accounts = sorted(
         tt_connection.user_accounts_cache.values(),
-        key=lambda acc: (ttstr(acc.username).lower() if isinstance(acc.username, bytes) else str(acc.username).lower()),
+        key=lambda acc: (
+            ttstr(acc.username).lower()
+            if isinstance(acc.username, bytes)
+            else str(acc.username).lower()
+        ),
     )
-    page_items, _, _ = paginate_list(all_accounts, callback_data.current_page, USERS_PER_PAGE)
+    page_items, _, _ = paginate_list(
+        all_accounts, callback_data.current_page, USERS_PER_PAGE
+    )
 
     if 0 <= callback_data.user_idx < len(page_items):
         username_attr = page_items[callback_data.user_idx].username
@@ -191,8 +217,12 @@ def _get_username_from_muted_list(
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
     # The user_settings object from the DI container now has this preloaded.
-    relevant_usernames = sorted([muted.muted_teamtalk_username for muted in user_settings.muted_users_list])
-    page_items, _, _ = paginate_list(relevant_usernames, callback_data.current_page, USERS_PER_PAGE)
+    relevant_usernames = sorted(
+        [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
+    )
+    page_items, _, _ = paginate_list(
+        relevant_usernames, callback_data.current_page, USERS_PER_PAGE
+    )
 
     if 0 <= callback_data.user_idx < len(page_items):
         return page_items[callback_data.user_idx]
@@ -200,7 +230,11 @@ def _get_username_from_muted_list(
 
 
 def format_mute_toast(
-    username_to_toggle: str, *, was_added_to_list: bool, current_mode: MuteListMode, translator: NullTranslations
+    username_to_toggle: str,
+    *,
+    was_added_to_list: bool,
+    current_mode: MuteListMode,
+    translator: NullTranslations,
 ) -> str:
     """Formats the toast message for a mute/unmute action."""
     _ = translator.gettext
@@ -213,7 +247,9 @@ def format_mute_toast(
         (MuteListMode.whitelist, False): "removed from whitelist",
     }
     action_text = _(action_key_map[(current_mode, was_added_to_list)])
-    return _("{username} has been {action}.").format(username=quoted_username, action=action_text)
+    return _("{username} has been {action}.").format(
+        username=quoted_username, action=action_text
+    )
 
 
 async def _refresh_mute_related_ui(
@@ -234,14 +270,23 @@ async def _refresh_mute_related_ui(
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_connection and tt_connection.is_ready:
             await _display_all_server_accounts_list(
-                callback_query, translator, user_settings, tt_connection, current_page_for_refresh
+                callback_query,
+                translator,
+                user_settings,
+                tt_connection,
+                current_page_for_refresh,
             )
         else:
             await callback_query.answer(
-                _("TeamTalk bot is disconnected. UI could not be fully refreshed."), show_alert=True
+                _("TeamTalk bot is disconnected. UI could not be fully refreshed."),
+                show_alert=True,
             )
-            manage_muted_cb_data = NotificationCallback(action=NotificationControl.MANAGE_MUTED)
-            await show_manage_muted_menu(callback_query, translator, user_settings, manage_muted_cb_data)
+            manage_muted_cb_data = NotificationCallback(
+                action=NotificationControl.MANAGE_MUTED
+            )
+            await show_manage_muted_menu(
+                callback_query, translator, user_settings, manage_muted_cb_data
+            )
     else:
         await _display_internal_user_list(
             callback_query,
@@ -252,7 +297,9 @@ async def _refresh_mute_related_ui(
         )
 
 
-@mute_router.callback_query(NotificationCallback.filter(F.action == NotificationControl.MANAGE_MUTED))
+@mute_router.callback_query(
+    NotificationCallback.filter(F.action == NotificationControl.MANAGE_MUTED)
+)
 @ensure_message_context
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
@@ -262,18 +309,28 @@ async def show_manage_muted_menu(
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
     if not user_settings:
-        logger.warning("Cannot show manage muted menu for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.warning(
+            "Cannot show manage muted menu for event without a user, user_settings is None."
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
-    manage_muted_builder = await create_manage_muted_users_keyboard(translator, user_settings)
+    manage_muted_builder = await create_manage_muted_users_keyboard(
+        translator, user_settings
+    )
     if user_settings.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
             "Current mode is Blacklist. You receive notifications from everyone except those on the list."
         )
     else:
-        current_mode_text = _("Current mode is Whitelist. You only receive notifications from users on the list.")
-    full_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_text)
+        current_mode_text = _(
+            "Current mode is Whitelist. You only receive notifications from users on the list."
+        )
+    full_text = _("Manage Mute List\n\n{current_mode_description}").format(
+        current_mode_description=current_mode_text
+    )
 
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
@@ -297,13 +354,21 @@ async def set_mute_mode(
     _ = translator.gettext
     new_mode = callback_data.mode
 
-    updated_user_settings = await user_settings_service.update_mute_mode(user_settings, new_mode, actor=Actor.USER)
+    updated_user_settings = await user_settings_service.update_mute_mode(
+        user_settings, new_mode, actor=Actor.USER
+    )
 
     if not updated_user_settings:
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         current_settings_for_keyboard = user_settings
     else:
-        mode_text = _("Blacklist") if updated_user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+        mode_text = (
+            _("Blacklist")
+            if updated_user_settings.mute_list_mode == MuteListMode.blacklist
+            else _("Whitelist")
+        )
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)
         current_settings_for_keyboard = updated_user_settings
@@ -313,10 +378,16 @@ async def set_mute_mode(
             "Current mode is Blacklist. You receive notifications from everyone except those on the list."
         )
     else:
-        current_mode_desc = _("Current mode is Whitelist. You only receive notifications from users on the list.")
+        current_mode_desc = _(
+            "Current mode is Whitelist. You only receive notifications from users on the list."
+        )
 
-    menu_text = _("Manage Mute List\n\n{current_mode_description}").format(current_mode_description=current_mode_desc)
-    updated_keyboard_markup = await create_manage_muted_users_keyboard(translator, current_settings_for_keyboard)
+    menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
+        current_mode_description=current_mode_desc
+    )
+    updated_keyboard_markup = await create_manage_muted_users_keyboard(
+        translator, current_settings_for_keyboard
+    )
 
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
@@ -328,7 +399,9 @@ async def set_mute_mode(
 
 
 @mute_router.callback_query(
-    PaginateUsersCallback.filter(F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]))
+    PaginateUsersCallback.filter(
+        F.list_type.in_([UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED])
+    )
 )
 @ensure_message_context
 async def display_internal_user_list(
@@ -347,7 +420,9 @@ async def display_internal_user_list(
     )
 
 
-@mute_router.callback_query(PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS))
+@mute_router.callback_query(
+    PaginateUsersCallback.filter(F.list_type == UserListAction.LIST_ALL_ACCOUNTS)
+)
 @ensure_message_context
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
@@ -359,13 +434,19 @@ async def display_all_accounts_list(
     """Handles pagination for the list of all TeamTalk server accounts."""
     if not user_settings:
         _ = translator.gettext
-        logger.warning("Cannot display all accounts list for event without a user, user_settings is None.")
-        await callback_query.answer(_("An error occurred. Please try again later."), show_alert=True)
+        logger.warning(
+            "Cannot display all accounts list for event without a user, user_settings is None."
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     if not tt_connection:
         _ = translator.gettext
-        await callback_query.answer(_("TeamTalk connection is not active."), show_alert=True)
+        await callback_query.answer(
+            _("TeamTalk connection is not active."), show_alert=True
+        )
         return
     await _display_all_server_accounts_list(
         callback_query, translator, user_settings, tt_connection, callback_data.page
@@ -389,7 +470,9 @@ async def toggle_user_mute(
 
     if list_type == UserListAction.LIST_ALL_ACCOUNTS:
         if tt_connection:
-            username_to_toggle = await _get_username_from_all_accounts(callback_data, tt_connection)
+            username_to_toggle = await _get_username_from_all_accounts(
+                callback_data, tt_connection
+            )
     elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
         username_to_toggle = _get_username_from_muted_list(callback_data, user_settings)
 
@@ -399,13 +482,25 @@ async def toggle_user_mute(
             callback_query.from_user.id,
             callback_data,
         )
-        await callback_query.answer(_("Error determining user to mute/unmute. Try again."), show_alert=True)
+        await callback_query.answer(
+            _("Error determining user to mute/unmute. Try again."), show_alert=True
+        )
         return
 
-    result = await moderation_service.toggle_mute_status(user_settings, username_to_toggle, translator)
+    result = await moderation_service.toggle_mute_status(
+        user_settings, username_to_toggle, translator
+    )
 
-    toast_message = translator.gettext(result.message_key).format(**(result.message_args or {}))
+    toast_message = translator.gettext(result.message_key).format(
+        **(result.message_args or {})
+    )
     await callback_query.answer(toast_message, show_alert=not result.success)
 
     if result.success and result.user_settings:
-        await _refresh_mute_related_ui(callback_query, translator, result.user_settings, tt_connection, callback_data)
+        await _refresh_mute_related_ui(
+            callback_query,
+            translator,
+            result.user_settings,
+            tt_connection,
+            callback_data,
+        )

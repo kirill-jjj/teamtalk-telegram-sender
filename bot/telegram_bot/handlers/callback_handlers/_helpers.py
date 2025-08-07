@@ -100,7 +100,9 @@ async def refresh_subscriber_view(
 ) -> None:
     """Refresher function for the subscriber detail view."""
     target_telegram_id = callback_data.target_telegram_id
-    page_context = getattr(callback_data, "subscriber_page_context", getattr(callback_data, "page", 0))
+    page_context = getattr(
+        callback_data, "subscriber_page_context", getattr(callback_data, "page", 0)
+    )
 
     user_settings = await user_repo.get_by_id(target_telegram_id)
     if not user_settings:
@@ -142,7 +144,10 @@ def ensure_message_context(
             try:
                 await query.answer(error_message_for_missing_context, show_alert=True)
             except TelegramAPIError:
-                logger.exception("Failed to answer callback query in decorator for '%s'.", func.__name__)
+                logger.exception(
+                    "Failed to answer callback query in decorator for '%s'.",
+                    func.__name__,
+                )
             return
 
         await func(query, *args, translator=translator, **kwargs)
@@ -171,13 +176,20 @@ def ensure_tt_user_exists(
     ) -> None:
         _ = translator.gettext
         if not hasattr(callback_data, "user_id"):
-            logger.error("Handler '%s': could not find callback_data with user_id.", func.__name__)
-            await query.answer(_("Error processing command: Invalid callback data."), show_alert=True)
+            logger.error(
+                "Handler '%s': could not find callback_data with user_id.",
+                func.__name__,
+            )
+            await query.answer(
+                _("Error processing command: Invalid callback data."), show_alert=True
+            )
             return
 
         if not tt_connection.instance:
             logger.error("Handler '%s': tt_connection has no instance.", func.__name__)
-            await query.answer(_("Error: No active TeamTalk connection."), show_alert=True)
+            await query.answer(
+                _("Error: No active TeamTalk connection."), show_alert=True
+            )
             return
 
         server_host = tt_connection.server_info.host
@@ -185,7 +197,9 @@ def ensure_tt_user_exists(
 
         if not user_to_act_on:
             await query.answer(
-                _("User not found on server {server_host} anymore.").format(server_host=server_host),
+                _("User not found on server {server_host} anymore.").format(
+                    server_host=server_host
+                ),
                 show_alert=True,
             )
             try:
@@ -231,13 +245,20 @@ async def _display_subscriber_view(
         chat_info = await bot.get_chat(user_settings.telegram_id)
         display_name = format_telegram_user_display_name(chat_info)
     except TelegramAPIError:
-        logger.exception("Could not fetch chat info for %s via Telegram API.", user_settings.telegram_id)
+        logger.exception(
+            "Could not fetch chat info for %s via Telegram API.",
+            user_settings.telegram_id,
+        )
     except Exception:
-        logger.exception("Unexpected error fetching chat info for %s.", user_settings.telegram_id)
+        logger.exception(
+            "Unexpected error fetching chat info for %s.", user_settings.telegram_id
+        )
 
     details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
     details_parts.append(
-        _("Linked TT Account: {tt_username}").format(tt_username=user_settings.teamtalk_username or _("None"))
+        _("Linked TT Account: {tt_username}").format(
+            tt_username=user_settings.teamtalk_username or _("None")
+        )
     )
     details_parts.append(_("Language: {lang}").format(lang=user_settings.language_code))
     noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
@@ -250,12 +271,20 @@ async def _display_subscriber_view(
     }
     notif_setting_str = user_settings.notification_settings.value
     details_parts.append(
-        _("Notifications: {setting}").format(setting=notif_setting_map.get(notif_setting_str, notif_setting_str))
+        _("Notifications: {setting}").format(
+            setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
+        )
     )
-    mute_mode_str = _("Blacklist") if user_settings.mute_list_mode == MuteListMode.blacklist else _("Whitelist")
+    mute_mode_str = (
+        _("Blacklist")
+        if user_settings.mute_list_mode == MuteListMode.blacklist
+        else _("Whitelist")
+    )
     details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
 
     text = "\n".join(details_parts)
     # This assumes query.message is a Message, which is guaranteed by @ensure_message_context
-    await cast(Message, query.message).edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await cast(Message, query.message).edit_text(
+        text, reply_markup=keyboard, parse_mode="HTML"
+    )
     await query.answer()

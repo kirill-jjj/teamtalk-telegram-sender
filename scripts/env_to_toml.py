@@ -31,23 +31,51 @@ ENV_TO_TOML_MAPPING: EnvMappingType = {
     "TG_ADMIN_CHAT_ID": ("telegram", "admin_chat_id", int),
     "HOST_NAME": ("teamtalk", "host_name", str),
     "PORT": ("teamtalk", "port", int),
-    "ENCRYPTED": ("teamtalk", "encrypted", lambda v: v.lower() == "true" if isinstance(v, str) else bool(v)),
+    "ENCRYPTED": (
+        "teamtalk",
+        "encrypted",
+        lambda v: v.lower() == "true" if isinstance(v, str) else bool(v),
+    ),
     "USER_NAME": ("teamtalk", "user_name", str),
     "PASSWORD": ("teamtalk", "password", str),
     "CHANNEL": ("teamtalk", "channel", str),
-    "CHANNEL_PASSWORD": ("teamtalk", "channel_password", str),  # Will be empty string if missing/empty in .env
+    "CHANNEL_PASSWORD": (
+        "teamtalk",
+        "channel_password",
+        str,
+    ),  # Will be empty string if missing/empty in .env
     "NICK_NAME": ("teamtalk", "nick_name", str),
     "STATUS_TEXT": ("teamtalk", "status_text", str),
     "CLIENT_NAME": ("teamtalk", "client_name", str),
-    "SERVER_NAME": ("teamtalk", "server_name", str),  # Will be empty string if missing/empty in .env
-    "ADMIN_USERNAME": ("general", "admin_username", str),  # Will be empty string if missing/empty in .env
-    "GLOBAL_IGNORE_USERNAMES": ("teamtalk", "global_ignore_usernames", parse_comma_separated_string_to_list),
+    "SERVER_NAME": (
+        "teamtalk",
+        "server_name",
+        str,
+    ),  # Will be empty string if missing/empty in .env
+    "ADMIN_USERNAME": (
+        "general",
+        "admin_username",
+        str,
+    ),  # Will be empty string if missing/empty in .env
+    "GLOBAL_IGNORE_USERNAMES": (
+        "teamtalk",
+        "global_ignore_usernames",
+        parse_comma_separated_string_to_list,
+    ),
     "DATABASE_FILE": ("database", "db_file", str),
     "DEFAULT_LANG": ("general", "default_lang", str),
     "GENDER": ("general", "gender", str),
     "DEEPLINK_TTL_SECONDS": ("operational_parameters", "deeplink_ttl_seconds", int),
-    "TT_RECONNECT_RETRY_SECONDS": ("operational_parameters", "tt_reconnect_retry_seconds", int),
-    "TT_RECONNECT_CHECK_INTERVAL_SECONDS": ("operational_parameters", "tt_reconnect_check_interval_seconds", int),
+    "TT_RECONNECT_RETRY_SECONDS": (
+        "operational_parameters",
+        "tt_reconnect_retry_seconds",
+        int,
+    ),
+    "TT_RECONNECT_CHECK_INTERVAL_SECONDS": (
+        "operational_parameters",
+        "tt_reconnect_check_interval_seconds",
+        int,
+    ),
     "ONLINE_USERS_CACHE_SYNC_INTERVAL_SECONDS": (
         "operational_parameters",
         "online_users_cache_sync_interval_seconds",
@@ -55,7 +83,16 @@ ENV_TO_TOML_MAPPING: EnvMappingType = {
     ),
 }
 
-DEFAULT_EXCLUDE_DIRS = [".venv", ".git", "__pycache__", "alembic", "node_modules", "dist", "build", "scripts"]
+DEFAULT_EXCLUDE_DIRS = [
+    ".venv",
+    ".git",
+    "__pycache__",
+    "alembic",
+    "node_modules",
+    "dist",
+    "build",
+    "scripts",
+]
 
 
 def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:  # noqa: ANN401
@@ -65,10 +102,16 @@ def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str)
     # However, we iterate items from dotenv_values, so raw_value is what's after '='.
     # An empty value (KEY=) results in raw_value being an empty string.
 
-    is_optional_empty_string_field = env_key in ["CHANNEL_PASSWORD", "SERVER_NAME", "ADMIN_USERNAME"]
+    is_optional_empty_string_field = env_key in [
+        "CHANNEL_PASSWORD",
+        "SERVER_NAME",
+        "ADMIN_USERNAME",
+    ]
     is_optional_empty_list_field = env_key == "GLOBAL_IGNORE_USERNAMES"
 
-    if raw_value == "" or raw_value is None:  # Treat None from direct access or empty string from .env as "empty"
+    if (
+        raw_value == "" or raw_value is None
+    ):  # Treat None from direct access or empty string from .env as "empty"
         if is_optional_empty_string_field:
             return ""
         if is_optional_empty_list_field:
@@ -127,12 +170,17 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
             section, toml_key, conversion_func = ENV_TO_TOML_MAPPING[env_key]
             converted_value = convert_value(env_value, conversion_func, env_key)
 
-            if converted_value is not None:  # Add to TOML only if there's a meaningful converted value
+            if (
+                converted_value is not None
+            ):  # Add to TOML only if there's a meaningful converted value
                 if section not in toml_data:
                     toml_data[section] = {}
                 toml_data[section][toml_key] = converted_value
         else:
-            print(f"Warning: Unmapped key '{env_key}' from '{input_env_path}' will be ignored.", file=sys.stderr)
+            print(
+                f"Warning: Unmapped key '{env_key}' from '{input_env_path}' will be ignored.",
+                file=sys.stderr,
+            )
 
     try:
         output_toml_path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,7 +191,10 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
         print(f"Error writing TOML file '{output_toml_path}': {e}", file=sys.stderr)
         return False
     except Exception as e:
-        print(f"Error during TOML generation for '{output_toml_path}': {e}", file=sys.stderr)
+        print(
+            f"Error during TOML generation for '{output_toml_path}': {e}",
+            file=sys.stderr,
+        )
         return False
     else:
         return True
@@ -151,13 +202,19 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
 
 def _process_all_env_files(project_root: Path, exclude_dirs_str: str) -> None:
     """Scans and converts all found .env files in the project directory."""
-    print(f"Searching for .env files in '{project_root}' and subdirectories (excluding: {exclude_dirs_str})...")
-    excluded_dir_parts = {Path(d.strip()).name for d in exclude_dirs_str.split(",") if d.strip()}
+    print(
+        f"Searching for .env files in '{project_root}' and subdirectories (excluding: {exclude_dirs_str})..."
+    )
+    excluded_dir_parts = {
+        Path(d.strip()).name for d in exclude_dirs_str.split(",") if d.strip()
+    }
 
     env_files_to_process = []
     for p in project_root.rglob("*"):
         if p.is_file() and (p.name.endswith(".env") or ".env." in p.name):
-            if not any(part in excluded_dir_parts for part in p.relative_to(project_root).parts):
+            if not any(
+                part in excluded_dir_parts for part in p.relative_to(project_root).parts
+            ):
                 env_files_to_process.append(p)
             else:
                 print(f"Skipping excluded file by directory: {p}", file=sys.stderr)
@@ -176,7 +233,8 @@ def _process_all_env_files(project_root: Path, exclude_dirs_str: str) -> None:
     for env_file_path_item in env_files_to_process:
         output_toml_path_item = (
             (project_root / "config.toml")
-            if env_file_path_item.name == ".env" and env_file_path_item.parent == project_root
+            if env_file_path_item.name == ".env"
+            and env_file_path_item.parent == project_root
             else env_file_path_item.with_suffix(".toml")
         )
         if process_single_env_file(env_file_path_item, output_toml_path_item):
@@ -210,7 +268,10 @@ def main() -> None:
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--config", type=Path, metavar="<path_to_env_file>", help="Path to a specific input .env file to convert."
+        "--config",
+        type=Path,
+        metavar="<path_to_env_file>",
+        help="Path to a specific input .env file to convert.",
     )
     group.add_argument(
         "--all",

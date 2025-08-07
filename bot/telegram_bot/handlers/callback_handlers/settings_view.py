@@ -7,7 +7,10 @@ from typing import cast
 from aiogram.types import CallbackQuery, Message
 
 from bot.models import UserSettings
-from bot.telegram_bot.keyboards import create_main_settings_keyboard, create_notification_settings_keyboard
+from bot.telegram_bot.keyboards import (
+    create_main_settings_keyboard,
+    create_notification_settings_keyboard,
+)
 from bot.telegram_bot.ui_utils import safe_edit_text
 
 logger = logging.getLogger(__name__)
@@ -47,7 +50,9 @@ async def refresh_notification_settings_view(
         return
 
     menu_text = _("Notification Settings")
-    updated_keyboard_markup = await create_notification_settings_keyboard(translator, user_settings)
+    updated_keyboard_markup = await create_notification_settings_keyboard(
+        translator, user_settings
+    )
 
     await safe_edit_text(
         message_to_edit=cast(Message, query.message),

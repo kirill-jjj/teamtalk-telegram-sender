@@ -34,7 +34,9 @@ class SubscriptionService:
         self._ban_repo = ban_repo
         self._cache = cache
 
-    async def create_subscription(self, user_settings: UserSettings, tt_username: str) -> bool:
+    async def create_subscription(
+        self, user_settings: UserSettings, tt_username: str
+    ) -> bool:
         """Handles all DB and cache operations for a new subscription.
 
         Args:
@@ -92,7 +94,9 @@ class SubscriptionService:
         )
         return True
 
-    async def link_tt_account(self, user_settings: UserSettings, tt_username: str) -> OperationResult:
+    async def link_tt_account(
+        self, user_settings: UserSettings, tt_username: str
+    ) -> OperationResult:
         """Links a TeamTalk account to a subscriber.
 
         Args:
@@ -126,7 +130,11 @@ class SubscriptionService:
         )
 
         is_relink = bool(original_tt_username and original_tt_username != tt_username)
-        message_key = "link_tt_account_success_relinked" if is_relink else "link_tt_account_success_linked"
+        message_key = (
+            "link_tt_account_success_relinked"
+            if is_relink
+            else "link_tt_account_success_linked"
+        )
         return OperationResult(
             success=True,
             message_key=message_key,

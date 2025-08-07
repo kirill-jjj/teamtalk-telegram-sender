@@ -101,8 +101,20 @@ class CommandRouter:
 
         # Определяем, какие зависимости нужны каждому обработчику
         handler_dependencies: dict[Callable[..., Any], list[str]] = {
-            on_subscribe: ["tt_message", "deeplink_repo", "translator", "settings", "bot"],
-            on_unsubscribe: ["tt_message", "deeplink_repo", "translator", "settings", "bot"],
+            on_subscribe: [
+                "tt_message",
+                "deeplink_repo",
+                "translator",
+                "settings",
+                "bot",
+            ],
+            on_unsubscribe: [
+                "tt_message",
+                "deeplink_repo",
+                "translator",
+                "settings",
+                "bot",
+            ],
             on_add_admin: [
                 "tt_message",
                 "translator",
@@ -130,7 +142,9 @@ class CommandRouter:
 
         if required_deps_names:
             # Collect kwargs only with the necessary dependencies
-            kwargs_for_handler = {dep: dependencies_pool[dep] for dep in required_deps_names}
+            kwargs_for_handler = {
+                dep: dependencies_pool[dep] for dep in required_deps_names
+            }
             await handler(**kwargs_for_handler)
         else:
             logger.error(

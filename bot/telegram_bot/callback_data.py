@@ -160,16 +160,24 @@ class LinkTTAccountChosenCallback(CallbackData, prefix=CB_PREFIX_LINK_TT_CHOSEN)
 
 
 # For paginating the list of linkable TT accounts
-class PaginateLinkableAccountsCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS):
+class PaginateLinkableAccountsCallback(
+    CallbackData, prefix=CB_PREFIX_PAGINATE_LINKABLE_ACCOUNTS
+):
     """Callback data for paginating the list of TeamTalk accounts available for linking."""
 
-    subscriber_context_page: int  # Original page of the subscriber list (context to return to)
-    target_telegram_id: int  # The Telegram user (subscriber) we are linking an account for
+    subscriber_context_page: (
+        int  # Original page of the subscriber list (context to return to)
+    )
+    target_telegram_id: (
+        int  # The Telegram user (subscriber) we are linking an account for
+    )
     page: int  # The page of linkable TT accounts to display
 
 
 # For admin setting a subscriber's language
-class AdminSetSubscriberLanguageCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_LANG):
+class AdminSetSubscriberLanguageCallback(
+    CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_LANG
+):
     """Callback data for an admin setting a specific subscriber's language."""
 
     target_telegram_id: int  # The subscriber whose language is being changed
@@ -179,7 +187,9 @@ class AdminSetSubscriberLanguageCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SE
 
 
 # For admin setting a subscriber's notification preferences
-class AdminSetSubscriberNotificationPrefCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF):
+class AdminSetSubscriberNotificationPrefCallback(
+    CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_NOTIF_PREF
+):
     """Callback data for an admin setting a specific subscriber's notification preferences."""
 
     target_telegram_id: int  # The subscriber whose setting is being changed
@@ -188,7 +198,9 @@ class AdminSetSubscriberNotificationPrefCallback(CallbackData, prefix=CB_PREFIX_
 
 
 # For admin setting a subscriber's mute list mode
-class AdminSetSubscriberMuteModeCallback(CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE):
+class AdminSetSubscriberMuteModeCallback(
+    CallbackData, prefix=CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE
+):
     """Callback data for an admin setting a specific subscriber's mute list mode."""
 
     target_telegram_id: int  # The subscriber whose mode is being changed
@@ -202,4 +214,6 @@ class PaginateMuteListCallback(CallbackData, prefix=CB_PREFIX_PAGINATE_MUTE_LIST
 
     target_telegram_id: int  # The subscriber whose mute list is being viewed
     mute_list_page: int  # The page of the mute list to display
-    subscriber_context_page: int  # Original page of the main subscriber list (for back button context)
+    subscriber_context_page: (
+        int  # Original page of the main subscriber list (for back button context)
+    )
