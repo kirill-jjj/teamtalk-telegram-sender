@@ -234,8 +234,8 @@ class RequestProvider(Provider):
 
     @provide
     def get_user_from_event(self, event: TelegramObject) -> User | None:
-        """
-        Extracts the User object from the incoming event, if it exists.
+        """Extracts the User object from the incoming event, if it exists.
+
         AiogramProvider provides the `event: TelegramObject`.
         This provider makes the `User` available for other dependencies.
         """

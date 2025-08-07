@@ -17,6 +17,7 @@ from bot.lifecycle import on_startup
 from bot.logging_setup import setup_logging
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
+from bot.telegram_bot.handlers.errors import error_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 from bot.telegram_bot.handlers.user import user_commands_router
 from bot.telegram_bot.middlewares import (
@@ -70,6 +71,7 @@ class Application:
         self.dp.include_router(admin_router)
         self.dp.include_router(callback_router)
         self.dp.include_router(catch_all_router)
+        self.dp.include_router(error_router)
 
         # Register startup handler to be executed when the bot starts
         self.dp.startup.register(on_startup)
