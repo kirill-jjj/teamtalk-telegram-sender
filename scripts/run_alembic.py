@@ -16,8 +16,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run Alembic commands with a specific TOML configuration file.",
         usage=(
-            "migrate [--config CONFIG_FILE.toml] [alembic_command] "
-            "[alembic_options...]"
+            "migrate [--config CONFIG_FILE.toml] [alembic_command] [alembic_options...]"
         ),
     )
     parser.add_argument(

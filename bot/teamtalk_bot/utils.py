@@ -315,9 +315,7 @@ async def forward_tt_message_to_telegram_admin(
 P = ParamSpec(
     "P"
 )  # ParamSpec might not be used with ... but kept for potential future refinement
-R = TypeVar(
-    "R"
-)  # TypeVar for the original function's return type (simplified to Any)
+R = TypeVar("R")  # TypeVar for the original function's return type (simplified to Any)
 
 
 # Type for the original function that will be decorated.
@@ -339,7 +337,9 @@ def handle_command_errors(
     def decorator(func: OriginalFunctionType) -> WrappedFunctionType:
         @functools.wraps(func)
         async def wrapper(
-            tt_message: TeamTalkMessage, *args: Any, **kwargs: Any  # noqa: ANN401
+            tt_message: TeamTalkMessage,
+            *args: Any,
+            **kwargs: Any,  # noqa: ANN401
         ) -> None:
             try:
                 await func(tt_message, *args, **kwargs)

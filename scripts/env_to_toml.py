@@ -310,8 +310,7 @@ def main() -> None:
         type=Path,
         default=Path.cwd(),
         help=(
-            "Project root directory for --all scan. Default: current working "
-            "directory."
+            "Project root directory for --all scan. Default: current working directory."
         ),
     )
 

@@ -62,7 +62,6 @@ def with_view_refresh(
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            query = kwargs.pop("query")
             callback_answer = kwargs.pop("callback_answer")
 
             success, message, updated_object = await func(**kwargs)
@@ -74,7 +73,6 @@ def with_view_refresh(
                 kwargs["user_settings"] = updated_object
 
             await view_refresher(
-                query=query,
                 **kwargs,
             )
 
@@ -120,10 +118,12 @@ def ensure_message_context(
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        translator: NullTranslations,
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        translator = cast(
+            NullTranslations, kwargs.get("translator", NullTranslations())
+        )
         _ = translator.gettext
         error_message_for_missing_context = _("Error processing command.")
 
@@ -143,7 +143,7 @@ def ensure_message_context(
                 )
             return
 
-        await func(query, *args, translator=translator, **kwargs)
+        await func(query, *args, **kwargs)
 
     return wrapper
 
