@@ -54,14 +54,17 @@ class Application:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
-        # Create and set up dishka container
-        container = make_async_container(AppProvider(), RequestProvider(), AiogramProvider())
+        app_provider = AppProvider(settings=self.app_config)
+        container = make_async_container(app_provider, RequestProvider(), AiogramProvider())
+
         self.dp = await container.get(Dispatcher)
         self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
         self.dp.update.middleware.register(SubscriptionCheckMiddleware())
-        self.dp.update.middleware.register(ActiveTeamTalkConnectionMiddleware(default_server_key=None))
+        self.dp.update.middleware.register(
+            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
+        )
         self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         # Include routers

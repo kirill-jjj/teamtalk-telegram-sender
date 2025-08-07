@@ -58,10 +58,15 @@ class AppProvider(Provider):
 
     scope = Scope.APP
 
+    def __init__(self, settings: Settings) -> None:
+        """Initializes the provider with application settings."""
+        super().__init__()
+        self._settings = settings
+
     @provide
     def get_settings(self) -> Settings:
         """Provides application settings."""
-        return Settings.from_toml("config.toml")
+        return self._settings
 
     @provide
     def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
