@@ -1,8 +1,8 @@
 """Service for generating reports."""
 
 from gettext import NullTranslations
-from html import escape
 
+from aiogram.utils.formatting import Bold, Text, as_list
 import pytalk
 from pytalk.user import User as TeamTalkUser
 
@@ -65,7 +65,7 @@ def _group_users_for_who_command(
         if channel_name not in channels_data:
             channels_data[channel_name] = []
 
-        channels_data[channel_name].append(escape(get_tt_user_display_name(user, translator)))
+        channels_data[channel_name].append(get_tt_user_display_name(user, translator))
         user_count += 1
 
     return [
@@ -91,34 +91,42 @@ def _format_who_message(
 
     header_template = (
         ngettext(
-            "There is {user_count} user on the server {server_host}:\n",
-            "There are {user_count} users on the server {server_host}:\n",
+            "There is {user_count} user on the server {server_host}:",
+            "There are {user_count} users on the server {server_host}:",
             total_users,
         )
         if server_host
         else ngettext(
-            "There is {user_count} user on the server:\n",
-            "There are {user_count} users on the server:\n",
+            "There is {user_count} user on the server:",
+            "There are {user_count} users on the server:",
             total_users,
         )
     )
-    text_reply = header_template.format(user_count=total_users, server_host=server_host)
+    header = Text(header_template.format(user_count=total_users, server_host=server_host))
 
     channel_parts = []
+    user_separator = translator.gettext(" and ")
+
     for group in sorted(grouped_data, key=lambda g: g.channel_name):
         sorted_nicks = sorted(user.nickname for user in group.users)
         if not sorted_nicks:
             continue
 
-        user_separator = translator.gettext(" and ")
-        user_list = (
-            f"<b>{user_separator.join(sorted_nicks)}</b>"
-            if len(sorted_nicks) == 1
-            else f"<b>{', '.join(sorted_nicks[:-1])}{user_separator}{sorted_nicks[-1]}</b>"
-        )
-        channel_parts.append(f"{user_list} {group.channel_name}")
+        if len(sorted_nicks) == 1:
+            user_list = Bold(sorted_nicks[0])
+        else:
+            # Format as: User1, User2 and User3
+            user_list = Bold(
+                f"{', '.join(sorted_nicks[:-1])}",
+                user_separator,
+                sorted_nicks[-1],
+            )
+        channel_parts.append(Text(user_list, " ", group.channel_name))
 
-    return text_reply + "\n" + "\n".join(channel_parts)
+    # Combine header and the list of channel parts
+    content = as_list(header, as_list(*channel_parts, sep="\n"), sep="\n\n")
+
+    return content.as_html()
 
 
 class ReportService:

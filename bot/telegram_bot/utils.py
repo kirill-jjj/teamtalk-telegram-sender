@@ -216,9 +216,7 @@ async def update_user_bot_commands(
     """Updates the bot commands for a specific user based on their admin status and language."""
     _ = translator.gettext
     is_admin = cache.is_admin(telegram_id)
-    commands: list[BotCommand] = (
-        get_admin_commands(_) if is_admin else get_user_commands(_)
-    )
+    commands: list[BotCommand] = get_admin_commands(_) if is_admin else get_user_commands(_)
 
     scope = BotCommandScopeChat(chat_id=telegram_id)
     try:

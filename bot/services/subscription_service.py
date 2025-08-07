@@ -5,7 +5,7 @@ import logging
 from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
-from bot.models import OperationResult, SubscribedUser, UserSettings
+from bot.models import OperationResult, UserSettings
 from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)

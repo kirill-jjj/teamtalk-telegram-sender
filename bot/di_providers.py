@@ -9,7 +9,7 @@ from typing import cast
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import TelegramObject, User
+from aiogram.types import User
 from dishka import FromDishka, Provider, Scope, provide
 import pytalk
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -42,8 +42,9 @@ def create_translator_factory(
     def get_translator(lang_code: str) -> NullTranslations:
         if lang_code in translator_cache:
             return translator_cache[lang_code]
+        translation: NullTranslations
         try:
-            translation = gettext.translation(  # type: ignore[assignment]
+            translation = gettext.translation(
                 DOMAIN, localedir=str(LOCALE_DIR), languages=[lang_code]
             )
         except FileNotFoundError:
@@ -232,11 +233,6 @@ class RequestProvider(Provider):
     def get_report_service(self) -> ReportService:
         """Provides a ReportService."""
         return ReportService()
-
-    @provide
-    def get_event_user(self, event: TelegramObject) -> User | None:
-        """Provides the user object from the current event, if available."""
-        return getattr(event, "from_user", None)
 
     @provide(provides=UserSettings | None)
     async def get_user_settings_optional(

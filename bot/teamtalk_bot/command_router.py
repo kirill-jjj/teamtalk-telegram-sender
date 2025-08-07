@@ -129,7 +129,7 @@ class CommandRouter:
         required_deps_names = handler_dependencies.get(handler)
 
         if required_deps_names:
-            # Cобираем kwargs только с нужными зависимостями
+            # Collect kwargs only with the necessary dependencies
             kwargs_for_handler = {dep: dependencies_pool[dep] for dep in required_deps_names}
             await handler(**kwargs_for_handler)
         else:
