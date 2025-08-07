@@ -15,10 +15,14 @@ from bot.database.repositories.user_repository import UserRepository
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
+from bot.telegram_bot.handlers.admin import _show_user_buttons
+from bot.telegram_bot.handlers.user import (
+    on_help_command,
+    on_settings_command,
+    on_who_command,
+)
 from bot.telegram_bot.types.bots import EventBot
 
-from ..admin import _show_user_buttons
-from ..user import on_help_command, on_settings_command, on_who_command
 from ._helpers import ensure_message_context
 from .list_utils import (
     _show_banned_list_page,

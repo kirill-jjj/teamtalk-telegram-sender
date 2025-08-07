@@ -82,6 +82,9 @@ select = [
     "RET",
     "TRY",
     "FBT",
+    "C90",
+    "TID",
+    "PERF",
 ]
 ignore = [
     "D203",
@@ -96,11 +99,12 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["D104"]
 "tests/*" = ["D", "S101"]
-"alembic/versions/*" = ["D"]
+"alembic/versions/*" = ["D", "C901"]
 "scripts/*" = ["T201"]
 "sender.py" = ["T201"]
 "bot/config.py" = ["E501"]
 "bot/telegram_bot/handlers/*" = ["ARG001"]
+"bot/teamtalk_bot/event_handler.py" = ["C901"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

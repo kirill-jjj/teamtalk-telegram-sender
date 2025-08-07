@@ -2,9 +2,9 @@
 
 from aiogram import Router
 
+from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 
-from ..filters.subscription import IsSubscribed
 from .callback_handlers.admin import admin_actions_router
 from .callback_handlers.banned_user_actions import banned_user_actions_router
 from .callback_handlers.language import language_router
