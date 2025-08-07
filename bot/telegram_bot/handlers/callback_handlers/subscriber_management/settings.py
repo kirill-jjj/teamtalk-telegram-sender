@@ -154,6 +154,7 @@ async def admin_toggle_noon(
     callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
+    bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
     user_settings_service: FromDishka[UserSettingsService],
 ) -> tuple[bool, str, UserSettings | None]:
@@ -319,6 +320,8 @@ AnySettingCallback: TypeAlias = (
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
+    query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     callback_data: AnySettingCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
