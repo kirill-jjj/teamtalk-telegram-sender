@@ -155,29 +155,32 @@ async def admin_toggle_noon(
     callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
     user_settings_service: FromDishka[UserSettingsService],
 ) -> tuple[bool, str, UserSettings | None]:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    if not user_settings:
-        return False, _("Subscriber settings not found."), None
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        if not user_settings:
+            return False, _("Subscriber settings not found."), None
 
-    updated_settings = await user_settings_service.toggle_noon_setting(
-        user_settings, actor=Actor.ADMIN
-    )
+        updated_settings = await user_settings_service.toggle_noon_setting(
+            user_settings, actor=Actor.ADMIN
+        )
 
-    if updated_settings:
-        status = (
-            _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
-        )
-        msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
-            tg_id=target_telegram_id, status=status
-        )
-        return True, msg, updated_settings
+        if updated_settings:
+            status = (
+                _("Enabled")
+                if updated_settings.not_on_online_enabled
+                else _("Disabled")
+            )
+            msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
+                tg_id=target_telegram_id, status=status
+            )
+            return True, msg, updated_settings
     return False, _("Failed to toggle NOON status."), None
 
 
@@ -227,19 +230,18 @@ async def admin_view_mute_list(
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    uow: FromDishka[IUnitOfWork],
+    user_repo: FromDishka[UserRepository],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
-    async with uow:
-        await _display_subscriber_mute_list_page(
-            query=query,
-            translator=translator,
-            bot=bot,
-            user_repo=uow.users,
-            target_telegram_id=callback_data.target_telegram_id,
-            subscriber_list_return_page=callback_data.page,
-            mute_list_page_num=0,
-        )
+    await _display_subscriber_mute_list_page(
+        query=query,
+        translator=translator,
+        bot=bot,
+        user_repo=user_repo,
+        target_telegram_id=callback_data.target_telegram_id,
+        subscriber_list_return_page=callback_data.page,
+        mute_list_page_num=0,
+    )
 
 
 async def _display_subscriber_mute_list_page(
@@ -288,19 +290,18 @@ async def paginate_mute_list(
     callback_data: PaginateMuteListCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    uow: FromDishka[IUnitOfWork],
+    user_repo: FromDishka[UserRepository],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
-    async with uow:
-        await _display_subscriber_mute_list_page(
-            query=query,
-            translator=translator,
-            bot=bot,
-            user_repo=uow.users,
-            target_telegram_id=callback_data.target_telegram_id,
-            subscriber_list_return_page=callback_data.subscriber_context_page,
-            mute_list_page_num=callback_data.mute_list_page,
-        )
+    await _display_subscriber_mute_list_page(
+        query=query,
+        translator=translator,
+        bot=bot,
+        user_repo=user_repo,
+        target_telegram_id=callback_data.target_telegram_id,
+        subscriber_list_return_page=callback_data.subscriber_context_page,
+        mute_list_page_num=callback_data.mute_list_page,
+    )
     await query.answer()
 
 
@@ -317,12 +318,10 @@ AnySettingCallback: TypeAlias = (
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
-    query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: AnySettingCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    user_repo: FromDishka[UserRepository],
+    uow: FromDishka[IUnitOfWork],
     user_settings_service: FromDishka[UserSettingsService],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
 ) -> tuple[bool, str, UserSettings | None]:
@@ -330,41 +329,44 @@ async def admin_set_any_subscriber_setting(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    if not user_settings:
-        return False, _("Subscriber settings not found."), None
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        if not user_settings:
+            return False, _("Subscriber settings not found."), None
 
-    updated_settings: UserSettings | None = None
-    success_msg = ""
+        updated_settings: UserSettings | None = None
+        success_msg = ""
 
-    if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
-        updated_settings = await user_settings_service.update_language(
-            bot,
-            user_settings,
-            callback_data.lang_code,
-            translator_factory,
-            Actor.ADMIN,
-        )
-        success_msg = _("Language for subscriber {tg_id} changed to {value}.").format(
-            tg_id=target_telegram_id, value=callback_data.lang_code
-        )
-    elif isinstance(callback_data, AdminSetSubscriberNotificationPrefCallback):
-        new_pref = NotificationSetting(callback_data.setting_value)
-        updated_settings = await user_settings_service.update_notification_preference(
-            user_settings, new_pref, Actor.ADMIN
-        )
-        success_msg = _(
-            "Notification preference for subscriber {tg_id} set to: {value}."
-        ).format(tg_id=target_telegram_id, value=new_pref.value)
-    elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
-        updated_settings = await user_settings_service.update_mute_mode(
-            user_settings, callback_data.mode, Actor.ADMIN
-        )
-        success_msg = _(
-            "Mute list mode for subscriber {tg_id} set to: {value}."
-        ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
+        if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
+            updated_settings = await user_settings_service.update_language(
+                bot,
+                user_settings,
+                callback_data.lang_code,
+                translator_factory,
+                Actor.ADMIN,
+            )
+            success_msg = _(
+                "Language for subscriber {tg_id} changed to {value}."
+            ).format(tg_id=target_telegram_id, value=callback_data.lang_code)
+        elif isinstance(callback_data, AdminSetSubscriberNotificationPrefCallback):
+            new_pref = NotificationSetting(callback_data.setting_value)
+            updated_settings = (
+                await user_settings_service.update_notification_preference(
+                    user_settings, new_pref, Actor.ADMIN
+                )
+            )
+            success_msg = _(
+                "Notification preference for subscriber {tg_id} set to: {value}."
+            ).format(tg_id=target_telegram_id, value=new_pref.value)
+        elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
+            updated_settings = await user_settings_service.update_mute_mode(
+                user_settings, callback_data.mode, Actor.ADMIN
+            )
+            success_msg = _(
+                "Mute list mode for subscriber {tg_id} set to: {value}."
+            ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
 
-    if updated_settings:
-        return True, success_msg, updated_settings
+        if updated_settings:
+            return True, success_msg, updated_settings
 
     return False, _("Failed to update setting. Please try again."), None

@@ -6,13 +6,13 @@ from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
 from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import SubscriberCallback
@@ -52,18 +52,18 @@ async def refresh_banned_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_banned_list_view)
 async def unban_subscriber(
-    query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
+    uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.unban_subscriber(target_telegram_id)
-    message = _(result.message_key).format(**(result.message_args or {}))
+    async with uow:
+        result = await moderation_service.unban_subscriber(target_telegram_id)
+        message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, message, None
 
 
@@ -93,25 +93,25 @@ async def refresh_subscriber_list_view(
 @ensure_message_context
 @with_view_refresh(refresh_subscriber_list_view)
 async def ban_subscriber(
-    query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     tt_connection: "TeamTalkConnection | None",
+    uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(
-        target_telegram_id, translator, tt_connection
-    )
-
-    if result.long_message:
-        logger.info(
-            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
+    async with uow:
+        result = await moderation_service.ban_and_delete_subscriber(
+            target_telegram_id, translator, tt_connection
         )
 
-    short_message = _(result.message_key).format(**(result.message_args or {}))
+        if result.long_message:
+            logger.info(
+                "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
+            )
+
+        short_message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, short_message, None

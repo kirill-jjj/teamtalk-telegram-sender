@@ -1,5 +1,7 @@
 """Global error handler for the Telegram bot."""
 
+from collections.abc import Callable
+from gettext import NullTranslations
 import logging
 
 from aiogram import Router
@@ -20,11 +22,11 @@ async def universal_error_handler(
     event: ErrorEvent,
     bot: FromDishka[EventBot],
     settings: FromDishka[Settings],
+    translator_factory: FromDishka[Callable[[str], NullTranslations]],
 ) -> bool:
     """Catches all exceptions that were not handled in other handlers."""
-
-    def _(s: str) -> str:  # Placeholder for future gettext integration
-        return s
+    translator = translator_factory(settings.general.default_lang)
+    _ = translator.gettext
 
     logger.exception(
         "An error occurred while processing an update: %s",
@@ -50,18 +52,18 @@ async def universal_error_handler(
     admin_id = settings.telegram.admin_chat_id
     if admin_id:
         content = Text(
-            Bold("Critical Error!"),
+            Bold(_("Critical Error!")),
             "\n\n",
-            Bold("Type: "),
+            Bold(_("Type: ")),
             type(event.exception).__name__,
             "\n",
-            Bold("Error: "),
+            Bold(_("Error: ")),
             str(event.exception),
             "\n\n",
-            Bold("Update ID: "),
+            Bold(_("Update ID: ")),
             event.update.update_id,
             "\n",
-            Bold("Chat ID: "),
+            Bold(_("Chat ID: ")),
             str(chat_id or "N/A"),
         )
         try:

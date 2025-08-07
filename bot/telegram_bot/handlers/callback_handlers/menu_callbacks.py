@@ -9,10 +9,9 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import AdminCommand
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
+from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.handlers.admin import _show_user_buttons
@@ -42,6 +41,7 @@ async def menu_who_handler(
     cache: FromDishka[CacheService],
     tt_connection: TeamTalkConnection,
     bot: FromDishka[EventBot],
+    report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     await on_who_command(
@@ -50,6 +50,7 @@ async def menu_who_handler(
         cache=cache,
         tt_connection=tt_connection,
         bot=bot,
+        report_service=report_service,
     )
 
 
@@ -117,18 +118,18 @@ async def menu_subscribers_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    user_repo: FromDishka[UserRepository],
-    subscriber_repo: FromDishka[SubscriberRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    await _show_subscriber_list_page(
-        cast(Message, query.message),
-        user_repo,
-        subscriber_repo,
-        bot,
-        translator,
-        page=0,
-    )
+    async with uow:
+        await _show_subscriber_list_page(
+            cast(Message, query.message),
+            uow.users,
+            uow.subscribers,
+            bot,
+            translator,
+            page=0,
+        )
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "unban"))
@@ -137,13 +138,14 @@ async def menu_unban_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    ban_repo: FromDishka[BanRepository],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
-    await _show_banned_list_page(
-        target=cast(Message, query.message),
-        ban_repo=ban_repo,
-        bot=bot,
-        page=0,
-        translator=translator,
-    )
+    async with uow:
+        await _show_banned_list_page(
+            target=cast(Message, query.message),
+            ban_repo=uow.bans,
+            bot=bot,
+            page=0,
+            translator=translator,
+        )
