@@ -38,15 +38,16 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback,
     translator: NullTranslations,
     bot: EventBot,
-    user_repo: UserRepository,
-    subscriber_repo: SubscriberRepository,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
+    # Теперь эта функция не управляет транзакцией, она просто использует
+    # репозитории из переданного Unit of Work.
     await _refresh_and_display_subscriber_list(
         query=query,
-        user_repo=user_repo,
-        subscriber_repo=subscriber_repo,
+        user_repo=uow.users,
+        subscriber_repo=uow.subscribers,
         bot=bot,
         return_page=callback_data.page,
         translator=translator,
@@ -65,6 +66,7 @@ async def on_ban_subscriber_confirm(
     translator: FromDishka[NullTranslations],
     moderation_service: FromDishka[ModerationService],
     tt_connection: TeamTalkConnection | None,
+    bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber after admin confirmation."""
@@ -96,14 +98,15 @@ async def delete_subscriber(
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],
+    bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    async with uow:
-        success = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+    # Передаем uow в сервис, чтобы избежать конфликта сессий
+    success = await subscription_service.delete_profile(target_telegram_id, uow=uow)
 
     if success:
         message = _("Subscriber {telegram_id} deleted successfully.").format(
