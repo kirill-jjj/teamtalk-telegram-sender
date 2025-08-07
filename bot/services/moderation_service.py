@@ -84,9 +84,7 @@ class ModerationService:
 
         # 2. Collect all associated TeamTalk usernames from these bans
         associated_tt_usernames = {
-            ban.teamtalk_username
-            for ban in bans_by_tg_id
-            if ban.teamtalk_username
+            ban.teamtalk_username for ban in bans_by_tg_id if ban.teamtalk_username
         }
 
         # 3. Remove all bans by Telegram ID

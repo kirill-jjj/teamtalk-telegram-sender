@@ -168,7 +168,7 @@ async def admin_toggle_noon(
             return False, _("Subscriber settings not found."), None
 
         updated_settings = await user_settings_service.toggle_noon_setting(
-            user_settings, actor=Actor.ADMIN
+            user_settings, actor=Actor.ADMIN, uow=uow
         )
 
         if updated_settings:

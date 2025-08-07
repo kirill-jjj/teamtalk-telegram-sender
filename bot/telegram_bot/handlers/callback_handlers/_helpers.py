@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.callback_answer import CallbackAnswer
 
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
@@ -96,7 +96,7 @@ async def refresh_subscriber_view(
     callback_data: RefreshableViewCallback,
     translator: NullTranslations,
     bot: "EventBot",
-    user_repo: UserRepository,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
@@ -105,19 +105,20 @@ async def refresh_subscriber_view(
         callback_data, "subscriber_page_context", getattr(callback_data, "page", 0)
     )
 
-    user_settings = await user_repo.get_by_id(target_telegram_id)
-    if not user_settings:
-        await query.answer("User not found.", show_alert=True)
-        return
+    async with uow:
+        user_settings = await uow.users.get_by_id(target_telegram_id)
+        if not user_settings:
+            await query.answer("User not found.", show_alert=True)
+            return
 
-    await _display_subscriber_view(
-        query=query,
-        target_telegram_id=target_telegram_id,
-        page_context=page_context,
-        user_settings=user_settings,
-        translator=translator,
-        bot=bot,
-    )
+        await _display_subscriber_view(
+            query=query,
+            target_telegram_id=target_telegram_id,
+            page_context=page_context,
+            user_settings=user_settings,
+            translator=translator,
+            bot=bot,
+        )
 
 
 def ensure_message_context(
