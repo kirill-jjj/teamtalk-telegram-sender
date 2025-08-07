@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
@@ -54,6 +55,7 @@ async def show_language_menu(
 @with_view_refresh(refresh_main_settings_view)
 async def set_language(
     query: CallbackQuery,
+    callback_answer: CallbackAnswer,
     user_settings: FromDishka[UserSettings],
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,
