@@ -46,10 +46,10 @@ def main() -> None:
 
     # Set environment variable for alembic/env.py to pick up
     env_vars = os.environ.copy()
-    env_vars["ALEMBIC_ENV_CONFIG_FILE"] = str(absolute_config_path)
+    env_vars["APP_CONFIG_FILE"] = str(absolute_config_path)
 
     print(
-        f"INFO  [run_alembic.py] Setting ALEMBIC_ENV_CONFIG_FILE={absolute_config_path}"
+        f"INFO  [run_alembic.py] Setting APP_CONFIG_FILE={absolute_config_path}"
     )
 
     # Determine Alembic executable.
