@@ -11,9 +11,9 @@ from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
+from bot.config import Settings
 from bot.core.utils import build_help_message
 from bot.database.uow import IUnitOfWork
-from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
@@ -40,12 +40,16 @@ async def on_start_with_payload(
     message: Message,
     token: str,
     translator: Annotated[NullTranslations, FromDishka()],
-    user_settings: Annotated[UserSettings, FromDishka()],
     uow: Annotated[IUnitOfWork, FromDishka()],
     deeplink_service: Annotated[DeeplinkService, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
     async with uow:
+        user_settings = await uow.users.get_or_create(
+            message.from_user.id,
+            defaults={"language_code": settings.general.default_lang},
+        )
         await handle_deeplink(
             message,
             token,

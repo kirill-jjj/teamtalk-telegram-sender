@@ -10,9 +10,6 @@ from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot.connection import TeamTalkConnection

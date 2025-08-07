@@ -51,6 +51,7 @@ class UserSettingsService:
         field_name: str,
         new_value: T,
         log_context: str,
+        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """A generic helper to update a field on the UserSettings model."""
         telegram_id = user_settings.telegram_id
@@ -67,8 +68,12 @@ class UserSettingsService:
             return user_settings
 
         setattr(user_settings, field_name, new_value)
+        active_uow = uow or self._uow
         try:
-            await self._uow.users.save(user_settings)
+            async with active_uow:
+                await active_uow.users.save(user_settings)
+                if not uow:
+                    await active_uow.commit()
 
             self._cache.update_user_settings(user_settings)
             logger.info(
@@ -99,11 +104,12 @@ class UserSettingsService:
         new_lang_code: str,
         translator_factory: Callable[[str], NullTranslations],
         actor: Actor = Actor.USER,
+        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
         updated_settings = await self._update_setting(
-            user_settings, "language_code", new_lang_code, log_context
+            user_settings, "language_code", new_lang_code, log_context, uow=uow
         )
         if updated_settings:
             new_translator = translator_factory(new_lang_code)
@@ -121,11 +127,12 @@ class UserSettingsService:
         user_settings: UserSettings,
         new_mode: MuteListMode,
         actor: Actor = Actor.USER,
+        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
         return await self._update_setting(
-            user_settings, "mute_list_mode", new_mode, log_context
+            user_settings, "mute_list_mode", new_mode, log_context, uow=uow
         )
 
     async def update_notification_preference(
@@ -133,22 +140,30 @@ class UserSettingsService:
         user_settings: UserSettings,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
+        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
         return await self._update_setting(
-            user_settings, "notification_settings", new_pref, log_context
+            user_settings, "notification_settings", new_pref, log_context, uow=uow
         )
 
     async def toggle_noon_setting(
-        self, user_settings: UserSettings, actor: Actor = Actor.USER
+        self,
+        user_settings: UserSettings,
+        actor: Actor = Actor.USER,
+        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         new_noon_value = not user_settings.not_on_online_enabled
         log_context = f" by {actor.value} (toggle NOON)"
 
         updated_settings = await self._update_setting(
-            user_settings, "not_on_online_enabled", new_noon_value, log_context
+            user_settings,
+            "not_on_online_enabled",
+            new_noon_value,
+            log_context,
+            uow=uow,
         )
 
         if not updated_settings:
@@ -164,6 +179,7 @@ class UserSettingsService:
                 field_name="not_on_online_confirmed",
                 new_value=True,
                 log_context=confirm_log_context,
+                uow=uow,
             )
             return confirmed_settings or updated_settings
 
