@@ -82,6 +82,8 @@ class MessageHandler:
                     cache=self.cache,
                 )
 
+            await session.commit()
+
     def _get_translator(self) -> NullTranslations:
         """Determines the language for the reply and returns a translator."""
         admin_cfg = self.settings.telegram.admin_chat_id
