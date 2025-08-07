@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-08-07 08:46+0000\n"
+"POT-Creation-Date: 2025-08-07 14:36+0000\n"
 "PO-Revision-Date: 2025-08-06 18:43+0000\n"
 "Last-Translator: \n"
 "Language: ru\n"
@@ -98,60 +98,44 @@ msgstr ""
 "/add_admin <Telegram ID> [<Telegram ID>...] - Добавить админа бота.\n"
 "/remove_admin <Telegram ID> [<Telegram ID>...] - Удалить админа бота."
 
-#: bot/services/deeplink_service.py:44
+#: bot/services/deeplink_service.py:45
 msgid "Your Telegram account is banned from using this service."
 msgstr "Ваш Telegram аккаунт заблокирован и не может использовать этот сервис."
 
-#: bot/services/deeplink_service.py:50
+#: bot/services/deeplink_service.py:49
 msgid "Error: Missing required information for subscription."
 msgstr "Ошибка: Отсутствует необходимая информация для подписки."
 
-#: bot/services/deeplink_service.py:58
+#: bot/services/deeplink_service.py:57
 #, python-brace-format
 msgid "The TeamTalk username '{tt_username}' is banned."
 msgstr "Имя пользователя TeamTalk '{tt_username}' забанено."
 
-#: bot/services/deeplink_service.py:66 bot/teamtalk_bot/utils.py:370
-#: bot/telegram_bot/deeplink.py:38 bot/telegram_bot/handlers/admin.py:47
-#: bot/telegram_bot/handlers/admin.py:56
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:54
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:70
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:80
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:123
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:319
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:368
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:449
-#: bot/telegram_bot/handlers/callback_handlers/notifications.py:41
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:82
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:154
-msgid "An error occurred. Please try again later."
-msgstr "Произошла ошибка. Пожалуйста, попробуйте позже."
-
-#: bot/services/deeplink_service.py:73
+#: bot/services/deeplink_service.py:70
 msgid "You have successfully subscribed to notifications."
 msgstr "Вы успешно подписались на уведомления."
 
-#: bot/services/deeplink_service.py:81
+#: bot/services/deeplink_service.py:78
 msgid "You have successfully unsubscribed from notifications."
 msgstr "Вы успешно отписались от уведомления."
 
-#: bot/services/deeplink_service.py:82
+#: bot/services/deeplink_service.py:79
 msgid "You were not subscribed to notifications."
 msgstr "Вы не были подписаны на уведомления."
 
-#: bot/services/deeplink_service.py:102
+#: bot/services/deeplink_service.py:100
 msgid "Invalid deeplink action."
 msgstr "Неверное действие deeplink."
 
-#: bot/services/moderation_service.py:68
+#: bot/services/moderation_service.py:69
 msgid "ban_success_full"
 msgstr "Пользователь {telegram_id} забанен, а его профиль удален."
 
-#: bot/services/moderation_service.py:137
+#: bot/services/moderation_service.py:143
 msgid "mute_toggle_success_muted"
 msgstr "Пользователь {username} был успешно замьючен."
 
-#: bot/services/moderation_service.py:139
+#: bot/services/moderation_service.py:145
 msgid "mute_toggle_success_unmuted"
 msgstr "Пользователь {username} был успешно размьючен."
 
@@ -159,142 +143,128 @@ msgstr "Пользователь {username} был успешно размьюч
 msgid "in unknown location"
 msgstr "в неизвестном месте"
 
-#: bot/services/report_service.py:42 bot/services/report_service.py:49
+#: bot/services/report_service.py:41 bot/services/report_service.py:53
 msgid "under server"
 msgstr "под сервером"
 
-#: bot/services/report_service.py:45
+#: bot/services/report_service.py:47
+msgid "the root channel"
+msgstr "в корневом канале"
+
+#: bot/services/report_service.py:49
 #, python-brace-format
 msgid "in {channel_name}"
 msgstr "в {channel_name}"
 
-#: bot/services/report_service.py:96 bot/telegram_bot/handlers/admin.py:63
+#: bot/services/report_service.py:100 bot/telegram_bot/handlers/admin.py:61
 #, python-brace-format
 msgid "No users found online on server {server_host}."
 msgstr "На сервере {server_host} нет пользователей онлайн."
 
-#: bot/services/report_service.py:98
+#: bot/services/report_service.py:102
 msgid "No users found online."
 msgstr "Пользователей онлайн не найдено."
 
-#: bot/services/report_service.py:103
+# | msgid "There is {user_count} user on the server {server_host}:\n"
+# | msgid_plural "There are {user_count} users on the server {server_host}:\n"
+#: bot/services/report_service.py:107
 #, fuzzy, python-brace-format
-#| msgid "There is {user_count} user on the server {server_host}:\n"
-#| msgid_plural "There are {user_count} users on the server {server_host}:\n"
 msgid "There is {user_count} user on the server {server_host}:"
 msgid_plural "There are {user_count} users on the server {server_host}:"
 msgstr[0] "На сервере {server_host} сейчас {user_count} пользователь:\n"
 msgstr[1] "На сервере {server_host} сейчас {user_count} пользователя:\n"
 msgstr[2] "На сервере {server_host} сейчас {user_count} пользователей:\n"
 
-#: bot/services/report_service.py:109
+# | msgid "There is {user_count} user on the server:\n"
+# | msgid_plural "There are {user_count} users on the server:\n"
+#: bot/services/report_service.py:113
 #, fuzzy, python-brace-format
-#| msgid "There is {user_count} user on the server:\n"
-#| msgid_plural "There are {user_count} users on the server:\n"
 msgid "There is {user_count} user on the server:"
 msgid_plural "There are {user_count} users on the server:"
 msgstr[0] "На сервере сейчас {user_count} пользователь:\n"
 msgstr[1] "На сервере сейчас {user_count} пользователя:\n"
 msgstr[2] "На сервере сейчас {user_count} пользователей:\n"
 
-#: bot/services/report_service.py:119
+#: bot/services/report_service.py:123
 msgid " and "
 msgstr " и "
 
-#: bot/services/report_service.py:155
+#: bot/services/report_service.py:159
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:194
 msgid "Error: No active TeamTalk connection."
 msgstr "Ошибка: Нет активного подключения к TeamTalk."
 
-#: bot/teamtalk_bot/commands.py:84
+#: bot/teamtalk_bot/commands.py:86
 msgid "You are not authorized to perform this action."
 msgstr "У вас недостаточно прав для выполнения этого действия."
 
-#: bot/teamtalk_bot/commands.py:119
+#: bot/teamtalk_bot/commands.py:121
 msgid "No action was performed. Please check the IDs provided."
 msgstr "Никаких действий не выполнено. Пожалуйста, проверьте предоставленные ID."
 
-#: bot/teamtalk_bot/commands.py:248
-#, python-brace-format
-msgid ""
-"Click this link to subscribe to notifications (link valid for 5 minutes):"
-"\n"
-"{deeplink_url}"
-msgstr ""
-"Нажмите на эту ссылку, чтобы подписаться на уведомления (ссылка "
-"действительна 5 минут):\n"
-"{deeplink_url}"
+#: bot/teamtalk_bot/commands.py:271
+msgid "reply_text_key"
+msgstr "ключ_текста_ответа"
 
-#: bot/teamtalk_bot/commands.py:272
-#, python-brace-format
-msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 "
-"minutes):\n"
-"{deeplink_url}"
-msgstr ""
-"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка "
-"действительна 5 минут):\n"
-"{deeplink_url}"
-
-#: bot/teamtalk_bot/commands.py:299 bot/teamtalk_bot/commands.py:332
+#: bot/teamtalk_bot/commands.py:330 bot/teamtalk_bot/commands.py:363
 #, python-brace-format
 msgid "Please provide Telegram IDs. Example: {cmd} 12345678"
 msgstr "Пожалуйста, укажите ID Telegram после команды. Пример: {cmd} 12345678"
 
-#: bot/teamtalk_bot/commands.py:302
+#: bot/teamtalk_bot/commands.py:333
 #, python-brace-format
 msgid "ID {telegram_id} is already an admin or failed to add."
 msgstr ""
 "Пользователь с ID {telegram_id} уже является администратором или не "
 "удалось его добавить."
 
-#: bot/teamtalk_bot/commands.py:303 bot/teamtalk_bot/commands.py:336
+#: bot/teamtalk_bot/commands.py:334 bot/teamtalk_bot/commands.py:367
 #, python-brace-format
 msgid "'{telegram_id_str}' is not a valid numeric ID."
 msgstr "'{telegram_id_str}' не является допустимым числовым ID."
 
-#: bot/teamtalk_bot/commands.py:304 bot/teamtalk_bot/commands.py:337
+#: bot/teamtalk_bot/commands.py:335 bot/teamtalk_bot/commands.py:368
 msgid "Action Results:"
 msgstr "Результаты действия:"
 
-#: bot/teamtalk_bot/commands.py:335
+#: bot/teamtalk_bot/commands.py:366
 #, python-brace-format
 msgid "Admin with ID {telegram_id} not found or failed to remove."
 msgstr "Администратор с ID {telegram_id} не найден или не удалось его удалить."
 
-#: bot/teamtalk_bot/commands.py:383
+#: bot/teamtalk_bot/commands.py:414
 #, python-brace-format
 msgid "Unknown command. Available commands: {commands}."
 msgstr "Неизвестная команда. Доступные команды: {commands}."
 
-#: bot/teamtalk_bot/utils.py:67 bot/teamtalk_bot/utils.py:73
-#: bot/teamtalk_bot/utils.py:79 bot/teamtalk_bot/utils.py:81
-#: bot/teamtalk_bot/utils.py:82
+#: bot/teamtalk_bot/utils.py:70 bot/teamtalk_bot/utils.py:76
+#: bot/teamtalk_bot/utils.py:82 bot/teamtalk_bot/utils.py:84
+#: bot/teamtalk_bot/utils.py:85
 msgid "Unknown Server"
 msgstr "Неизвестный сервер"
 
-#: bot/teamtalk_bot/utils.py:104
+#: bot/teamtalk_bot/utils.py:107
 msgid "unknown user"
 msgstr "неизвестный пользователь"
 
-#: bot/teamtalk_bot/utils.py:285
+#: bot/teamtalk_bot/utils.py:287
 msgid "Message from server "
 msgstr "Сообщение с сервера "
 
-#: bot/teamtalk_bot/utils.py:288
+#: bot/teamtalk_bot/utils.py:290
 msgid "From "
 msgstr "От "
 
-#: bot/teamtalk_bot/utils.py:303
+#: bot/teamtalk_bot/utils.py:304
 msgid "Message sent to Telegram successfully."
 msgstr "Сообщение успешно отправлено в Telegram."
 
-#: bot/teamtalk_bot/utils.py:306
+#: bot/teamtalk_bot/utils.py:307
 #, python-brace-format
 msgid "Failed to send message: {error}"
 msgstr "Не удалось отправить сообщение: {error}"
 
-#: bot/teamtalk_bot/utils.py:307
+#: bot/teamtalk_bot/utils.py:308
 msgid "Failed to deliver message to Telegram"
 msgstr "Не удалось доставить сообщение в Telegram"
 
@@ -330,11 +300,11 @@ msgstr "Разбанить пользователя (показывает спи
 msgid "View and manage subscribed users"
 msgstr "Просмотр и управление подписанными пользователями"
 
-#: bot/telegram_bot/deeplink.py:43
+#: bot/telegram_bot/deeplink.py:44
 msgid "Invalid or expired deeplink."
 msgstr "Недействительная или истекшая ссылка."
 
-#: bot/telegram_bot/deeplink.py:51
+#: bot/telegram_bot/deeplink.py:52
 msgid "This confirmation link was intended for a different Telegram account."
 msgstr "Эта ссылка для подтверждения предназначена для другого Telegram аккаунта."
 
@@ -352,51 +322,51 @@ msgstr " на {server_host}"
 msgid "Error displaying list."
 msgstr "Ошибка при отображении списка."
 
-#: bot/telegram_bot/handlers/admin.py:77
+#: bot/telegram_bot/handlers/admin.py:75
 #, python-brace-format
 msgid "Select a user to kick from {server_host}:"
 msgstr "Выберите пользователя для кика с сервера {server_host}:"
 
-#: bot/telegram_bot/handlers/admin.py:80
+#: bot/telegram_bot/handlers/admin.py:78
 #, python-brace-format
 msgid "Select a user to ban from {server_host}:"
 msgstr "Выберите пользователя для бана на сервере {server_host}:"
 
-#: bot/telegram_bot/handlers/admin.py:84
+#: bot/telegram_bot/handlers/admin.py:82
 msgid "Select a user:"
 msgstr "Выберите пользователя:"
 
-#: bot/telegram_bot/handlers/admin.py:98 bot/telegram_bot/handlers/admin.py:112
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:456
-#: bot/telegram_bot/handlers/user.py:85
+#: bot/telegram_bot/handlers/admin.py:96 bot/telegram_bot/handlers/admin.py:110
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:467
+#: bot/telegram_bot/handlers/user.py:91
 msgid "TeamTalk connection is not active."
 msgstr "Соединение с TeamTalk неактивно."
 
-#: bot/telegram_bot/handlers/errors.py:43
+# | msgid "An error occurred. Please try again later."
+#: bot/telegram_bot/handlers/errors.py:45
 #, fuzzy
-#| msgid "An error occurred. Please try again later."
 msgid ""
 "An unexpected error occurred. We are already working on fixing it. Please"
 " try again later."
 msgstr "Произошла ошибка. Пожалуйста, попробуйте позже."
 
-#: bot/telegram_bot/handlers/errors.py:53
+#: bot/telegram_bot/handlers/errors.py:55
 msgid "Critical Error!"
 msgstr "Критическая ошибка!"
 
-#: bot/telegram_bot/handlers/errors.py:55
+#: bot/telegram_bot/handlers/errors.py:57
 msgid "Type: "
 msgstr "Тип: "
 
-#: bot/telegram_bot/handlers/errors.py:58
+#: bot/telegram_bot/handlers/errors.py:60
 msgid "Error: "
 msgstr "Ошибка: "
 
-#: bot/telegram_bot/handlers/errors.py:61
+#: bot/telegram_bot/handlers/errors.py:63
 msgid "Update ID: "
 msgstr "ID обновления: "
 
-#: bot/telegram_bot/handlers/errors.py:64
+#: bot/telegram_bot/handlers/errors.py:66
 msgid "Chat ID: "
 msgstr "ID чата: "
 
@@ -404,17 +374,17 @@ msgstr "ID чата: "
 msgid "Unknown command. Use /help to see available commands."
 msgstr "Неизвестная команда. Используйте /help для просмотра доступных команд."
 
-#: bot/telegram_bot/handlers/user.py:67
+#: bot/telegram_bot/handlers/user.py:73
 msgid "Hello! Use /help to see available commands."
 msgstr "Привет! Используйте /help для просмотра доступных команд."
 
 #: bot/telegram_bot/handlers/callback_handlers/navigation.py:31
 #: bot/telegram_bot/handlers/callback_handlers/settings_view.py:33
-#: bot/telegram_bot/handlers/user.py:133
+#: bot/telegram_bot/handlers/user.py:139
 msgid "Settings"
 msgstr "Настройки"
 
-#: bot/telegram_bot/handlers/user.py:155
+#: bot/telegram_bot/handlers/user.py:161
 msgid "Main Menu:"
 msgstr "Главное меню:"
 
@@ -452,21 +422,21 @@ msgid "Language: {lang}"
 msgstr "Язык: {lang}"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:267
-#: bot/telegram_bot/handlers/callback_handlers/notifications.py:79
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:173
-#: bot/telegram_bot/keyboards/settings_keyboards.py:131
+#: bot/telegram_bot/handlers/callback_handlers/notifications.py:81
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:176
+#: bot/telegram_bot/keyboards/settings_keyboards.py:129
 msgid "Enabled"
 msgstr "Включено"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:267
-#: bot/telegram_bot/handlers/callback_handlers/notifications.py:79
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:173
-#: bot/telegram_bot/keyboards/settings_keyboards.py:131
+#: bot/telegram_bot/handlers/callback_handlers/notifications.py:81
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:178
+#: bot/telegram_bot/keyboards/settings_keyboards.py:129
 msgid "Disabled"
 msgstr "Выключено"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:268
-#: bot/telegram_bot/keyboards/settings_keyboards.py:132
+#: bot/telegram_bot/keyboards/settings_keyboards.py:130
 #, python-brace-format
 msgid "NOON (Not on Online): {status}"
 msgstr "NOON (Не в сети): {status}"
@@ -492,50 +462,50 @@ msgid "Notifications: {setting}"
 msgstr "Уведомления: {setting}"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:282
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:373
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:205
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:386
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:210
 msgid "Blacklist"
 msgstr "Черный список"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:284
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:375
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:207
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:388
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:212
 msgid "Whitelist"
 msgstr "Белый список"
 
 #: bot/telegram_bot/handlers/callback_handlers/_helpers.py:286
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:214
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:219
 #, python-brace-format
 msgid "Mute Mode: {mode}"
 msgstr "Режим игнорирования: {mode}"
 
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:83
+#: bot/telegram_bot/handlers/callback_handlers/admin.py:84
 #, python-brace-format
 msgid "User {user_nickname} kicked from server {server_host}."
 msgstr "Пользователь {user_nickname} исключен с сервера {server_host}."
 
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:97
+#: bot/telegram_bot/handlers/callback_handlers/admin.py:98
 #, python-brace-format
 msgid "User {user_nickname} banned and kicked from server {server_host}."
 msgstr "Пользователь {user_nickname} забанен и исключен с сервера {server_host}."
 
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:106
+#: bot/telegram_bot/handlers/callback_handlers/admin.py:107
 msgid "Unknown action."
 msgstr "Неизвестное действие."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:44
+#: bot/telegram_bot/handlers/callback_handlers/language.py:46
 msgid "Please choose your language:"
-msgstr ""
+msgstr "Пожалуйста, выберите ваш язык:"
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:75
+#: bot/telegram_bot/handlers/callback_handlers/language.py:77
 msgid "Invalid language selection."
 msgstr "Неверный выбор языка."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:92
+#: bot/telegram_bot/handlers/callback_handlers/language.py:101
 msgid "Language has been changed."
 msgstr "Язык был изменен."
 
-#: bot/telegram_bot/handlers/callback_handlers/language.py:95
+#: bot/telegram_bot/handlers/callback_handlers/language.py:104
 msgid "Failed to change language. Please try again."
 msgstr "Не удалось изменить язык. Пожалуйста, попробуйте еще раз."
 
@@ -555,23 +525,23 @@ msgstr "Забаненные пользователи"
 msgid "The ban list is empty."
 msgstr "Список забаненных пуст."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:115
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:112
 msgid "Blacklisted Users (Block List)"
 msgstr "Список игнорируемых (черный список)"
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:116
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:113
 msgid "Your blacklist is empty."
 msgstr "Ваш чёрный список пуст."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:118
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:115
 msgid "Whitelisted Users (Allow List)"
 msgstr "Список отслеживаемых (белый список)"
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:119
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:116
 msgid "Your whitelist is empty."
 msgstr "Ваш белый список пуст."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:156
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:159
 #, python-brace-format
 msgid ""
 "Server user accounts are not loaded yet for {server_host}. Please try "
@@ -580,25 +550,25 @@ msgstr ""
 "Список пользователей сервера еще не загружен для {server_host}. "
 "Пожалуйста, попробуйте через несколько секунд."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:181
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:187
 msgid "All Server Accounts"
 msgstr "Все учетные записи сервера"
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:182
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:188
 msgid "No user accounts found on the server."
 msgstr "Учетные записи на сервере не найдены."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:252
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:269
 #, python-brace-format
 msgid "{username} has been {action}."
 msgstr "{username} был {action}."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:283
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:300
 msgid "TeamTalk bot is disconnected. UI could not be fully refreshed."
 msgstr "Бот TeamTalk отключен, поэтому не удалось полностью обновить интерфейс."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:328
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:383
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:343
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:396
 msgid ""
 "Current mode is Blacklist. You receive notifications from everyone except"
 " those on the list."
@@ -606,8 +576,8 @@ msgstr ""
 "Текущий режим: Черный список. Вы получаете уведомления от всех, кроме "
 "тех, кто в списке."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:333
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:388
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:348
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:401
 msgid ""
 "Current mode is Whitelist. You only receive notifications from users on "
 "the list."
@@ -615,8 +585,8 @@ msgstr ""
 "Текущий режим: Белый список. Вы получаете уведомления только от "
 "пользователей в списке."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:336
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:392
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:351
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:405
 #, python-brace-format
 msgid ""
 "Manage Mute List\n"
@@ -627,12 +597,18 @@ msgstr ""
 "\n"
 "{current_mode_description}"
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:377
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:390
 #, python-brace-format
 msgid "Mute list mode set to {mode}."
 msgstr "Режим списка игнорирования изменен на {mode}."
 
-#: bot/telegram_bot/handlers/callback_handlers/mute.py:495
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:498
+#: bot/telegram_bot/handlers/callback_handlers/settings_view.py:27
+#: bot/telegram_bot/handlers/callback_handlers/settings_view.py:49
+msgid "An error occurred. Please try again."
+msgstr "Произошла ошибка. Пожалуйста, попробуйте еще раз."
+
+#: bot/telegram_bot/handlers/callback_handlers/mute.py:520
 msgid "Error determining user to mute/unmute. Try again."
 msgstr ""
 "Ошибка определения пользователя для добавления/удаления из списка "
@@ -640,43 +616,42 @@ msgstr ""
 
 #: bot/telegram_bot/handlers/callback_handlers/notifications.py:50
 #: bot/telegram_bot/handlers/callback_handlers/settings_view.py:52
-#: bot/telegram_bot/keyboards/settings_keyboards.py:52
+#: bot/telegram_bot/keyboards/settings_keyboards.py:50
 msgid "Notification Settings"
 msgstr "Настройки уведомлений"
 
-#: bot/telegram_bot/handlers/callback_handlers/notifications.py:76
+#: bot/telegram_bot/handlers/callback_handlers/notifications.py:78
 msgid "Failed to update NOON setting. Please try again."
 msgstr "Не удалось обновить настройку NOON. Пожалуйста, попробуйте еще раз."
 
-#: bot/telegram_bot/handlers/callback_handlers/notifications.py:81
+#: bot/telegram_bot/handlers/callback_handlers/notifications.py:83
 #, python-brace-format
 msgid "NOON (Not on Online) is now {status}."
 msgstr "NOON (Не в сети) теперь {status}."
-
-#: bot/telegram_bot/handlers/callback_handlers/settings_view.py:27
-#: bot/telegram_bot/handlers/callback_handlers/settings_view.py:49
-msgid "An error occurred. Please try again."
-msgstr "Произошла ошибка. Пожалуйста, попробуйте еще раз."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:45
 msgid "Error: No Telegram ID specified for deletion."
 msgstr "Ошибка: Не указан Telegram ID для удаления."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:54
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:103
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:55
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:112
 #, python-brace-format
 msgid "Subscriber {telegram_id} deleted successfully."
 msgstr "Подписчик {telegram_id} успешно удален."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:57
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:107
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:59
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:116
 #, python-brace-format
 msgid "Error deleting subscriber {telegram_id}."
 msgstr "Ошибка при удалении подписчика {telegram_id}."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:69
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:75
 msgid "Error: Page number missing."
 msgstr "Ошибка: Отсутствует номер страницы."
+
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_list.py:88
+msgid "An error occurred. Please try again later."
+msgstr "Произошла ошибка. Пожалуйста, попробуйте позже."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:50
 msgid "An error occurred. User data not found."
@@ -684,7 +659,7 @@ msgstr "Произошла ошибка. Данные пользователя �
 
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:66
 #: bot/telegram_bot/handlers/callback_handlers/subscription.py:139
-#: bot/telegram_bot/keyboards/settings_keyboards.py:48
+#: bot/telegram_bot/keyboards/settings_keyboards.py:46
 msgid "Subscription Settings"
 msgstr "Настройки подписок"
 
@@ -706,9 +681,9 @@ msgid "Subscription setting updated to: {setting_name}."
 msgstr "Настройка подписки обновлена до: {setting_name}."
 
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:98
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:165
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:257
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:330
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:168
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:263
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:339
 msgid "Subscriber settings not found."
 msgstr "Настройки подписчика не найдены."
 
@@ -722,55 +697,55 @@ msgstr "Выберите новый язык для подписчика {tg_id}
 msgid "Select notification preference for subscriber {tg_id}:"
 msgstr "Выберите настройку уведомлений для подписчика {tg_id}:"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:119
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:120
 #, python-brace-format
 msgid "Select mute list mode for subscriber {tg_id}:"
 msgstr "Выберите режим тишины для подписчика {tg_id}:"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:175
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:180
 #, python-brace-format
 msgid "NOON for subscriber {tg_id} set to: {status}."
 msgstr "Статус NOON для подписчика {tg_id} установлен на: {status}"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:179
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:184
 msgid "Failed to toggle NOON status."
 msgstr "Не удалось переключить статус NOON."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:211
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:216
 #, python-brace-format
 msgid "Mute list for: {name} (ID: {id})"
 msgstr "Список игнорирования для: {name} (ID: {id})"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:271
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:277
 msgid "The mute list is currently empty."
 msgstr "Список игнорирования пуст."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:343
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:353
 #, python-brace-format
 msgid "Language for subscriber {tg_id} changed to {value}."
 msgstr "Язык для подписчика {tg_id} изменен на {value}."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:352
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:363
 #, python-brace-format
 msgid "Notification preference for subscriber {tg_id} set to: {value}."
 msgstr "Настройка уведомлений для подписчика {tg_id} установлена на: {value}."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:359
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:370
 #, python-brace-format
 msgid "Mute list mode for subscriber {tg_id} set to: {value}."
 msgstr "Режим списка игнорирования для подписчика {tg_id} установлен на: {value}."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:365
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/settings.py:376
 msgid "Failed to update setting. Please try again."
 msgstr "Не удалось обновить настройку. Пожалуйста, попробуйте еще раз."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:60
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:246
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:62
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:247
 #, python-brace-format
 msgid "Manage TeamTalk account link for subscriber {telegram_id}:"
 msgstr "Управление привязкой TeamTalk для подписчика {telegram_id}:"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:111
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:113
 msgid ""
 "TeamTalk server accounts are currently unavailable. Please try again "
 "later."
@@ -778,7 +753,7 @@ msgstr ""
 "Учетные записи сервера TeamTalk в настоящее время недоступны. Пожалуйста,"
 " попробуйте еще раз позже."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:138
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:140
 #, python-brace-format
 msgid ""
 "Select a TeamTalk account from {server_host} to link to subscriber "
@@ -787,19 +762,19 @@ msgstr ""
 "Выберите учетную запись TeamTalk с сервера {server_host} для привязки к "
 "подписчику {telegram_id}:"
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:141
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:143
 #, python-brace-format
 msgid "No TeamTalk server accounts found on {server_host}."
 msgstr "На сервере {server_host} не найдено учетных записей TeamTalk."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:146
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:148
 #, python-brace-format
 msgid "No TeamTalk server accounts found on {server_host} or unable to fetch."
 msgstr ""
 "На сервере {server_host} не найдено учетных записей TeamTalk или не "
 "удалось их получить."
 
-#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:212
+#: bot/telegram_bot/handlers/callback_handlers/subscriber_management/tt_account.py:213
 msgid "Subscriber not found."
 msgstr "Подписчик не найден."
 
@@ -892,33 +867,33 @@ msgstr "Нет доступных языков"
 msgid "⬅️ Back to User Actions"
 msgstr "⬅️ Назад к действиям пользователя"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:44
+#: bot/telegram_bot/keyboards/settings_keyboards.py:42
 msgid "Language"
 msgstr "Язык"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:141
+#: bot/telegram_bot/keyboards/settings_keyboards.py:139
 msgid "Manage Mute List"
 msgstr "Управление списком игнорирования"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:174
+#: bot/telegram_bot/keyboards/settings_keyboards.py:172
 #, python-brace-format
 msgid "{marker} Blacklist Mode"
 msgstr "{marker} Черный список"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:175
+#: bot/telegram_bot/keyboards/settings_keyboards.py:173
 #, python-brace-format
 msgid "{marker} Whitelist Mode"
 msgstr "{marker} Белый список"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:188
+#: bot/telegram_bot/keyboards/settings_keyboards.py:186
 msgid "Manage Blacklist"
 msgstr "Управлять черным списком"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:190
+#: bot/telegram_bot/keyboards/settings_keyboards.py:188
 msgid "Manage Whitelist"
 msgstr "Управлять белым списком"
 
-#: bot/telegram_bot/keyboards/settings_keyboards.py:199
+#: bot/telegram_bot/keyboards/settings_keyboards.py:197
 msgid "Mute/Unmute from Server List"
 msgstr "Добавить/убрать из списка игнорирования"
 
@@ -946,5 +921,3 @@ msgstr "{item_display_name} (Статус: в списке игнорирова�
 msgid "{item_display_name} (Status: Not Muted)"
 msgstr "{item_display_name} (Статус: не в списке игнорирования)"
 
-#~ msgid "Success!"
-#~ msgstr "Успешно!"

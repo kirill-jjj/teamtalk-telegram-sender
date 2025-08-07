@@ -7,6 +7,7 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 
 from bot.constants import (
+    WHO_CHANNEL_ID_ROOT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
@@ -40,9 +41,12 @@ def _get_user_display_channel_name(
         return translator.gettext("under server")
 
     if is_caller_admin or not is_channel_hidden:
-        return translator.gettext("in {channel_name}").format(
-            channel_name=ttstr(channel_obj.name)
-        )
+        channel_name = ttstr(channel_obj.name)
+        # If the channel name is empty and it's the root channel, use a fallback name
+        if not channel_name and channel_obj.id == WHO_CHANNEL_ID_ROOT:
+            channel_name = translator.gettext("the root channel")
+
+        return translator.gettext("in {channel_name}").format(channel_name=channel_name)
 
     return translator.gettext("under server")
 
