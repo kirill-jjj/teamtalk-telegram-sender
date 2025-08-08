@@ -22,7 +22,7 @@ from bot.telegram_bot.handlers.user import (
 )
 from bot.telegram_bot.types.bots import EventBot
 
-from ._helpers import ensure_message_context
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from .list_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,

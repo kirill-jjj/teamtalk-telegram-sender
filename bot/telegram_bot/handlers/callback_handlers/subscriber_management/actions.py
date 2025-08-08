@@ -1,9 +1,7 @@
 """Callback query handlers for core actions related to specific subscribers."""
-from collections.abc import Awaitable, Callable
-import functools
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeAlias, cast
+from typing import cast
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
@@ -29,70 +27,15 @@ from bot.telegram_bot.formatters import format_telegram_user_display_name
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )
-from bot.telegram_bot.handlers.decorators import ensure_message_context
+from bot.telegram_bot.handlers.decorators import (
+    ensure_message_context,
+    with_view_refresh,
+)
 from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
 from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
-
-
-RefreshableViewCallback: TypeAlias = (
-    AdminSetSubscriberLanguageCallback
-    | AdminSetSubscriberNotificationPrefCallback
-    | AdminSetSubscriberMuteModeCallback
-    | SubscriberCallback
-)
-
-
-ViewRefresher: TypeAlias = Callable[..., Awaitable[None]]
-
-
-def with_view_refresh(
-    view_refresher: ViewRefresher,
-) -> Callable[
-    [Callable[..., Awaitable[tuple[bool, str, Any | None]]]],
-    Callable[..., Awaitable[None]],
-]:
-    """Decorator factory for actions that result in refreshing a view.
-
-    The decorated function MUST return a tuple: (success, message, updated_object).
-    """
-
-    def decorator(
-        func: Callable[..., Awaitable[tuple[bool, str, Any | None]]],
-    ) -> Callable[..., Awaitable[None]]:
-        @functools.wraps(func)
-        async def wrapper(
-            query: CallbackQuery,
-            callback_answer: CallbackAnswer,
-            *args: Any,  # noqa: ANN401
-            **kwargs: Any,  # noqa: ANN401
-        ) -> None:
-            """Wrapper function for the with_view_refresh decorator."""
-            success, message, updated_object = await func(
-                query, callback_answer, *args, **kwargs
-            )
-
-            callback_answer.text = message
-            callback_answer.show_alert = not success
-
-            if updated_object and isinstance(updated_object, UserSettings):
-                kwargs["user_settings"] = updated_object
-                if "translator_factory" in kwargs:
-                    translator_factory = kwargs["translator_factory"]
-                    new_translator = translator_factory(updated_object.language_code)
-                    kwargs["translator"] = new_translator
-
-            await view_refresher(
-                query,
-                *args,
-                **kwargs,
-            )
-
-        return wrapper
-
-    return decorator
 
 
 async def _display_subscriber_view(
@@ -163,7 +106,10 @@ async def _display_subscriber_view(
 
 async def refresh_subscriber_view(
     query: CallbackQuery,
-    callback_data: RefreshableViewCallback,
+    callback_data: AdminSetSubscriberLanguageCallback
+    | AdminSetSubscriberNotificationPrefCallback
+    | AdminSetSubscriberMuteModeCallback
+    | SubscriberCallback,
     translator: NullTranslations,
     bot: "EventBot",
     uow: IUnitOfWork,

@@ -19,7 +19,10 @@ from bot.telegram_bot.handlers.callback_handlers.list_utils import (
 )
 from bot.telegram_bot.types.bots import EventBot
 
-from ._helpers import ensure_message_context, with_view_refresh
+from bot.telegram_bot.handlers.decorators import (
+    ensure_message_context,
+    with_view_refresh,
+)
 
 logger = logging.getLogger(__name__)
 banned_user_actions_router = Router(name="banned_user_actions_router")
