@@ -29,6 +29,7 @@ from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
+from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
@@ -164,25 +165,34 @@ class AppProvider(Provider):
         )
 
     @provide
+    def get_notification_recipient_service(
+        self,
+        session_factory: FromDishka[AsyncSessionFactoryType],
+        cache: FromDishka[CacheService],
+    ) -> NotificationRecipientService:
+        """Provides a NotificationRecipientService."""
+        return NotificationRecipientService(session_factory, cache)
+
+    @provide
     def get_telegram_notification_handler(
         self,
         event_bot: FromDishka[EventBot],
         message_bot: FromDishka[MessageBot],
-        session_factory: FromDishka[AsyncSessionFactoryType],
         cache: FromDishka[CacheService],
         settings: FromDishka[Settings],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
         event_bus: FromDishka[EventBus],
+        recipient_service: FromDishka[NotificationRecipientService],
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(
             event_bot=event_bot,
             message_bot=message_bot,
-            session_factory=session_factory,
             cache=cache,
             settings=settings,
             translator_factory=translator_factory,
             event_bus=event_bus,
+            recipient_service=recipient_service,
         )
 
     @provide

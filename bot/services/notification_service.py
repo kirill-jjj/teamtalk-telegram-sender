@@ -1,11 +1,16 @@
+# mypy: ignore-errors
 """Service for advanced notification logic like NOON."""
 
 import logging
+from typing import cast
 
 import pytalk  # Required for ttstr
 from pytalk.user import User as TeamTalkUser
+from sqlalchemy import and_, or_
+from sqlmodel import select
 
-from bot.models import UserSettings
+from bot.database.engine import AsyncSessionFactoryType
+from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
@@ -34,3 +39,64 @@ async def is_linked_user_online(
         ttstr(tt_user_obj.username) == linked_tt_username
         for tt_user_obj in online_users_cache.values()
     )
+
+
+class NotificationRecipientService:
+    """A service to determine who should receive notifications."""
+
+    def __init__(
+        self, session_factory: AsyncSessionFactoryType, cache: CacheService
+    ) -> None:
+        """Initializes the NotificationRecipientService."""
+        self.session_factory = session_factory
+        self.cache = cache
+
+    async def find_recipients(
+        self, username_to_check: str, event_type: str
+    ) -> list[tuple[int, str | None]]:
+        """Finds all users who should receive a notification for a given event."""
+        subscriber_ids = list(self.cache.get_all_subscriber_ids())
+        if not subscriber_ids:
+            return []
+
+        async with self.session_factory() as session:
+            stmt = select(
+                UserSettings.telegram_id,
+                UserSettings.language_code,
+            ).join(
+                MutedUser,
+                and_(
+                    UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
+                    MutedUser.muted_teamtalk_username == username_to_check,
+                ),
+                isouter=True,
+            )
+
+            filters = [
+                UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
+                UserSettings.notification_settings != NotificationSetting.NONE,
+            ]
+            if event_type == "join":
+                filters.append(
+                    UserSettings.notification_settings != NotificationSetting.JOIN_OFF
+                )
+            elif event_type == "leave":
+                filters.append(
+                    UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
+                )
+
+            mute_logic = or_(
+                and_(
+                    UserSettings.mute_list_mode == MuteListMode.blacklist.value,
+                    MutedUser.id.is_(None),
+                ),
+                and_(
+                    UserSettings.mute_list_mode == MuteListMode.whitelist.value,
+                    MutedUser.id.is_not(None),
+                ),
+            )
+            filters.append(mute_logic)  # type: ignore[arg-type]
+
+            stmt = stmt.where(and_(*filters))
+            result = await session.execute(stmt)
+            return cast(list[tuple[int, str | None]], result.all())
