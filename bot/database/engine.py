@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import TypeAlias  # For sessionmaker type hint
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -39,6 +41,21 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     logger.info("Creating database engine for: %s", db_url)
 
     engine = create_async_engine(db_url)
+
+    # Enable WAL mode for all connections created by this engine.
+    # This is a critical performance enhancement for SQLite in async applications,
+    # as it allows concurrent reads and writes, reducing "database is locked" errors.
+    @event.listens_for(Engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+        """Set SQLite PRAGMA for new connections."""
+        # In aiosqlite execute() is async, but here we operate at the raw DBAPI
+        # connection level, where it is synchronous.
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+        finally:
+            cursor.close()
 
     # expire_on_commit=False is standard practice for asynchronous applications,
     # so that objects do not become "detached" from the session after a commit.
