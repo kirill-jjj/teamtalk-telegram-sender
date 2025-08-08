@@ -6,13 +6,13 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import pytalk
-
-logger = logging.getLogger(__name__)
+from pytalk.user import User as PytalkUser
+from pytalk.user_account import UserAccount as PytalkUserAccount
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
-from pytalk.user import User as PytalkUser
-from pytalk.user_account import UserAccount as PytalkUserAccount
+
+logger = logging.getLogger(__name__)
 
 
 class TeamTalkCache:

@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import traceback
 from types import ModuleType  # For uvloop typing
 
@@ -96,14 +97,19 @@ def main_cli() -> None:
     parser.add_argument(
         "--config",
         type=str,
-        default="config.toml",
+        default=None,
         help="Path to the TOML configuration file",
     )
     args, _ = parser.parse_known_args()
 
+    if args.config:
+        os.environ["APP_CONFIG_PATH"] = args.config
+        print(f"Using configuration file from --config: {args.config}")
+    else:
+        print("Using default configuration path (config.toml or env variable).")
+
     try:
-        print(f"Loading configuration from: {args.config}")
-        app_config_instance = Settings.from_toml(args.config)
+        app_config_instance = Settings()
 
         if uvloop:
             uvloop.install()

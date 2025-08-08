@@ -1,11 +1,15 @@
 """Configuration models for the bot application."""
 
-from pathlib import Path
-import tomllib  # Requires Python 3.11+
+import os
 from typing import Literal
 
-from pydantic import Field, PrivateAttr
-from pydantic_settings import BaseSettings  # Still useful for model features
+from pydantic import Field
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 # Type for gender, can be expanded if needed
 GenderType = Literal["male", "female", "neutral"]
@@ -96,7 +100,7 @@ class OperationalParameters(BaseSettings):
 class Settings(BaseSettings):
     """Main application settings class.
 
-    Loads configuration from a TOML file.
+    Loads configuration from a TOML file, with environment variable overrides.
     """
 
     general: GeneralSettings
@@ -106,23 +110,28 @@ class Settings(BaseSettings):
     operational_parameters: OperationalParameters = Field(
         default_factory=OperationalParameters
     )
-    _config_dir: Path = PrivateAttr()
+
+    model_config = SettingsConfigDict(
+        toml_file=os.environ.get("APP_CONFIG_PATH", "config.toml"),
+        env_prefix="TT_SENDER_",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+    )
 
     @classmethod
-    def from_toml(cls, path_str: str) -> "Settings":
-        """Loads configuration from a TOML file."""
-        path = Path(path_str)
-        try:
-            with path.open("rb") as f:
-                data = tomllib.load(f)
-        except FileNotFoundError as e:
-            # Try to construct a more informative path based on common execution patterns
-            # Consider defining a custom exception for more structured error reporting
-            raise FileNotFoundError("Config not found") from e  # noqa: TRY003
-        except tomllib.TOMLDecodeError as e:
-            # Consider defining a custom exception
-            raise ValueError("TOML decode error") from e  # noqa: TRY003
-
-        instance = cls(**data)
-        instance._config_dir = path.parent.resolve()
-        return instance
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize the sources and their order for loading settings."""
+        return (
+            init_settings,
+            env_settings,
+            TomlConfigSettingsSource(settings_cls),
+            dotenv_settings,
+            file_secret_settings,
+        )
