@@ -2,10 +2,13 @@
 
 import logging
 
+import pytalk
+
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import ReplyToTeamTalkUserEvent
 
 logger = logging.getLogger(__name__)
+ttstr = pytalk.instance.sdk.ttstr
 
 
 class TeamTalkReplyHandler:
@@ -35,7 +38,8 @@ class TeamTalkReplyHandler:
         user_to_reply = connection.instance.get_user(event.user_id)
         if user_to_reply:
             try:
-                user_to_reply.send_message(event.text)
+                encoded_text = ttstr(event.text)
+                user_to_reply.send_message(encoded_text)
                 logger.info(
                     "Sent reply to TT user %d on connection %s.",
                     event.user_id,
