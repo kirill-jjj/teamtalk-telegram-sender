@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 import logging
 from logging.config import fileConfig
+import os
 from pathlib import Path
 
 from alembic import context
@@ -64,17 +65,49 @@ def prevent_empty_revisions(
 
 
 def get_db_url() -> str:
-    """Constructs the database URL from settings."""
-    settings = Settings()
-    # Path is relative to project root if not absolute
-    project_root = Path(__file__).resolve().parent.parent
-    db_file_path = Path(settings.database.db_file)
-    if not db_file_path.is_absolute():
-        db_file_path = project_root / db_file_path
+    """Constructs the database URL from 'config.toml' using the Settings model.
 
-    db_path = db_file_path.resolve()
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    logging.info("Using database URL: %s", db_url)
+    Returns:
+        str: The fully constructed SQLite database URL.
+
+    Raises:
+        FileNotFoundError: If 'config.toml' is not found.
+        ValueError: If critical configuration keys are missing or invalid.
+    """
+    config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
+    config_file = Path(config_file_str)
+    logging.info("Attempting to load configuration from: %s", config_file)
+
+    try:
+        settings = Settings.from_toml(str(config_file))  # Ensure it's a string for mypy
+    except FileNotFoundError:
+        logging.exception("Configuration file '%s' not found.", config_file)
+        raise
+    except ValueError:  # Covers TOMLDecodeError and other Pydantic validation errors
+        logging.exception("Error loading configuration from '%s'", config_file)
+        raise
+
+    db_file_name = settings.database.db_file
+
+    if not isinstance(db_file_name, str) or not db_file_name.strip():
+        error_message = (
+            f"'database.db_file' in '{config_file}' must be a non-empty string. "
+            f"Found: '{db_file_name}'"
+        )
+        logging.error(error_message)
+        raise ValueError(error_message)
+
+    db_path_obj = Path(db_file_name)
+    db_path = (
+        (PROJECT_ROOT / db_file_name).resolve()
+        if not db_path_obj.is_absolute()
+        else db_path_obj.resolve()
+    )
+
+    db_url = f"sqlite+aiosqlite:///{db_path}"  # f-string for URL construction is fine
+    logging.info(
+        "Using database URL: %s (from 'database.db_file' in '%s')", db_url, config_file
+    )
     return db_url
 
 
