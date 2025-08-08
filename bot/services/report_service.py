@@ -1,6 +1,7 @@
 """Service for generating reports."""
 
 from gettext import NullTranslations
+from typing import TYPE_CHECKING
 
 from aiogram.utils.formatting import Bold, Text, as_list
 import pytalk
@@ -12,7 +13,9 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
-from bot.teamtalk_bot.connection import TeamTalkConnection
+
+if TYPE_CHECKING:
+    from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
@@ -152,7 +155,7 @@ class ReportService:
 
     def get_online_users_report(
         self,
-        tt_connection: TeamTalkConnection,
+        tt_connection: "TeamTalkConnection",
         *,
         is_caller_admin: bool,
         translator: NullTranslations,
