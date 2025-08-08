@@ -318,34 +318,45 @@ class PytalkEventRouter:
             logger.info("TeamTalkConnection for %s initiated.", server_key)
 
     @route_event_to_connection
-    async def on_pytalk_my_login(self, server: PytalkServer) -> None:
-        """Route the bot's own login event to the correct connection via decorator."""
+    async def on_pytalk_my_login(
+        self, server: PytalkServer, connection: TeamTalkConnection
+    ) -> None:
+        """Handles the bot's own login event for a specific connection."""
+        await connection.on_my_login(server)
 
     @route_event_to_connection
     async def on_pytalk_user_join(
-        self, user: PytalkUser, channel: PytalkChannel
+        self, user: PytalkUser, channel: PytalkChannel, connection: TeamTalkConnection
     ) -> None:
-        """Routes a user join event to the appropriate connection via decorator."""
+        """Handles a user join event for a specific connection."""
+        await connection.on_user_join(user, channel)
 
     @route_event_to_connection
-    async def on_pytalk_my_connection_lost(self, server: PytalkServer) -> None:
-        """Route a connection lost event for the bot to the correct connection."""
+    async def on_pytalk_my_connection_lost(
+        self, server: PytalkServer, connection: TeamTalkConnection
+    ) -> None:
+        """Handles a connection lost event for the bot for a specific connection."""
+        await connection.on_my_connection_lost(server)
 
     @route_event_to_connection
     async def on_pytalk_my_kicked_from_channel(
-        self, channel_obj: PytalkChannel
+        self, channel_obj: PytalkChannel, connection: TeamTalkConnection
     ) -> None:
-        """Route a kicked from channel event for the bot to the correct connection."""
+        """Handles a kicked from channel event for the bot for a specific connection."""
+        await connection.on_my_kicked_from_channel(channel_obj)
 
     @route_event_to_connection
-    async def on_pytalk_message(self, message: TeamTalkMessage) -> None:
-        """Route an incoming message event to the correct connection via decorator."""
+    async def on_pytalk_message(
+        self, message: TeamTalkMessage, connection: TeamTalkConnection
+    ) -> None:
+        """Handles an incoming message event for a specific connection."""
+        await connection.on_message(message)
 
     @route_event_to_connection
     async def on_pytalk_user_login(
         self, user: PytalkUser, connection: TeamTalkConnection
     ) -> None:
-        """Handles user login, updates cache, and publishes an event."""
+        """Handles user login, updates cache, and publishes a domain event."""
         connection.cache_manager.update_caches_on_event("user_login", user)
         if not connection.instance:
             return
@@ -368,7 +379,7 @@ class PytalkEventRouter:
     async def on_pytalk_user_logout(
         self, user: PytalkUser, connection: TeamTalkConnection
     ) -> None:
-        """Handles user logout, updates cache, and publishes an event."""
+        """Handles user logout, updates cache, and publishes a domain event."""
         connection.cache_manager.update_caches_on_event("user_logout", user)
         if not connection.instance:
             return
@@ -388,13 +399,22 @@ class PytalkEventRouter:
         )
 
     @route_event_to_connection
-    async def on_pytalk_user_update(self, user: PytalkUser) -> None:
-        """Routes a user update event to the appropriate connection via decorator."""
+    async def on_pytalk_user_update(
+        self, user: PytalkUser, connection: TeamTalkConnection
+    ) -> None:
+        """Handles a user update event for a specific connection."""
+        await connection.on_user_update(user)
 
     @route_event_to_connection
-    async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
-        """Route a new user account event. Instance/broadcast handled by decorator."""
+    async def on_pytalk_user_account_new(
+        self, account: pytalk.UserAccount, connection: TeamTalkConnection
+    ) -> None:
+        """Handles a new user account event for a specific connection."""
+        await connection.on_user_account_new(account)
 
     @route_event_to_connection
-    async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
-        """Route a removed user account event. Handled by decorator."""
+    async def on_pytalk_user_account_remove(
+        self, account: pytalk.UserAccount, connection: TeamTalkConnection
+    ) -> None:
+        """Handles a removed user account event for a specific connection."""
+        await connection.on_user_account_remove(account)
