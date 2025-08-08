@@ -12,7 +12,6 @@ from dishka.integrations.aiogram import FromDishka
 from bot.core.enums import SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import SubscriberCallback
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_banned_list_page,
@@ -98,7 +97,6 @@ async def ban_subscriber(
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
-    tt_connection: "TeamTalkConnection | None",
     bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
@@ -108,7 +106,7 @@ async def ban_subscriber(
 
     async with uow:
         result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, tt_connection, uow=uow
+            target_telegram_id, translator, uow=uow
         )
 
         if result.long_message:

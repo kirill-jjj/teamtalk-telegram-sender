@@ -14,7 +14,6 @@ from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.subscription_service import SubscriptionService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     SubscriberCallback,
     ViewSubscriberCallback,
@@ -65,7 +64,6 @@ async def on_ban_subscriber_confirm(
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     moderation_service: FromDishka[ModerationService],
-    tt_connection: TeamTalkConnection | None,
     bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
@@ -75,7 +73,7 @@ async def on_ban_subscriber_confirm(
 
     async with uow:
         result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, tt_connection, uow=uow
+            target_telegram_id, translator, uow=uow
         )
 
         if result.long_message:
