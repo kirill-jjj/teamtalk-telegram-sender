@@ -164,7 +164,7 @@ class ReportService:
         if not tt_connection.instance:
             return translator.gettext("Error: No active TeamTalk connection.")
 
-        all_users = list(tt_connection.online_users_cache.values())
+        all_users = list(tt_connection.cache_manager.online_users_cache.values())
         bot_user_id = tt_connection.instance.getMyUserID()
         server_name = get_effective_server_name(
             tt_connection.instance, translator, self._settings

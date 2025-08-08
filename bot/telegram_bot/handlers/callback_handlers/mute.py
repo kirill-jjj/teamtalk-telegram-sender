@@ -152,7 +152,7 @@ async def _display_all_server_accounts_list(
     page: int = 0,
 ) -> None:
     _ = translator.gettext
-    if not tt_connection.user_accounts_cache:
+    if not tt_connection.cache_manager.user_accounts_cache:
         try:
             await cast(Message, callback_query.message).edit_text(
                 _(
@@ -168,7 +168,7 @@ async def _display_all_server_accounts_list(
         return
 
     async def fetcher() -> list[pytalk.UserAccount]:
-        return list(tt_connection.user_accounts_cache.values())
+        return list(tt_connection.cache_manager.user_accounts_cache.values())
 
     def username_extractor(item: pytalk.UserAccount) -> str:
         return cast(str, ttstr(item.username))
@@ -208,12 +208,12 @@ async def _get_username_from_all_accounts(
     tt_connection: TeamTalkConnection,
 ) -> str | None:
     """Retrieves a username from the cached list of all server accounts."""
-    if not tt_connection.user_accounts_cache:
+    if not tt_connection.cache_manager.user_accounts_cache:
         logger.warning("Cannot get username from 'all_accounts': cache empty/None.")
         return None
 
     all_accounts = sorted(
-        tt_connection.user_accounts_cache.values(),
+        tt_connection.cache_manager.user_accounts_cache.values(),
         key=lambda acc: (
             ttstr(acc.username).lower()
             if isinstance(acc.username, bytes)

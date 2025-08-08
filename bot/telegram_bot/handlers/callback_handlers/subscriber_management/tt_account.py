@@ -102,7 +102,8 @@ async def _display_linkable_tt_accounts_page(
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
 
-    if not tt_connection.is_ready or not tt_connection.user_accounts_cache:
+    cache = tt_connection.cache_manager.user_accounts_cache
+    if not tt_connection.is_ready or not cache:
         logger.warning(
             "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for "
             "displaying linkable accounts. User %s.",
@@ -118,7 +119,7 @@ async def _display_linkable_tt_accounts_page(
         return
 
     all_server_accounts: list[pytalk.UserAccount] = list(
-        tt_connection.user_accounts_cache.values()
+        tt_connection.cache_manager.user_accounts_cache.values()
     )
 
     try:

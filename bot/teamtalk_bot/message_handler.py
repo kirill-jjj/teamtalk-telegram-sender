@@ -24,6 +24,7 @@ from bot.teamtalk_bot.utils import (
 if TYPE_CHECKING:
     from pytalk.message import Message as TeamTalkMessage
 
+    from bot.teamtalk_bot.command_router import CommandRouter
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
@@ -43,6 +44,7 @@ class MessageHandler:
         translator_factory: Callable[[str], NullTranslations],
         connection: TeamTalkConnection,
         event_bus: EventBus,
+        command_router: CommandRouter,
     ) -> None:
         """Initializes the message handler."""
         self.settings = settings
@@ -51,14 +53,7 @@ class MessageHandler:
         self.translator_factory = translator_factory
         self.connection = connection
         self.event_bus = event_bus
-        self.command_router = CommandRouter(
-            settings=settings,
-            session_factory=session_factory,
-            cache=cache,
-            translator_factory=translator_factory,
-            connection=connection,
-            event_bus=self.event_bus,
-        )
+        self.command_router = command_router
 
     async def route_message(self, tt_message: TeamTalkMessage) -> None:
         """Public method to handle an incoming TeamTalk message."""

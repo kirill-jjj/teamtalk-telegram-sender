@@ -54,7 +54,7 @@ async def _show_user_buttons(
         await message.reply(_(MSG_GENERAL_ERROR))
         return
 
-    online_users = list(tt_connection.online_users_cache.values())
+    online_users = list(tt_connection.cache_manager.online_users_cache.values())
 
     if not online_users:
         await message.reply(

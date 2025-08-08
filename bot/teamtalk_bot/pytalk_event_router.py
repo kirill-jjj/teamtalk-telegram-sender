@@ -17,13 +17,17 @@ from bot.constants import INVALID_CHANNEL_ID
 from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
+from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.teamtalk_bot.utils import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 
 
 # Decorator definition
-def route_event_to_connection(  # noqa: C901
+def route_event_to_connection(
     handler_method_on_event_handler_class: Callable[..., Awaitable[None]],
 ) -> Callable[..., Awaitable[None]]:
     """Decorator for PytalkEventRouter methods to route events.
@@ -105,18 +109,15 @@ def route_event_to_connection(  # noqa: C901
 
         connection = self_event_handler._get_connection_by_instance(tt_instance)
         if connection:
-            actual_connection_method = getattr(
-                connection, method_name_on_connection, None
+            # Instead of calling the method on the connection, we call the handler
+            # on ourself (the router) and pass the connection as an argument.
+            await handler_method_on_event_handler_class(
+                self_event_handler,
+                event_primary_obj,
+                *args,
+                connection=connection,
+                **kwargs,
             )
-            if actual_connection_method and callable(actual_connection_method):
-                await actual_connection_method(event_primary_obj, *args, **kwargs)
-            else:
-                logger.error(
-                    "Decorator: Method '%s' not found/callable on TTConnection "
-                    "for Pytalk evt '%s'.",
-                    method_name_on_connection,
-                    handler_name_for_logs,
-                )
         else:
             logger.warning(
                 "Decorator: No active TTConnection for instance %s in Pytalk evt '%s'.",
@@ -290,6 +291,24 @@ class PytalkEventRouter:
                 self.translator_factory,
                 self.event_bus,
             )
+            command_router = CommandRouter(
+                settings=self.settings,
+                session_factory=self.session_factory,
+                cache=self.cache,
+                translator_factory=self.translator_factory,
+                connection=connection,
+                event_bus=self.event_bus,
+            )
+            message_handler = MessageHandler(
+                settings=self.settings,
+                session_factory=self.session_factory,
+                cache=self.cache,
+                translator_factory=self.translator_factory,
+                connection=connection,
+                event_bus=self.event_bus,
+                command_router=command_router,
+            )
+            connection.message_handler = message_handler
             self.connections[server_key] = connection
 
         logger.info("Connecting TeamTalkConnection for %s...", server_key)
@@ -323,12 +342,50 @@ class PytalkEventRouter:
         """Route an incoming message event to the correct connection via decorator."""
 
     @route_event_to_connection
-    async def on_pytalk_user_login(self, user: PytalkUser) -> None:
-        """Routes a user login event to the appropriate connection via decorator."""
+    async def on_pytalk_user_login(
+        self, user: PytalkUser, connection: TeamTalkConnection
+    ) -> None:
+        """Handles user login, updates cache, and publishes an event."""
+        connection.cache_manager.update_caches_on_event("user_login", user)
+        if not connection.instance:
+            return
+
+        translator = self.translator_factory(self.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            connection.instance, translator, self.settings
+        )
+
+        await self.event_bus.publish(
+            UserJoinedEvent(
+                user_nickname=connection.ttstr(user.nickname),
+                username=connection.ttstr(user.username),
+                user_id=user.id,
+                server_name=server_name,
+            )
+        )
 
     @route_event_to_connection
-    async def on_pytalk_user_logout(self, user: PytalkUser) -> None:
-        """Routes a user logout event to the appropriate connection via decorator."""
+    async def on_pytalk_user_logout(
+        self, user: PytalkUser, connection: TeamTalkConnection
+    ) -> None:
+        """Handles user logout, updates cache, and publishes an event."""
+        connection.cache_manager.update_caches_on_event("user_logout", user)
+        if not connection.instance:
+            return
+
+        translator = self.translator_factory(self.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            connection.instance, translator, self.settings
+        )
+
+        await self.event_bus.publish(
+            UserLeftEvent(
+                user_nickname=connection.ttstr(user.nickname),
+                username=connection.ttstr(user.username),
+                user_id=user.id,
+                server_name=server_name,
+            )
+        )
 
     @route_event_to_connection
     async def on_pytalk_user_update(self, user: PytalkUser) -> None:
