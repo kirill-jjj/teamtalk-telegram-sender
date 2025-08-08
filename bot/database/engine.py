@@ -3,7 +3,7 @@
 from collections.abc import Callable
 import logging
 from pathlib import Path
-from typing import TypeAlias  # For sessionmaker type hint
+from typing import Any, TypeAlias  # For sessionmaker type hint
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -46,7 +46,10 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # This is a critical performance enhancement for SQLite in async applications,
     # as it allows concurrent reads and writes, reducing "database is locked" errors.
     @event.listens_for(Engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+    def set_sqlite_pragma(
+        dbapi_connection: Any,  # noqa: ANN401
+        _connection_record: Any,  # noqa: ANN401
+    ) -> None:
         """Set SQLite PRAGMA for new connections."""
         # In aiosqlite execute() is async, but here we operate at the raw DBAPI
         # connection level, where it is synchronous.

@@ -36,7 +36,7 @@ from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
-async def on_startup(
+async def on_startup(  # noqa: PLR0915
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],

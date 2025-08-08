@@ -93,7 +93,9 @@ def ensure_message_context(func: F) -> F:
     """Decorator to ensure that a callback query handler has a message context."""
 
     @functools.wraps(func)
-    async def wrapper(query: CallbackQuery, *args: Any, **kwargs: Any) -> Any | None:
+    async def wrapper(
+        query: CallbackQuery, *args: Any, **kwargs: Any  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())
         )
@@ -135,9 +137,9 @@ def ensure_tt_user_exists(func: F) -> F:
         callback_data: T,
         translator: NullTranslations,
         tt_connection: TeamTalkConnection,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Any | None:
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
         _ = translator.gettext
 
         if not tt_connection.instance:
