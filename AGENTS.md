@@ -30,16 +30,24 @@ This is the central architectural pattern of the application. Dependencies are m
 *   **Use `dishka` Providers:** Handlers and services receive necessary dependencies (like database sessions, repositories, other services, or caches) via `dishka`'s injection mechanism.
 *   **Explicit is Better than Implicit:** Functions should receive their dependencies as explicit arguments, type-hinted with `FromDishka[...]`.
 
-### 2.2. Separation of Concerns (SoC)
+### 2.2. Event-Driven Architecture
+To ensure loose coupling between the major components of the application (`telegram_bot` and `teamtalk_bot`), the system uses an event-driven pattern facilitated by an `EventBus`.
+
+*   **Publishers:** Components that generate events (primarily the `teamtalk_bot`) do so by publishing event objects to the `EventBus`. Publishers are not aware of who is listening for their events.
+*   **Events:** Events are simple Pydantic models defined in `bot/teamtalk_bot/events.py` that represent a specific business action (e.g., `UserJoinedEvent`).
+*   **Subscribers (Handlers):** Components that need to react to events subscribe to specific event types on the `EventBus`. These handlers are typically located in `bot/event_handlers/` and contain the logic to perform actions based on the event data (e.g., sending a Telegram notification).
+
+This pattern ensures that the `teamtalk_bot` can operate and be tested independently of the `telegram_bot`, and vice-versa.
+
+### 2.3. Separation of Concerns (SoC)
 The codebase is organized into distinct layers and modules, each with a single responsibility.
 *   `bot/core`: Cross-cutting concerns, core enums, and business logic not tied to a specific platform.
-*   `bot/database`: Contains the data access layer.
-    *   `models.py`: Defines the `SQLModel` database tables.
-    *   `engine.py`: Sets up the database engine and session factory.
-    *   `repositories/`: Implements the **Repository Pattern**. Each file contains a class responsible for all database operations for a specific model or group of related models (e.g., `UserRepository`).
-*   `bot/services`: Contains the application's business logic. Each service is a focused class responsible for a single business capability (e.g., `UserSettingsService`, `ModerationService`). Services use repositories to interact with the database and can depend on other services.
-*   `bot/telegram_bot`: All components specific to the Telegram bot, including `handlers`, `keyboards`, and `middlewares`.
-*   `bot/teamtalk_bot`: All components specific to the TeamTalk client.
+*   `bot/database`: Contains the data access layer (Repositories, Models, etc.).
+*   `bot/event_bus`: The core implementation of the event bus system.
+*   `bot/event_handlers`: Contains the subscribers/listeners that react to events and perform actions (e.g., sending notifications).
+*   `bot/services`: Contains the application's business logic.
+*   `bot/telegram_bot`: All components specific to the Telegram bot. It does **not** directly depend on the `teamtalk_bot`.
+*   `bot/teamtalk_bot`: All components specific to the TeamTalk client. It publishes events and does **not** directly depend on the `telegram_bot`.
 *   `scripts`: Standalone utility scripts for development and maintenance.
 
 ## 3. Database and Migrations

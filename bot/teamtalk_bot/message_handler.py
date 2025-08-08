@@ -12,10 +12,11 @@ import pytalk
 from bot.config import Settings
 from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
 from bot.database.engine import AsyncSessionFactoryType
+from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.command_router import CommandRouter
-from bot.teamtalk_bot.utils import forward_tt_message_to_telegram_admin
-from bot.telegram_bot.types.bots import MessageBot
+from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
+from bot.teamtalk_bot.utils import get_tt_user_display_name
 
 if TYPE_CHECKING:
     from pytalk.message import Message as TeamTalkMessage
@@ -38,7 +39,7 @@ class MessageHandler:
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
         connection: TeamTalkConnection,
-        bot_for_admin_pm: MessageBot,
+        event_bus: EventBus,
     ) -> None:
         """Initializes the message handler."""
         self.settings = settings
@@ -46,14 +47,14 @@ class MessageHandler:
         self.cache = cache
         self.translator_factory = translator_factory
         self.connection = connection
-        self.bot = bot_for_admin_pm
+        self.event_bus = event_bus
         self.command_router = CommandRouter(
             settings=settings,
             session_factory=session_factory,
             cache=cache,
             translator_factory=translator_factory,
             connection=connection,
-            bot=connection.event_bot,
+            event_bus=self.event_bus,
         )
 
     async def route_message(self, tt_message: TeamTalkMessage) -> None:
@@ -62,12 +63,15 @@ class MessageHandler:
             return
 
         translator = self._get_translator()
-        sender = ttstr(tt_message.user.username)
         content = tt_message.content.strip()
+        from_user = tt_message.user
+        from_user_nickname = get_tt_user_display_name(from_user, translator)
+        from_user_username = ttstr(from_user.username)
+
         logger.debug(
             "[%s] Private msg from %s: '%s'",
             self.connection.server_info.host,
-            sender,
+            from_user_username,
             content[:50],
         )
 
@@ -80,12 +84,13 @@ class MessageHandler:
                     cmd, args, tt_message, translator, session
                 )
             else:
-                await forward_tt_message_to_telegram_admin(
-                    message=tt_message,
-                    settings=self.settings,
-                    bot=self.bot,
-                    translator=translator,
-                    cache=self.cache,
+                await self.event_bus.publish(
+                    PrivateMessageReceivedEvent(
+                        from_user_nickname=from_user_nickname,
+                        from_user_username=from_user_username,
+                        content=content,
+                        server_name=ttstr(self.connection.server_info.name),
+                    )
                 )
 
             await session.commit()

@@ -12,9 +12,7 @@ import gettext
 import logging
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
-from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from aiogram.utils.formatting import Bold, Text
 import pytalk
 from pytalk.instance import TeamTalkInstance, sdk
 from pytalk.message import Message as TeamTalkMessage
@@ -28,8 +26,6 @@ from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )
-from bot.services.cache_service import CacheService
-from bot.telegram_bot.utils import send_telegram_message
 
 if TYPE_CHECKING:
     pass
@@ -258,56 +254,6 @@ async def send_long_tt_reply(
             except pytalk.exceptions.TeamTalkException:
                 logger.exception("Error sending part %s of TT message.", part_idx + 1)
                 break
-
-
-async def forward_tt_message_to_telegram_admin(
-    message: TeamTalkMessage,
-    settings: Settings,
-    bot: Bot,
-    translator: gettext.NullTranslations,
-    cache: CacheService,
-) -> None:
-    """Forwards a private TeamTalk message to the configured Telegram admin."""
-    _ = translator.gettext
-    if not settings.telegram.admin_chat_id or not bot:
-        logger.debug(
-            "Telegram admin chat ID or message bot not configured. Skipping TT forward."
-        )
-        return
-
-    admin_chat_id = settings.telegram.admin_chat_id
-    server_name_to_display = get_effective_server_name(
-        message.teamtalk_instance, translator, settings
-    )
-    sender_display = get_tt_user_display_name(message.user, translator)
-    message_content = message.content
-
-    # Using aiogram.utils.formatting for safe, declarative text construction
-    content = Text(
-        _("Message from server "),
-        Bold(server_name_to_display),
-        "\n",
-        _("From "),
-        Bold(sender_display),
-        ":\n\n",
-        message_content,  # No need to escape, Text handles it.
-    )
-
-    was_sent: bool = await send_telegram_message(
-        bot_instance=bot,
-        chat_id=admin_chat_id,
-        cache=cache,
-        **content.as_kwargs(),
-    )
-
-    if was_sent:
-        message.reply(_("Message sent to Telegram successfully."))
-    else:
-        message.reply(
-            _("Failed to send message: {error}").format(
-                error=_("Failed to deliver message to Telegram")
-            )
-        )
 
 
 # --- Error Handling Decorator ---

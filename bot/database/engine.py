@@ -28,10 +28,11 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     _ = models
 
     db_file_path = Path(config.database.db_file)
-    # Resolve the path relative to the configuration file's directory if it's not absolute.
+    # Resolve the path relative to the configuration file's directory
+    # if it's not absolute.
     # The `_config_dir` is a private attribute, so we use a type ignore.
     if not db_file_path.is_absolute():
-        db_file_path = config._config_dir / db_file_path  # type: ignore[attr-defined]
+        db_file_path = config._config_dir / db_file_path
 
     db_path = db_file_path.resolve()
     db_url = f"sqlite+aiosqlite:///{db_path}"

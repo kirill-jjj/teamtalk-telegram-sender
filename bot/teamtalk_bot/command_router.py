@@ -14,6 +14,7 @@ from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
@@ -46,7 +47,8 @@ class CommandRouter:
         cache: CacheService,
         translator_factory: Callable[[str], GNUTranslations | NullTranslations],
         connection: TeamTalkConnection,
-        bot: Bot,
+        event_bus: EventBus,
+        bot: Bot | None = None,
     ) -> None:
         """Initializes the command router."""
         self.settings = settings
@@ -54,6 +56,7 @@ class CommandRouter:
         self.cache = cache
         self.translator_factory = translator_factory
         self.connection = connection
+        self.event_bus = event_bus
         self.bot = bot
         self.handlers: dict[str, Callable[..., Awaitable[None]]] = {
             tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe,
@@ -95,6 +98,7 @@ class CommandRouter:
             "translator": translator,
             "settings": self.settings,
             "cache": self.cache,
+            "event_bus": self.event_bus,
             "bot": self.bot,
             "user_repo": user_repo,
             "admin_repo": admin_repo,
@@ -111,21 +115,21 @@ class CommandRouter:
                 "deeplink_repo",
                 "translator",
                 "settings",
-                "bot",
+                "cache",
             ],
             on_unsubscribe: [
                 "tt_message",
                 "deeplink_repo",
                 "translator",
                 "settings",
-                "bot",
+                "cache",
             ],
             on_add_admin: [
                 "tt_message",
                 "translator",
                 "settings",
                 "cache",
-                "bot",
+                "event_bus",
                 "admin_repo",
                 "user_repo",
                 "args_str",
@@ -135,7 +139,7 @@ class CommandRouter:
                 "translator",
                 "settings",
                 "cache",
-                "bot",
+                "event_bus",
                 "admin_repo",
                 "user_repo",
                 "args_str",

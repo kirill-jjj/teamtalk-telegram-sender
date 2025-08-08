@@ -20,14 +20,13 @@ from pytalk.user_account import UserAccount as PytalkUserAccount
 from bot.config import Settings
 from bot.constants import (
     INVALID_CHANNEL_ID,
-    NOTIFICATION_EVENT_JOIN,
-    NOTIFICATION_EVENT_LEAVE,
 )
-from bot.core.notifications import send_join_leave_notification
 from bot.database.engine import AsyncSessionFactoryType
+from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.telegram_bot.types.bots import EventBot, MessageBot
+from bot.teamtalk_bot.utils import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,7 @@ class TeamTalkConnection:
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
-        event_bot: EventBot,
-        message_bot: MessageBot,
+        event_bus: EventBus,
     ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
@@ -53,8 +51,7 @@ class TeamTalkConnection:
         self.session_factory = session_factory
         self.cache = cache
         self.translator_factory = translator_factory
-        self.event_bot = event_bot
-        self.message_bot = message_bot
+        self.event_bus = event_bus
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
         self.online_users_cache: dict[int, PytalkUser] = {}
@@ -69,7 +66,7 @@ class TeamTalkConnection:
             cache=cache,
             translator_factory=translator_factory,
             connection=self,
-            bot_for_admin_pm=self.message_bot,
+            event_bus=self.event_bus,
         )
 
     async def connect(self) -> bool:
@@ -601,17 +598,19 @@ class TeamTalkConnection:
         self.update_caches_on_event("user_login", user)
         if not self.instance:
             return
-        await send_join_leave_notification(
-            event_type=NOTIFICATION_EVENT_JOIN,
-            tt_user=user,
-            tt_instance=self.instance,
-            login_complete_time=self.login_complete_time,
-            online_users_cache_for_instance=self.online_users_cache,
-            settings=self.settings,
-            session_factory=self.session_factory,
-            cache=self.cache,
-            translator_factory=self.translator_factory,
-            bot=self.event_bot,
+
+        translator = self.translator_factory(self.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            self.instance, translator, self.settings
+        )
+
+        await self.event_bus.publish(
+            UserJoinedEvent(
+                user_nickname=self.ttstr(user.nickname),
+                username=self.ttstr(user.username),
+                user_id=user.id,
+                server_name=server_name,
+            )
         )
 
     async def on_user_logout(self, user: PytalkUser) -> None:
@@ -619,17 +618,19 @@ class TeamTalkConnection:
         self.update_caches_on_event("user_logout", user)
         if not self.instance:
             return
-        await send_join_leave_notification(
-            event_type=NOTIFICATION_EVENT_LEAVE,
-            tt_user=user,
-            tt_instance=self.instance,
-            login_complete_time=self.login_complete_time,
-            online_users_cache_for_instance=self.online_users_cache,
-            settings=self.settings,
-            session_factory=self.session_factory,
-            cache=self.cache,
-            translator_factory=self.translator_factory,
-            bot=self.event_bot,
+
+        translator = self.translator_factory(self.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            self.instance, translator, self.settings
+        )
+
+        await self.event_bus.publish(
+            UserLeftEvent(
+                user_nickname=self.ttstr(user.nickname),
+                username=self.ttstr(user.username),
+                user_id=user.id,
+                server_name=server_name,
+            )
         )
 
     async def on_user_update(self, user: PytalkUser) -> None:

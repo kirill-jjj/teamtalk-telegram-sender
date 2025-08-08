@@ -8,7 +8,6 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from aiogram import Bot
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -23,11 +22,12 @@ from bot.core.utils import build_help_message
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.event_bus.bus import EventBus
 from bot.models import Admin
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
+from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.teamtalk_bot.utils import handle_command_errors, send_long_tt_reply
-from bot.telegram_bot.utils import update_user_bot_commands
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -147,7 +147,7 @@ async def _manage_admin_ids(
     header_msg_key: str,
     settings: Settings,
     cache: CacheService,
-    bot: Bot,
+    event_bus: EventBus,
     admin_repo: AdminRepository,
     user_repo: UserRepository,
 ) -> None:
@@ -177,8 +177,12 @@ async def _manage_admin_ids(
             user_settings = await user_repo.get_or_create(
                 telegram_id, {"language_code": settings.general.default_lang}
             )
-            await update_user_bot_commands(
-                telegram_id, user_settings.language_code, cache, bot, translator
+            await event_bus.publish(
+                AdminStatusChangedEvent(
+                    telegram_id=telegram_id,
+                    is_admin=action_type == "add",
+                    lang_code=user_settings.language_code,
+                )
             )
             success_count += 1
         except Exception:
@@ -218,7 +222,7 @@ async def reply_with_deeplink(
     action: DeeplinkAction,
     reply_text_source: str,
     settings: Settings,
-    bot: Bot,
+    cache: CacheService,
     payload: str | None = None,
 ) -> None:
     """Generates a deeplink and replies to the user with it."""
@@ -228,8 +232,14 @@ async def reply_with_deeplink(
         settings.operational_parameters.deeplink_ttl_seconds,
         payload=payload,
     )
-    bot_info = await bot.get_me()
-    deeplink_url = f"https://t.me/{bot_info.username}?start={deeplink.token}"
+    bot_username = cache.get_bot_username()
+    if not bot_username:
+        logger.error("Bot username not found in cache. Cannot create deeplink.")
+        tt_message.reply(
+            _("Could not generate a link, bot username is not configured.")
+        )
+        return
+    deeplink_url = f"https://t.me/{bot_username}?start={deeplink.token}"
     logger.info(
         "Generated deeplink %s for TT user %s",
         deeplink.token,
@@ -261,7 +271,7 @@ async def _handle_deeplink_command(
     deeplink_repo: DeeplinkRepository,
     translator: NullTranslations,
     settings: Settings,
-    bot: Bot,
+    cache: CacheService,
     action: DeeplinkAction,
 ) -> None:
     """Generic handler for subscribe/unsubscribe commands."""
@@ -278,7 +288,7 @@ async def _handle_deeplink_command(
         payload=payload,
         reply_text_source=reply_text_source,
         settings=settings,
-        bot=bot,
+        cache=cache,
     )
 
 
@@ -287,11 +297,11 @@ async def on_subscribe(
     deeplink_repo: DeeplinkRepository,
     translator: NullTranslations,
     settings: Settings,
-    bot: Bot,
+    cache: CacheService,
 ) -> None:
     """Handles the /sub command from a TeamTalk user."""
     await _handle_deeplink_command(
-        tt_message, deeplink_repo, translator, settings, bot, DeeplinkAction.SUBSCRIBE
+        tt_message, deeplink_repo, translator, settings, cache, DeeplinkAction.SUBSCRIBE
     )
 
 
@@ -300,11 +310,16 @@ async def on_unsubscribe(
     deeplink_repo: DeeplinkRepository,
     translator: NullTranslations,
     settings: Settings,
-    bot: Bot,
+    cache: CacheService,
 ) -> None:
     """Handles the /unsub command from a TeamTalk user."""
     await _handle_deeplink_command(
-        tt_message, deeplink_repo, translator, settings, bot, DeeplinkAction.UNSUBSCRIBE
+        tt_message,
+        deeplink_repo,
+        translator,
+        settings,
+        cache,
+        DeeplinkAction.UNSUBSCRIBE,
     )
 
 
@@ -314,7 +329,7 @@ async def on_add_admin(
     translator: NullTranslations,
     settings: Settings,
     cache: CacheService,
-    bot: Bot,
+    event_bus: EventBus,
     admin_repo: AdminRepository,
     user_repo: UserRepository,
     *,
@@ -335,7 +350,7 @@ async def on_add_admin(
         header_msg_key=_("Action Results:"),
         settings=settings,
         cache=cache,
-        bot=bot,
+        event_bus=event_bus,
         admin_repo=admin_repo,
         user_repo=user_repo,
     )
@@ -347,7 +362,7 @@ async def on_remove_admin(
     translator: NullTranslations,
     settings: Settings,
     cache: CacheService,
-    bot: Bot,
+    event_bus: EventBus,
     admin_repo: AdminRepository,
     user_repo: UserRepository,
     *,
@@ -368,7 +383,7 @@ async def on_remove_admin(
         header_msg_key=_("Action Results:"),
         settings=settings,
         cache=cache,
-        bot=bot,
+        event_bus=event_bus,
         admin_repo=admin_repo,
         user_repo=user_repo,
     )

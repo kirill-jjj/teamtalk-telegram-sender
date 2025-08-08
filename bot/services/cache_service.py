@@ -24,6 +24,17 @@ class CacheService:
         self._user_settings_cache = user_settings_cache
         self._admin_ids_cache = admin_ids_cache
         self._subscribed_users_cache = subscribed_users_cache
+        self._bot_username: str | None = None
+
+    # --- Methods for bot info ---
+    def set_bot_username(self, username: str) -> None:
+        """Sets the bot's username in the cache."""
+        self._bot_username = username
+        logger.info("Bot username '%s' stored in cache.", username)
+
+    def get_bot_username(self) -> str | None:
+        """Gets the bot's username from the cache."""
+        return self._bot_username
 
     # --- Methods for admins ---
     def add_admin(self, telegram_id: int) -> None:

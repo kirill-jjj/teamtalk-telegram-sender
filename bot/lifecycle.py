@@ -15,9 +15,17 @@ from bot.database.engine import AsyncSessionFactoryType
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.event_bus.bus import EventBus
+from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
+from bot.teamtalk_bot.events import (
+    AdminStatusChangedEvent,
+    PrivateMessageReceivedEvent,
+    UserJoinedEvent,
+    UserLeftEvent,
+)
+from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
@@ -35,7 +43,9 @@ async def on_startup(
     settings: FromDishka[Settings],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
-    _tt_event_handler: FromDishka[TeamTalkEventHandler],
+    event_bus: FromDishka[EventBus],
+    telegram_handler: FromDishka[TelegramNotificationHandler],
+    _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
@@ -97,10 +107,25 @@ async def on_startup(
         await session.commit()
 
     logger.info("Setting Telegram bot commands...")
+    bot_info = await bot.get_me()
+    if bot_info.username:
+        cache.set_bot_username(bot_info.username)
+
     await set_telegram_commands_for_bot(
         bot, cache, translator_factory, available_languages, settings
     )
     logger.info("Telegram bot commands set.")
+
+    logger.info("Subscribing event handlers...")
+    event_bus.subscribe(UserJoinedEvent, telegram_handler.handle_user_joined)
+    event_bus.subscribe(UserLeftEvent, telegram_handler.handle_user_left)
+    event_bus.subscribe(
+        PrivateMessageReceivedEvent, telegram_handler.handle_private_message
+    )
+    event_bus.subscribe(
+        AdminStatusChangedEvent, telegram_handler.handle_admin_status_changed
+    )
+    logger.info("Event handlers subscribed.")
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())
     logger.info("Application startup sequence complete.")

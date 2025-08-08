@@ -15,18 +15,18 @@ from pytalk.user import User as PytalkUser
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID
 from bot.database.engine import AsyncSessionFactoryType
+from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 logger = logging.getLogger(__name__)
 
 
 # Decorator definition
-def route_event_to_connection(
+def route_event_to_connection(  # noqa: C901
     handler_method_on_event_handler_class: Callable[..., Awaitable[None]],
 ) -> Callable[..., Awaitable[None]]:
-    """Decorator for TeamTalkEventHandler methods to route events.
+    """Decorator for PytalkEventRouter methods to route events.
 
     Routes to the appropriate TeamTalkConnection instance.
     It assumes the decorated method's first arg after 'self' is the primary
@@ -35,7 +35,7 @@ def route_event_to_connection(
 
     @functools.wraps(handler_method_on_event_handler_class)
     async def wrapper(
-        self_event_handler: "TeamTalkEventHandler",
+        self_event_handler: "PytalkEventRouter",
         event_primary_obj: Any,  # noqa: ANN401 # Intentionally Any for generic event object
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
@@ -128,7 +128,7 @@ def route_event_to_connection(
 
 
 async def _broadcast_event_to_all_connections(
-    self_event_handler: "TeamTalkEventHandler",
+    self_event_handler: "PytalkEventRouter",
     event_primary_obj: Any,  # noqa: ANN401
     method_name_on_connection: str,
     handler_name_for_logs: str,
@@ -191,7 +191,7 @@ async def _broadcast_event_to_all_connections(
         )
 
 
-class TeamTalkEventHandler:
+class PytalkEventRouter:
     """Routes Pytalk events to the corresponding TeamTalkConnection instance."""
 
     def __init__(
@@ -200,25 +200,23 @@ class TeamTalkEventHandler:
         session_factory: AsyncSessionFactoryType,
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
-        event_bot: EventBot,
-        message_bot: MessageBot,
+        event_bus: EventBus,
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         logger: logging.Logger,
     ) -> None:
-        """Initializes the TeamTalkEventHandler."""
+        """Initializes the PytalkEventRouter."""
         self.settings = settings
         self.session_factory = session_factory
         self.cache = cache
         self.translator_factory = translator_factory
-        self.event_bot = event_bot
-        self.message_bot = message_bot
+        self.event_bus = event_bus
         self.tt_bot = tt_bot
         self.connections = connections
         self.logger = logger
         self._register_pytalk_event_handlers()
         self.logger.info(
-            "TeamTalkEventHandler initialized and Pytalk event handlers registered."
+            "PytalkEventRouter initialized and Pytalk event handlers registered."
         )
 
     def _register_pytalk_event_handlers(self) -> None:
@@ -290,8 +288,7 @@ class TeamTalkEventHandler:
                 self.session_factory,
                 self.cache,
                 self.translator_factory,
-                self.event_bot,
-                self.message_bot,
+                self.event_bus,
             )
             self.connections[server_key] = connection
 

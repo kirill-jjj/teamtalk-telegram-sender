@@ -22,6 +22,8 @@ from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
+from bot.event_bus.bus import EventBus
+from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
@@ -30,7 +32,7 @@ from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.event_handler import TeamTalkEventHandler
+from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 
@@ -126,6 +128,11 @@ class AppProvider(Provider):
         return create_translator_factory(translator_cache)
 
     @provide
+    def get_event_bus(self) -> EventBus:
+        """Provides the application-wide event bus."""
+        return EventBus()
+
+    @provide
     def get_cache_service(self) -> CacheService:
         """Provides the application-wide cache service."""
         return CacheService(
@@ -133,28 +140,46 @@ class AppProvider(Provider):
         )
 
     @provide
-    def get_teamtalk_event_handler(
+    def get_pytalk_event_router(
         self,
         settings: FromDishka[Settings],
         session_factory: FromDishka[AsyncSessionFactoryType],
         cache: FromDishka[CacheService],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
-        event_bot: FromDishka[EventBot],
-        message_bot: FromDishka[MessageBot],
+        event_bus: FromDishka[EventBus],
         tt_bot: FromDishka[pytalk.TeamTalkBot],
         connections: FromDishka[dict[str, TeamTalkConnection]],
-    ) -> "TeamTalkEventHandler":
-        """Provides the TeamTalk event handler."""
-        return TeamTalkEventHandler(
+    ) -> "PytalkEventRouter":
+        """Provides the Pytalk event router."""
+        return PytalkEventRouter(
             settings=settings,
             session_factory=session_factory,
             cache=cache,
             translator_factory=translator_factory,
-            event_bot=event_bot,
-            message_bot=message_bot,
+            event_bus=event_bus,
             tt_bot=tt_bot,
             connections=connections,
-            logger=logging.getLogger(TeamTalkEventHandler.__module__),
+            logger=logging.getLogger(PytalkEventRouter.__module__),
+        )
+
+    @provide
+    def get_telegram_notification_handler(
+        self,
+        event_bot: FromDishka[EventBot],
+        message_bot: FromDishka[MessageBot],
+        session_factory: FromDishka[AsyncSessionFactoryType],
+        cache: FromDishka[CacheService],
+        settings: FromDishka[Settings],
+        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+    ) -> TelegramNotificationHandler:
+        """Provides the Telegram notification handler."""
+        return TelegramNotificationHandler(
+            event_bot=event_bot,
+            message_bot=message_bot,
+            session_factory=session_factory,
+            cache=cache,
+            settings=settings,
+            translator_factory=translator_factory,
         )
 
 
