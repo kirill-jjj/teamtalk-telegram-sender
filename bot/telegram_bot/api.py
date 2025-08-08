@@ -1,8 +1,7 @@
-"""Utility functions for Telegram bot operations, like sending messages."""
+"""Functions for interacting with the Telegram Bot API."""
 
 import asyncio
 from collections.abc import Callable
-from gettext import NullTranslations
 import logging
 
 # For type hinting Services
@@ -15,8 +14,6 @@ from aiogram.exceptions import (
     TelegramForbiddenError,
 )
 from aiogram.types import (
-    BotCommand,
-    BotCommandScopeChat,
     Chat,
     InlineKeyboardMarkup,
     Message,
@@ -30,7 +27,7 @@ from bot.constants import (
 from bot.models import UserSettings
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
-from bot.telegram_bot.commands import get_admin_commands, get_user_commands
+from bot.telegram_bot.formatters import format_telegram_user_display_name
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
@@ -234,86 +231,6 @@ async def broadcast_to_users(
             # send_telegram_message
             # So we just log the summary here.
             logger.debug("Failed to send a message (handled individually): %s", error)
-
-
-def format_telegram_user_display_name(chat: Chat | None) -> str:
-    """Formats a Telegram user's display name from a Chat object.
-
-    Returns the Telegram ID as a string if chat object is None or no other
-    info is available.
-    """
-    if not chat:
-        # This function expects a Chat object.
-        # If chat is None, we cannot process it to get a display name or ID.
-        return "Unknown User"
-
-    # Default to string representation of chat.id if no other name parts are available
-    display_name = str(chat.id)
-
-    # Try to construct a more descriptive name
-    full_name = f"{chat.first_name or ''} {chat.last_name or ''}".strip()
-    username_part = f" (@{chat.username})" if chat.username else ""
-
-    if full_name:
-        display_name = f"{full_name}{username_part}"
-    elif chat.username:  # Only username is available
-        display_name = f"@{chat.username}"
-    # If neither full_name nor username is present, display_name remains str(chat.id)
-
-    return display_name
-
-
-async def update_user_bot_commands(
-    telegram_id: int,
-    new_lang_code: str,
-    cache: CacheService,
-    bot: AiogramBot,
-    translator: NullTranslations,
-) -> bool:
-    """Update the bot commands for a user based on their admin status and language."""
-    _ = translator.gettext
-    is_admin = cache.is_admin(telegram_id)
-    commands: list[BotCommand] = (
-        get_admin_commands(_) if is_admin else get_user_commands(_)
-    )
-
-    scope = BotCommandScopeChat(chat_id=telegram_id)
-    try:
-        await bot.set_my_commands(
-            commands=commands, scope=scope, language_code=new_lang_code
-        )
-        logger.info(
-            "Successfully updated commands for user %s (admin: %s) in language '%s'.",
-            telegram_id,
-            is_admin,
-            new_lang_code,
-        )
-    except TelegramBadRequest as e:
-        if "chat not found" in str(e).lower():
-            logger.warning(
-                "Could not set commands for user %s (admin: %s): "
-                "chat not found. This is expected if the user hasn't "
-                "started the bot.",
-                telegram_id,
-                is_admin,
-            )
-        else:
-            logger.exception(
-                "TelegramBadRequest while updating commands for user %s (admin: %s).",
-                telegram_id,
-                is_admin,
-            )
-        return False
-    except TelegramAPIError:
-        logger.exception(
-            "Failed to update commands for user %s (admin: %s) in language '%s'.",
-            telegram_id,
-            is_admin,
-            new_lang_code,
-        )
-        return False
-    else:
-        return True
 
 
 async def safe_delete_message(

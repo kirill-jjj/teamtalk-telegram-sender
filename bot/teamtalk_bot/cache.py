@@ -25,6 +25,23 @@ class TeamTalkCache:
         self._populate_accounts_task: asyncio.Task[Any] | None = None
         self.ttstr = pytalk.instance.sdk.ttstr
 
+    def _get_username_as_str(
+        self, user_or_account: PytalkUser | PytalkUserAccount
+    ) -> str:
+        """Extract username as a string from a TeamTalkUser or TeamTalkUserAccount."""
+        username = None
+        if hasattr(user_or_account, "username"):
+            username = user_or_account.username
+        elif hasattr(user_or_account, "_account") and hasattr(
+            user_or_account._account, "szUsername"
+        ):
+            username = user_or_account._account.szUsername
+        elif hasattr(user_or_account, "szUsername"):
+            username = user_or_account.szUsername
+        if isinstance(username, bytes):
+            return str(self.ttstr(username))
+        return str(username) if username is not None else ""
+
     async def _periodic_cache_sync(self) -> None:
         """Periodically synchronizes the online users cache with the server."""
         if not self.connection.instance:
@@ -97,13 +114,11 @@ class TeamTalkCache:
                 del self.online_users_cache[user_id]
         elif event_type == "user_account_new":
             new_acc: PytalkUserAccount = data
-            acc_username = self.ttstr(new_acc.username) if new_acc.username else ""
+            acc_username = self._get_username_as_str(new_acc)
             if acc_username:
                 self.user_accounts_cache[acc_username] = new_acc
         elif event_type == "user_account_remove":
             removed_acc: PytalkUserAccount = data
-            acc_username = (
-                self.ttstr(removed_acc.username) if removed_acc.username else ""
-            )
+            acc_username = self._get_username_as_str(removed_acc)
             if acc_username and acc_username in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username]

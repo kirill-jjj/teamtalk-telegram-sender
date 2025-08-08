@@ -16,7 +16,6 @@ from bot.core.enums import (
 )
 from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting
-from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import (
     AdminCallback,
     AdminSetSubscriberLanguageCallback,
@@ -31,6 +30,7 @@ from bot.telegram_bot.callback_data import (
     SubscriberListCallback,
     ViewSubscriberCallback,
 )
+from bot.telegram_bot.formatters import get_tt_user_display_name
 from bot.telegram_bot.models import SubscriberInfo
 
 from .shared import (

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.keyboards import (
     create_banned_user_list_keyboard,
     create_subscriber_list_keyboard,
@@ -19,7 +20,6 @@ from bot.telegram_bot.keyboards import (
 from bot.telegram_bot.models import SubscriberInfo
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.telegram_bot.utils import get_display_names_for_ids
 
 logger = logging.getLogger(__name__)
 

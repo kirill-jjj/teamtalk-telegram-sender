@@ -12,12 +12,12 @@ from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
 from bot.config import Settings
-from bot.core.utils import build_help_message
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.keyboards import (
@@ -26,7 +26,6 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.utils import safe_delete_message
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
@@ -101,6 +100,37 @@ async def on_who_command(
         await message.reply(report_text)
 
 
+def _build_telegram_help_message(
+    translator: NullTranslations, *, is_admin: bool
+) -> str:
+    """Builds the help message for Telegram users."""
+    _ = translator.gettext
+    parts = [
+        _("<b>Available Commands:</b>"),
+        _(
+            "/who - Show online users.\n"
+            "/settings - Access the interactive settings menu "
+            "(language, notifications, mute lists, NOON feature).\n"
+            "/help - Show this help message.\n"
+            "(Note: `/start` is used to initiate the bot and process deeplinks.)"
+        ),
+    ]
+    if is_admin:
+        parts.extend(
+            [
+                _("\n<b>Admin Commands:</b>"),
+                _(
+                    "/kick - Kick a user from the server (via buttons).\n"
+                    "/ban - Ban a user from the server (via buttons).\n"
+                    "/unban - Unban a user from the server "
+                    "(shows a list of banned users).\n"
+                    "/subscribers - View and manage subscribed users."
+                ),
+            ]
+        )
+    return "\n".join(parts)
+
+
 @user_commands_router.message(Command("help"), IsSubscribed())
 async def on_help_command(
     message: Message,
@@ -108,18 +138,12 @@ async def on_help_command(
     cache: Annotated[CacheService, FromDishka()],
 ) -> None:
     """Handles the /help command, showing available commands."""
-    _ = translator.gettext
     if not message.from_user:
         return
 
-    is_telegram_admin = cache.is_admin(message.from_user.id)
-    help_text = build_help_message(
-        translator,
-        "telegram",
-        is_telegram_admin=is_telegram_admin,
-        is_teamtalk_admin=False,
-    )
-    await message.reply(help_text)
+    is_admin = cache.is_admin(message.from_user.id)
+    help_text = _build_telegram_help_message(translator, is_admin=is_admin)
+    await message.reply(help_text, parse_mode="HTML")
 
 
 @user_commands_router.message(Command("settings"), IsSubscribed())

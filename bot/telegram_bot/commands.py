@@ -4,7 +4,7 @@ from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import (
     BotCommand,
     BotCommandScopeAllPrivateChats,
@@ -120,3 +120,56 @@ async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:
             "An unexpected error occurred while clearing commands for chat_id %s.",
             chat_id,
         )
+
+
+async def update_user_bot_commands(
+    telegram_id: int,
+    new_lang_code: str,
+    cache: CacheService,
+    bot: EventBot,
+    translator: NullTranslations,
+) -> bool:
+    """Update the bot commands for a user based on their admin status and language."""
+    _ = translator.gettext
+    is_admin = cache.is_admin(telegram_id)
+    commands: list[BotCommand] = (
+        get_admin_commands(_) if is_admin else get_user_commands(_)
+    )
+
+    scope = BotCommandScopeChat(chat_id=telegram_id)
+    try:
+        await bot.set_my_commands(
+            commands=commands, scope=scope, language_code=new_lang_code
+        )
+        logger.info(
+            "Successfully updated commands for user %s (admin: %s) in language '%s'.",
+            telegram_id,
+            is_admin,
+            new_lang_code,
+        )
+    except TelegramBadRequest as e:
+        if "chat not found" in str(e).lower():
+            logger.warning(
+                "Could not set commands for user %s (admin: %s): "
+                "chat not found. This is expected if the user hasn't "
+                "started the bot.",
+                telegram_id,
+                is_admin,
+            )
+        else:
+            logger.exception(
+                "TelegramBadRequest while updating commands for user %s (admin: %s).",
+                telegram_id,
+                is_admin,
+            )
+        return False
+    except TelegramAPIError:
+        logger.exception(
+            "Failed to update commands for user %s (admin: %s) in language '%s'.",
+            telegram_id,
+            is_admin,
+            new_lang_code,
+        )
+        return False
+    else:
+        return True

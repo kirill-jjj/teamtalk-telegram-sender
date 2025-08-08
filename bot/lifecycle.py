@@ -31,8 +31,8 @@ from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
+from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.utils import update_user_bot_commands
 
 
 @inject

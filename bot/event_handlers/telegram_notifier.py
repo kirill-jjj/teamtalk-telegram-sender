@@ -20,12 +20,9 @@ from bot.teamtalk_bot.events import (
     UserJoinedEvent,
     UserLeftEvent,
 )
+from bot.telegram_bot.api import broadcast_to_users, send_telegram_message
+from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot, MessageBot
-from bot.telegram_bot.utils import (
-    broadcast_to_users,
-    send_telegram_message,
-    update_user_bot_commands,
-)
 
 logger = logging.getLogger(__name__)
 

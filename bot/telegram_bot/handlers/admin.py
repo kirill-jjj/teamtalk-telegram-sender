@@ -13,8 +13,8 @@ from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
+from bot.telegram_bot.formatters import get_tt_user_display_name
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
 

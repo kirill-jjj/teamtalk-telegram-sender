@@ -16,10 +16,13 @@ from pytalk.exceptions import TeamTalkException as PytalkException
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import AdminCommand
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_tt_user_display_name
 from bot.telegram_bot.callback_data import AdminCallback
-
-from ._helpers import ensure_message_context, ensure_tt_user_exists, safe_edit_text
+from bot.telegram_bot.formatters import get_tt_user_display_name
+from bot.telegram_bot.handlers.decorators import (
+    ensure_message_context,
+    ensure_tt_user_exists,
+)
+from bot.telegram_bot.ui_utils import safe_edit_text
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")

@@ -16,7 +16,7 @@ from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
-from bot.teamtalk_bot.utils import (
+from bot.telegram_bot.formatters import (
     get_effective_server_name,
     get_tt_user_display_name,
 )

@@ -27,11 +27,12 @@ from bot.telegram_bot.callback_data import (
     PaginateMuteListCallback,
     SubscriberCallback,
 )
-from bot.telegram_bot.handlers.callback_handlers._helpers import (
-    ensure_message_context,
+from bot.telegram_bot.formatters import format_telegram_user_display_name
+from bot.telegram_bot.handlers.callback_handlers.subscriber_management.actions import (
     refresh_subscriber_view,
     with_view_refresh,
 )
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_admin_subscriber_lang_keyboard,
     create_admin_subscriber_mute_mode_keyboard,
@@ -40,7 +41,6 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import display_paginated_list
-from bot.telegram_bot.utils import format_telegram_user_display_name
 
 
 class SettingChoiceConfig(TypedDict):

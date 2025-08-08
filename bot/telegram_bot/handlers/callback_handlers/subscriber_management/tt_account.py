@@ -21,8 +21,8 @@ from bot.telegram_bot.callback_data import (
     PaginateLinkableAccountsCallback,
     SubscriberCallback,
 )
-from bot.telegram_bot.handlers.callback_handlers._helpers import ensure_message_context
 from bot.telegram_bot.handlers.callback_handlers.list_utils import SUBSCRIBERS_PER_PAGE
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,

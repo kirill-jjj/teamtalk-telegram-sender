@@ -21,7 +21,7 @@ from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.teamtalk_bot.utils import get_effective_server_name
+from bot.telegram_bot.formatters import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 

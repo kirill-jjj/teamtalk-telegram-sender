@@ -71,7 +71,7 @@ These rules are enforced by the `ruff` configuration in `pyproject.toml` and mus
 ### 5.1. Core Principles
 *   **Embrace Modern Python:** This project targets Python 3.11+. All new code should leverage modern syntax and features (e.g., `|` for union types, structural pattern matching where appropriate) from the outset. Do not write legacy code with the expectation that tooling will fix it.
 *   **Single Responsibility Principle (SRP):** A function or class should do one thing and do it well. Handlers should delegate complex logic to service functions.
-*   **Don't Repeat Yourself (DRY):** If you write the same code block more than once, refactor it into a reusable utility function. Check `bot/core/utils.py` before creating a new one.
+*   **Don't Repeat Yourself (DRY):** If you write the same code block more than once, refactor it into a reusable utility function. Before creating a new utility function, check existing modules for a suitable location.
 *   **Simplicity and The Zen of Python:** Prefer simple, clear, and explicit code over complex, clever, and implicit solutions.
 
 ### 5.2. Integrating External Code

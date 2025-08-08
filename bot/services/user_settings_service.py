@@ -11,8 +11,8 @@ from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
+from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.utils import update_user_bot_commands
 
 logger = logging.getLogger(__name__)
 

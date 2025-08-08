@@ -16,7 +16,10 @@ from bot.constants import (
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.utils import get_effective_server_name, get_tt_user_display_name
+from bot.telegram_bot.formatters import (
+    get_effective_server_name,
+    get_tt_user_display_name,
+)
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
 ttstr = pytalk.instance.sdk.ttstr
