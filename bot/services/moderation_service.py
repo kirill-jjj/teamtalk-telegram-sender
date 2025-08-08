@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import ConfigDict, Field, validate_call
 
@@ -10,7 +10,9 @@ from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, OperationResult, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.subscription_service import SubscriptionService
-from bot.teamtalk_bot.connection import TeamTalkConnection
+
+if TYPE_CHECKING:
+    from bot.teamtalk_bot.connection import TeamTalkConnection
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class ModerationService:
         self,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
-        tt_connection: TeamTalkConnection | None,
+        tt_connection: "TeamTalkConnection | None",
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Bans a user and deletes their profile within a single transaction."""
