@@ -3,7 +3,7 @@
 import asyncio
 from collections import defaultdict
 import logging
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from bot.event_bus.types import BaseEvent, EventHandler
 
@@ -17,13 +17,13 @@ class EventBus:
 
     def __init__(self) -> None:
         """Initializes the EventBus."""
-        self._subscribers: defaultdict[Type[BaseEvent], list[EventHandler[Any]]] = (
+        self._subscribers: defaultdict[type[BaseEvent], list[EventHandler[Any]]] = (
             defaultdict(list)
         )
         self.tasks: set[asyncio.Task[Any]] = set()
 
     def subscribe(
-        self, event_type: Type[T_Event], handler: EventHandler[T_Event]
+        self, event_type: type[T_Event], handler: EventHandler[T_Event]
     ) -> None:
         """Subscribes a handler to a specific event type.
 

@@ -16,7 +16,10 @@ from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
-from bot.teamtalk_bot.utils import get_tt_user_display_name
+from bot.teamtalk_bot.utils import (
+    get_effective_server_name,
+    get_tt_user_display_name,
+)
 
 if TYPE_CHECKING:
     from pytalk.message import Message as TeamTalkMessage
@@ -84,12 +87,15 @@ class MessageHandler:
                     cmd, args, tt_message, translator, session
                 )
             else:
+                server_name = get_effective_server_name(
+                    self.connection.instance, translator, self.settings
+                )
                 await self.event_bus.publish(
                     PrivateMessageReceivedEvent(
                         from_user_nickname=from_user_nickname,
                         from_user_username=from_user_username,
                         content=content,
-                        server_name=ttstr(self.connection.server_info.name),
+                        server_name=server_name,
                     )
                 )
 
