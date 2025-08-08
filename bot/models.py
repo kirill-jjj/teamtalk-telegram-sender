@@ -4,7 +4,7 @@ from datetime import datetime
 import enum
 from typing import Any
 
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from bot.core.enums import DeeplinkAction
@@ -30,6 +30,16 @@ class UserSettings(SQLModel, table=True):
     """Represents user-specific settings stored in the database."""
 
     __tablename__ = "user_settings"
+    __table_args__ = (
+        CheckConstraint(
+            "notification_settings IN ('all', 'join_off', 'leave_off', 'none')",
+            name="ck_user_settings_notification_valid",
+        ),
+        CheckConstraint(
+            "mute_list_mode IN ('blacklist', 'whitelist')",
+            name="ck_user_settings_mute_mode_valid",
+        ),
+    )
 
     telegram_id: int = Field(default=None, primary_key=True, index=True)
     language_code: str = Field(nullable=False)
@@ -55,6 +65,13 @@ class MutedUser(SQLModel, table=True):
     """Represents a TeamTalk user muted by a specific Telegram user."""
 
     __tablename__ = "muted_users"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_settings_telegram_id",
+            "muted_teamtalk_username",
+            name="uq_user_muted_username",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     muted_teamtalk_username: str = Field(index=True, nullable=False)
