@@ -2,9 +2,12 @@
 
 import asyncio
 import contextlib
+import logging
 from typing import TYPE_CHECKING, Any
 
 import pytalk
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -73,6 +76,9 @@ class TeamTalkCache:
             if self.connection.instance:
                 all_accounts = await self.connection.instance.list_user_accounts()
                 if all_accounts:
+                    logger.info(
+                        "Fetched %d user accounts from the server.", len(all_accounts)
+                    )
                     self.user_accounts_cache.clear()
                     for acc in all_accounts:
                         username_str = self.ttstr(acc.username)

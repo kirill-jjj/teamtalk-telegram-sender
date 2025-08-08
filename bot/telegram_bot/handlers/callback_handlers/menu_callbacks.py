@@ -15,6 +15,7 @@ from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.handlers.admin import _show_user_buttons
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.handlers.user import (
     on_help_command,
     on_settings_command,
@@ -22,7 +23,6 @@ from bot.telegram_bot.handlers.user import (
 )
 from bot.telegram_bot.types.bots import EventBot
 
-from bot.telegram_bot.handlers.decorators import ensure_message_context
 from .list_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,

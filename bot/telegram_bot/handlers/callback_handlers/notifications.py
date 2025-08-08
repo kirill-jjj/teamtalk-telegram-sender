@@ -14,13 +14,13 @@ from bot.core.enums import Actor, NotificationControl, SettingsNavAction
 from bot.models import UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
-from bot.telegram_bot.keyboards import create_notification_settings_keyboard
-
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
     with_view_refresh,
 )
+from bot.telegram_bot.keyboards import create_notification_settings_keyboard
 from bot.telegram_bot.ui_utils import safe_edit_text
+
 from .settings_view import refresh_notification_settings_view
 
 logger = logging.getLogger(__name__)

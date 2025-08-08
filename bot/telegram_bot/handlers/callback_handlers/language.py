@@ -16,13 +16,12 @@ from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
-from bot.telegram_bot.keyboards import create_language_selection_keyboard
-from bot.telegram_bot.types.bots import EventBot
-
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
     with_view_refresh,
 )
+from bot.telegram_bot.keyboards import create_language_selection_keyboard
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import safe_edit_text
 
 from .settings_view import refresh_main_settings_view

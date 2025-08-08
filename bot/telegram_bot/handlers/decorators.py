@@ -162,7 +162,7 @@ def ensure_tt_user_exists(func: F) -> F:
                     await query.message.edit_reply_markup(reply_markup=None)
                 except TelegramAPIError:
                     logger.debug(
-                        "Failed to remove reply markup when user %s was not found on %s.",
+                        "Failed to remove reply markup for user %s on server %s.",
                         callback_data.user_id,
                         server_host,
                     )

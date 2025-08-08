@@ -12,9 +12,9 @@ from bot.core.enums import SubscriberListAction
 from bot.database.uow import IUnitOfWork
 from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.callback_data import SubscriberListCallback
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.types.bots import EventBot
 
-from bot.telegram_bot.handlers.decorators import ensure_message_context
 from .list_utils import _show_subscriber_list_page
 
 logger = logging.getLogger(__name__)

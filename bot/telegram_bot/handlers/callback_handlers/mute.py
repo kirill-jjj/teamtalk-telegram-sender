@@ -28,16 +28,18 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
     _build_user_toggle_keyboard,
     _create_back_button_text,
 )
 from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
-from bot.telegram_bot.ui_utils import display_paginated_list, paginate_list
-
-from bot.telegram_bot.handlers.decorators import ensure_message_context
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import (
+    display_paginated_list,
+    paginate_list,
+    safe_edit_text,
+)
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
