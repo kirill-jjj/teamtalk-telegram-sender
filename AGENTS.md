@@ -33,8 +33,8 @@ This is the central architectural pattern of the application. Dependencies are m
 ### 2.2. Event-Driven Architecture
 To ensure loose coupling between the major components of the application (`telegram_bot` and `teamtalk_bot`), the system uses an event-driven pattern facilitated by an `EventBus`.
 
-*   **Publishers:** Components that generate events (primarily the `teamtalk_bot`) do so by publishing event objects to the `EventBus`. Publishers are not aware of who is listening for their events.
-*   **Events:** Events are simple Pydantic models defined in `bot/teamtalk_bot/events.py` that represent a specific business action (e.g., `UserJoinedEvent`).
+*   **Publisher (`PytalkEventRouter`):** This is the primary publisher. It listens for raw events from the `pytalk` library and translates them into meaningful domain events for the rest of the application. It knows nothing about who is listening.
+*   **Events:** Events are simple Pydantic models defined in `bot/teamtalk_bot/events.py` that represent a specific business action (e.g., `UserJoinedEvent`, `ReplyToTeamTalkUserEvent`).
 *   **Subscribers (Handlers):** Components that need to react to events subscribe to specific event types on the `EventBus`. These handlers are typically located in `bot/event_handlers/` and contain the logic to perform actions based on the event data (e.g., sending a Telegram notification).
 
 This pattern ensures that the `teamtalk_bot` can operate and be tested independently of the `telegram_bot`, and vice-versa.
@@ -47,7 +47,12 @@ The codebase is organized into distinct layers and modules, each with a single r
 *   `bot/event_handlers`: Contains the subscribers/listeners that react to events and perform actions (e.g., sending notifications).
 *   `bot/services`: Contains the application's business logic.
 *   `bot/telegram_bot`: All components specific to the Telegram bot. It does **not** directly depend on the `teamtalk_bot`.
-*   `bot/teamtalk_bot`: All components specific to the TeamTalk client. It publishes events and does **not** directly depend on the `telegram_bot`.
+*   `bot/teamtalk_bot`: All components specific to the TeamTalk client. This module is now decomposed into several key components:
+    *   `PytalkEventRouter`: The primary adapter to the `pytalk` library. It listens for raw events and is the **sole publisher** of domain events (e.g., `UserJoinedEvent`) to the `EventBus`.
+    *   `TeamTalkConnection`: A state container for a single server connection. It owns the `TeamTalkConnectionManager` and `TeamTalkCache`.
+    *   `TeamTalkConnectionManager`: Manages the connection lifecycle (`connect`, `disconnect`, `reconnect`).
+    *   `TeamTalkCache`: Manages caches (`online_users_cache`, etc.) and their background sync tasks for a single connection.
+    *   `MessageHandler` & `CommandRouter`: Handle incoming private messages and commands for a single connection.
 *   `scripts`: Standalone utility scripts for development and maintenance.
 
 ## 3. Database and Migrations
