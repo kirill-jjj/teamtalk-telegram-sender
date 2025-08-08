@@ -90,12 +90,18 @@ class MessageHandler:
                 server_name = get_effective_server_name(
                     self.connection.instance, translator, self.settings
                 )
+                server_key = (
+                    f"{self.connection.server_info.host}:"
+                    f"{self.connection.server_info.tcp_port}"
+                )
                 await self.event_bus.publish(
                     PrivateMessageReceivedEvent(
+                        from_user_id=from_user.id,
                         from_user_nickname=from_user_nickname,
                         from_user_username=from_user_username,
                         content=content,
                         server_name=server_name,
+                        connection_id=server_key,
                     )
                 )
 

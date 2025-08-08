@@ -16,12 +16,14 @@ from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.event_bus.bus import EventBus
+from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
+    ReplyToTeamTalkUserEvent,
     UserJoinedEvent,
     UserLeftEvent,
 )
@@ -45,6 +47,7 @@ async def on_startup(
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
     telegram_handler: FromDishka[TelegramNotificationHandler],
+    teamtalk_replier: FromDishka[TeamTalkReplyHandler],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -125,6 +128,7 @@ async def on_startup(
     event_bus.subscribe(
         AdminStatusChangedEvent, telegram_handler.handle_admin_status_changed
     )
+    event_bus.subscribe(ReplyToTeamTalkUserEvent, teamtalk_replier.handle_reply_event)
     logger.info("Event handlers subscribed.")
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())

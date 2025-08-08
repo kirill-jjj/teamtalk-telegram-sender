@@ -23,6 +23,7 @@ from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
+from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
@@ -171,6 +172,7 @@ class AppProvider(Provider):
         cache: FromDishka[CacheService],
         settings: FromDishka[Settings],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        event_bus: FromDishka[EventBus],
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(
@@ -180,7 +182,16 @@ class AppProvider(Provider):
             cache=cache,
             settings=settings,
             translator_factory=translator_factory,
+            event_bus=event_bus,
         )
+
+    @provide
+    def get_teamtalk_reply_handler(
+        self,
+        connections: FromDishka[dict[str, TeamTalkConnection]],
+    ) -> TeamTalkReplyHandler:
+        """Provides the TeamTalk reply handler."""
+        return TeamTalkReplyHandler(connections=connections)
 
 
 class RequestProvider(Provider):

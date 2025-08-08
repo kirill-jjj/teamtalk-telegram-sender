@@ -14,11 +14,13 @@ from sqlmodel import select
 from bot.config import Settings
 from bot.constants import NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.database.engine import AsyncSessionFactoryType
+from bot.event_bus.bus import EventBus
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
+    ReplyToTeamTalkUserEvent,
     UserJoinedEvent,
     UserLeftEvent,
 )
@@ -43,6 +45,7 @@ class TelegramNotificationHandler:
         cache: CacheService,
         settings: Settings,
         translator_factory: Callable[[str], NullTranslations],
+        event_bus: EventBus,
     ) -> None:
         """Initializes the TelegramNotificationHandler."""
         self.event_bot = event_bot
@@ -51,6 +54,7 @@ class TelegramNotificationHandler:
         self.cache = cache
         self.settings = settings
         self.translator_factory = translator_factory
+        self.event_bus = event_bus
 
     async def handle_user_joined(self, event: UserJoinedEvent) -> None:
         """Handles the UserJoinedEvent and sends notifications."""
@@ -94,11 +98,25 @@ class TelegramNotificationHandler:
             event.content,
         )
 
-        await send_telegram_message(
+        was_sent = await send_telegram_message(
             bot_instance=self.message_bot,
             chat_id=admin_chat_id,
             cache=self.cache,
             **content.as_kwargs(),
+        )
+
+        reply_text = (
+            _("Message sent to Telegram successfully.")
+            if was_sent
+            else _("Failed to deliver message to Telegram")
+        )
+
+        await self.event_bus.publish(
+            ReplyToTeamTalkUserEvent(
+                connection_id=event.connection_id,
+                user_id=event.from_user_id,
+                text=reply_text,
+            )
         )
 
     def _get_translator_for_admin(self) -> NullTranslations:
