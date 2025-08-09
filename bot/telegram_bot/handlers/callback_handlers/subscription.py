@@ -68,9 +68,6 @@ async def show_subscriptions_menu(
     await callback_query.answer()
 
 
-from bot.database.uow import IUnitOfWork
-
-
 @subscription_router.callback_query(
     SubscriptionCallback.filter(F.action == SubscriptionSetting.SET_SUB)
 )
@@ -78,17 +75,16 @@ from bot.database.uow import IUnitOfWork
 async def set_subscription_setting(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
+    user_settings: FromDishka[UserSettings],
     callback_data: SubscriptionCallback,
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
-    updated_settings: UserSettings | None = None
-
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
+
     except ValidationError:
         logger.exception(
             "Invalid subscription setting value received in callback for user %s. "
@@ -101,30 +97,19 @@ async def set_subscription_setting(
         )
         return
 
-    async with uow:
-        user_settings = await uow.users.get_by_id(callback_query.from_user.id)
-        if not user_settings:
-            logger.error(
-                "Could not find user_settings for user %s in "
-                "set_subscription_setting",
-                callback_query.from_user.id,
-            )
-            await callback_query.answer(
-                _("An error occurred. Please try again."), show_alert=True
-            )
-            return
+    original_setting = user_settings.notification_settings
 
-        original_setting = user_settings.notification_settings
-        if new_setting_enum == original_setting:
-            await callback_query.answer()  # No change, just acknowledge.
-            return
+    if new_setting_enum == original_setting:
+        await callback_query.answer()  # No change, just acknowledge.
+        return
 
-        updated_settings = await user_settings_service.update_notification_preference(
-            user_settings=user_settings,
-            new_pref=new_setting_enum,
-            actor=Actor.USER,
-            uow=uow,
-        )
+    # Call the dedicated service function to update the preference.
+    # This encapsulates business logic and makes the handler cleaner.
+    updated_settings = await user_settings_service.update_notification_preference(
+        user_settings=user_settings,
+        new_pref=new_setting_enum,
+        actor=Actor.USER,
+    )
 
     if not updated_settings:
         await callback_query.answer(
@@ -133,12 +118,14 @@ async def set_subscription_setting(
         )
         return
 
+    # UI Update
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),
         NotificationSetting.LEAVE_OFF: _("Join Only"),
         NotificationSetting.JOIN_OFF: _("Leave Only"),
         NotificationSetting.NONE: _("None"),
     }
+    # Use the value from updated_settings which is confirmed from DB
     setting_display_name = setting_to_text_map.get(
         updated_settings.notification_settings, _("unknown setting")
     )

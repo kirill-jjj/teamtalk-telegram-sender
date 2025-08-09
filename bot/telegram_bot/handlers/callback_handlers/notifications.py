@@ -67,6 +67,7 @@ async def show_notifications_menu(
 async def toggle_noon_setting(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
+    user_settings: FromDishka[UserSettings],
     user_settings_service: FromDishka[UserSettingsService],
     uow: FromDishka[IUnitOfWork],
     **kwargs: Any,  # noqa: ANN401
@@ -75,14 +76,6 @@ async def toggle_noon_setting(
     _ = translator.gettext
     updated_settings: UserSettings | None = None
     async with uow:
-        user_settings = await uow.users.get_by_id(query.from_user.id)
-        if not user_settings:
-            logger.error(
-                "Could not find user_settings for user %s in toggle_noon_setting",
-                query.from_user.id,
-            )
-            return False, _(MSG_GENERAL_ERROR), None
-
         updated_settings = await user_settings_service.toggle_noon_setting(
             user_settings=user_settings, actor=Actor.USER, uow=uow
         )

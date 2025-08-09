@@ -43,14 +43,12 @@ class ModerationService:
         user_settings = await active_uow.users.get_by_id(telegram_id)
         tt_username = user_settings.teamtalk_username if user_settings else None
 
-        # Ban Telegram ID
-        await active_uow.bans.add_ban(telegram_id=telegram_id, reason="Banned by admin")
-        # Ban TeamTalk username if it exists
-        if tt_username:
-            await active_uow.bans.add_ban(
-                teamtalk_username=tt_username,
-                reason=f"Linked to banned TG ID {telegram_id}",
-            )
+        # Create a single ban entry that links both identifiers
+        await active_uow.bans.add_ban(
+            telegram_id=telegram_id,
+            teamtalk_username=tt_username,  # Pass both telegram_id and tt_username
+            reason="Banned by admin",
+        )
 
         # Delete profile within the same transaction
         await self._subscription_service.delete_profile(
@@ -72,31 +70,41 @@ class ModerationService:
         translator: NullTranslations,
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
-        """Unbans a subscriber by removing all their ban entries."""
+        """Unbans a subscriber by finding all linked identifiers in the ban list and removing them."""
         _ = translator.gettext
         active_uow = uow or self._uow
 
-        # 1. Find all bans associated with this Telegram ID
-        bans_by_tg_id = await active_uow.bans.get_by_telegram_id(telegram_id)
+        # 1. Find all ban entries for the given telegram_id.
+        bans_for_tg_id = await active_uow.bans.get_by_telegram_id(telegram_id)
 
-        # 2. Collect all associated TeamTalk usernames from these bans
+        # 2. From these entries, collect all associated TeamTalk usernames.
+        #    Using a set for automatic deduplication.
         associated_tt_usernames = {
-            ban.teamtalk_username for ban in bans_by_tg_id if ban.teamtalk_username
+            ban.teamtalk_username for ban in bans_for_tg_id if ban.teamtalk_username
         }
 
-        # 3. Remove all bans by Telegram ID
+        # 3. Remove all ban entries by telegram_id.
         await active_uow.bans.remove_by_telegram_id(telegram_id)
+        logger.info("Removed all ban entries for Telegram ID: %s.", telegram_id)
 
-        # 4. Remove all bans for each found TeamTalk username
+        # 4. For each found associated TT username, also remove all their bans.
+        #    This is necessary in case the username was banned separately.
         for tt_username in associated_tt_usernames:
-            tt_bans = await active_uow.bans.get_by_teamtalk_username(tt_username)
-            for ban in tt_bans:
-                await active_uow.bans.delete(ban)
+            await active_uow.bans.remove_by_teamtalk_username(tt_username)
+            logger.info(
+                "Removed all ban entries for linked TeamTalk username: '%s'.",
+                tt_username,
+            )
 
-        logger.info("Successfully unbanned user %s.", telegram_id)
+        logger.info(
+            "Successfully unbanned user %s and all associated accounts.", telegram_id
+        )
+        # Message for the user in .po files
+        # msgid "unban_success"
+        # msgstr "User {telegram_id} was successfully unbanned."
         return OperationResult(
             success=True,
-            message_key=_("Successfully unbanned user {telegram_id}."),
+            message_key=_("unban_success"),
             message_args={"telegram_id": telegram_id},
         )
 
