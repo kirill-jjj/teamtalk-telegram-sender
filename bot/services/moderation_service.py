@@ -8,8 +8,8 @@ from pydantic import ConfigDict, Field, validate_call
 
 from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, UserSettings
-from bot.services.schemas import OperationResult
 from bot.services.cache_service import CacheService
+from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)

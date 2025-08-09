@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
-from bot.core.enums import SubscriberCommand
+from bot.core.enums import SubscriberCommand, SubscriberListAction
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
@@ -21,6 +21,7 @@ from bot.telegram_bot.callback_data import (
     AdminSetSubscriberMuteModeCallback,
     AdminSetSubscriberNotificationPrefCallback,
     SubscriberCallback,
+    SubscriberListCallback,
     ViewSubscriberCallback,
 )
 from bot.telegram_bot.formatters import (
@@ -113,6 +114,25 @@ async def refresh_subscriber_view(
         )
 
 
+async def _refresh_and_display_subscriber_list(
+    query: CallbackQuery,
+    user_repo: UserRepository,
+    subscriber_repo: SubscriberRepository,
+    bot: EventBot,
+    return_page: int,
+    translator: NullTranslations,
+) -> None:
+    """Refresh and display paginated subscribers list via the central display func."""
+    await _show_subscriber_list_page(
+        target=query,
+        user_repo=user_repo,
+        subscriber_repo=subscriber_repo,
+        bot=bot,
+        translator=translator,
+        page=return_page,
+    )
+
+
 async def refresh_subscriber_list_view(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
@@ -130,6 +150,34 @@ async def refresh_subscriber_list_view(
         return_page=callback_data.page,
         translator=translator,
     )
+
+
+@actions_router.callback_query(
+    SubscriberListCallback.filter(F.action == SubscriberListAction.DELETE_SUBSCRIBER)
+)
+@ensure_message_context
+@with_view_refresh(refresh_subscriber_list_view)
+async def delete_subscriber_from_list(
+    query: CallbackQuery,
+    callback_data: SubscriberListCallback,
+    translator: FromDishka[NullTranslations],
+    subscription_service: FromDishka[SubscriptionService],
+    uow: FromDishka[IUnitOfWork],
+) -> tuple[bool, str, None]:
+    """Handles deleting a subscriber directly from the subscriber list."""
+    _ = translator.gettext
+
+    if callback_data.telegram_id is None:
+        return False, _("Error: No Telegram ID specified for deletion."), None
+
+    target_telegram_id = callback_data.telegram_id
+
+    async with uow:
+        result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+
+    message = _(result.message_key).format(**(result.message_args or {}))
+
+    return result.success, message, None
 
 
 @actions_router.callback_query(
@@ -186,25 +234,6 @@ async def delete_subscriber(
     message = _(result.message_key).format(**(result.message_args or {}))
 
     return result.success, message, None
-
-
-async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery,
-    user_repo: UserRepository,
-    subscriber_repo: SubscriberRepository,
-    bot: EventBot,
-    return_page: int,
-    translator: NullTranslations,
-) -> None:
-    """Refresh and display paginated subscribers list via the central display func."""
-    await _show_subscriber_list_page(
-        target=query,
-        user_repo=user_repo,
-        subscriber_repo=subscriber_repo,
-        bot=bot,
-        translator=translator,
-        page=return_page,
-    )
 
 
 @actions_router.callback_query(ViewSubscriberCallback.filter())
