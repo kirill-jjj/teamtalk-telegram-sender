@@ -27,7 +27,11 @@ from bot.telegram_bot.keyboards import (
     create_linkable_tt_account_list_keyboard,
     create_manage_tt_account_keyboard,
 )
-from bot.telegram_bot.ui_utils import display_paginated_list, safe_edit_text
+from bot.telegram_bot.ui_utils import (
+    display_paginated_list,
+    paginate_list,
+    safe_edit_text,
+)
 
 logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
@@ -156,12 +160,17 @@ async def _display_linkable_tt_accounts_page(
         await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
+    page_slice, _, current_page_idx = paginate_list(
+        all_server_accounts, linkable_accounts_page_to_show, SUBSCRIBERS_PER_PAGE
+    )
+
     await display_paginated_list(
         target=query,
         bot=query.bot,
         translator=translator,
-        items=all_server_accounts,
-        page=linkable_accounts_page_to_show,
+        items_on_page=page_slice,
+        total_items=len(all_server_accounts),
+        page=current_page_idx,
         title_text=title_text,
         empty_list_text=empty_list_text,
         keyboard_factory=create_linkable_tt_account_list_keyboard,

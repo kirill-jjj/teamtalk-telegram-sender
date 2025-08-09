@@ -267,14 +267,24 @@ async def _display_subscriber_mute_list_page(
     if not query.bot:
         return
 
+    full_mute_list = sorted(
+        [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
+    )
+    # Inlining pagination logic to bypass a stubborn mypy error
+    total_items = len(full_mute_list)
+    page_size = MUTE_LIST_ITEMS_PER_PAGE
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    current_page_idx = max(0, min(mute_list_page_num, total_pages - 1))
+    start_index = current_page_idx * page_size
+    page_slice = full_mute_list[start_index : start_index + page_size]
+
     await display_paginated_list(
         target=query,
         bot=query.bot,
         translator=translator,
-        items=sorted(
-            [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
-        ),
-        page=mute_list_page_num,
+        items_on_page=page_slice,
+        total_items=total_items,
+        page=current_page_idx,
         title_text=_build_mute_list_title(translator, user_settings, display_name),
         empty_list_text=_("The mute list is currently empty."),
         keyboard_factory=create_view_mute_list_keyboard,

@@ -51,7 +51,8 @@ async def display_paginated_list(
     target: CallbackQuery | Message,
     bot: Bot,
     translator: NullTranslations,
-    items: list[Any],
+    items_on_page: list[Any],
+    total_items: int,
     page: int,
     title_text: str,
     empty_list_text: str,
@@ -62,27 +63,29 @@ async def display_paginated_list(
 ) -> None:
     """Displays or updates a paginated list in a Telegram message.
 
-    Can send a new message or edit an existing one based on the target type.
+    This version works with pre-paginated data.
 
     Args:
         target: The Aiogram CallbackQuery (to edit message) or Message (to send
             new message / get chat_id).
         bot: The Aiogram Bot instance.
         translator: The gettext NullTranslations object for localization.
-        items: The full list of items to display.
+        items_on_page: The pre-sliced list of items for the current page.
+        total_items: The total number of items across all pages.
         page: The current page number (0-indexed).
         title_text: The main title text for the message.
-        empty_list_text: Text to display if the items list is empty.
+        empty_list_text: Text to display if there are no items at all.
         keyboard_factory: An async callable that returns an InlineKeyboardMarkup.
         keyboard_factory_kwargs: Additional keyword arguments for the keyboard_factory.
         page_size: Number of items per page.
         server_host_for_display: Optional server host string to append to the title.
     """
     _ = translator.gettext
-    page_slice, total_pages, current_page_idx = paginate_list(items, page, page_size)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    current_page_idx = max(0, min(page, total_pages - 1))
 
     message_parts = [title_text]
-    if not items:
+    if total_items == 0:
         message_parts.append(empty_list_text)
 
     page_indicator_text = _("Page {current_page}/{total_pages}").format(
@@ -101,7 +104,7 @@ async def display_paginated_list(
 
     keyboard_markup = await keyboard_factory(
         translator,
-        page_items=page_slice,
+        page_items=items_on_page,
         current_page=current_page_idx,
         total_pages=total_pages,
         **keyboard_factory_kwargs,

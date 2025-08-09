@@ -1,9 +1,10 @@
 """Base class for data repositories."""
 
 import logging
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
-from sqlmodel import SQLModel, select
+from sqlalchemy import Column
+from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -78,3 +79,29 @@ class BaseRepository(Generic[Model]):
         logger.debug("Deleting %s: %s", self._model.__name__, model_instance)
         await self._session.delete(model_instance)
         await self._session.flush()
+
+    async def get_paginated(
+        self, offset: int, limit: int, order_by: str | Column[Any] | None = None
+    ) -> list[Model]:
+        """Retrieves a paginated list of model instances."""
+        logger.debug(
+            "Getting paginated %s with offset=%s, limit=%s",
+            self._model.__name__,
+            offset,
+            limit,
+        )
+        statement = select(self._model)
+        if order_by is not None:
+            statement = statement.order_by(order_by)
+
+        statement = statement.offset(offset).limit(limit)
+        result = await self._session.exec(statement)
+        return list(result.all())
+
+    async def count_all(self) -> int:
+        """Counts all instances of the model."""
+        logger.debug("Counting all instances of %s", self._model.__name__)
+        statement = select(func.count()).select_from(self._model)
+        result = await self._session.exec(statement)
+        count = result.one_or_none()
+        return count if count is not None else 0

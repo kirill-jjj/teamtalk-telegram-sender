@@ -1,6 +1,6 @@
 """Repository for managing ban list entries."""
 
-from sqlmodel import select
+from sqlmodel import func, select
 
 from bot.database.repositories.base import BaseRepository
 from bot.models import BanList
@@ -105,3 +105,28 @@ class BanRepository(BaseRepository[BanList]):
         for entry in entries_to_delete:
             await self._session.delete(entry)
         await self._session.flush()
+
+    async def count_with_telegram_id(self) -> int:
+        """Counts all ban entries that have a Telegram ID."""
+        statement = (
+            select(func.count(BanList.id))  # type: ignore[arg-type]
+            .select_from(self._model)
+            .where(BanList.telegram_id != None)  # noqa: E711
+        )
+        result = await self._session.exec(statement)
+        count = result.one_or_none()
+        return count if count is not None else 0
+
+    async def get_paginated_with_telegram_id(
+        self, offset: int, limit: int
+    ) -> list[BanList]:
+        """Retrieves a paginated list of ban entries that have a Telegram ID."""
+        statement = (
+            select(self._model)
+            .where(BanList.telegram_id != None)  # noqa: E711
+            .order_by(BanList.telegram_id)  # type: ignore[arg-type]
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self._session.exec(statement)
+        return list(result.all())
