@@ -41,6 +41,16 @@ async def is_linked_user_online(
     )
 
 
+def is_username_effectively_muted(
+    username: str, user_settings: UserSettings, muted_usernames_set: set[str]
+) -> bool:
+    """Determines if a username is effectively muted based on user settings."""
+    is_in_set = username in muted_usernames_set
+    if user_settings.mute_list_mode == MuteListMode.whitelist:
+        return not is_in_set  # In whitelist, not in set -> muted
+    return is_in_set  # In blacklist, in set -> muted
+
+
 class NotificationRecipientService:
     """A service to determine who should receive notifications."""
 

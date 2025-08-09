@@ -9,7 +9,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
 from bot.core.enums import UserListAction
-from bot.models import MuteListMode, UserSettings
+from bot.models import UserSettings
+from bot.services.notification_service import is_username_effectively_muted
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -19,16 +20,6 @@ def _create_back_button_text(translator: NullTranslations, destination_key: str)
     """Creates a standardized 'Back to...' button text."""
     _ = translator.gettext
     return f"⬅️ {_('Back to')} {_(destination_key)}"
-
-
-def _is_username_effectively_muted(
-    username: str, user_settings: UserSettings, muted_usernames_set: set[str]
-) -> bool:
-    """Determines if a username is effectively muted based on user settings."""
-    is_in_set = username in muted_usernames_set
-    if user_settings.mute_list_mode == MuteListMode.whitelist:
-        return not is_in_set
-    return is_in_set
 
 
 class PackableCallbackData(Protocol):
@@ -209,7 +200,7 @@ async def _build_user_toggle_keyboard(
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-        effectively_muted = _is_username_effectively_muted(
+        effectively_muted = is_username_effectively_muted(
             username_str, user_settings, muted_usernames_from_relationship
         )
         if effectively_muted:
