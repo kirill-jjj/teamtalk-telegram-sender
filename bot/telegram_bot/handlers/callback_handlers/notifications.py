@@ -6,7 +6,6 @@ from typing import Any
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MSG_GENERAL_ERROR

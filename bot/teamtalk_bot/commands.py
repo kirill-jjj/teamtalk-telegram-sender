@@ -125,13 +125,11 @@ async def _send_long_tt_reply(
 
 def _handle_command_errors(
     *, reply_to_user_on_error: bool = True
-) -> Callable[
-    [Callable[..., Awaitable[Any]]], Callable[..., Awaitable[None]]
-]:
+) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[None]]]:
     """Decorator to handle common exceptions for TeamTalk command handlers."""
 
     def decorator(
-        func: Callable[..., Awaitable[Any]]
+        func: Callable[..., Awaitable[Any]],
     ) -> Callable[..., Awaitable[None]]:
         @functools.wraps(func)
         async def wrapper(

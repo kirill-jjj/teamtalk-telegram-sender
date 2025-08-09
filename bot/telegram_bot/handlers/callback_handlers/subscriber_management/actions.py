@@ -1,4 +1,5 @@
 """Callback query handlers for core actions related to specific subscribers."""
+
 from gettext import NullTranslations
 import logging
 from typing import cast
@@ -6,7 +7,6 @@ from typing import cast
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand

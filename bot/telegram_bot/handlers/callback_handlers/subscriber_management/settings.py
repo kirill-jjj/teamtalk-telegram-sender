@@ -7,7 +7,6 @@ from typing import TypeAlias, TypedDict
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MUTE_LIST_ITEMS_PER_PAGE

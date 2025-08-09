@@ -70,6 +70,7 @@ class TelegramNotificationHandler:
                 lang_code or self.settings.general.default_lang,
             ),
             cache=self.cache,
+            online_users_cache_for_instance=event.online_users_cache,
         )
 
     async def handle_user_left(self, event: UserLeftEvent) -> None:
@@ -93,6 +94,7 @@ class TelegramNotificationHandler:
                 lang_code or self.settings.general.default_lang,
             ),
             cache=self.cache,
+            online_users_cache_for_instance=event.online_users_cache,
         )
 
     async def handle_admin_status_changed(self, event: AdminStatusChangedEvent) -> None:

@@ -6,7 +6,6 @@ from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand

@@ -372,6 +372,7 @@ class PytalkEventRouter:
                 username=connection.ttstr(user.username),
                 user_id=user.id,
                 server_name=server_name,
+                online_users_cache=connection.cache_manager.online_users_cache,
             )
         )
 
@@ -395,6 +396,7 @@ class PytalkEventRouter:
                 username=connection.ttstr(user.username),
                 user_id=user.id,
                 server_name=server_name,
+                online_users_cache=connection.cache_manager.online_users_cache,
             )
         )
 

@@ -1,5 +1,9 @@
 """Defines domain events specific to the TeamTalk bot."""
 
+from __future__ import annotations
+
+import pytalk
+
 from bot.event_bus.types import BaseEvent
 
 
@@ -10,6 +14,7 @@ class UserJoinedEvent(BaseEvent):
     username: str
     user_id: int
     server_name: str
+    online_users_cache: dict[int, pytalk.user.User]
 
 
 class PrivateMessageReceivedEvent(BaseEvent):
@@ -46,3 +51,4 @@ class UserLeftEvent(BaseEvent):
     username: str
     user_id: int
     server_name: str
+    online_users_cache: dict[int, pytalk.user.User]

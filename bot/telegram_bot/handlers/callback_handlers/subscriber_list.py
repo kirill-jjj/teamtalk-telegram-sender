@@ -6,7 +6,6 @@ from typing import Any
 
 from aiogram import Router
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberListAction
@@ -32,7 +31,7 @@ async def on_subscriber_list_callback(
     bot: FromDishka[EventBot],
     subscription_service: FromDishka[SubscriptionService],
     uow: FromDishka[IUnitOfWork],
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
     callback_answer = kwargs["callback_answer"]

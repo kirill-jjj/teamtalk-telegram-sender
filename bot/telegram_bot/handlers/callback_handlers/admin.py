@@ -7,7 +7,6 @@ from typing import Annotated, Any
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_answer import CallbackAnswer
 from dishka.integrations.aiogram import FromDishka
 import pytalk
 from pytalk.exceptions import PermissionError as PytalkPermissionError
@@ -142,7 +141,7 @@ async def on_moderation_confirm(
     translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: TeamTalkConnection,
     tt_user: pytalk.user.User,
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     callback_answer = kwargs["callback_answer"]

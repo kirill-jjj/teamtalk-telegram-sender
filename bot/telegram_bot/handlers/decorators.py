@@ -62,9 +62,7 @@ def with_view_refresh(
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
             # The decorated function no longer receives callback_answer.
-            success, message, updated_object = await func(
-                query, *args, **kwargs
-            )
+            success, message, updated_object = await func(query, *args, **kwargs)
 
             callback_answer.text = message
             callback_answer.show_alert = not success
@@ -101,7 +99,9 @@ def ensure_message_context(func: F) -> F:
 
     @functools.wraps(func)
     async def wrapper(
-        query: CallbackQuery, *args: Any, **kwargs: Any  # noqa: ANN401
+        query: CallbackQuery,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
     ) -> Any | None:  # noqa: ANN401
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())

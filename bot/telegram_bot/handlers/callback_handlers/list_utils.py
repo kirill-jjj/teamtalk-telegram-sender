@@ -45,7 +45,9 @@ async def _show_subscriber_list_page(
 
     # 2. Get only the IDs for the current page, sorted by telegram_id
     paginated_subscribers = await subscriber_repo.get_paginated(
-        offset, page_size, order_by=SubscribedUser.telegram_id  # type: ignore[arg-type]
+        offset,
+        page_size,
+        order_by=SubscribedUser.telegram_id,  # type: ignore[arg-type]
     )
     paginated_ids = [sub.telegram_id for sub in paginated_subscribers]
 
