@@ -11,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
+from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
@@ -69,14 +70,16 @@ async def toggle_noon_setting(
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
     **kwargs: Any,  # noqa: ANN401
 ) -> tuple[bool, str, UserSettings | None]:
-    """Handles toggling the NOON (Not On Online) setting."""
+    """Handles toggling the NOON (Not on Online) setting."""
     _ = translator.gettext
-
-    updated_settings = await user_settings_service.toggle_noon_setting(
-        user_settings=user_settings, actor=Actor.USER
-    )
+    updated_settings: UserSettings | None = None
+    async with uow:
+        updated_settings = await user_settings_service.toggle_noon_setting(
+            user_settings=user_settings, actor=Actor.USER, uow=uow
+        )
 
     if not updated_settings:
         return False, _("Failed to update NOON setting. Please try again."), None
