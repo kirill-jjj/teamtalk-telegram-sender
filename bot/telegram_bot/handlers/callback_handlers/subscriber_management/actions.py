@@ -229,7 +229,8 @@ async def delete_subscriber(
     target_telegram_id = callback_data.target_telegram_id
 
     # Pass uow to the service to avoid session conflicts
-    result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+    async with uow:
+        result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
 
     message = _(result.message_key).format(**(result.message_args or {}))
 
