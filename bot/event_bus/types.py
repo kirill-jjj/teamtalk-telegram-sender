@@ -2,13 +2,15 @@
 
 from typing import Protocol, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 T_Event_contra = TypeVar("T_Event_contra", bound="BaseEvent", contravariant=True)
 
 
 class BaseEvent(BaseModel):
     """Base class for all events, ensuring they are Pydantic models."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class EventHandler(Protocol[T_Event_contra]):
