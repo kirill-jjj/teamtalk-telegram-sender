@@ -38,7 +38,7 @@ def upgrade() -> None:
     with op.batch_alter_table("user_settings", schema=None) as batch_op:
         batch_op.create_check_constraint(
             "ck_user_settings_notification_valid",
-            "notification_settings IN ('all', 'join_off', 'leave_off', 'none')",
+            "LOWER(notification_settings) IN ('all', 'join_off', 'leave_off', 'none')",
         )
         batch_op.create_check_constraint(
             "ck_user_settings_mute_mode_valid",
