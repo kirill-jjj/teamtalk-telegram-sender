@@ -56,6 +56,7 @@ async def show_notifications_menu(
         logger_instance=logger,
         log_context="cq_show_notifications_menu",
     )
+    await callback_query.answer()
 
 
 @notifications_router.callback_query(

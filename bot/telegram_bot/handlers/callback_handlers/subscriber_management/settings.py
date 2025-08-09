@@ -243,6 +243,7 @@ async def admin_view_mute_list(
             subscriber_list_return_page=callback_data.page,
             mute_list_page_num=0,
         )
+    await query.answer()
 
 
 async def _display_subscriber_mute_list_page(

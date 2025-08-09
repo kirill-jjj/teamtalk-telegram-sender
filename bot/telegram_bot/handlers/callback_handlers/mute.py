@@ -366,6 +366,7 @@ async def show_manage_muted_menu(
         logger_instance=logger,
         log_context="cq_show_manage_muted_menu",
     )
+    await callback_query.answer()
 
 
 @mute_router.callback_query(SetMuteModeCallback.filter())
@@ -445,6 +446,7 @@ async def display_internal_user_list(
         callback_data.list_type,
         callback_data.page,
     )
+    await callback_query.answer()
 
 
 @mute_router.callback_query(
@@ -477,6 +479,7 @@ async def display_all_accounts_list(
     await _display_all_server_accounts_list(
         callback_query, translator, user_settings, tt_connection, callback_data.page
     )
+    await callback_query.answer()
 
 
 @mute_router.callback_query(ToggleMuteCallback.filter())

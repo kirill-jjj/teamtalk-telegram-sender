@@ -93,6 +93,7 @@ async def link_new_tt_account_choice(
         tt_connection=tt_connection,
         translator=translator,
     )
+    await query.answer()
 
 
 async def _display_linkable_tt_accounts_page(
@@ -200,6 +201,7 @@ async def paginate_linkable_accounts(
         tt_connection=tt_connection,
         translator=translator,
     )
+    await query.answer()
 
 
 @tt_account_router.callback_query(LinkTTAccountChosenCallback.filter())

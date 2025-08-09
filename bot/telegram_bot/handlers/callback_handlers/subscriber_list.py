@@ -41,3 +41,4 @@ async def on_subscriber_list_page(
             translator,
             page=callback_data.page or 0,
         )
+    await query.answer()

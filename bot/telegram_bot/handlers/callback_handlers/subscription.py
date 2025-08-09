@@ -65,6 +65,7 @@ async def show_subscriptions_menu(
         logger_instance=logger,
         log_context="cq_show_subscriptions_menu",
     )
+    await callback_query.answer()
 
 
 @subscription_router.callback_query(

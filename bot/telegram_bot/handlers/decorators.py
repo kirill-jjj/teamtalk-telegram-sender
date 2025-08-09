@@ -8,7 +8,6 @@ from typing import Any, Protocol, TypeAlias, TypeVar, cast
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.callback_answer import CallbackAnswer
 
 from bot.models import UserSettings
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -56,30 +55,33 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            callback_answer: CallbackAnswer,
             *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            # The decorated function no longer receives callback_answer.
+            # Call the original handler function
             success, message, updated_object = await func(query, *args, **kwargs)
 
-            callback_answer.text = message
-            callback_answer.show_alert = not success
+            # Manually answer the callback query
+            if message:  # Answer with a message if one was provided
+                await query.answer(text=message, show_alert=not success)
+            else:  # Otherwise, just acknowledge the callback
+                await query.answer()
 
+            # The rest of the logic for refreshing the view
             if updated_object and isinstance(updated_object, UserSettings):
                 kwargs["user_settings"] = updated_object
                 if "translator_factory" in kwargs:
                     translator_factory = kwargs["translator_factory"]
                     new_translator = translator_factory(updated_object.language_code)
                     kwargs["translator"] = new_translator
-            # Pass the original callback_data for the refresher
+
             if "callback_data" not in kwargs and args:
-                # Attempt to find callback_data in args if not in kwargs
                 for arg in args:
                     if isinstance(arg, RefreshableViewCallback):
                         kwargs["callback_data"] = arg
                         break
+
             await view_refresher(
                 query,
                 *args,

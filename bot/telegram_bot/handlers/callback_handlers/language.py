@@ -51,6 +51,7 @@ async def show_language_menu(
         logger_instance=logger,
         log_context="cq_show_language_menu",
     )
+    await callback_query.answer()
 
 
 @language_router.callback_query(

@@ -3,7 +3,7 @@
 from gettext import NullTranslations
 from html import escape
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -141,10 +141,8 @@ async def on_moderation_confirm(
     translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: TeamTalkConnection,
     tt_user: pytalk.user.User,
-    **kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
-    callback_answer = kwargs["callback_answer"]
     _ = translator.gettext
     server_host_for_display = tt_connection.server_info.host
 
@@ -156,8 +154,7 @@ async def on_moderation_confirm(
         server_host=server_host_for_display,
     )
 
-    callback_answer.text = message_text
-    callback_answer.show_alert = not success  # Show alert on failure
+    await callback_query.answer(text=message_text, show_alert=not success)
 
     if success:
         await safe_edit_text(

@@ -37,3 +37,4 @@ async def back_to_main_settings_menu(
         logger_instance=logger,
         log_context="cq_back_to_main_settings_menu",
     )
+    await callback_query.answer()

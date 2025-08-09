@@ -7,7 +7,6 @@ import traceback
 from types import ModuleType  # For uvloop typing
 
 from aiogram import Dispatcher
-from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
@@ -64,7 +63,6 @@ class Application:
         self.dp.update.middleware.register(
             ActiveTeamTalkConnectionMiddleware(default_server_key=None)
         )
-        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         # Include routers
         self.dp.include_router(user_commands_router)
