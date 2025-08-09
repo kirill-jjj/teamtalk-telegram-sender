@@ -173,9 +173,11 @@ async def delete_subscriber_from_list(
     target_telegram_id = callback_data.telegram_id
 
     async with uow:
-        result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+        result = await subscription_service.delete_profile(
+            target_telegram_id, translator, uow=uow
+        )
 
-    message = _(result.message_key).format(**(result.message_args or {}))
+    message = result.message_key.format(**(result.message_args or {}))
 
     return result.success, message, None
 
@@ -230,9 +232,11 @@ async def delete_subscriber(
 
     # Pass uow to the service to avoid session conflicts
     async with uow:
-        result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+        result = await subscription_service.delete_profile(
+            target_telegram_id, translator, uow=uow
+        )
 
-    message = _(result.message_key).format(**(result.message_args or {}))
+    message = result.message_key.format(**(result.message_args or {}))
 
     return result.success, message, None
 

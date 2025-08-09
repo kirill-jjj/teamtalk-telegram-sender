@@ -226,7 +226,7 @@ async def link_tt_account_chosen(
             return
 
         operation_result: OperationResult = await subscription_service.link_tt_account(
-            user_settings, tt_username_to_link, uow=uow
+            user_settings, tt_username_to_link, translator, uow=uow
         )
 
         alert_message_args = operation_result.message_args or {}
@@ -235,7 +235,7 @@ async def link_tt_account_chosen(
         if "new_tt_username" not in alert_message_args:
             alert_message_args["new_tt_username"] = tt_username_to_link
 
-        alert_message = _(operation_result.message_key).format(**alert_message_args)
+        alert_message = operation_result.message_key.format(**alert_message_args)
         await query.answer(alert_message, show_alert=True)
 
         final_tt_username_for_keyboard: str | None

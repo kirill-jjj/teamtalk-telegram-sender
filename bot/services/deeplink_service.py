@@ -74,7 +74,9 @@ class DeeplinkService:
     ) -> str:
         """Handles the logic for an unsubscribe deeplink."""
         _ = translator.gettext
-        if await self._subscription_service.delete_profile(telegram_id, uow=uow):
+        if await self._subscription_service.delete_profile(
+            telegram_id, translator, uow=uow
+        ):
             return _("You have successfully unsubscribed from notifications.")
         return _("You were not subscribed to notifications.")
 

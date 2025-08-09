@@ -1,5 +1,6 @@
 """Service for managing user subscriptions."""
 
+from gettext import NullTranslations
 import logging
 from typing import Annotated
 
@@ -62,9 +63,11 @@ class SubscriptionService:
     async def delete_profile(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
+        translator: NullTranslations,
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Orchestrates the full deletion of a user's profile from DB and cache."""
+        _ = translator.gettext
         logger.info("Deleting full user profile for Telegram ID: %s", telegram_id)
 
         active_uow = uow or self._uow
@@ -84,7 +87,7 @@ class SubscriptionService:
         )
         return OperationResult(
             success=True,
-            message_key="subscriber_delete_success",
+            message_key=_("Subscriber {telegram_id} deleted successfully."),
             message_args={"telegram_id": telegram_id},
         )
 
@@ -93,9 +96,11 @@ class SubscriptionService:
         self,
         user_settings: UserSettings,
         tt_username: str,
+        translator: NullTranslations,
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Links a TeamTalk account to a subscriber."""
+        _ = translator.gettext
         active_uow = uow or self._uow
 
         if await active_uow.bans.is_teamtalk_username_banned(tt_username):
@@ -106,7 +111,9 @@ class SubscriptionService:
             )
             return OperationResult(
                 success=False,
-                message_key="link_tt_account_error_banned",
+                message_key=_(
+                    "Cannot link TeamTalk account: username {tt_username} is banned."
+                ),
                 message_args={"tt_username": tt_username},
             )
 
@@ -124,9 +131,12 @@ class SubscriptionService:
 
         is_relink = bool(original_tt_username and original_tt_username != tt_username)
         message_key = (
-            "link_tt_account_success_relinked"
+            _(
+                "Successfully relinked TeamTalk account to {new_tt_username} "
+                "(was {original_tt_username})."
+            )
             if is_relink
-            else "link_tt_account_success_linked"
+            else _("Successfully linked TeamTalk account: {new_tt_username}.")
         )
         return OperationResult(
             success=True,

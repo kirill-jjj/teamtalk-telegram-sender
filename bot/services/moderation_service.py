@@ -53,11 +53,15 @@ class ModerationService:
             )
 
         # Delete profile within the same transaction
-        await self._subscription_service.delete_profile(telegram_id, uow=active_uow)
+        await self._subscription_service.delete_profile(
+            telegram_id, translator, uow=active_uow
+        )
 
         return OperationResult(
             success=True,
-            message_key=_("ban_success_full"),
+            message_key=_(
+                "User {telegram_id} was banned and their profile was deleted."
+            ),
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 
@@ -65,9 +69,11 @@ class ModerationService:
     async def unban_subscriber(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
+        translator: NullTranslations,
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Unbans a subscriber by removing all their ban entries."""
+        _ = translator.gettext
         active_uow = uow or self._uow
 
         # 1. Find all bans associated with this Telegram ID
@@ -90,7 +96,7 @@ class ModerationService:
         logger.info("Successfully unbanned user %s.", telegram_id)
         return OperationResult(
             success=True,
-            message_key="unban_success",
+            message_key=_("Successfully unbanned user {telegram_id}."),
             message_args={"telegram_id": telegram_id},
         )
 
@@ -135,14 +141,14 @@ class ModerationService:
             tt_username_to_toggle,
             user_settings.telegram_id,
         )
-        message_key = (
-            _("mute_toggle_success_muted")
+        message_text = (
+            _("User {username} has been successfully muted.")
             if action == "muted"
-            else _("mute_toggle_success_unmuted")
+            else _("User {username} has been successfully unmuted.")
         )
         return OperationResult(
             success=True,
-            message_key=message_key,
+            message_key=message_text,
             message_args={"username": tt_username_to_toggle},
             user_settings=user_settings,
         )
