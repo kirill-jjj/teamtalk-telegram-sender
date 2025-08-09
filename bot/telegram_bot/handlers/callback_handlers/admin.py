@@ -139,13 +139,12 @@ async def _apply_user_moderation(
 async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
+    callback_answer: CallbackAnswer,
     translator: Annotated[NullTranslations, FromDishka()],
     tt_connection: TeamTalkConnection,
     tt_user: pytalk.user.User,
-    **kwargs: Any,
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
-    callback_answer = kwargs["callback_answer"]
     _ = translator.gettext
     server_host_for_display = tt_connection.server_info.host
 

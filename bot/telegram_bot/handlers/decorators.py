@@ -56,12 +56,15 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
+            callback_answer: CallbackAnswer,
             *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            callback_answer = kwargs.pop("callback_answer")
-            success, message, updated_object = await func(query, *args, **kwargs)
+            # The decorated function no longer receives callback_answer.
+            success, message, updated_object = await func(
+                query, *args, **kwargs
+            )
 
             callback_answer.text = message
             callback_answer.show_alert = not success
@@ -72,7 +75,13 @@ def with_view_refresh(
                     translator_factory = kwargs["translator_factory"]
                     new_translator = translator_factory(updated_object.language_code)
                     kwargs["translator"] = new_translator
-
+            # Pass the original callback_data for the refresher
+            if "callback_data" not in kwargs and args:
+                # Attempt to find callback_data in args if not in kwargs
+                for arg in args:
+                    if isinstance(arg, RefreshableViewCallback):
+                        kwargs["callback_data"] = arg
+                        break
             await view_refresher(
                 query,
                 *args,
