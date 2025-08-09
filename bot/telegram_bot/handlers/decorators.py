@@ -56,18 +56,11 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
+            callback_answer: CallbackAnswer,
             *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            callback_answer = kwargs.pop("callback_answer", None)
-            if not isinstance(callback_answer, CallbackAnswer):
-                logger.error(
-                    "CallbackAnswer not found in kwargs for handler %s", func.__name__
-                )
-                await query.answer("Internal error", show_alert=True)
-                return
-
             # The decorated function no longer receives callback_answer.
             success, message, updated_object = await func(query, *args, **kwargs)
 
