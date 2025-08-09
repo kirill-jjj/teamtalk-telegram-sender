@@ -42,97 +42,79 @@ This bot acts as a bridge between a TeamTalk 5 server and Telegram. It monitors 
 
 ## Technology Stack
 
-*   Python 3.11+
-*   [aiogram](https://github.com/aiogram/aiogram) (asynchronous framework for the Telegram Bot API)
-*   [py-talk-ex](https://github.com/BlindMaster24/pytalk) (library for interacting with the TeamTalk 5 SDK)
-*   SQLAlchemy (ORM for database interaction)
-*   Aiosqlite (asynchronous SQLite driver)
-*   python-dotenv (management of environment variables)
+*   **Python 3.11+**
+*   **[Aiogram 3](https://github.com/aiogram/aiogram)**: An asynchronous framework for the Telegram Bot API.
+*   **[Dishka](https://github.com/ishadbol/dishka)**: A fast and flexible Dependency Injection framework.
+*   **[py-talk-ex](https://github.com/BlindMaster24/pytalk)**: A library for interacting with the TeamTalk 5 SDK.
+*   **[SQLModel](https://sqlmodel.tiangolo.com/)**: An ORM for database interaction, built on Pydantic and SQLAlchemy.
+*   **[Alembic](https://alembic.sqlalchemy.org/en/latest/)**: A database migration tool for SQLAlchemy.
+*   **[Pydantic](https://docs.pydantic.dev/)**: Used for parsing and validating configuration from `config.toml`.
+
+## Architecture
+
+The project is built on modern asynchronous patterns with an emphasis on modularity, testability, and Separation of Concerns.
+
+*   **Dependency Injection (DI)**: This is the central architectural pattern. Dependencies (e.g., database sessions, repositories, services) are managed by the **Dishka** library and are automatically injected into handlers and services. This eliminates the need for global objects and makes the code cleaner and more testable.
+
+*   **Layered Architecture**: The code is clearly divided into layers:
+    *   **Handlers (`bot/telegram_bot/handlers`)**: Receive incoming updates from Telegram and invoke the appropriate business logic.
+    *   **Services (`bot/services`)**: Contain the core business logic of the application (e.g., user management, moderation).
+    *   **Repositories (`bot/database/repositories`)**: Abstract data access, providing an interface for working with database models (e.g., `UserRepository`).
+    *   **Unit of Work (UoW)**: Ensures the atomicity of database operations.
+
+*   **Event-Driven Model**: An `EventBus` is used for loose coupling between components. Components that interact with TeamTalk publish domain events (e.g., `UserJoinedEvent`), and other parts of the system (like the Telegram notifier) subscribe to these events and react accordingly. This allows the `teamtalk_bot` and `telegram_bot` components to be independent of each other.
+
+A more detailed description of the architecture and contribution guidelines can be found in the [AGENTS.md](AGENTS.md) file.
 
 ## Installation and Setup
 
-1.  **Install `uv` (if not already installed):**
-    *   **For Linux and macOS:**
-        ```bash
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
-        ```
-    *   **For Windows:** The simplest way if you have Python and pip installed is to run `pip install uv`. Other installation methods (e.g., via an installer) can be found on the [official Astral website](https://astral.sh/uv#installation).
-
-2.  **Clone the repository:**
+1.  **Install `uv`**: This project uses `uv` for package and virtual environment management. Follow the official `uv` installation guide: [https://github.com/astral-sh/uv#installation](https://github.com/astral-sh/uv#installation)
+2.  **Clone the repository**:
     ```bash
     git clone https://github.com/kirill-jjj/teamtalk-telegram-sender.git
     cd teamtalk-telegram-sender
     ```
-
-3.  **Install dependencies:** `uv sync` will automatically create a virtual environment in a `.venv` folder if it doesn't exist and install all necessary packages into it. For development, you need to install the extra dependencies as well:
+3.  **Install dependencies**: `uv sync` will automatically create a virtual environment in a `.venv` folder if one doesn't exist and install all required packages. For development, you also need to install the extra dependencies:
     ```bash
     # This command installs both production and development dependencies
     uv sync --all-extras
     ```
-4.  **Generate Localization Files**: The project uses a gettext-based localization system. To manage localization files, use the following `uv run` commands:
-    *   To extract all translatable strings from the code into a template file (`locales/messages.pot`):
-        ```bash
-        uv run i18n extract
-        ```
-    *   To create or update language-specific `.po` files (e.g., for Russian `ru` located in `locales/ru/LC_MESSAGES/messages.po`):
-        ```bash
-        uv run i18n update
-        ```
-        (The `manage_locales.py` script, called via `i18n`, will dynamically find languages based on subdirectories in `locales/`. If adding a new language, e.g., 'de', first create `locales/de/LC_MESSAGES/` then run this command.)
-    *   To compile `.po` files into binary `.mo` files used by the bot at runtime:
-        ```bash
-        uv run i18n compile
-        ```
-    (Typically, after initial setup, developers will run `uv run i18n extract` when new text is added, then `uv run i18n update`, then translate, then `uv run i18n compile` to compile.)
-5.  **Configure the bot**: Copy the `config.example.toml` file to `config.toml` and fill in your actual configuration values (API tokens, admin IDs, TeamTalk server details, etc.).
+4.  **Configure the application**: Copy the `config.example.toml` file to a new file named `config.toml` and fill it with your actual data (API tokens, admin IDs, TeamTalk connection details, etc.).
     ```bash
     cp config.example.toml config.toml
-    # Now edit config.toml with your values.
-    # Pay close attention to mandatory fields like tokens and passwords.
+    # Now edit config.toml with your values
     ```
-    All fields that do not have default values in `config.example.toml` (e.g., `event_token`, `message_token`, `admin_chat_id` in the `[telegram]` section, and `password` in the `[teamtalk]` section) are mandatory.
-
-6.  **Apply database migrations**:
-    Before the first run or after updating database models, apply migrations:
+5.  **Apply database migrations**:
+    Before the first run or after updating the database models, apply migrations:
     ```bash
     uv run migrate upgrade head
     ```
-    If you use a custom configuration file name, specify it:
+6.  **Run the bot**:
     ```bash
-    uv run migrate --config custom_config.toml upgrade head
+    uv run start
     ```
-7.  **Run the bot**:
+    By default, the bot will use the `config.toml` file. You can also specify a different configuration file via the `APP_CONFIG_FILE` environment variable:
     ```bash
-    uv run sender.py
+    APP_CONFIG_FILE=prod.toml uv run start
     ```
-    If you use a custom configuration file name (e.g., `my_settings.toml`), specify it using the `--config` option:
-    ```bash
-    uv run sender.py --config my_settings.toml
-    ```
-    If the `--config` argument is not provided, the bot will default to looking for `config.toml` in the project's root directory.
 
 ## Database Migrations
 
-This project uses Alembic to manage database schema changes.
+This project uses **Alembic** to manage database schema changes.
 
 ### When to Use Migrations
 
 *   **Initial Setup**: Before running the bot for the first time, the initial migration must be applied to create the database tables.
-*   **After Model Updates**: If you change the SQLAlchemy models in `bot/models.py` (e.g., add a new table or column), you will need to create and apply a new migration.
+*   **After Model Updates**: If you change the SQLModel models in `bot/models.py` (e.g., add a new table or column), you will need to create and apply a new migration.
 
 ### Basic Alembic Commands
 
-Database migrations are managed using the `uv run migrate` command, which wraps Alembic functionality.
+Migrations are managed using the `uv run migrate` command, which is a wrapper for `alembic`. The `run_alembic.py` script automatically picks up the configuration from `config.toml` (or the file specified in `APP_CONFIG_FILE`).
 
 *   **Apply Migrations**:
-    To apply all pending migrations to the database (using the default `.env` configuration):
+    To apply all pending migrations to the database:
     ```bash
     uv run migrate upgrade head
-    ```
-    If using a different configuration file (e.g., `prod.env`), pass it via the `--config` argument:
-    ```bash
-    uv run migrate --config prod.env upgrade head
     ```
 
 *   **Create a New Revision (Migration)**:
@@ -140,30 +122,12 @@ Database migrations are managed using the `uv run migrate` command, which wraps 
     ```bash
     uv run migrate revision -m "short_description_of_changes" --autogenerate
     ```
-    With a custom config file:
-    ```bash
-    uv run migrate --config prod.env revision -m "short_description_of_changes" --autogenerate
-    ```
     This command will create a new migration file in `alembic/versions/`. It is crucial to **review** this file and make manual adjustments if necessary, as autogeneration is not always perfect.
 
 *   **Rollback Migrations**:
     To revert the last applied migration:
     ```bash
     uv run migrate downgrade -1
-    ```
-    To downgrade to a specific revision (replace `<revision_id>` with the hash of the desired revision):
-    ```bash
-    uv run migrate downgrade <revision_id>
-    ```
-    To revert all migrations (returning to an empty database schema):
-    ```bash
-    uv run migrate downgrade base
-    ```
-
-*   **View Current Revision**:
-    Shows the current revision of the database.
-    ```bash
-    uv run migrate current
     ```
 
 *   **View Migration History**:
