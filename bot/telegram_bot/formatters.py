@@ -9,6 +9,7 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.config import Settings
+from bot.models import MuteListMode, NotificationSetting, UserSettings
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -106,3 +107,40 @@ def get_tt_user_display_name(
     if not display_name:
         display_name = _("unknown user")
     return display_name
+
+
+def format_subscriber_details(
+    user_settings: UserSettings, display_name: str, translator: gettext.NullTranslations
+) -> str:
+    """Formats the detailed view of a subscriber's settings."""
+    _ = translator.gettext
+
+    details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
+    details_parts.append(
+        _("Linked TT Account: {tt_username}").format(
+            tt_username=user_settings.teamtalk_username or _("None")
+        )
+    )
+    details_parts.append(_("Language: {lang}").format(lang=user_settings.language_code))
+    noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
+    details_parts.append(_("NOON (Not on Online): {status}").format(status=noon_status))
+    notif_setting_map = {
+        NotificationSetting.ALL.value: _("All (Join & Leave)"),
+        NotificationSetting.LEAVE_OFF.value: _("Join Only"),
+        NotificationSetting.JOIN_OFF.value: _("Leave Only"),
+        NotificationSetting.NONE.value: _("None"),
+    }
+    notif_setting_str = user_settings.notification_settings.value
+    details_parts.append(
+        _("Notifications: {setting}").format(
+            setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
+        )
+    )
+    mute_mode_str = (
+        _("Blacklist")
+        if user_settings.mute_list_mode == MuteListMode.blacklist
+        else _("Whitelist")
+    )
+    details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
+
+    return "\n".join(details_parts)

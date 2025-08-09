@@ -7,7 +7,8 @@ from typing import Annotated
 from pydantic import ConfigDict, Field, validate_call
 
 from bot.database.uow import IUnitOfWork
-from bot.models import MutedUser, OperationResult, UserSettings
+from bot.models import MutedUser, UserSettings
+from bot.services.schemas import OperationResult
 from bot.services.cache_service import CacheService
 from bot.services.subscription_service import SubscriptionService
 

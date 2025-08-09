@@ -915,3 +915,8 @@ msgstr "{item_display_name} (Статус: в списке игнорирова�
 msgid "{item_display_name} (Status: Not Muted)"
 msgstr "{item_display_name} (Статус: не в списке игнорирования)"
 
+msgid "subscriber_delete_success"
+msgstr "Подписчик {telegram_id} успешно удален."
+
+msgid "subscriber_delete_error"
+msgstr "Ошибка при удалении подписчика {telegram_id}."

@@ -6,8 +6,9 @@ from typing import Annotated
 from pydantic import ConfigDict, Field, validate_call
 
 from bot.database.uow import IUnitOfWork
-from bot.models import OperationResult, SubscribedUser, UserSettings
+from bot.models import SubscribedUser, UserSettings
 from bot.services.cache_service import CacheService
+from bot.services.schemas import OperationResult
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class SubscriptionService:
         self,
         telegram_id: Annotated[int, Field(gt=0)],
         uow: IUnitOfWork | None = None,
-    ) -> bool:
+    ) -> OperationResult:
         """Orchestrates the full deletion of a user's profile from DB and cache."""
         logger.info("Deleting full user profile for Telegram ID: %s", telegram_id)
 
@@ -81,7 +82,11 @@ class SubscriptionService:
             "Full user profile deletion process completed for Telegram ID: %s.",
             telegram_id,
         )
-        return True
+        return OperationResult(
+            success=True,
+            message_key="subscriber_delete_success",
+            message_args={"telegram_id": telegram_id},
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def link_tt_account(

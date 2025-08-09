@@ -13,7 +13,7 @@ from bot.core.enums import SubscriberCommand
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.callback_data import (
@@ -23,7 +23,10 @@ from bot.telegram_bot.callback_data import (
     SubscriberCallback,
     ViewSubscriberCallback,
 )
-from bot.telegram_bot.formatters import format_telegram_user_display_name
+from bot.telegram_bot.formatters import (
+    format_subscriber_details,
+    format_telegram_user_display_name,
+)
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )
@@ -67,35 +70,8 @@ async def _display_subscriber_view(
             "Unexpected error fetching chat info for %s.", user_settings.telegram_id
         )
 
-    details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
-    details_parts.append(
-        _("Linked TT Account: {tt_username}").format(
-            tt_username=user_settings.teamtalk_username or _("None")
-        )
-    )
-    details_parts.append(_("Language: {lang}").format(lang=user_settings.language_code))
-    noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
-    details_parts.append(_("NOON (Not on Online): {status}").format(status=noon_status))
-    notif_setting_map = {
-        NotificationSetting.ALL.value: _("All (Join & Leave)"),
-        NotificationSetting.LEAVE_OFF.value: _("Join Only"),
-        NotificationSetting.JOIN_OFF.value: _("Leave Only"),
-        NotificationSetting.NONE.value: _("None"),
-    }
-    notif_setting_str = user_settings.notification_settings.value
-    details_parts.append(
-        _("Notifications: {setting}").format(
-            setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
-        )
-    )
-    mute_mode_str = (
-        _("Blacklist")
-        if user_settings.mute_list_mode == MuteListMode.blacklist
-        else _("Whitelist")
-    )
-    details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))
+    text = format_subscriber_details(user_settings, display_name, translator)
 
-    text = "\n".join(details_parts)
     # This assumes query.message is a Message, which is guaranteed by
     # @ensure_message_context
     await cast(Message, query.message).edit_text(
@@ -204,19 +180,12 @@ async def delete_subscriber(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    # Передаем uow в сервис, чтобы избежать конфликта сессий
-    success = await subscription_service.delete_profile(target_telegram_id, uow=uow)
+    # Pass uow to the service to avoid session conflicts
+    result = await subscription_service.delete_profile(target_telegram_id, uow=uow)
 
-    if success:
-        message = _("Subscriber {telegram_id} deleted successfully.").format(
-            telegram_id=target_telegram_id
-        )
-    else:
-        message = _("Error deleting subscriber {telegram_id}.").format(
-            telegram_id=target_telegram_id
-        )
+    message = _(result.message_key).format(**(result.message_args or {}))
 
-    return success, message, None
+    return result.success, message, None
 
 
 async def _refresh_and_display_subscriber_list(

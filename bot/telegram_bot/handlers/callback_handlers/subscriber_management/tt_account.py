@@ -12,7 +12,7 @@ import pytalk
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
-from bot.models import OperationResult
+from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
