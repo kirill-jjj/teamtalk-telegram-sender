@@ -106,6 +106,17 @@ class BanRepository(BaseRepository[BanList]):
             await self._session.delete(entry)
         await self._session.flush()
 
+    async def remove_by_teamtalk_username(self, teamtalk_username: str) -> None:
+        """Removes all ban entries associated with a TeamTalk username.
+
+        Args:
+            teamtalk_username: The TeamTalk username whose ban entries should be removed.
+        """
+        entries_to_delete = await self.get_by_teamtalk_username(teamtalk_username)
+        for entry in entries_to_delete:
+            await self._session.delete(entry)
+        await self._session.flush()
+
     async def count_with_telegram_id(self) -> int:
         """Counts all ban entries that have a Telegram ID."""
         statement = (
