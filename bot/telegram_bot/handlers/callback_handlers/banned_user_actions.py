@@ -52,7 +52,6 @@ async def refresh_banned_list_view(
 @with_view_refresh(refresh_banned_list_view)
 async def unban_subscriber(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
@@ -95,7 +94,6 @@ async def refresh_subscriber_list_view(
 @with_view_refresh(refresh_subscriber_list_view)
 async def ban_subscriber(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],

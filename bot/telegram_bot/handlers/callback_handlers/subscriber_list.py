@@ -2,6 +2,7 @@
 
 from gettext import NullTranslations
 import logging
+from typing import Any
 
 from aiogram import Router
 from aiogram.types import CallbackQuery
@@ -27,13 +28,14 @@ subscriber_list_router = Router(name="subscriber_list_actions_router")
 async def on_subscriber_list_callback(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
-    callback_answer: CallbackAnswer,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     subscription_service: FromDishka[SubscriptionService],
     uow: FromDishka[IUnitOfWork],
+    **kwargs: Any,
 ) -> None:
     """Handles actions from the subscriber list, like deletion or pagination."""
+    callback_answer = kwargs["callback_answer"]
     _ = translator.gettext
     action = callback_data.action
     page_from_callback = callback_data.page if callback_data.page is not None else 0

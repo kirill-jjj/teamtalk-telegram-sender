@@ -61,7 +61,6 @@ async def show_language_menu(
 @with_view_refresh(refresh_main_settings_view)
 async def set_language(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     uow: FromDishka[IUnitOfWork],
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,

@@ -66,7 +66,6 @@ async def show_notifications_menu(
 @with_view_refresh(refresh_notification_settings_view)
 async def toggle_noon_setting(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
     user_settings_service: FromDishka[UserSettingsService],

@@ -153,7 +153,6 @@ async def admin_set_setting_choice(
 @with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
@@ -333,7 +332,6 @@ AnySettingCallback: TypeAlias = (
 @with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: AnySettingCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],

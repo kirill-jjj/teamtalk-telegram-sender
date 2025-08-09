@@ -56,14 +56,12 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            callback_answer: CallbackAnswer,
             *args: Any,  # noqa: ANN401
             **kwargs: Any,  # noqa: ANN401
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
-            success, message, updated_object = await func(
-                query, callback_answer, *args, **kwargs
-            )
+            callback_answer = kwargs.pop("callback_answer")
+            success, message, updated_object = await func(query, *args, **kwargs)
 
             callback_answer.text = message
             callback_answer.show_alert = not success

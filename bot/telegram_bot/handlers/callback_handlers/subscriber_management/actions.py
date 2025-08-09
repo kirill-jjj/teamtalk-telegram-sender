@@ -163,7 +163,6 @@ async def refresh_subscriber_list_view(
 @with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     moderation_service: FromDishka[ModerationService],
@@ -195,7 +194,6 @@ async def on_ban_subscriber_confirm(
 @with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber(
     query: CallbackQuery,
-    callback_answer: CallbackAnswer,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],
