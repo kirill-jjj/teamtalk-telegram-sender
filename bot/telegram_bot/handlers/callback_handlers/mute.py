@@ -374,30 +374,45 @@ async def show_manage_muted_menu(
 async def set_mute_mode(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    uow: FromDishka[IUnitOfWork],
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
     new_mode = callback_data.mode
+    updated_user_settings = None
+    original_user_settings = None
 
-    updated_user_settings = await user_settings_service.update_mute_mode(
-        user_settings, new_mode, actor=Actor.USER
-    )
+    async with uow:
+        original_user_settings = await uow.users.get_by_id(callback_query.from_user.id)
+        if not original_user_settings:
+            logger.warning(
+                "Could not get user settings for user %s in set_mute_mode",
+                callback_query.from_user.id,
+            )
+            await callback_query.answer(
+                _("An error occurred. Please try again."), show_alert=True
+            )
+            return
+
+        updated_user_settings = await user_settings_service.update_mute_mode(
+            original_user_settings, new_mode, actor=Actor.USER, uow=uow
+        )
+
+    # After the UoW block, decide which settings to use for the UI update.
+    current_settings_for_keyboard = updated_user_settings or original_user_settings
 
     if not updated_user_settings:
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        current_settings_for_keyboard = user_settings
     else:
         mode_text = (
             _("Blacklist")
-            if updated_user_settings.mute_list_mode == MuteListMode.blacklist
+            if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist
             else _("Whitelist")
         )
         success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
         await callback_query.answer(success_toast_text)
-        current_settings_for_keyboard = updated_user_settings
 
     if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist:
         current_mode_desc = _(
