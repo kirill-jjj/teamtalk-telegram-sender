@@ -358,6 +358,7 @@ async def admin_set_any_subscriber_setting(
                 callback_data.lang_code,
                 translator_factory,
                 Actor.ADMIN,
+                uow=uow,
             )
             success_msg = _(
                 "Language for subscriber {tg_id} changed to {value}."
@@ -366,7 +367,7 @@ async def admin_set_any_subscriber_setting(
             new_pref = NotificationSetting(callback_data.setting_value)
             updated_settings = (
                 await user_settings_service.update_notification_preference(
-                    user_settings, new_pref, Actor.ADMIN
+                    user_settings, new_pref, Actor.ADMIN, uow=uow
                 )
             )
             success_msg = _(
@@ -374,7 +375,7 @@ async def admin_set_any_subscriber_setting(
             ).format(tg_id=target_telegram_id, value=new_pref.value)
         elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
             updated_settings = await user_settings_service.update_mute_mode(
-                user_settings, callback_data.mode, Actor.ADMIN
+                user_settings, callback_data.mode, Actor.ADMIN, uow=uow
             )
             success_msg = _(
                 "Mute list mode for subscriber {tg_id} set to: {value}."

@@ -11,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 from pydantic import BaseModel, Field, ValidationError
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
+from bot.database.uow import IUnitOfWork
 from bot.models import NotificationSetting, UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
@@ -75,7 +76,7 @@ async def show_subscriptions_menu(
 async def set_subscription_setting(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    uow: FromDishka[IUnitOfWork],
     callback_data: SubscriptionCallback,
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
@@ -84,68 +85,65 @@ async def set_subscription_setting(
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
         new_setting_enum = update_data.setting
-
     except ValidationError:
         logger.exception(
-            "Invalid subscription setting value received in callback for user %s. "
-            "Raw value: %s",
+            "Invalid subscription setting value for user %s: %s",
             callback_query.from_user.id,
             callback_data.setting_value,
         )
-        await callback_query.answer(
-            _("Error: Invalid setting value received."), show_alert=True
+        await callback_query.answer(_("Error: Invalid setting value."), show_alert=True)
+        return
+
+    updated_settings: UserSettings | None = None
+    original_settings: UserSettings | None = None
+
+    async with uow:
+        original_settings = await uow.users.get_by_id(callback_query.from_user.id)
+        if not original_settings:
+            logger.warning(
+                "User settings not found for user %s", callback_query.from_user.id
+            )
+            await callback_query.answer(_("User data not found."), show_alert=True)
+            return
+
+        if new_setting_enum == original_settings.notification_settings:
+            await callback_query.answer()
+            return
+
+        updated_settings = await user_settings_service.update_notification_preference(
+            user_settings=original_settings,
+            new_pref=new_setting_enum,
+            actor=Actor.USER,
+            uow=uow,
         )
-        return
-
-    original_setting = user_settings.notification_settings
-
-    if new_setting_enum == original_setting:
-        await callback_query.answer()  # No change, just acknowledge.
-        return
-
-    # Call the dedicated service function to update the preference.
-    # This encapsulates business logic and makes the handler cleaner.
-    updated_settings = await user_settings_service.update_notification_preference(
-        user_settings=user_settings,
-        new_pref=new_setting_enum,
-        actor=Actor.USER,
-    )
 
     if not updated_settings:
         await callback_query.answer(
-            _("Failed to update subscription setting. Please try again."),
-            show_alert=True,
+            _("Failed to update setting. Please try again."), show_alert=True
         )
         return
 
-    # UI Update
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),
         NotificationSetting.LEAVE_OFF: _("Join Only"),
         NotificationSetting.JOIN_OFF: _("Leave Only"),
         NotificationSetting.NONE: _("None"),
     }
-    # Use the value from updated_settings which is confirmed from DB
     setting_display_name = setting_to_text_map.get(
         updated_settings.notification_settings, _("unknown setting")
     )
-    success_toast_text = _("Subscription setting updated to: {setting_name}.").format(
+    toast_text = _("Subscription setting updated to: {setting_name}.").format(
         setting_name=setting_display_name
     )
-    await callback_query.answer(success_toast_text, show_alert=False)
+    await callback_query.answer(toast_text)
 
-    menu_text = _("Subscription Settings")
-    # Use updated_settings (which is user_settings after in-place modification
-    # by helper) for keyboard
-    updated_keyboard_markup = await create_subscription_settings_keyboard(
+    keyboard_markup = await create_subscription_settings_keyboard(
         translator, updated_settings.notification_settings
     )
-
-    # @ensure_message_context guarantees query.message is a Message
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
-        text=menu_text,
-        reply_markup=updated_keyboard_markup,  # Use directly
+        text=_("Subscription Settings"),
+        reply_markup=keyboard_markup,
         logger_instance=logger,
         log_context="cq_set_subscription_setting_ui_refresh",
     )
