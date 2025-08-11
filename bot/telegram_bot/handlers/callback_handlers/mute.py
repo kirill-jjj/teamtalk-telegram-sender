@@ -1,8 +1,9 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
+from collections.abc import Callable
 from gettext import NullTranslations
 import logging
-from typing import TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
@@ -50,36 +51,38 @@ ttstr = pytalk.instance.sdk.ttstr
 T = TypeVar("T")
 
 
+def _get_item_from_paginated_list(
+    items: list[T],
+    sort_key_extractor: Callable[[T], Any],
+    page: int,
+    idx_on_page: int,
+) -> T | None:
+    """Gets a specific item from a paginated list."""
+    sorted_items = sorted(items, key=sort_key_extractor)
+    page_items, _, _ = paginate_list(sorted_items, page, USERS_PER_PAGE)
+    if 0 <= idx_on_page < len(page_items):
+        return page_items[idx_on_page]
+    return None
 
 
-async def _display_internal_user_list(
+async def _display_user_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    list_type: UserListAction,
-    page: int = 0,
+    page: int,
+    items: list[Any],
+    sort_key_extractor: Callable[[Any], Any],
+    title_text: str,
+    empty_list_text: str,
+    keyboard_factory_kwargs: dict[str, Any],
+    server_host_for_display: str | None = None,
 ) -> None:
+    """A generic helper to display a paginated list of users."""
     _ = translator.gettext
-
-    items = [
-        muted.muted_teamtalk_username for muted in user_settings.muted_users_list
-    ]
-    sorted_items = sorted(items, key=lambda x: x.lower())
-
-    header_text_str, empty_list_text_str = "", ""
-    if user_settings.mute_list_mode == MuteListMode.blacklist:
-        header_text_str = _("Blacklisted Users (Block List)")
-        empty_list_text_str = _("Your blacklist is empty.")
-    elif user_settings.mute_list_mode == MuteListMode.whitelist:
-        header_text_str = _("Whitelisted Users (Allow List)")
-        empty_list_text_str = _("Your whitelist is empty.")
-    else:
-        logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
+    sorted_items = sorted(items, key=sort_key_extractor)
 
     if callback_query.bot is None:
-        logger.error("Cannot display internal user list: bot is None.")
+        logger.error("Cannot display user list: bot is None.")
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
@@ -94,9 +97,49 @@ async def _display_internal_user_list(
         items_on_page=page_slice,
         total_items=len(sorted_items),
         page=current_page_idx,
+        title_text=title_text,
+        empty_list_text=empty_list_text,
+        keyboard_factory=_build_user_toggle_keyboard,
+        keyboard_factory_kwargs=keyboard_factory_kwargs,
+        page_size=USERS_PER_PAGE,
+        server_host_for_display=server_host_for_display,
+    )
+
+
+async def _display_internal_user_list(
+    callback_query: CallbackQuery,
+    translator: NullTranslations,
+    user_settings: UserSettings,
+    list_type: UserListAction,
+    page: int = 0,
+) -> None:
+    _ = translator.gettext
+
+    items = [
+        muted.muted_teamtalk_username for muted in user_settings.muted_users_list
+    ]
+
+    header_text_str, empty_list_text_str = "", ""
+    if user_settings.mute_list_mode == MuteListMode.blacklist:
+        header_text_str = _("Blacklisted Users (Block List)")
+        empty_list_text_str = _("Your blacklist is empty.")
+    elif user_settings.mute_list_mode == MuteListMode.whitelist:
+        header_text_str = _("Whitelisted Users (Allow List)")
+        empty_list_text_str = _("Your whitelist is empty.")
+    else:
+        logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
+
+    await _display_user_list(
+        callback_query=callback_query,
+        translator=translator,
+        user_settings=user_settings,
+        page=page,
+        items=items,
+        sort_key_extractor=lambda x: x.lower(),
         title_text=header_text_str,
         empty_list_text=empty_list_text_str,
-        keyboard_factory=_build_user_toggle_keyboard,
         keyboard_factory_kwargs={
             "user_settings": user_settings,
             "list_type_for_callback": list_type,
@@ -109,7 +152,6 @@ async def _display_internal_user_list(
                 translator, "Mute Management"
             ),
         },
-        page_size=USERS_PER_PAGE,
     )
 
 
@@ -137,37 +179,23 @@ async def _display_all_server_accounts_list(
         return
 
     items = list(tt_connection.cache_manager.user_accounts_cache.values())
-    sorted_items = sorted(
-        items,
-        key=lambda acc: (
-            ttstr(acc.username).lower()
-            if isinstance(acc.username, bytes)
-            else str(acc.username).lower()
-        ),
-    )
 
     def username_extractor(item: pytalk.UserAccount) -> str:
         return cast(str, ttstr(item.username))
 
-    if callback_query.bot is None:
-        logger.error("Cannot display all server accounts list: bot is None.")
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
-
-    page_slice, total_pages, current_page_idx = paginate_list(
-        sorted_items, page, USERS_PER_PAGE
-    )
-
-    await display_paginated_list(
-        target=callback_query,
-        bot=callback_query.bot,
+    await _display_user_list(
+        callback_query=callback_query,
         translator=translator,
-        items_on_page=page_slice,
-        total_items=len(sorted_items),
-        page=current_page_idx,
+        user_settings=user_settings,
+        page=page,
+        items=items,
+        sort_key_extractor=lambda acc: (
+            ttstr(acc.username).lower()
+            if isinstance(acc.username, bytes)
+            else str(acc.username).lower()
+        ),
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
-        keyboard_factory=_build_user_toggle_keyboard,
         keyboard_factory_kwargs={
             "user_settings": user_settings,
             "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
@@ -180,7 +208,6 @@ async def _display_all_server_accounts_list(
                 translator, "Mute Management"
             ),
         },
-        page_size=USERS_PER_PAGE,
         server_host_for_display=tt_connection.server_info.host,
     )
 
@@ -194,21 +221,18 @@ async def _get_username_from_all_accounts(
         logger.warning("Cannot get username from 'all_accounts': cache empty/None.")
         return None
 
-    all_accounts = sorted(
-        tt_connection.cache_manager.user_accounts_cache.values(),
-        key=lambda acc: (
+    account = _get_item_from_paginated_list(
+        items=list(tt_connection.cache_manager.user_accounts_cache.values()),
+        sort_key_extractor=lambda acc: (
             ttstr(acc.username).lower()
             if isinstance(acc.username, bytes)
             else str(acc.username).lower()
         ),
+        page=callback_data.current_page,
+        idx_on_page=callback_data.user_idx,
     )
-    page_items, _, _ = paginate_list(
-        all_accounts, callback_data.current_page, USERS_PER_PAGE
-    )
-
-    if 0 <= callback_data.user_idx < len(page_items):
-        username_attr = page_items[callback_data.user_idx].username
-        return cast(str, ttstr(username_attr)) if username_attr is not None else None
+    if account:
+        return cast(str, ttstr(account.username))
     return None
 
 
@@ -217,17 +241,14 @@ def _get_username_from_muted_list(
     user_settings: UserSettings,
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
-    # The user_settings object from the DI container now has this preloaded.
-    relevant_usernames = sorted(
-        [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
+    return _get_item_from_paginated_list(
+        items=[
+            muted.muted_teamtalk_username for muted in user_settings.muted_users_list
+        ],
+        sort_key_extractor=lambda x: x.lower(),
+        page=callback_data.current_page,
+        idx_on_page=callback_data.user_idx,
     )
-    page_items, _, _ = paginate_list(
-        relevant_usernames, callback_data.current_page, USERS_PER_PAGE
-    )
-
-    if 0 <= callback_data.user_idx < len(page_items):
-        return page_items[callback_data.user_idx]
-    return None
 
 
 def format_mute_toast(
