@@ -36,7 +36,7 @@ from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
-async def on_startup(
+async def on_startup(  # noqa: PLR0915
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
@@ -48,9 +48,6 @@ async def on_startup(
     event_bus: FromDishka[EventBus],
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
-    admin_repo: FromDishka[AdminRepository],
-    subscriber_repo: FromDishka[SubscriberRepository],
-    user_repo: FromDishka[UserRepository],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -69,8 +66,11 @@ async def on_startup(
 
     logger.info("Loading all caches from database...")
     async with session_factory() as session:
+        admin_repo = AdminRepository()
         admin_repo._session = session
+        subscriber_repo = SubscriberRepository()
         subscriber_repo._session = session
+        user_repo = UserRepository()
         user_repo._session = session
 
         db_admin_ids = await admin_repo.get_all_ids()
