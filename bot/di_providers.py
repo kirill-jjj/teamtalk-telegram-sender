@@ -14,7 +14,6 @@ from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
 from bot.config import Settings
-from bot.core.exceptions import NoActiveTeamTalkConnectionError
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.repositories.admin_repository import AdminRepository
@@ -377,11 +376,11 @@ class RequestProvider(Provider):
         )
         return translator_factory(lang_code)
 
-    @provide
+    @provide(provides=TeamTalkConnection | None)
     def get_tt_connection(
         self, connections: FromDishka[dict[str, TeamTalkConnection]]
-    ) -> TeamTalkConnection:
+    ) -> TeamTalkConnection | None:
         """Provides the active TeamTalk connection."""
         if not connections:
-            raise NoActiveTeamTalkConnectionError
-        return next(iter(connections.values()))
+            return None
+        return next(iter(connections.values()), None)
