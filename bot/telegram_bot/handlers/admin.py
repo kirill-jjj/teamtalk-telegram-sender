@@ -143,6 +143,7 @@ async def on_unban_command(
         await _show_banned_list_page(
             target=message,
             ban_repo=uow.bans,
+            user_repo=uow.users,
             bot=bot,
             page=0,
             translator=translator,
