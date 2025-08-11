@@ -281,7 +281,9 @@ async def _manage_admin_ids(
     tt_message: TeamTalkMessage,
     args_str: str | None,
     translator: NullTranslations,
-    action_type: str,
+    repo_action: Callable[[Any], Awaitable[Any]],
+    *,
+    is_add_action: bool,
     prompt_msg_key: str,
     error_msg_key: str,
     invalid_id_msg_key: str,
@@ -303,44 +305,44 @@ async def _manage_admin_ids(
 
     for telegram_id in args.valid_ids:
         try:
-            if action_type == "add":
-                admin = await admin_repo.get_by_id(telegram_id)
-                if not admin:
-                    await admin_repo.add(Admin(telegram_id=telegram_id))
-            elif action_type == "remove":
-                admin = await admin_repo.get_by_id(telegram_id)
-                if admin:
-                    await admin_repo.delete(admin)
+            admin = await admin_repo.get_by_id(telegram_id)
+            if (is_add_action and not admin) or (not is_add_action and admin):
+                if is_add_action:
+                    await repo_action(Admin(telegram_id=telegram_id))
+                else:
+                    await repo_action(admin)
 
-            cache.add_admin(
-                telegram_id
-            ) if action_type == "add" else cache.remove_admin(telegram_id)
+            if is_add_action:
+                cache.add_admin(telegram_id)
+            else:
+                cache.remove_admin(telegram_id)
+
             user_settings = await user_repo.get_or_create(
                 telegram_id, {"language_code": settings.general.default_lang}
             )
             await event_bus.publish(
                 AdminStatusChangedEvent(
                     telegram_id=telegram_id,
-                    is_admin=action_type == "add",
+                    is_admin=is_add_action,
                     lang_code=user_settings.language_code,
                 )
             )
             success_count += 1
         except Exception:
             failed_action_ids.append(telegram_id)
-            logger.exception("Failed to %s admin %s", action_type, telegram_id)
+            action_str = "add" if is_add_action else "remove"
+            logger.exception("Failed to %s admin %s", action_str, telegram_id)
 
-    success_msg_single, success_msg_plural = (
-        ("Successfully added {count} admin.", "Successfully added {count} admins.")
-        if action_type == "add"
-        else (
-            "Successfully removed {count} admin.",
-            "Successfully removed {count} admins.",
-        )
+    if is_add_action:
+        s_msg = "Successfully added {count} admin."
+        p_msg = "Successfully added {count} admins."
+    else:
+        s_msg = "Successfully removed {count} admin."
+        p_msg = "Successfully removed {count} admins."
+
+    success_message = translator.ngettext(s_msg, p_msg, success_count).format(
+        count=success_count
     )
-    success_message = translator.ngettext(
-        success_msg_single, success_msg_plural, success_count
-    ).format(count=success_count)
 
     report = _create_admin_action_report(
         translator,
@@ -482,7 +484,8 @@ async def on_add_admin(
         tt_message=tt_message,
         args_str=args_str,
         translator=translator,
-        action_type="add",
+        repo_action=admin_repo.add,
+        is_add_action=True,
         prompt_msg_key=_("Please provide Telegram IDs. Example: {cmd} 12345678").format(
             cmd=tt_cmds.TT_CMD_ADD_ADMIN
         ),
@@ -515,7 +518,8 @@ async def on_remove_admin(
         tt_message=tt_message,
         args_str=args_str,
         translator=translator,
-        action_type="remove",
+        repo_action=admin_repo.delete,
+        is_add_action=False,
         prompt_msg_key=_("Please provide Telegram IDs. Example: {cmd} 12345678").format(
             cmd=tt_cmds.TT_CMD_REMOVE_ADMIN
         ),

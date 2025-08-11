@@ -33,6 +33,10 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.formatters import get_tt_user_display_name
 from bot.telegram_bot.models import SubscriberInfo
 
+from .keyboard_utils import (
+    get_language_options,
+    get_notification_settings_options,
+)
 from .shared import (
     _add_pagination_controls_generic,
     _create_back_button_text,
@@ -437,7 +441,7 @@ async def create_admin_subscriber_lang_keyboard(
 ) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard for an admin."""
     _ = translator.gettext
-    options = [(lang["code"], lang["native_name"]) for lang in available_languages]
+    options = get_language_options(available_languages)
 
     if not available_languages:
         builder = InlineKeyboardBuilder()
@@ -485,22 +489,8 @@ async def create_admin_subscriber_notification_pref_keyboard(
     subscriber_page_context: int,
 ) -> InlineKeyboardMarkup:
     """Creates the notification preference selection keyboard for an admin."""
-    settings_map_source = {
-        NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
-        NotificationSetting.LEAVE_OFF: (
-            "Join Only",
-            NotificationSetting.LEAVE_OFF.value,
-        ),
-        NotificationSetting.JOIN_OFF: (
-            "Leave Only",
-            NotificationSetting.JOIN_OFF.value,
-        ),
-        NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
-    }
-    options = [
-        (val_str, text_source)
-        for _setting_enum, (text_source, val_str) in settings_map_source.items()
-    ]
+    _ = translator.gettext
+    options = get_notification_settings_options()
 
     def notif_pref_callback_factory(
         setting_value_str: str,

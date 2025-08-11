@@ -70,7 +70,10 @@ class ModerationService:
         translator: NullTranslations,
         uow: IUnitOfWork | None = None,
     ) -> OperationResult:
-        """Unbans a subscriber by finding all linked identifiers in the ban list and removing them."""
+        """Unbans a subscriber.
+
+        Finds all linked identifiers in the ban list and removes them.
+        """
         _ = translator.gettext
         active_uow = uow or self._uow
 

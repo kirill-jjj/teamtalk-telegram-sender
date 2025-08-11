@@ -24,6 +24,10 @@ from bot.telegram_bot.callback_data import (
     SubscriptionCallback,
 )
 
+from .keyboard_utils import (
+    get_language_options,
+    get_notification_settings_options,
+)
 from .shared import (
     _create_back_button_text,
     _create_option_selection_keyboard,
@@ -59,7 +63,7 @@ async def create_language_selection_keyboard(
     available_languages: list[LanguageInfo],
 ) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard using the generic helper."""
-    options = [(lang["code"], lang["native_name"]) for lang in available_languages]
+    options = get_language_options(available_languages)
 
     def lang_callback_factory(lang_code_value: str) -> LanguageCallback:
         return LanguageCallback(
@@ -83,22 +87,7 @@ async def create_subscription_settings_keyboard(
     translator: NullTranslations, current_setting: NotificationSetting
 ) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
-    settings_map_source = {
-        NotificationSetting.ALL: ("All (Join & Leave)", NotificationSetting.ALL.value),
-        NotificationSetting.LEAVE_OFF: (
-            "Join Only",
-            NotificationSetting.LEAVE_OFF.value,
-        ),
-        NotificationSetting.JOIN_OFF: (
-            "Leave Only",
-            NotificationSetting.JOIN_OFF.value,
-        ),
-        NotificationSetting.NONE: ("None", NotificationSetting.NONE.value),
-    }
-    options = [
-        (val_str, text_source)
-        for _setting_enum, (text_source, val_str) in settings_map_source.items()
-    ]
+    options = get_notification_settings_options()
 
     def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
         return SubscriptionCallback(

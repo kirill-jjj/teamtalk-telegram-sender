@@ -110,7 +110,8 @@ class BanRepository(BaseRepository[BanList]):
         """Removes all ban entries associated with a TeamTalk username.
 
         Args:
-            teamtalk_username: The TeamTalk username whose ban entries should be removed.
+            teamtalk_username: The TeamTalk username whose ban entries should be
+                removed.
         """
         entries_to_delete = await self.get_by_teamtalk_username(teamtalk_username)
         for entry in entries_to_delete:

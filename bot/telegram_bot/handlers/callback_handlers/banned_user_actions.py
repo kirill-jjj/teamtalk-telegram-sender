@@ -38,6 +38,7 @@ async def refresh_banned_list_view(
     await _show_banned_list_page(
         target=query,
         ban_repo=uow.bans,
+        user_repo=uow.users,
         bot=bot,
         page=callback_data.page,
         translator=translator,
