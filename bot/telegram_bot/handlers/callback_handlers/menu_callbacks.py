@@ -151,6 +151,7 @@ async def menu_unban_handler(
         await _show_banned_list_page(
             target=cast(Message, query.message),
             ban_repo=uow.bans,
+            user_repo=uow.users,
             bot=bot,
             page=0,
             translator=translator,

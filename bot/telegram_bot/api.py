@@ -174,6 +174,16 @@ async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int
     return display_names
 
 
+async def get_display_name_for_id(bot: AiogramBot, user_id: int) -> str:
+    """Safely fetches the display name for a single user ID."""
+    try:
+        chat_info = await bot.get_chat(user_id)
+        return format_telegram_user_display_name(chat_info)
+    except TelegramAPIError:
+        logger.warning("Could not fetch chat info for user %s", user_id)
+        return str(user_id)
+
+
 async def broadcast_to_users(
     bot_instance_to_use: AiogramBot,
     recipients_with_lang: list[tuple[int, str | None]],

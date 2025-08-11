@@ -1,9 +1,8 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
-from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeVar, cast
+from typing import TypeVar, cast
 
 from aiogram import F, Router, html
 from aiogram.exceptions import TelegramAPIError
@@ -51,52 +50,6 @@ ttstr = pytalk.instance.sdk.ttstr
 T = TypeVar("T")
 
 
-async def _display_user_list_generic(
-    callback_query: CallbackQuery,
-    translator: NullTranslations,
-    user_settings: UserSettings,
-    page: int,
-    data_fetcher: Callable[[], Awaitable[list[Any]]],
-    sort_key_extractor: Callable[[Any], str],
-    title_text: str,
-    empty_list_text: str,
-    keyboard_factory: Callable[..., Awaitable[Any]],
-    keyboard_factory_kwargs: dict[str, Any],
-    server_host_for_display: str | None = None,
-) -> None:
-    _ = translator.gettext
-    try:
-        items = await data_fetcher()
-        sorted_items = sorted(items, key=sort_key_extractor)
-    except Exception:
-        logger.exception("Failed to fetch or sort user list.")
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
-
-    if callback_query.bot is None:
-        logger.error(
-            "_display_user_list_generic: callback_query.bot is None. "
-            "Cannot display list."
-        )
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
-
-    page_slice, _, current_page_idx = paginate_list(sorted_items, page, USERS_PER_PAGE)
-
-    await display_paginated_list(
-        target=callback_query,
-        bot=callback_query.bot,
-        translator=translator,
-        items_on_page=page_slice,
-        total_items=len(sorted_items),
-        page=current_page_idx,
-        title_text=title_text,
-        empty_list_text=empty_list_text,
-        keyboard_factory=keyboard_factory,
-        keyboard_factory_kwargs=keyboard_factory_kwargs,
-        server_host_for_display=server_host_for_display,
-        page_size=USERS_PER_PAGE,
-    )
 
 
 async def _display_internal_user_list(
@@ -108,11 +61,10 @@ async def _display_internal_user_list(
 ) -> None:
     _ = translator.gettext
 
-    async def fetcher() -> list[str]:
-        # The user_settings object from the DI container now has this preloaded.
-        return [
-            muted.muted_teamtalk_username for muted in user_settings.muted_users_list
-        ]
+    items = [
+        muted.muted_teamtalk_username for muted in user_settings.muted_users_list
+    ]
+    sorted_items = sorted(items, key=lambda x: x.lower())
 
     header_text_str, empty_list_text_str = "", ""
     if user_settings.mute_list_mode == MuteListMode.blacklist:
@@ -126,13 +78,22 @@ async def _display_internal_user_list(
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    await _display_user_list_generic(
-        callback_query=callback_query,
+    if callback_query.bot is None:
+        logger.error("Cannot display internal user list: bot is None.")
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
+
+    page_slice, total_pages, current_page_idx = paginate_list(
+        sorted_items, page, USERS_PER_PAGE
+    )
+
+    await display_paginated_list(
+        target=callback_query,
+        bot=callback_query.bot,
         translator=translator,
-        user_settings=user_settings,
-        page=page,
-        data_fetcher=fetcher,
-        sort_key_extractor=lambda x: x.lower(),
+        items_on_page=page_slice,
+        total_items=len(sorted_items),
+        page=current_page_idx,
         title_text=header_text_str,
         empty_list_text=empty_list_text_str,
         keyboard_factory=_build_user_toggle_keyboard,
@@ -148,6 +109,7 @@ async def _display_internal_user_list(
                 translator, "Mute Management"
             ),
         },
+        page_size=USERS_PER_PAGE,
     )
 
 
@@ -174,23 +136,35 @@ async def _display_all_server_accounts_list(
             )
         return
 
-    async def fetcher() -> list[pytalk.UserAccount]:
-        return list(tt_connection.cache_manager.user_accounts_cache.values())
-
-    def username_extractor(item: pytalk.UserAccount) -> str:
-        return cast(str, ttstr(item.username))
-
-    await _display_user_list_generic(
-        callback_query=callback_query,
-        translator=translator,
-        user_settings=user_settings,
-        page=page,
-        data_fetcher=fetcher,
-        sort_key_extractor=lambda acc: (
+    items = list(tt_connection.cache_manager.user_accounts_cache.values())
+    sorted_items = sorted(
+        items,
+        key=lambda acc: (
             ttstr(acc.username).lower()
             if isinstance(acc.username, bytes)
             else str(acc.username).lower()
         ),
+    )
+
+    def username_extractor(item: pytalk.UserAccount) -> str:
+        return cast(str, ttstr(item.username))
+
+    if callback_query.bot is None:
+        logger.error("Cannot display all server accounts list: bot is None.")
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
+
+    page_slice, total_pages, current_page_idx = paginate_list(
+        sorted_items, page, USERS_PER_PAGE
+    )
+
+    await display_paginated_list(
+        target=callback_query,
+        bot=callback_query.bot,
+        translator=translator,
+        items_on_page=page_slice,
+        total_items=len(sorted_items),
+        page=current_page_idx,
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
         keyboard_factory=_build_user_toggle_keyboard,
@@ -206,6 +180,7 @@ async def _display_all_server_accounts_list(
                 translator, "Mute Management"
             ),
         },
+        page_size=USERS_PER_PAGE,
         server_host_for_display=tt_connection.server_info.host,
     )
 

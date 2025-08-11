@@ -22,6 +22,28 @@ def _create_back_button_text(translator: NullTranslations, destination_key: str)
     return f"⬅️ {_('Back to')} {_(destination_key)}"
 
 
+def create_back_button(
+    translator: NullTranslations,
+    destination_key: str,
+    callback_data: "PackableCallbackData",
+) -> InlineKeyboardButton:
+    """Creates a standardized 'Back' button."""
+    return InlineKeyboardButton(
+        text=_create_back_button_text(translator, destination_key),
+        callback_data=callback_data.pack(),
+    )
+
+
+def add_back_button(
+    builder: InlineKeyboardBuilder,
+    translator: NullTranslations,
+    destination_key: str,
+    callback_data: "PackableCallbackData",
+) -> None:
+    """Adds a standardized 'Back' button to the keyboard builder."""
+    builder.row(create_back_button(translator, destination_key, callback_data))
+
+
 class PackableCallbackData(Protocol):
     """A protocol for objects that have a .pack() method returning a string."""
 
@@ -36,7 +58,7 @@ async def _create_option_selection_keyboard(
     current_value: str | None,
     callback_data_factory: Callable[[str], PackableCallbackData],
     back_button_callback_data: PackableCallbackData,
-    back_button_text_key: str = "⬅️ Back",
+    back_button_text_key: str,
     buttons_per_row: int = 1,
 ) -> InlineKeyboardMarkup:
     """Creates a generic keyboard for selecting one option from a list."""
@@ -56,11 +78,8 @@ async def _create_option_selection_keyboard(
     if options:
         builder.adjust(buttons_per_row)
 
-    builder.row(
-        InlineKeyboardButton(
-            text=_(back_button_text_key),
-            callback_data=back_button_callback_data.pack(),
-        )
+    add_back_button(
+        builder, translator, back_button_text_key, back_button_callback_data
     )
     return builder.as_markup()
 

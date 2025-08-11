@@ -5,7 +5,6 @@ import logging
 from typing import cast
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
@@ -16,6 +15,7 @@ from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.subscription_service import SubscriptionService
+from bot.telegram_bot.api import get_display_name_for_id
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
@@ -26,7 +26,6 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.telegram_bot.formatters import (
     format_subscriber_details,
-    format_telegram_user_display_name,
 )
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
@@ -56,21 +55,7 @@ async def _display_subscriber_view(
     keyboard = await create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
-    display_name = str(target_telegram_id)
-
-    try:
-        chat_info = await bot.get_chat(user_settings.telegram_id)
-        display_name = format_telegram_user_display_name(chat_info)
-    except TelegramAPIError:
-        logger.exception(
-            "Could not fetch chat info for %s via Telegram API.",
-            user_settings.telegram_id,
-        )
-    except Exception:
-        logger.exception(
-            "Unexpected error fetching chat info for %s.", user_settings.telegram_id
-        )
-
+    display_name = await get_display_name_for_id(bot, user_settings.telegram_id)
     text = format_subscriber_details(user_settings, display_name, translator)
 
     # This assumes query.message is a Message, which is guaranteed by

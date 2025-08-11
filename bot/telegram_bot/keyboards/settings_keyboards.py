@@ -29,8 +29,8 @@ from .keyboard_utils import (
     get_notification_settings_options,
 )
 from .shared import (
-    _create_back_button_text,
     _create_option_selection_keyboard,
+    add_back_button,
 )
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -78,7 +78,7 @@ async def create_language_selection_keyboard(
         current_value=None,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key=_create_back_button_text(translator, "Settings"),
+        back_button_text_key="Settings",
         buttons_per_row=1,
     )
 
@@ -102,7 +102,7 @@ async def create_subscription_settings_keyboard(
         current_value=current_setting.value,
         callback_data_factory=sub_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key=_create_back_button_text(translator, "Settings"),
+        back_button_text_key="Settings",
         buttons_per_row=1,
     )
 
@@ -130,9 +130,11 @@ async def create_notification_settings_keyboard(
             action=NotificationControl.MANAGE_MUTED
         ).pack(),
     )
-    builder.button(
-        text=_create_back_button_text(translator, "Settings"),
-        callback_data=SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN).pack(),
+    add_back_button(
+        builder,
+        translator,
+        "Settings",
+        SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN),
     )
     builder.adjust(1)
     return builder
@@ -188,9 +190,11 @@ async def create_manage_muted_users_keyboard(
             list_type=UserListAction.LIST_ALL_ACCOUNTS, page=0
         ).pack(),
     )
-    builder.button(
-        text=_create_back_button_text(translator, "Notification Settings"),
-        callback_data=SettingsCallback(action=SettingsNavAction.NOTIFICATIONS).pack(),
+    add_back_button(
+        builder,
+        translator,
+        "Notification Settings",
+        SettingsCallback(action=SettingsNavAction.NOTIFICATIONS),
     )
     builder.adjust(1)
     return builder

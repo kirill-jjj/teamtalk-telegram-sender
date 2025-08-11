@@ -39,8 +39,9 @@ from .keyboard_utils import (
 )
 from .shared import (
     _add_pagination_controls_generic,
-    _create_back_button_text,
     _create_option_selection_keyboard,
+    add_back_button,
+    create_back_button,
     create_paginated_keyboard,
 )
 
@@ -250,11 +251,11 @@ async def create_subscriber_action_menu_keyboard(
             page=page,
         ).pack(),
     )
-    builder.button(
-        text=_create_back_button_text(translator, "Subscribers List"),
-        callback_data=SubscriberListCallback(
-            action=SubscriberListAction.PAGE, page=page
-        ).pack(),
+    add_back_button(
+        builder,
+        translator,
+        "Subscribers List",
+        SubscriberListCallback(action=SubscriberListAction.PAGE, page=page),
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -290,11 +291,11 @@ async def create_manage_tt_account_keyboard(
             page=page,
         ).pack(),
     )
-    builder.button(
-        text=_create_back_button_text(translator, "User Actions"),
-        callback_data=ViewSubscriberCallback(
-            telegram_id=target_telegram_id, page=page
-        ).pack(),
+    add_back_button(
+        builder,
+        translator,
+        "User Actions",
+        ViewSubscriberCallback(telegram_id=target_telegram_id, page=page),
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -309,7 +310,6 @@ async def create_view_mute_list_keyboard(
     subscriber_context_page: int,
 ) -> InlineKeyboardMarkup:
     """Create the keyboard for viewing a paginated mute list for a subscriber."""
-    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     if total_pages > 1:
@@ -330,14 +330,14 @@ async def create_view_mute_list_keyboard(
             subscriber_context_page=subscriber_context_page,
         )
 
-    builder.row(
-        InlineKeyboardButton(
-            text=_create_back_button_text(translator, "User Actions"),
-            callback_data=ViewSubscriberCallback(
-                telegram_id=target_telegram_id,
-                page=subscriber_context_page,
-            ).pack(),
-        )
+    add_back_button(
+        builder,
+        translator,
+        "User Actions",
+        ViewSubscriberCallback(
+            telegram_id=target_telegram_id,
+            page=subscriber_context_page,
+        ),
     )
     return builder.as_markup()
 
@@ -375,7 +375,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
         current_value=current_mode.value,
         callback_data_factory=mute_mode_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key=_create_back_button_text(translator, "User Actions"),
+        back_button_text_key="User Actions",
         buttons_per_row=1,
     )
 
@@ -389,7 +389,6 @@ async def create_linkable_tt_account_list_keyboard(
     subscriber_list_page: int,
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
-    _ = translator.gettext
 
     def _create_tt_account_button(
         account_obj: pytalk.UserAccount,
@@ -406,13 +405,14 @@ async def create_linkable_tt_account_list_keyboard(
             ).pack(),
         )
 
-    back_button = InlineKeyboardButton(
-        text=_create_back_button_text(translator, "Manage Account"),
-        callback_data=SubscriberCallback(
+    back_button = create_back_button(
+        translator,
+        "Manage Account",
+        SubscriberCallback(
             action=SubscriberCommand.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
             page=subscriber_list_page,
-        ).pack(),
+        ),
     )
     bottom_buttons = [[back_button]]
 
@@ -448,13 +448,13 @@ async def create_admin_subscriber_lang_keyboard(
         builder.button(
             text=_("No languages available"), callback_data="noop_admin_lang_sel"
         )
-        builder.row(
-            InlineKeyboardButton(
-                text=_create_back_button_text(translator, "User Actions"),
-                callback_data=ViewSubscriberCallback(
-                    telegram_id=target_telegram_id, page=subscriber_page_context
-                ).pack(),
-            )
+        add_back_button(
+            builder,
+            translator,
+            "User Actions",
+            ViewSubscriberCallback(
+                telegram_id=target_telegram_id, page=subscriber_page_context
+            ),
         )
         return builder.as_markup()
 
@@ -477,7 +477,7 @@ async def create_admin_subscriber_lang_keyboard(
         current_value=None,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key=_("⬅️ Back to User Actions"),
+        back_button_text_key="User Actions",
         buttons_per_row=1,
     )
 
@@ -511,6 +511,6 @@ async def create_admin_subscriber_notification_pref_keyboard(
         current_value=current_setting.value,
         callback_data_factory=notif_pref_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key=_create_back_button_text(translator, "User Actions"),
+        back_button_text_key="User Actions",
         buttons_per_row=1,
     )
