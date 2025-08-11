@@ -6,6 +6,7 @@ from gettext import NullTranslations
 import logging
 from typing import Any
 
+from dishka import AsyncContainer
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.message import Message as TeamTalkMessage
@@ -14,7 +15,6 @@ from pytalk.user import User as PytalkUser
 
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID
-from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.command_router import CommandRouter
@@ -198,7 +198,7 @@ class PytalkEventRouter:
     def __init__(
         self,
         settings: Settings,
-        session_factory: AsyncSessionFactoryType,
+        dishka_container: AsyncContainer,
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
         event_bus: EventBus,
@@ -208,7 +208,7 @@ class PytalkEventRouter:
     ) -> None:
         """Initializes the PytalkEventRouter."""
         self.settings = settings
-        self.session_factory = session_factory
+        self.dishka_container = dishka_container
         self.cache = cache
         self.translator_factory = translator_factory
         self.event_bus = event_bus
@@ -257,6 +257,30 @@ class PytalkEventRouter:
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         return self.connections.get(server_key)
 
+    async def _publish_user_event(
+        self,
+        user: PytalkUser,
+        connection: TeamTalkConnection,
+        event_class: type[UserJoinedEvent] | type[UserLeftEvent],
+    ) -> None:
+        """Generic helper to publish user-related domain events."""
+        if not connection.instance:
+            return
+
+        translator = self.translator_factory(self.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            connection.instance, translator, self.settings
+        )
+
+        event = event_class(
+            user_nickname=connection.ttstr(user.nickname),
+            username=connection.ttstr(user.username),
+            user_id=user.id,
+            server_name=server_name,
+            online_users_cache=connection.cache_manager.online_users_cache,
+        )
+        await self.event_bus.publish(event)
+
     async def on_pytalk_ready(self) -> None:
         """Handle PytalkBot on_ready; init primary TeamTalk server connection."""
         self.logger.info("Pytalk Bot ready. Initializing TT connections...")
@@ -286,26 +310,18 @@ class PytalkEventRouter:
                 pytalk_server_info,
                 self.tt_bot,
                 self.settings,
-                self.session_factory,
+                self.dishka_container,
                 self.cache,
                 self.translator_factory,
                 self.event_bus,
             )
             command_router = CommandRouter(
-                settings=self.settings,
-                session_factory=self.session_factory,
-                cache=self.cache,
-                translator_factory=self.translator_factory,
+                dishka_container=self.dishka_container,
                 connection=connection,
-                event_bus=self.event_bus,
             )
             message_handler = MessageHandler(
-                settings=self.settings,
-                session_factory=self.session_factory,
-                cache=self.cache,
-                translator_factory=self.translator_factory,
+                dishka_container=self.dishka_container,
                 connection=connection,
-                event_bus=self.event_bus,
                 command_router=command_router,
             )
             connection.message_handler = message_handler
@@ -358,23 +374,7 @@ class PytalkEventRouter:
     ) -> None:
         """Handles user login, updates cache, and publishes a domain event."""
         connection.cache_manager.update_caches_on_event("user_login", user)
-        if not connection.instance:
-            return
-
-        translator = self.translator_factory(self.settings.general.default_lang)
-        server_name = get_effective_server_name(
-            connection.instance, translator, self.settings
-        )
-
-        await self.event_bus.publish(
-            UserJoinedEvent(
-                user_nickname=connection.ttstr(user.nickname),
-                username=connection.ttstr(user.username),
-                user_id=user.id,
-                server_name=server_name,
-                online_users_cache=connection.cache_manager.online_users_cache,
-            )
-        )
+        await self._publish_user_event(user, connection, UserJoinedEvent)
 
     @route_event_to_connection
     async def on_pytalk_user_logout(
@@ -382,23 +382,7 @@ class PytalkEventRouter:
     ) -> None:
         """Handles user logout, updates cache, and publishes a domain event."""
         connection.cache_manager.update_caches_on_event("user_logout", user)
-        if not connection.instance:
-            return
-
-        translator = self.translator_factory(self.settings.general.default_lang)
-        server_name = get_effective_server_name(
-            connection.instance, translator, self.settings
-        )
-
-        await self.event_bus.publish(
-            UserLeftEvent(
-                user_nickname=connection.ttstr(user.nickname),
-                username=connection.ttstr(user.username),
-                user_id=user.id,
-                server_name=server_name,
-                online_users_cache=connection.cache_manager.online_users_cache,
-            )
-        )
+        await self._publish_user_event(user, connection, UserLeftEvent)
 
     @route_event_to_connection
     async def on_pytalk_user_update(

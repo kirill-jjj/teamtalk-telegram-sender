@@ -28,7 +28,10 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
-from bot.telegram_bot.handlers.decorators import ensure_message_context
+from bot.telegram_bot.handlers.decorators import (
+    ensure_message_context,
+    with_view_refresh,
+)
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
     _build_user_toggle_keyboard,
@@ -365,20 +368,29 @@ async def show_manage_muted_menu(
     await callback_query.answer()
 
 
+async def refresh_manage_muted_menu(
+    callback_query: CallbackQuery,
+    translator: NullTranslations,
+    user_settings: UserSettings,
+    **kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Refresher function for the manage muted menu."""
+    await show_manage_muted_menu(callback_query, translator, user_settings)
+
+
 @mute_router.callback_query(SetMuteModeCallback.filter())
 @ensure_message_context
+@with_view_refresh(refresh_manage_muted_menu)
 async def set_mute_mode(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     uow: FromDishka[IUnitOfWork],
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
-) -> None:
+) -> tuple[bool, str, UserSettings | None]:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
     new_mode = callback_data.mode
-    updated_user_settings = None
-    original_user_settings = None
 
     async with uow:
         original_user_settings = await uow.users.get_by_id(callback_query.from_user.id)
@@ -387,54 +399,22 @@ async def set_mute_mode(
                 "Could not get user settings for user %s in set_mute_mode",
                 callback_query.from_user.id,
             )
-            await callback_query.answer(
-                _("An error occurred. Please try again."), show_alert=True
-            )
-            return
+            return False, _("An error occurred. Please try again."), None
 
         updated_user_settings = await user_settings_service.update_mute_mode(
             original_user_settings, new_mode, actor=Actor.USER, uow=uow
         )
 
-    # After the UoW block, decide which settings to use for the UI update.
-    current_settings_for_keyboard = updated_user_settings or original_user_settings
-
     if not updated_user_settings:
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-    else:
-        mode_text = (
-            _("Blacklist")
-            if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist
-            else _("Whitelist")
-        )
-        success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
-        await callback_query.answer(success_toast_text)
+        return False, _(MSG_GENERAL_ERROR), original_user_settings
 
-    if current_settings_for_keyboard.mute_list_mode == MuteListMode.blacklist:
-        current_mode_desc = _(
-            "Current mode is Blacklist. You receive notifications from everyone "
-            "except those on the list."
-        )
-    else:
-        current_mode_desc = _(
-            "Current mode is Whitelist. You only receive notifications "
-            "from users on the list."
-        )
-
-    menu_text = _("Manage Mute List\n\n{current_mode_description}").format(
-        current_mode_description=current_mode_desc
+    mode_text = (
+        _("Blacklist")
+        if updated_user_settings.mute_list_mode == MuteListMode.blacklist
+        else _("Whitelist")
     )
-    updated_keyboard_markup = await create_manage_muted_users_keyboard(
-        translator, current_settings_for_keyboard
-    )
-
-    await safe_edit_text(
-        message_to_edit=callback_query.message,  # type: ignore[arg-type]
-        text=menu_text,
-        reply_markup=updated_keyboard_markup.as_markup(),
-        logger_instance=logger,
-        log_context="cq_set_mute_mode_action (after service call)",
-    )
+    success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
+    return True, success_toast_text, updated_user_settings
 
 
 @mute_router.callback_query(

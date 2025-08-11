@@ -15,6 +15,7 @@ from bot.database.uow import IUnitOfWork
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.formatters import get_tt_user_display_name
+from bot.telegram_bot.handlers.decorators import require_tt_connection
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
 
@@ -85,6 +86,7 @@ async def _show_user_buttons(
 
 
 @admin_router.message(Command("kick"), IsAdmin())
+@require_tt_connection
 async def on_kick_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
@@ -92,13 +94,16 @@ async def on_kick_command(
 ) -> None:
     """Handles the /kick command for administrators."""
     if not tt_connection:
-        _ = translator.gettext
-        await message.reply(_("TeamTalk connection is not active."))
+        logger.error(
+            "tt_connection is None in on_kick_command despite "
+            "@require_tt_connection decorator."
+        )
         return
     await _show_user_buttons(message, AdminCommand.KICK, translator, tt_connection)
 
 
 @admin_router.message(Command("ban"), IsAdmin())
+@require_tt_connection
 async def on_ban_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
@@ -106,8 +111,10 @@ async def on_ban_command(
 ) -> None:
     """Handles the /ban command for administrators."""
     if not tt_connection:
-        _ = translator.gettext
-        await message.reply(_("TeamTalk connection is not active."))
+        logger.error(
+            "tt_connection is None in on_ban_command despite "
+            "@require_tt_connection decorator."
+        )
         return
     await _show_user_buttons(message, AdminCommand.BAN, translator, tt_connection)
 

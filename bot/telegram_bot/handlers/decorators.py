@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "ensure_message_context",
     "ensure_tt_user_exists",
+    "require_tt_connection",
     "with_view_refresh",
 ]
 
@@ -128,6 +129,40 @@ def ensure_message_context(func: F) -> F:
             return None
 
         return await func(query, *args, **kwargs)
+
+    return cast(F, wrapper)
+
+
+def require_tt_connection(func: F) -> F:
+    """Decorator to ensure that a TeamTalk connection is active."""
+
+    @functools.wraps(func)
+    async def wrapper(
+        message_or_query: Message | CallbackQuery,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
+        translator = cast(
+            NullTranslations, kwargs.get("translator", NullTranslations())
+        )
+        tt_connection = cast(
+            TeamTalkConnection | None, kwargs.get("tt_connection")
+        )
+        _ = translator.gettext
+
+        if not tt_connection:
+            reply_target = (
+                message_or_query
+                if isinstance(message_or_query, Message)
+                else message_or_query.message
+            )
+            if reply_target:
+                await reply_target.reply(_("TeamTalk connection is not active."))
+            if isinstance(message_or_query, CallbackQuery):
+                await message_or_query.answer()
+            return None
+
+        return await func(message_or_query, *args, **kwargs)
 
     return cast(F, wrapper)
 

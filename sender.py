@@ -14,6 +14,7 @@ from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
 from bot.lifecycle import on_startup
 from bot.logging_setup import setup_logging
+from bot.teamtalk_bot.di_providers import TeamTalkProvider
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.errors import error_router
@@ -53,7 +54,7 @@ class Application:
 
         app_provider = AppProvider(settings=self.app_config)
         container = make_async_container(
-            app_provider, RequestProvider(), AiogramProvider()
+            app_provider, RequestProvider(), TeamTalkProvider(), AiogramProvider()
         )
 
         self.dp = await container.get(Dispatcher)

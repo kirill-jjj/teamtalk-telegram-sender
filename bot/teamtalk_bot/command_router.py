@@ -3,19 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from gettext import GNUTranslations, NullTranslations
+from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from bot.config import Settings
-from bot.database.engine import AsyncSessionFactoryType
-from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
-from bot.event_bus.bus import EventBus
-from bot.services.cache_service import CacheService
+from dishka import AsyncContainer
+
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
     on_add_admin,
@@ -27,9 +20,7 @@ from bot.teamtalk_bot.commands import (
 )
 
 if TYPE_CHECKING:
-    from aiogram import Bot
     from pytalk.message import Message as TeamTalkMessage
-    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
@@ -42,27 +33,17 @@ class CommandRouter:
 
     def __init__(
         self,
-        settings: Settings,
-        session_factory: AsyncSessionFactoryType,
-        cache: CacheService,
-        translator_factory: Callable[[str], GNUTranslations | NullTranslations],
+        dishka_container: AsyncContainer,
         connection: TeamTalkConnection,
-        event_bus: EventBus,
-        bot: Bot | None = None,
     ) -> None:
         """Initializes the command router."""
-        self.settings = settings
-        self.session_factory = session_factory
-        self.cache = cache
-        self.translator_factory = translator_factory
+        self.dishka_container = dishka_container
         self.connection = connection
-        self.event_bus = event_bus
-        self.bot = bot
-        self.handlers: dict[str, Callable[..., Awaitable[None]]] = {
+        self.handlers: dict[str, Callable[..., Awaitable[Any | None]]] = {
             tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe,
             tt_cmds.TT_CMD_UNSUBSCRIBE: on_unsubscribe,
-            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin,  # type: ignore[dict-item]
-            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin,  # type: ignore[dict-item]
+            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin,
+            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin,
             tt_cmds.TT_CMD_HELP: on_help,
         }
 
@@ -72,7 +53,6 @@ class CommandRouter:
         args: str | None,
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
-        session: AsyncSession,
     ) -> None:
         """Routes a command to the appropriate handler."""
         handler = self.handlers.get(cmd)
@@ -80,84 +60,12 @@ class CommandRouter:
             await on_unknown(tt_message, translator, connection=self.connection)
             return
 
-        # Create all possible dependencies once
-        user_repo = UserRepository()
-        user_repo._session = session
-        admin_repo = AdminRepository()
-        admin_repo._session = session
-        deeplink_repo = DeeplinkRepository()
-        deeplink_repo._session = session
-        ban_repo = BanRepository()
-        ban_repo._session = session
-        subscriber_repo = SubscriberRepository()
-        subscriber_repo._session = session
-
-        # Pool of all available dependencies
-        dependencies_pool: dict[str, Any] = {
-            "tt_message": tt_message,
-            "translator": translator,
-            "settings": self.settings,
-            "cache": self.cache,
-            "event_bus": self.event_bus,
-            "bot": self.bot,
-            "user_repo": user_repo,
-            "admin_repo": admin_repo,
-            "deeplink_repo": deeplink_repo,
-            "ban_repo": ban_repo,
-            "subscriber_repo": subscriber_repo,
-            "args_str": args,
-        }
-
-        # Определяем, какие зависимости нужны каждому обработчику
-        handler_dependencies: dict[Callable[..., Any], list[str]] = {
-            on_subscribe: [
-                "tt_message",
-                "deeplink_repo",
-                "translator",
-                "settings",
-                "cache",
-            ],
-            on_unsubscribe: [
-                "tt_message",
-                "deeplink_repo",
-                "translator",
-                "settings",
-                "cache",
-            ],
-            on_add_admin: [
-                "tt_message",
-                "translator",
-                "settings",
-                "cache",
-                "event_bus",
-                "admin_repo",
-                "user_repo",
-                "args_str",
-            ],
-            on_remove_admin: [
-                "tt_message",
-                "translator",
-                "settings",
-                "cache",
-                "event_bus",
-                "admin_repo",
-                "user_repo",
-                "args_str",
-            ],
-            on_help: ["tt_message", "translator", "settings"],
-        }
-
-        required_deps_names = handler_dependencies.get(handler)
-
-        if required_deps_names:
-            # Collect kwargs only with the necessary dependencies
-            kwargs_for_handler = {
-                dep: dependencies_pool[dep] for dep in required_deps_names
+        async with self.dishka_container(
+            context={
+                TeamTalkMessage: tt_message,
+                "args_str": args,
+                NullTranslations: translator,
             }
-            await handler(**kwargs_for_handler)
-        else:
-            logger.error(
-                "Handler for command '%s' found but its dependencies are not "
-                "defined in command_router.",
-                cmd,
-            )
+        ) as request_container:
+            resolved_handler = await request_container.get(handler)
+            await resolved_handler()

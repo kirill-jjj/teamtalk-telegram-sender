@@ -4,16 +4,17 @@ from collections.abc import Callable
 import gettext
 from gettext import NullTranslations
 import logging
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
-from dishka import FromDishka, Provider, Scope, provide
+from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
 from bot.config import Settings
+from bot.core.exceptions import NoActiveTeamTalkConnectionError
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.repositories.admin_repository import AdminRepository
@@ -36,6 +37,9 @@ from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
+
+if TYPE_CHECKING:
+    from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
 
 def create_translator_factory(
@@ -145,7 +149,7 @@ class AppProvider(Provider):
     def get_pytalk_event_router(
         self,
         settings: FromDishka[Settings],
-        session_factory: FromDishka[AsyncSessionFactoryType],
+        dishka_container: FromDishka[AsyncContainer],
         cache: FromDishka[CacheService],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
         event_bus: FromDishka[EventBus],
@@ -155,7 +159,7 @@ class AppProvider(Provider):
         """Provides the Pytalk event router."""
         return PytalkEventRouter(
             settings=settings,
-            session_factory=session_factory,
+            dishka_container=dishka_container,
             cache=cache,
             translator_factory=translator_factory,
             event_bus=event_bus,
@@ -333,11 +337,11 @@ class RequestProvider(Provider):
         )
         return translator_factory(lang_code)
 
-    @provide(provides=TeamTalkConnection | None)
+    @provide
     def get_tt_connection(
         self, connections: FromDishka[dict[str, TeamTalkConnection]]
-    ) -> TeamTalkConnection | None:
+    ) -> TeamTalkConnection:
         """Provides the active TeamTalk connection."""
         if not connections:
-            return None
-        return next(iter(connections.values()), None)
+            raise NoActiveTeamTalkConnectionError
+        return next(iter(connections.values()))

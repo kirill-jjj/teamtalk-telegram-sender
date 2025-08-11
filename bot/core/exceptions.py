@@ -23,6 +23,10 @@ class MissingSettingsError(DependencyError):
         super().__init__(message)
 
 
+class NoActiveTeamTalkConnectionError(BotError):
+    """Raised when no active TeamTalk connection is available."""
+
+
 class MissingTranslatorError(DependencyError):
     """Raised when the translator is not found or of incorrect type."""
 

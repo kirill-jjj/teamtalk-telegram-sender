@@ -9,6 +9,7 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
+from dishka import FromDishka
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -199,7 +200,7 @@ class AdminIdArgs(BaseModel):
         return {"valid_ids": valid_ids, "invalid_entries": invalid_entries}
 
 
-def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
+def is_tt_admin(func: Callable[..., Awaitable[None]]) -> Callable[..., Awaitable[None]]:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
@@ -207,7 +208,7 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
         tt_message: TeamTalkMessage,
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
+    ) -> None:
         settings = kwargs.get("settings")
         if not isinstance(settings, Settings):
             raise MissingSettingsError
@@ -225,8 +226,8 @@ def is_tt_admin(func: Callable[..., Any]) -> Callable[..., Any | None]:
                 func.__name__,
             )
             tt_message.reply(_("You are not authorized to perform this action."))
-            return None
-        return await func(tt_message, *args, **kwargs)
+            return
+        await func(tt_message, *args, **kwargs)
 
     return wrapper
 
@@ -437,10 +438,10 @@ async def _handle_deeplink_command(
 
 async def on_subscribe(
     tt_message: TeamTalkMessage,
-    deeplink_repo: DeeplinkRepository,
+    deeplink_repo: FromDishka[DeeplinkRepository],
     translator: NullTranslations,
-    settings: Settings,
-    cache: CacheService,
+    settings: FromDishka[Settings],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /sub command from a TeamTalk user."""
     await _handle_deeplink_command(
@@ -450,10 +451,10 @@ async def on_subscribe(
 
 async def on_unsubscribe(
     tt_message: TeamTalkMessage,
-    deeplink_repo: DeeplinkRepository,
+    deeplink_repo: FromDishka[DeeplinkRepository],
     translator: NullTranslations,
-    settings: Settings,
-    cache: CacheService,
+    settings: FromDishka[Settings],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /unsub command from a TeamTalk user."""
     await _handle_deeplink_command(
@@ -470,11 +471,11 @@ async def on_unsubscribe(
 async def on_add_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
-    settings: Settings,
-    cache: CacheService,
-    event_bus: EventBus,
-    admin_repo: AdminRepository,
-    user_repo: UserRepository,
+    settings: FromDishka[Settings],
+    cache: FromDishka[CacheService],
+    event_bus: FromDishka[EventBus],
+    admin_repo: FromDishka[AdminRepository],
+    user_repo: FromDishka[UserRepository],
     *,
     args_str: str | None,
 ) -> None:
@@ -504,11 +505,11 @@ async def on_add_admin(
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
-    settings: Settings,
-    cache: CacheService,
-    event_bus: EventBus,
-    admin_repo: AdminRepository,
-    user_repo: UserRepository,
+    settings: FromDishka[Settings],
+    cache: FromDishka[CacheService],
+    event_bus: FromDishka[EventBus],
+    admin_repo: FromDishka[AdminRepository],
+    user_repo: FromDishka[UserRepository],
     *,
     args_str: str | None,
 ) -> None:

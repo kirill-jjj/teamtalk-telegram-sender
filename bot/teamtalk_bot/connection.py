@@ -6,6 +6,7 @@ from datetime import datetime
 from gettext import NullTranslations
 import logging
 
+from dishka import AsyncContainer
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import Status as PytalkStatus
@@ -18,7 +19,6 @@ from bot.config import Settings
 from bot.constants import (
     INVALID_CHANNEL_ID,
 )
-from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.cache import TeamTalkCache
@@ -36,7 +36,7 @@ class TeamTalkConnection:
         server_info: PytalkTeamTalkServerInfo,
         pytalk_bot: pytalk.TeamTalkBot,
         settings: Settings,
-        session_factory: AsyncSessionFactoryType,
+        dishka_container: AsyncContainer,
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
         event_bus: EventBus,
@@ -45,7 +45,7 @@ class TeamTalkConnection:
         self.server_info = server_info
         self.pytalk_bot = pytalk_bot
         self.settings = settings
-        self.session_factory = session_factory
+        self.dishka_container = dishka_container
         self.cache = cache
         self.translator_factory = translator_factory
         self.event_bus = event_bus
