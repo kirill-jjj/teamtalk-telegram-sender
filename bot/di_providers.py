@@ -214,9 +214,24 @@ class RequestProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    def get_uow(self, factory: AsyncSessionFactoryType) -> IUnitOfWork:
+    def get_uow(
+        self,
+        factory: AsyncSessionFactoryType,
+        users: FromDishka[UserRepository],
+        bans: FromDishka[BanRepository],
+        admins: FromDishka[AdminRepository],
+        subscribers: FromDishka[SubscriberRepository],
+        deeplinks: FromDishka[DeeplinkRepository],
+    ) -> IUnitOfWork:
         """Provides the Unit of Work."""
-        return SqlModelUnitOfWork(factory)
+        return SqlModelUnitOfWork(
+            session_factory=factory,
+            users=users,
+            bans=bans,
+            admins=admins,
+            subscribers=subscribers,
+            deeplinks=deeplinks,
+        )
 
     @provide
     def get_user_repo(self, uow: FromDishka[IUnitOfWork]) -> UserRepository:
@@ -242,6 +257,31 @@ class RequestProvider(Provider):
     def get_deeplink_repo(self, uow: FromDishka[IUnitOfWork]) -> DeeplinkRepository:
         """Provides the DeeplinkRepository from the Unit of Work."""
         return uow.deeplinks
+
+    @provide(scope=Scope.REQUEST)
+    def get_user_repository(self) -> UserRepository:
+        """Provides a UserRepository."""
+        return UserRepository()
+
+    @provide(scope=Scope.REQUEST)
+    def get_ban_repository(self) -> BanRepository:
+        """Provides a BanRepository."""
+        return BanRepository()
+
+    @provide(scope=Scope.REQUEST)
+    def get_admin_repository(self) -> AdminRepository:
+        """Provides an AdminRepository."""
+        return AdminRepository()
+
+    @provide(scope=Scope.REQUEST)
+    def get_subscriber_repository(self) -> SubscriberRepository:
+        """Provides a SubscriberRepository."""
+        return SubscriberRepository()
+
+    @provide(scope=Scope.REQUEST)
+    def get_deeplink_repository(self) -> DeeplinkRepository:
+        """Provides a DeeplinkRepository."""
+        return DeeplinkRepository()
 
     @provide
     def get_deeplink_service(
