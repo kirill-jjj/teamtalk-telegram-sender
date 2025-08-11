@@ -24,7 +24,6 @@ from pytalk.user import User as TeamTalkUser
 from bot.constants import (
     DEFAULT_LANGUAGE,
 )
-from bot.models import UserSettings
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
 from bot.telegram_bot.formatters import format_telegram_user_display_name
@@ -200,16 +199,12 @@ async def broadcast_to_users(
                     else None
                 )
 
-                user_settings: UserSettings | None = cache.get_user_settings(chat_id)
                 individual_tt_user_is_online = False
-                if (
-                    user_settings
-                    and user_settings.teamtalk_username
-                    and online_users_cache_for_instance
-                ):
-                    individual_tt_user_is_online = any(
-                        ttstr(tt_user_obj.username) == user_settings.teamtalk_username
-                        for tt_user_obj in online_users_cache_for_instance.values()
+                if online_users_cache_for_instance:
+                    individual_tt_user_is_online = (
+                        await notification_service.is_linked_user_online(
+                            chat_id, cache, online_users_cache_for_instance
+                        )
                     )
 
                 tg.create_task(
