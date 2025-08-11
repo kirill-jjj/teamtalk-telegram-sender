@@ -145,9 +145,7 @@ def require_tt_connection(func: F) -> F:
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())
         )
-        tt_connection = cast(
-            TeamTalkConnection | None, kwargs.get("tt_connection")
-        )
+        tt_connection = cast(TeamTalkConnection | None, kwargs.get("tt_connection"))
         _ = translator.gettext
 
         if not tt_connection:

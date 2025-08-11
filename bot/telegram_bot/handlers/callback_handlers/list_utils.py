@@ -44,9 +44,7 @@ class UserListRepository(Protocol[T]):
         """Counts all items in the repository."""
         ...
 
-    def get_paginated(
-        self, offset: int, limit: int
-    ) -> Coroutine[Any, Any, list[T]]:
+    def get_paginated(self, offset: int, limit: int) -> Coroutine[Any, Any, list[T]]:
         """Retrieves a paginated list of items."""
         ...
 

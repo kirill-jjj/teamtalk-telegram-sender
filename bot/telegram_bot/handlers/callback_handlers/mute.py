@@ -118,9 +118,7 @@ async def _display_internal_user_list(
 ) -> None:
     _ = translator.gettext
 
-    items = [
-        muted.muted_teamtalk_username for muted in user_settings.muted_users_list
-    ]
+    items = [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
 
     header_text_str, empty_list_text_str = "", ""
     if user_settings.mute_list_mode == MuteListMode.blacklist:
