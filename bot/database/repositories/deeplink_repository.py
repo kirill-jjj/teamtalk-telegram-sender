@@ -4,11 +4,12 @@ import datetime as dt
 from datetime import datetime, timedelta
 import secrets
 
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 from bot.core.enums import DeeplinkAction
 from bot.database.repositories.base import BaseRepository
 from bot.models import Deeplink
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class DeeplinkRepository(BaseRepository[Deeplink]):

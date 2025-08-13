@@ -27,7 +27,6 @@ from bot.core.exceptions import (
     MissingTranslatorError,
 )
 from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus

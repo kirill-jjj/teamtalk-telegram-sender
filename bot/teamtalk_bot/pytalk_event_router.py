@@ -306,7 +306,8 @@ class PytalkEventRouter:
             connection = self.connections[server_key]
             await connection.disconnect_instance()
         else:
-            # Создаем TeamTalkConnection, передавая ему все необходимые APP-scope зависимости
+            # Создаем TeamTalkConnection, передавая ему все необходимые
+            # APP-scope зависимости
             connection = TeamTalkConnection(
                 pytalk_server_info,
                 self.tt_bot,

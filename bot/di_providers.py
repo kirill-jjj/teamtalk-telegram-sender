@@ -16,11 +16,6 @@ import pytalk
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
-from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.deeplink_repository import DeeplinkRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
@@ -33,8 +28,6 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
-
-
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot

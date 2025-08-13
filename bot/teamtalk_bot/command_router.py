@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
+import inspect
 import logging
 from typing import TYPE_CHECKING, Any
 
 from dishka import AsyncContainer
+from pytalk.message import Message as TeamTalkMessage
 
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.commands import (
@@ -18,8 +20,6 @@ from bot.teamtalk_bot.commands import (
     on_unknown,
     on_unsubscribe,
 )
-
-from pytalk.message import Message as TeamTalkMessage
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -67,8 +67,6 @@ class CommandRouter:
                 NullTranslations: translator,
             }
         ) as request_container:
-            import inspect
-
             handler_kwargs = {
                 "tt_message": tt_message,
                 "translator": translator,

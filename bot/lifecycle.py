@@ -12,10 +12,7 @@ import pytalk
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType
-from bot.database.repositories.admin_repository import AdminRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
-from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
+from bot.database.uow import SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
@@ -37,7 +34,7 @@ from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
-async def on_startup(  # noqa: PLR0915
+async def on_startup(
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
