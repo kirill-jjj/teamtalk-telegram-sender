@@ -15,6 +15,7 @@ from bot.database.engine import AsyncSessionFactoryType
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
@@ -65,21 +66,14 @@ async def on_startup(  # noqa: PLR0915
         logger.info("Pytalk main event loop task is already running.")
 
     logger.info("Loading all caches from database...")
-    async with session_factory() as session:
-        admin_repo = AdminRepository()
-        admin_repo._session = session
-        subscriber_repo = SubscriberRepository()
-        subscriber_repo._session = session
-        user_repo = UserRepository()
-        user_repo._session = session
-
-        db_admin_ids = await admin_repo.get_all_ids()
+    async with SqlModelUnitOfWork(session_factory) as uow:
+        db_admin_ids = await uow.admins.get_all_ids()
         cache.load_admins_from_db(db_admin_ids)
 
-        db_subscriber_ids = await subscriber_repo.get_all_ids()
+        db_subscriber_ids = await uow.subscribers.get_all_ids()
         cache.load_subscribers_from_db(db_subscriber_ids)
 
-        all_settings = await user_repo.get_all()
+        all_settings = await uow.users.get_all()
         cache.load_all_user_settings(all_settings)
         logger.info("All caches have been loaded.")
 
@@ -90,10 +84,10 @@ async def on_startup(  # noqa: PLR0915
                 tg_admin_chat_id,
             )
 
-            if not await admin_repo.get_by_id(tg_admin_chat_id):
-                await admin_repo.add(Admin(telegram_id=tg_admin_chat_id))
+            if not await uow.admins.get_by_id(tg_admin_chat_id):
+                await uow.admins.add(Admin(telegram_id=tg_admin_chat_id))
 
-            user_settings = await user_repo.get_or_create(
+            user_settings = await uow.users.get_or_create(
                 tg_admin_chat_id,
                 defaults={"language_code": settings.general.default_lang},
             )
@@ -107,7 +101,6 @@ async def on_startup(  # noqa: PLR0915
                 bot=bot,
                 translator=translator,
             )
-        await session.commit()
 
     logger.info("Setting Telegram bot commands...")
     bot_info = await bot.get_me()

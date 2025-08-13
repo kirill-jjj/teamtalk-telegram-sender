@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from dishka import FromDishka
+from dishka.integrations.aiogram import inject
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -28,6 +29,7 @@ from bot.core.exceptions import (
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.models import Admin
 from bot.services.cache_service import CacheService
@@ -361,7 +363,7 @@ async def _manage_admin_ids(
 @_handle_command_errors()
 async def reply_with_deeplink(
     tt_message: TeamTalkMessage,
-    deeplink_repo: DeeplinkRepository,
+    uow: FromDishka[IUnitOfWork],
     translator: NullTranslations,
     action: DeeplinkAction,
     reply_text_source: str,
@@ -371,7 +373,7 @@ async def reply_with_deeplink(
 ) -> None:
     """Generates a deeplink and replies to the user with it."""
     _ = translator.gettext
-    deeplink = await deeplink_repo.create(
+    deeplink = await uow.deeplinks.create(
         action,
         settings.operational_parameters.deeplink_ttl_seconds,
         payload=payload,
@@ -412,7 +414,7 @@ DEEPLINK_CONFIG: dict[DeeplinkAction, DeeplinkConfig] = {
 
 async def _handle_deeplink_command(
     tt_message: TeamTalkMessage,
-    deeplink_repo: DeeplinkRepository,
+    uow: FromDishka[IUnitOfWork],
     translator: NullTranslations,
     settings: Settings,
     cache: CacheService,
@@ -426,7 +428,7 @@ async def _handle_deeplink_command(
 
     await reply_with_deeplink(
         tt_message=tt_message,
-        deeplink_repo=deeplink_repo,
+        uow=uow,
         translator=translator,
         action=action,
         payload=payload,
@@ -436,38 +438,43 @@ async def _handle_deeplink_command(
     )
 
 
+@inject
 async def on_subscribe(
     tt_message: TeamTalkMessage,
-    deeplink_repo: FromDishka[DeeplinkRepository],
+    uow: FromDishka[IUnitOfWork],
     translator: NullTranslations,
     settings: FromDishka[Settings],
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /sub command from a TeamTalk user."""
-    await _handle_deeplink_command(
-        tt_message, deeplink_repo, translator, settings, cache, DeeplinkAction.SUBSCRIBE
-    )
+    async with uow:
+        await _handle_deeplink_command(
+            tt_message, uow, translator, settings, cache, DeeplinkAction.SUBSCRIBE
+        )
 
 
+@inject
 async def on_unsubscribe(
     tt_message: TeamTalkMessage,
-    deeplink_repo: FromDishka[DeeplinkRepository],
+    uow: FromDishka[IUnitOfWork],
     translator: NullTranslations,
     settings: FromDishka[Settings],
     cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /unsub command from a TeamTalk user."""
-    await _handle_deeplink_command(
-        tt_message,
-        deeplink_repo,
-        translator,
-        settings,
-        cache,
-        DeeplinkAction.UNSUBSCRIBE,
-    )
+    async with uow:
+        await _handle_deeplink_command(
+            tt_message,
+            uow,
+            translator,
+            settings,
+            cache,
+            DeeplinkAction.UNSUBSCRIBE,
+        )
 
 
 @is_tt_admin
+@inject
 async def on_add_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -502,6 +509,7 @@ async def on_add_admin(
 
 
 @is_tt_admin
+@inject
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -561,6 +569,7 @@ def _build_teamtalk_help_message(
     return "\n".join(parts)
 
 
+@inject
 async def on_help(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,

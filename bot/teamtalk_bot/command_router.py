@@ -19,9 +19,9 @@ from bot.teamtalk_bot.commands import (
     on_unsubscribe,
 )
 
-if TYPE_CHECKING:
-    from pytalk.message import Message as TeamTalkMessage
+from pytalk.message import Message as TeamTalkMessage
 
+if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
@@ -67,5 +67,16 @@ class CommandRouter:
                 NullTranslations: translator,
             }
         ) as request_container:
-            resolved_handler = await request_container.get(handler)
-            await resolved_handler()
+            import inspect
+
+            handler_kwargs = {
+                "tt_message": tt_message,
+                "translator": translator,
+                "dishka_container": request_container,
+            }
+
+            # Check if handler expects 'args_str'
+            if "args_str" in inspect.signature(handler).parameters:
+                handler_kwargs["args_str"] = args
+
+            await handler(**handler_kwargs)

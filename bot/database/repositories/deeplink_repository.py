@@ -8,14 +8,15 @@ from bot.constants import DEEPLINK_TOKEN_LENGTH_BYTES
 from bot.core.enums import DeeplinkAction
 from bot.database.repositories.base import BaseRepository
 from bot.models import Deeplink
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class DeeplinkRepository(BaseRepository[Deeplink]):
     """Repository for managing Deeplinks."""
 
-    def __init__(self) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         """Initializes the deeplink repository."""
-        super().__init__(Deeplink)
+        super().__init__(Deeplink, session)
 
     async def create(
         self,

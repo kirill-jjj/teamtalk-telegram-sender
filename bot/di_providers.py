@@ -33,6 +33,8 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
+
+
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
@@ -216,71 +218,13 @@ class RequestProvider(Provider):
     def get_uow(
         self,
         factory: AsyncSessionFactoryType,
-        users: FromDishka[UserRepository],
-        bans: FromDishka[BanRepository],
-        admins: FromDishka[AdminRepository],
-        subscribers: FromDishka[SubscriberRepository],
-        deeplinks: FromDishka[DeeplinkRepository],
     ) -> IUnitOfWork:
         """Provides the Unit of Work."""
         return SqlModelUnitOfWork(
             session_factory=factory,
-            users=users,
-            bans=bans,
-            admins=admins,
-            subscribers=subscribers,
-            deeplinks=deeplinks,
         )
 
-    @provide
-    def get_user_repo(self, uow: FromDishka[IUnitOfWork]) -> UserRepository:
-        """Provides the UserRepository from the Unit of Work."""
-        return uow.users
 
-    @provide
-    def get_ban_repo(self, uow: FromDishka[IUnitOfWork]) -> BanRepository:
-        """Provides the BanRepository from the Unit of Work."""
-        return uow.bans
-
-    @provide
-    def get_admin_repo(self, uow: FromDishka[IUnitOfWork]) -> AdminRepository:
-        """Provides the AdminRepository from the Unit of Work."""
-        return uow.admins
-
-    @provide
-    def get_subscriber_repo(self, uow: FromDishka[IUnitOfWork]) -> SubscriberRepository:
-        """Provides the SubscriberRepository from the Unit of Work."""
-        return uow.subscribers
-
-    @provide
-    def get_deeplink_repo(self, uow: FromDishka[IUnitOfWork]) -> DeeplinkRepository:
-        """Provides the DeeplinkRepository from the Unit of Work."""
-        return uow.deeplinks
-
-    @provide(scope=Scope.REQUEST)
-    def get_user_repository(self) -> UserRepository:
-        """Provides a UserRepository."""
-        return UserRepository()
-
-    @provide(scope=Scope.REQUEST)
-    def get_ban_repository(self) -> BanRepository:
-        """Provides a BanRepository."""
-        return BanRepository()
-
-    @provide(scope=Scope.REQUEST)
-    def get_admin_repository(self) -> AdminRepository:
-        """Provides an AdminRepository."""
-        return AdminRepository()
-
-    @provide(scope=Scope.REQUEST)
-    def get_subscriber_repository(self) -> SubscriberRepository:
-        """Provides a SubscriberRepository."""
-        return SubscriberRepository()
-
-    @provide(scope=Scope.REQUEST)
-    def get_deeplink_repository(self) -> DeeplinkRepository:
-        """Provides a DeeplinkRepository."""
-        return DeeplinkRepository()
 
     @provide
     def get_deeplink_service(

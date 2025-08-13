@@ -55,31 +55,26 @@ class SqlModelUnitOfWork(IUnitOfWork):
     def __init__(
         self,
         session_factory: AsyncSessionFactoryType,
-        users: UserRepository,
-        bans: BanRepository,
-        admins: AdminRepository,
-        subscribers: SubscriberRepository,
-        deeplinks: DeeplinkRepository,
     ) -> None:
         """Initializes the Unit of Work and its repositories."""
         self._session_factory = session_factory
         self._session: AsyncSession | None = None
 
-        self.users = users
-        self.bans = bans
-        self.admins = admins
-        self.subscribers = subscribers
-        self.deeplinks = deeplinks
+        self.users: UserRepository
+        self.bans: BanRepository
+        self.admins: AdminRepository
+        self.subscribers: SubscriberRepository
+        self.deeplinks: DeeplinkRepository
 
     async def __aenter__(self) -> Self:
         """Enter the context manager, create and inject a new session."""
         self._session = self._session_factory()
 
-        self.users._session = self._session
-        self.bans._session = self._session
-        self.admins._session = self._session
-        self.subscribers._session = self._session
-        self.deeplinks._session = self._session
+        self.users = UserRepository(self._session)
+        self.bans = BanRepository(self._session)
+        self.admins = AdminRepository(self._session)
+        self.subscribers = SubscriberRepository(self._session)
+        self.deeplinks = DeeplinkRepository(self._session)
 
         return self
 

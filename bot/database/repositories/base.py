@@ -21,13 +21,14 @@ class BaseRepository(Generic[Model]):
     repositories that handle individual models.
     """
 
-    def __init__(self, model: type[Model]) -> None:
+    def __init__(self, model: type[Model], session: AsyncSession) -> None:
         """Initializes the repository.
 
         Args:
             model: The SQLModel class that this repository will manage.
+            session: The AsyncSession to use for database operations.
         """
-        self._session: AsyncSession
+        self._session = session
         self._model = model
 
     async def get_by_id(self, pk: int | str) -> Model | None:

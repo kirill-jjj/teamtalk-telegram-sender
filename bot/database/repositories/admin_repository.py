@@ -1,6 +1,7 @@
 """Repository for managing Admin users."""
 
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.repositories.base import BaseRepository
 from bot.models import Admin
@@ -9,9 +10,9 @@ from bot.models import Admin
 class AdminRepository(BaseRepository[Admin]):
     """Repository for managing Admins."""
 
-    def __init__(self) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         """Initializes the admin repository."""
-        super().__init__(Admin)
+        super().__init__(Admin, session)
 
     async def get_all_ids(self) -> list[int]:
         """Retrieves the Telegram IDs of all admins.
