@@ -40,6 +40,7 @@ class TeamTalkConnection:
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
         event_bus: EventBus,
+        message_handler: MessageHandler | None = None,
     ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
@@ -55,7 +56,7 @@ class TeamTalkConnection:
         self.ttstr = pytalk.instance.sdk.ttstr
         self.cache_manager = TeamTalkCache(self)
         self.connection_manager = TeamTalkConnectionManager(self)
-        self.message_handler: MessageHandler | None = None
+        self.message_handler = message_handler
 
     async def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""

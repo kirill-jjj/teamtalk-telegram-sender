@@ -52,7 +52,7 @@ class MessageHandler:
         if not self._is_valid_message(tt_message):
             return
 
-        async with self.dishka_container() as request_container:
+        async with (await self.dishka_container()) as request_container:
             settings = await request_container.get(Settings)
             cache = await request_container.get(CacheService)
             translator_factory = await request_container.get(
@@ -60,7 +60,7 @@ class MessageHandler:
             )
             event_bus = await request_container.get(EventBus)
 
-            translator = self._get_translator(settings, cache, translator_factory)
+            translator = await self._get_translator(settings, cache, translator_factory)
             content = tt_message.content.strip()
             from_user = tt_message.user
             from_user_nickname = get_tt_user_display_name(from_user, translator)
@@ -97,7 +97,7 @@ class MessageHandler:
                     )
                 )
 
-    def _get_translator(
+    async def _get_translator(
         self,
         settings: Settings,
         cache: CacheService,
@@ -107,7 +107,7 @@ class MessageHandler:
         admin_cfg = settings.telegram.admin_chat_id
         reply_lang = settings.general.default_lang
         if admin_cfg:
-            admin_settings = cache.get_user_settings(admin_cfg)
+            admin_settings = await cache.get_user_settings(admin_cfg)
             if admin_settings and admin_settings.language_code:
                 reply_lang = admin_settings.language_code
         return translator_factory(reply_lang)

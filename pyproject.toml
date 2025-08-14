@@ -137,6 +137,7 @@ pythonpath = [
   "."
 ]
 asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [project.optional-dependencies]
 dev = [

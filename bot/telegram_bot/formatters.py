@@ -62,28 +62,23 @@ def get_effective_server_name(
         The server name string.
     """
     _ = translator.gettext
-    server_name = app_cfg.teamtalk.server_name
-    if not server_name:
-        if tt_instance and tt_instance.connected:
-            try:
-                server_name = ttstr(tt_instance.server.get_properties().server_name)
-                if not server_name:  # Check if empty string after ttstr
-                    server_name = _("Unknown Server")
-            except (TimeoutError, pytalk.exceptions.TeamTalkException):
-                logger.exception(
-                    "Error getting server name from TT instance %s.",
-                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                )
-                server_name = _("Unknown Server")
-            except Exception:  # Catch any other unexpected error
-                logger.exception(
-                    "Unexpected error getting server name from TT instance %s.",
-                    tt_instance.server_info.host if tt_instance.server_info else "N/A",
-                )
-                server_name = _("Unknown Server")
-        else:
-            server_name = _("Unknown Server")
-    return server_name if server_name else _("Unknown Server")
+    server_name_from_instance: str | None = None
+    if tt_instance and tt_instance.connected:
+        try:
+            server_name_from_instance = ttstr(
+                tt_instance.server.get_properties().server_name
+            )
+        except (TimeoutError, pytalk.exceptions.TeamTalkException, Exception):
+            logger.exception(
+                "Error getting server name from TT instance %s.",
+                tt_instance.server_info.host if tt_instance.server_info else "N/A",
+            )
+
+    if server_name_from_instance:
+        return server_name_from_instance
+    if app_cfg.teamtalk.server_name:
+        return app_cfg.teamtalk.server_name
+    return _("Unknown Server")
 
 
 def get_tt_user_display_name(

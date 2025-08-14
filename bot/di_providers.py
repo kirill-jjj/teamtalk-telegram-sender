@@ -217,8 +217,6 @@ class RequestProvider(Provider):
             session_factory=factory,
         )
 
-
-
     @provide
     def get_deeplink_service(
         self,

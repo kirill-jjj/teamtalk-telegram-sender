@@ -306,8 +306,8 @@ class PytalkEventRouter:
             connection = self.connections[server_key]
             await connection.disconnect_instance()
         else:
-            # Создаем TeamTalkConnection, передавая ему все необходимые
-            # APP-scope зависимости
+            # Теперь создаем CommandRouter и MessageHandler вручную,
+            # так как они принадлежат этому конкретному `connection`
             connection = TeamTalkConnection(
                 pytalk_server_info,
                 self.tt_bot,
@@ -316,6 +316,7 @@ class PytalkEventRouter:
                 self.cache,
                 self.translator_factory,
                 self.event_bus,
+                None,  # message_handler will be set after it's created
             )
             # Теперь создаем CommandRouter и MessageHandler вручную,
             # так как они принадлежат этому конкретному `connection`
@@ -328,7 +329,6 @@ class PytalkEventRouter:
                 connection=connection,
                 command_router=command_router,
             )
-            # Внедряем обработчик сообщений в соединение (Attribute Injection)
             connection.message_handler = message_handler
             self.connections[server_key] = connection
 
