@@ -49,3 +49,5 @@ locales/**/*.mo
 *.toml
 !config.example.toml
 !pyproject.toml
+ai-docs
+.geminiignore
