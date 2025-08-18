@@ -572,7 +572,7 @@ def _build_teamtalk_help_message(
 async def on_help(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
-    settings: Settings,
+    settings: FromDishka[Settings],
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Handles the /help command from a TeamTalk user."""
