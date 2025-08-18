@@ -52,7 +52,7 @@ class MessageHandler:
         if not self._is_valid_message(tt_message):
             return
 
-        async with (await self.dishka_container()) as request_container:
+        async with self.dishka_container() as request_container:
             settings = await request_container.get(Settings)
             cache = await request_container.get(CacheService)
             translator_factory = await request_container.get(
@@ -107,7 +107,7 @@ class MessageHandler:
         admin_cfg = settings.telegram.admin_chat_id
         reply_lang = settings.general.default_lang
         if admin_cfg:
-            admin_settings = await cache.get_user_settings(admin_cfg)
+            admin_settings = cache.get_user_settings(admin_cfg)
             if admin_settings and admin_settings.language_code:
                 reply_lang = admin_settings.language_code
         return translator_factory(reply_lang)
