@@ -60,7 +60,7 @@ class CommandRouter:
             await on_unknown(tt_message, translator, connection=self.connection)
             return
 
-        async with (await self.dishka_container())(
+        async with self.dishka_container(
             context={
                 TeamTalkMessage: tt_message,
                 "args_str": args,
