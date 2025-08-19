@@ -1,5 +1,6 @@
 """Defines commands and their result models for the CommandBus."""
 
+import pytalk
 from pydantic import BaseModel
 
 from bot.command_bus.types import BaseCommand
@@ -8,8 +9,10 @@ from bot.command_bus.types import BaseCommand
 # --- GetOnlineUsers Command ---
 class GetOnlineUsersResult(BaseModel):
     """Represents the result of getting online users."""
+    model_config = {"arbitrary_types_allowed": True}
 
     success: bool
+    users: list[pytalk.user.User] = []
     report_text: str | None = None
     error_message: str | None = None
 

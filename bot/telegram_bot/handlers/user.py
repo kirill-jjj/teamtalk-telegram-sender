@@ -12,6 +12,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
+from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.database.uow import IUnitOfWork
@@ -81,24 +82,30 @@ async def on_who_command(
     command_bus: Annotated[CommandBus, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
+    _ = translator.gettext
     if not message.from_user:
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
         is_admin = cache.is_admin(message.from_user.id)
         command = GetOnlineUsersCommand(is_caller_admin=is_admin)
-        result: GetOnlineUsersResult = await command_bus.execute(command)
+        try:
+            result: GetOnlineUsersResult = await command_bus.execute(command)
+        except NoHandlerFoundError:
+            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+            await message.reply(_("This feature is temporarily unavailable."))
+            return
 
         if not result.success:
             await message.reply(
-                result.error_message or translator.gettext("An error occurred.")
+                result.error_message or _("An error occurred.")
             )
             return
 
         if result.report_text:
             await message.reply(result.report_text)
         else:
-            await message.reply(translator.gettext("Failed to generate the report."))
+            await message.reply(_("Failed to generate the report."))
 
 
 def _build_telegram_help_message(

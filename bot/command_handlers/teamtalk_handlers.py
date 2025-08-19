@@ -56,7 +56,11 @@ class TeamTalkCommandHandlers:
             is_caller_admin=command.is_caller_admin,
             translator=self._translator,
         )
-        return GetOnlineUsersResult(success=True, report_text=report_text)
+        return GetOnlineUsersResult(
+            success=True,
+            report_text=report_text,
+            users=list(self._tt_connection.cache_manager.online_users_cache.values()),
+        )
 
     async def handle_kick_user(self, command: KickUserCommand) -> ModerationResult:
         """Handles the command to kick a user."""

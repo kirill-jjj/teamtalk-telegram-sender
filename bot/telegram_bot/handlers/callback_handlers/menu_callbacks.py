@@ -8,13 +8,15 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
+from bot.command_bus.bus import CommandBus
+from bot.command_bus.exceptions import NoHandlerFoundError
+from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
+from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
-from bot.services.report_service import ReportService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import MenuCallback
-from bot.telegram_bot.handlers.admin import _show_user_buttons
+from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.handlers.user import (
     on_help_command,
@@ -39,18 +41,16 @@ async def menu_who_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     cache: FromDishka[CacheService],
-    tt_connection: TeamTalkConnection,
     bot: FromDishka[EventBot],
-    report_service: FromDishka[ReportService],
+    command_bus: FromDishka[CommandBus],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     await on_who_command(
         message=query.message,
         translator=translator,
         cache=cache,
-        tt_connection=tt_connection,
         bot=bot,
-        report_service=report_service,
+        command_bus=command_bus,
     )
     await query.answer()
 
@@ -90,13 +90,34 @@ async def menu_settings_handler(
 async def menu_kick_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    tt_connection: TeamTalkConnection,
+    command_bus: FromDishka[CommandBus],
+    settings: FromDishka[Settings],
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
+    _ = translator.gettext
     if isinstance(query.message, Message):
-        await _show_user_buttons(
-            query.message, AdminCommand.KICK, translator, tt_connection
-        )
+        try:
+            result: GetOnlineUsersResult = await command_bus.execute(
+                GetOnlineUsersCommand(is_caller_admin=True)
+            )
+        except NoHandlerFoundError:
+            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+            await query.message.reply(_("This feature is temporarily unavailable."))
+            await query.answer()
+            return
+
+        if result.success and result.users:
+            await show_user_buttons_from_list(
+                query.message,
+                AdminCommand.KICK,
+                translator,
+                result.users,
+                settings.teamtalk.host_name,
+            )
+        else:
+            await query.message.reply(
+                result.error_message or _("Failed to get user list.")
+            )
     await query.answer()
 
 
@@ -105,13 +126,34 @@ async def menu_kick_handler(
 async def menu_ban_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    tt_connection: TeamTalkConnection,
+    command_bus: FromDishka[CommandBus],
+    settings: FromDishka[Settings],
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
+    _ = translator.gettext
     if isinstance(query.message, Message):
-        await _show_user_buttons(
-            query.message, AdminCommand.BAN, translator, tt_connection
-        )
+        try:
+            result: GetOnlineUsersResult = await command_bus.execute(
+                GetOnlineUsersCommand(is_caller_admin=True)
+            )
+        except NoHandlerFoundError:
+            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+            await query.message.reply(_("This feature is temporarily unavailable."))
+            await query.answer()
+            return
+
+        if result.success and result.users:
+            await show_user_buttons_from_list(
+                query.message,
+                AdminCommand.BAN,
+                translator,
+                result.users,
+                settings.teamtalk.host_name,
+            )
+        else:
+            await query.message.reply(
+                result.error_message or _("Failed to get user list.")
+            )
     await query.answer()
 
 

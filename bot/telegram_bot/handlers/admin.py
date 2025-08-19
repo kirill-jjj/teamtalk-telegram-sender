@@ -4,18 +4,20 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
+import pytalk
 from aiogram import Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
 
-from bot.constants import MSG_GENERAL_ERROR
+from bot.command_bus.bus import CommandBus
+from bot.command_bus.exceptions import NoHandlerFoundError
+from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
+from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.formatters import get_tt_user_display_name
-from bot.telegram_bot.handlers.decorators import require_tt_connection
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
 
@@ -29,44 +31,26 @@ logger = logging.getLogger(__name__)
 admin_router = Router(name="admin_router")
 
 
-async def _show_user_buttons(
+async def show_user_buttons_from_list(
     message: Message,
     command_type: AdminCommand,
     translator: NullTranslations,
-    tt_connection: TeamTalkConnection,
+    users: list[pytalk.user.User],
+    server_host: str,
 ) -> None:
+    """Creates and sends a keyboard with a list of users for moderation."""
     _ = translator.gettext
-    tt_instance = tt_connection.instance
-    if not tt_instance:
-        logger.error(
-            "[%s] Could not get own user ID in _show_user_buttons: "
-            "tt_instance is None.",
-            tt_connection.server_info.host,
-        )
-        await message.reply(_(MSG_GENERAL_ERROR))
-        return
-    my_user_id = tt_instance.getMyUserID()
 
-    if my_user_id is None:
-        logger.error(
-            "[%s] Could not get own user ID in _show_user_buttons.",
-            tt_connection.server_info.host,
-        )
-        await message.reply(_(MSG_GENERAL_ERROR))
-        return
-
-    online_users = list(tt_connection.cache_manager.online_users_cache.values())
-
-    if not online_users:
+    if not users:
         await message.reply(
             _("No users found online on server {server_host}.").format(
-                server_host=tt_connection.server_info.host
+                server_host=server_host
             )
         )
         return
 
     sorted_users = sorted(
-        online_users, key=lambda u: get_tt_user_display_name(u, translator).lower()
+        users, key=lambda u: get_tt_user_display_name(u, translator).lower()
     )
     builder = await create_user_selection_keyboard(
         translator, sorted_users, command_type
@@ -74,10 +58,10 @@ async def _show_user_buttons(
 
     command_text_map = {
         AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(
-            server_host=tt_connection.server_info.host
+            server_host=server_host
         ),
         AdminCommand.BAN: _("Select a user to ban from {server_host}:").format(
-            server_host=tt_connection.server_info.host
+            server_host=server_host
         ),
     }
     reply_text = command_text_map.get(command_type, _("Select a user:"))
@@ -86,37 +70,67 @@ async def _show_user_buttons(
 
 
 @admin_router.message(Command("kick"), IsAdmin())
-@require_tt_connection
 async def on_kick_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
-    if not tt_connection:
-        logger.error(
-            "tt_connection is None in on_kick_command despite "
-            "@require_tt_connection decorator."
+    _ = translator.gettext
+    try:
+        result: GetOnlineUsersResult = await command_bus.execute(
+            GetOnlineUsersCommand(is_caller_admin=True)
         )
+    except NoHandlerFoundError:
+        logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+        await message.reply(_("This feature is temporarily unavailable."))
         return
-    await _show_user_buttons(message, AdminCommand.KICK, translator, tt_connection)
+
+    if result.success and result.users:
+        await show_user_buttons_from_list(
+            message,
+            AdminCommand.KICK,
+            translator,
+            result.users,
+            settings.teamtalk.host_name,
+        )
+    else:
+        await message.reply(
+            result.error_message or _("Failed to get user list.")
+        )
 
 
 @admin_router.message(Command("ban"), IsAdmin())
-@require_tt_connection
 async def on_ban_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
-    if not tt_connection:
-        logger.error(
-            "tt_connection is None in on_ban_command despite "
-            "@require_tt_connection decorator."
+    _ = translator.gettext
+    try:
+        result: GetOnlineUsersResult = await command_bus.execute(
+            GetOnlineUsersCommand(is_caller_admin=True)
         )
+    except NoHandlerFoundError:
+        logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+        await message.reply(_("This feature is temporarily unavailable."))
         return
-    await _show_user_buttons(message, AdminCommand.BAN, translator, tt_connection)
+
+    if result.success and result.users:
+        await show_user_buttons_from_list(
+            message,
+            AdminCommand.BAN,
+            translator,
+            result.users,
+            settings.teamtalk.host_name,
+        )
+    else:
+        await message.reply(
+            result.error_message or _("Failed to get user list.")
+        )
 
 
 @admin_router.message(Command("subscribers"), IsAdmin())
@@ -156,6 +170,7 @@ async def on_unban_command(
             translator=translator,
         )
 
+
 @admin_router.message(Command("exit"), IsAdmin())
 async def on_exit_command(
     message: Message,
@@ -168,3 +183,4 @@ async def on_exit_command(
     await message.reply(_("Shutting down..."))
     await dispatcher.stop_polling()
     await bot.session.close()
+
