@@ -119,7 +119,7 @@ async def on_startup(  # noqa: PLR0915
     connections = None
     dishka_container = dispatcher.workflow_data.get("dishka_container")
     if dishka_container:
-        connections = dishka_container.get_sync(dict[str, TeamTalkConnection])
+        connections = await dishka_container.get(dict[str, TeamTalkConnection])
 
     if connections:
         main_connection = next(iter(connections.values()))

@@ -132,10 +132,9 @@ class TeamTalkConnection:
             self.login_complete_time = datetime.now(dt.UTC)
             self.mark_finalized(status=True)
             logger.info(
-                "[%s] Login finalized at %s. Status: '%s'",
+                "[%s] Login finalized at %s.",
                 self.server_info.host,
                 self.login_complete_time,
-                status_text,
             )
         except Exception:
             logger.exception(
@@ -273,9 +272,8 @@ class TeamTalkConnection:
             return
 
         logger.info(
-            "[%s] Logged in to TT: %s. Instance: %s",
+            "[%s] Logged in to TT. Instance: %s",
             self.server_info.host,
-            server_name_display,
             self.instance,
         )
         await self._join_configured_channel()
