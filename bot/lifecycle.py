@@ -9,6 +9,9 @@ from aiogram import Dispatcher
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
 
+from bot.command_bus.bus import CommandBus
+from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
+from bot.commands import BanUserCommand, GetOnlineUsersCommand, KickUserCommand
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType
@@ -18,6 +21,8 @@ from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
+from bot.services.report_service import ReportService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -34,7 +39,7 @@ from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
-async def on_startup(
+async def on_startup(  # noqa: PLR0915
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
@@ -44,6 +49,7 @@ async def on_startup(
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
+    command_bus: FromDishka[CommandBus],
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
     _tt_event_handler: FromDishka[PytalkEventRouter],
@@ -108,6 +114,30 @@ async def on_startup(
         bot, cache, translator_factory, available_languages, settings
     )
     logger.info("Telegram bot commands set.")
+
+    # Register command handlers
+    connections = None
+    dishka_container = dispatcher.workflow_data.get("dishka_container")
+    if dishka_container:
+        connections = dishka_container.get_sync(dict[str, TeamTalkConnection])
+
+    if connections:
+        main_connection = next(iter(connections.values()))
+        default_translator = translator_factory(settings.general.default_lang)
+        report_service = ReportService(settings=settings)
+        tt_handlers = TeamTalkCommandHandlers(
+            main_connection, default_translator, report_service
+        )
+
+        command_bus.register(GetOnlineUsersCommand, tt_handlers.handle_get_online_users)
+        command_bus.register(KickUserCommand, tt_handlers.handle_kick_user)
+        command_bus.register(BanUserCommand, tt_handlers.handle_ban_user)
+        logger.info("Command handlers registered.")
+    else:
+        logger.warning(
+            "No TeamTalk connections found during startup, "
+            "command handlers not registered."
+        )
 
     logger.info("Subscribing event handlers...")
     event_bus.subscribe(UserJoinedEvent, telegram_handler.handle_user_joined)

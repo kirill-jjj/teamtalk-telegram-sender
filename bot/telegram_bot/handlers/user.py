@@ -11,12 +11,12 @@ from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
+from bot.command_bus.bus import CommandBus
+from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
-from bot.services.report_service import ReportService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.filters.subscription import IsSubscribed
@@ -77,27 +77,28 @@ async def on_who_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection | None, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    report_service: Annotated[ReportService, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     if not message.from_user:
         return
 
-    if not tt_connection:
-        _ = translator.gettext
-        await message.reply(_("TeamTalk connection is not active."))
-        return
-
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
         is_admin = cache.is_admin(message.from_user.id)
+        command = GetOnlineUsersCommand(is_caller_admin=is_admin)
+        result: GetOnlineUsersResult = await command_bus.execute(command)
 
-        report_text = report_service.get_online_users_report(
-            tt_connection=tt_connection, is_caller_admin=is_admin, translator=translator
-        )
+        if not result.success:
+            await message.reply(
+                result.error_message or translator.gettext("An error occurred.")
+            )
+            return
 
-        await message.reply(report_text)
+        if result.report_text:
+            await message.reply(result.report_text)
+        else:
+            await message.reply(translator.gettext("Failed to generate the report."))
 
 
 def _build_telegram_help_message(

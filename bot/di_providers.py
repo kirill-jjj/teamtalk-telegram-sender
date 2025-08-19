@@ -13,6 +13,7 @@ from aiogram.types import TelegramObject, User
 from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
+from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
@@ -131,6 +132,11 @@ class AppProvider(Provider):
     def get_event_bus(self) -> EventBus:
         """Provides the application-wide event bus."""
         return EventBus()
+
+    @provide
+    def get_command_bus(self) -> CommandBus:
+        """Provides the application-wide command bus."""
+        return CommandBus()
 
     @provide
     def get_cache_service(self) -> CacheService:
