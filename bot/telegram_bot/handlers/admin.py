@@ -4,7 +4,7 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-from aiogram import Router
+from aiogram import Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
@@ -155,3 +155,16 @@ async def on_unban_command(
             page=0,
             translator=translator,
         )
+
+@admin_router.message(Command("exit"), IsAdmin())
+async def on_exit_command(
+    message: Message,
+    translator: Annotated[NullTranslations, FromDishka()],
+    dispatcher: Annotated[Dispatcher, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
+) -> None:
+    """Handles the /exit command to gracefully shut down the bot."""
+    _ = translator.gettext
+    await message.reply(_("Shutting down..."))
+    await dispatcher.stop_polling()
+    await bot.session.close()

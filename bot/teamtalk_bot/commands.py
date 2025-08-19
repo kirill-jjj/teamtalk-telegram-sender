@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 from dishka import FromDishka
 from dishka.integrations.aiogram import inject
+
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
@@ -437,7 +438,7 @@ async def _handle_deeplink_command(
     )
 
 
-@inject
+
 async def on_subscribe(
     tt_message: TeamTalkMessage,
     uow: FromDishka[IUnitOfWork],
@@ -452,7 +453,7 @@ async def on_subscribe(
         )
 
 
-@inject
+
 async def on_unsubscribe(
     tt_message: TeamTalkMessage,
     uow: FromDishka[IUnitOfWork],
@@ -473,7 +474,7 @@ async def on_unsubscribe(
 
 
 @is_tt_admin
-@inject
+
 async def on_add_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -508,7 +509,7 @@ async def on_add_admin(
 
 
 @is_tt_admin
-@inject
+
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -568,7 +569,7 @@ def _build_teamtalk_help_message(
     return "\n".join(parts)
 
 
-@inject
+
 async def on_help(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
