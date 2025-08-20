@@ -1,7 +1,7 @@
 """Defines commands and their result models for the CommandBus."""
 
-import pytalk
 from pydantic import BaseModel
+import pytalk
 
 from bot.command_bus.types import BaseCommand
 

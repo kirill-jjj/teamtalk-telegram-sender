@@ -4,11 +4,11 @@ from gettext import NullTranslations
 import logging
 from typing import Annotated
 
-import pytalk
 from aiogram import Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
+import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError

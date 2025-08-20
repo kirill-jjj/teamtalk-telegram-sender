@@ -252,13 +252,14 @@ class TeamTalkConnection:
         _ = server  # Mark as unused to satisfy linters like Ruff (ARG002)
         self.login_complete_time = None
         self.mark_finalized(status=False)
-        server_name_display = "Unknown Server"
+
 
         if self.instance:
             try:
                 props = self.instance.server.get_properties()
                 if props:
-                    server_name_display = self.ttstr(props.server_name)
+                    pass
+
             except Exception as e:
                 logger.warning(
                     "[%s] Error getting server props: %s", self.server_info.host, e

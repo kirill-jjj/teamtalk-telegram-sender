@@ -10,8 +10,6 @@ import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from dishka import FromDishka
-from dishka.integrations.aiogram import inject
-
 from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
