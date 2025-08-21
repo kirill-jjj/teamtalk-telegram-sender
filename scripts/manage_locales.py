@@ -8,14 +8,15 @@ import tomllib
 
 if sys.platform == "win32":
     import os
+
     # Set console encoding to UTF-8 for Windows
     # This might not be strictly necessary if sys.stdout.reconfigure works,
     # but it's a common practice for Windows console output.
-    os.system("chcp 65001 > nul") # Change console codepage to UTF-8
+    os.system("chcp 65001 > nul")  # Change console codepage to UTF-8
 
     # Reconfigure stdout and stderr to use UTF-8
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 PROJECT_NAME = "teamtalk-telegram-sender"
 COPYRIGHT_HOLDER = "kirill-jjj"

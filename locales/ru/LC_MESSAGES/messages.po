@@ -139,7 +139,7 @@ msgstr "в корневом канале"
 #: bot/services/report_service.py:56
 #, python-brace-format
 msgid "in {channel_name}"
-msgstr "в {channel_name}"
+msgstr "{channel_name}"
 
 #: bot/services/report_service.py:105 bot/telegram_bot/handlers/admin.py:46
 #, python-brace-format

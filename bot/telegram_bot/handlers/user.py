@@ -80,6 +80,8 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     _ = translator.gettext
@@ -87,8 +89,15 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
+        async with uow:
+            user_settings = await uow.users.get_or_create(
+                message.from_user.id,
+                defaults={"language_code": settings.general.default_lang},
+            )
         is_admin = cache.is_admin(message.from_user.id)
-        command = GetOnlineUsersCommand(is_caller_admin=is_admin)
+        command = GetOnlineUsersCommand(
+            is_caller_admin=is_admin, lang_code=user_settings.language_code
+        )
         try:
             result: GetOnlineUsersResult = await command_bus.execute(command)
         except NoHandlerFoundError:

@@ -123,10 +123,9 @@ async def on_startup(  # noqa: PLR0915
 
     if connections:
         main_connection = next(iter(connections.values()))
-        default_translator = translator_factory(settings.general.default_lang)
         report_service = ReportService(settings=settings)
         tt_handlers = TeamTalkCommandHandlers(
-            main_connection, default_translator, report_service
+            main_connection, translator_factory, report_service
         )
 
         command_bus.register(GetOnlineUsersCommand, tt_handlers.handle_get_online_users)

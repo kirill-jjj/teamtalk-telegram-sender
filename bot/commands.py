@@ -22,6 +22,7 @@ class GetOnlineUsersCommand(BaseCommand):
     """A command to get the list of online users from TeamTalk."""
 
     is_caller_admin: bool
+    lang_code: str
 
 
 # --- User Moderation Commands (Kick/Ban) ---

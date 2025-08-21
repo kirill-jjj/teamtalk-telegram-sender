@@ -1,5 +1,6 @@
 """Command handlers that interact with the TeamTalk connection."""
 
+from collections.abc import Callable
 from gettext import NullTranslations
 from html import escape
 import logging
@@ -27,20 +28,19 @@ class TeamTalkCommandHandlers:
     def __init__(
         self,
         tt_connection: TeamTalkConnection,
-        translator: NullTranslations,
+        translator_factory: Callable[[str], NullTranslations],
         report_service: ReportService,
     ) -> None:
         """Initializes the TeamTalkCommandHandlers.
 
         Args:
             tt_connection: The TeamTalk connection instance.
-            translator: The translator instance.
+            translator_factory: The translator factory instance.
             report_service: The service for generating reports.
         """
         self._tt_connection = tt_connection
-        self._translator = translator
+        self._translator_factory = translator_factory
         self._report_service = report_service
-        self._ = self._translator.gettext
 
     async def handle_get_online_users(
         self, command: GetOnlineUsersCommand
@@ -51,10 +51,13 @@ class TeamTalkCommandHandlers:
                 success=False, error_message="TeamTalk connection is not active."
             )
 
+        translator = self._translator_factory(command.lang_code)
+        _ = translator.gettext
+
         report_text = self._report_service.get_online_users_report(
             tt_connection=self._tt_connection,
             is_caller_admin=command.is_caller_admin,
-            translator=self._translator,
+            translator=translator,
         )
         return GetOnlineUsersResult(
             success=True,
@@ -64,24 +67,39 @@ class TeamTalkCommandHandlers:
 
     async def handle_kick_user(self, command: KickUserCommand) -> ModerationResult:
         """Handles the command to kick a user."""
+        translator = self._translator_factory(
+            "en"
+        )  # Default to English for moderation messages
+        _ = translator.gettext
         return await self._apply_moderation(
             user_id=command.user_id,
             admin_telegram_id=command.admin_telegram_id,
             action="kick",
+            translator=translator,
         )
 
     async def handle_ban_user(self, command: BanUserCommand) -> ModerationResult:
         """Handles the command to ban a user."""
+        translator = self._translator_factory(
+            "en"
+        )  # Default to English for moderation messages
+        _ = translator.gettext
         return await self._apply_moderation(
             user_id=command.user_id,
             admin_telegram_id=command.admin_telegram_id,
             action="ban",
+            translator=translator,
         )
 
     async def _apply_moderation(
-        self, user_id: int, admin_telegram_id: int, action: str
+        self,
+        user_id: int,
+        admin_telegram_id: int,
+        action: str,
+        translator: NullTranslations,
     ) -> ModerationResult:
         """Generic method to apply kick or ban."""
+        _ = translator.gettext
         if not self._tt_connection or not self._tt_connection.instance:
             return ModerationResult(
                 success=False, message=self._("Error: No active TeamTalk connection.")
@@ -91,12 +109,12 @@ class TeamTalkCommandHandlers:
         server_host = self._tt_connection.server_info.host
 
         if not user_to_act_on:
-            msg = self._("User not found on server {server_host} anymore.").format(
+            msg = _("User not found on server {server_host} anymore.").format(
                 server_host=server_host
             )
             return ModerationResult(success=False, message=msg)
 
-        user_nickname = get_tt_user_display_name(user_to_act_on, self._translator)
+        user_nickname = get_tt_user_display_name(user_to_act_on, translator)
 
         try:
             if action == "kick":
@@ -107,7 +125,7 @@ class TeamTalkCommandHandlers:
                     user_nickname,
                     user_id,
                 )
-                msg = self._(
+                msg = _(
                     "User {user_nickname} kicked from server {server_host}."
                 ).format(user_nickname=escape(user_nickname), server_host=server_host)
                 return ModerationResult(success=True, message=msg)
@@ -120,7 +138,7 @@ class TeamTalkCommandHandlers:
                     user_nickname,
                     user_id,
                 )
-                msg = self._(
+                msg = _(
                     "User {user_nickname} banned and kicked from server {server_host}."
                 ).format(user_nickname=escape(user_nickname), server_host=server_host)
                 return ModerationResult(success=True, message=msg)
