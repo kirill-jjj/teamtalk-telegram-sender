@@ -253,7 +253,6 @@ class TeamTalkConnection:
         self.login_complete_time = None
         self.mark_finalized(status=False)
 
-
         if self.instance:
             try:
                 props = self.instance.server.get_properties()

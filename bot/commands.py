@@ -9,6 +9,7 @@ from bot.command_bus.types import BaseCommand
 # --- GetOnlineUsers Command ---
 class GetOnlineUsersResult(BaseModel):
     """Represents the result of getting online users."""
+
     model_config = {"arbitrary_types_allowed": True}
 
     success: bool

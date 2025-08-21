@@ -97,9 +97,7 @@ async def on_who_command(
             return
 
         if not result.success:
-            await message.reply(
-                result.error_message or _("An error occurred.")
-            )
+            await message.reply(result.error_message or _("An error occurred."))
             return
 
         if result.report_text:

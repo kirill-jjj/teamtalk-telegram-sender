@@ -29,6 +29,7 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
@@ -212,6 +213,22 @@ class RequestProvider(Provider):
     """Provides request-scoped dependencies."""
 
     scope = Scope.REQUEST
+
+    @provide
+    def get_tt_pm_handlers(
+        self,
+        uow: FromDishka[IUnitOfWork],
+        settings: FromDishka[Settings],
+        cache: FromDishka[CacheService],
+        event_bus: FromDishka[EventBus],
+    ) -> PrivateMessageCommandHandlers:
+        """Provides an instance of PrivateMessageCommandHandlers."""
+        return PrivateMessageCommandHandlers(
+            uow=uow,
+            settings=settings,
+            cache=cache,
+            event_bus=event_bus,
+        )
 
     @provide
     def get_uow(

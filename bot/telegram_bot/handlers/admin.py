@@ -96,9 +96,7 @@ async def on_kick_command(
             settings.teamtalk.host_name,
         )
     else:
-        await message.reply(
-            result.error_message or _("Failed to get user list.")
-        )
+        await message.reply(result.error_message or _("Failed to get user list."))
 
 
 @admin_router.message(Command("ban"), IsAdmin())
@@ -128,9 +126,7 @@ async def on_ban_command(
             settings.teamtalk.host_name,
         )
     else:
-        await message.reply(
-            result.error_message or _("Failed to get user list.")
-        )
+        await message.reply(result.error_message or _("Failed to get user list."))
 
 
 @admin_router.message(Command("subscribers"), IsAdmin())
@@ -183,4 +179,3 @@ async def on_exit_command(
     await message.reply(_("Shutting down..."))
     await dispatcher.stop_polling()
     await bot.session.close()
-

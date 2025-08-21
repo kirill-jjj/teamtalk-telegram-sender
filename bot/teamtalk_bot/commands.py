@@ -436,7 +436,6 @@ async def _handle_deeplink_command(
     )
 
 
-
 async def on_subscribe(
     tt_message: TeamTalkMessage,
     uow: FromDishka[IUnitOfWork],
@@ -449,7 +448,6 @@ async def on_subscribe(
         await _handle_deeplink_command(
             tt_message, uow, translator, settings, cache, DeeplinkAction.SUBSCRIBE
         )
-
 
 
 async def on_unsubscribe(
@@ -472,7 +470,6 @@ async def on_unsubscribe(
 
 
 @is_tt_admin
-
 async def on_add_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -507,7 +504,6 @@ async def on_add_admin(
 
 
 @is_tt_admin
-
 async def on_remove_admin(
     tt_message: TeamTalkMessage,
     translator: NullTranslations,
@@ -565,7 +561,6 @@ def _build_teamtalk_help_message(
             ]
         )
     return "\n".join(parts)
-
 
 
 async def on_help(

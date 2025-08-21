@@ -1,29 +1,20 @@
-"""Command router for TeamTalk bot."""
+"""Routes TeamTalk commands to appropriate handlers."""
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
-import inspect
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dishka import AsyncContainer
 from pytalk.message import Message as TeamTalkMessage
 
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.commands import (
-    on_add_admin,
-    on_help,
-    on_remove_admin,
-    on_subscribe,
-    on_unknown,
-    on_unsubscribe,
-)
+from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
+from bot.teamtalk_bot.commands import on_help, on_unknown
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
-
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +30,6 @@ class CommandRouter:
         """Initializes the command router."""
         self.dishka_container = dishka_container
         self.connection = connection
-        self.handlers: dict[str, Callable[..., Awaitable[Any | None]]] = {
-            tt_cmds.TT_CMD_SUBSCRIBE: on_subscribe,
-            tt_cmds.TT_CMD_UNSUBSCRIBE: on_unsubscribe,
-            tt_cmds.TT_CMD_ADD_ADMIN: on_add_admin,
-            tt_cmds.TT_CMD_REMOVE_ADMIN: on_remove_admin,
-            tt_cmds.TT_CMD_HELP: on_help,
-        }
 
     async def route(
         self,
@@ -54,27 +38,41 @@ class CommandRouter:
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
     ) -> None:
-        """Routes a command to the appropriate handler."""
-        handler = self.handlers.get(cmd)
-        if not handler:
+        """Routes a command to the appropriate handler with dependency injection."""
+        # on_help and on_unknown do not require complex dependencies,
+        # they can be left as is
+        if cmd == tt_cmds.TT_CMD_HELP:
+            async with self.dishka_container(
+                context={TeamTalkMessage: tt_message, NullTranslations: translator}
+            ) as request_container:
+                await request_container.execute(on_help)
+            return
+
+        if cmd not in [
+            tt_cmds.TT_CMD_SUBSCRIBE,
+            tt_cmds.TT_CMD_UNSUBSCRIBE,
+            tt_cmds.TT_CMD_ADD_ADMIN,
+            tt_cmds.TT_CMD_REMOVE_ADMIN,
+        ]:
             await on_unknown(tt_message, translator, connection=self.connection)
             return
 
-        async with self.dishka_container(
-            context={
-                TeamTalkMessage: tt_message,
-                "args_str": args,
-                NullTranslations: translator,
-            }
-        ) as request_container:
-            handler_kwargs = {
-                "tt_message": tt_message,
-                "translator": translator,
-                "dishka_container": request_container,
-            }
+        context = {
+            TeamTalkMessage: tt_message,
+            "args_str": args,
+            NullTranslations: translator,
+        }
 
-            # Check if handler expects 'args_str'
-            if "args_str" in inspect.signature(handler).parameters:
-                handler_kwargs["args_str"] = args
+        async with self.dishka_container(context=context) as request_container:
+            # Get a fully prepared object with already injected dependencies
+            handlers = await request_container.get(PrivateMessageCommandHandlers)
 
-            await handler(**handler_kwargs)
+            # Select the desired method and call it
+            if cmd == tt_cmds.TT_CMD_SUBSCRIBE:
+                await handlers.on_subscribe(tt_message, translator)
+            elif cmd == tt_cmds.TT_CMD_UNSUBSCRIBE:
+                await handlers.on_unsubscribe(tt_message, translator)
+            elif cmd == tt_cmds.TT_CMD_ADD_ADMIN:
+                await handlers.on_add_admin(tt_message, translator, args)
+            elif cmd == tt_cmds.TT_CMD_REMOVE_ADMIN:
+                await handlers.on_remove_admin(tt_message, translator, args)

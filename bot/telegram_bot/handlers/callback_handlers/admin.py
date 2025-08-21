@@ -37,13 +37,11 @@ async def on_moderation_confirm(
     command: KickUserCommand | BanUserCommand
     if callback_data.action == AdminCommand.KICK:
         command = KickUserCommand(
-            user_id=callback_data.user_id,
-            admin_telegram_id=callback_query.from_user.id
+            user_id=callback_data.user_id, admin_telegram_id=callback_query.from_user.id
         )
     elif callback_data.action == AdminCommand.BAN:
         command = BanUserCommand(
-            user_id=callback_data.user_id,
-            admin_telegram_id=callback_query.from_user.id
+            user_id=callback_data.user_id, admin_telegram_id=callback_query.from_user.id
         )
     else:
         # This case should not be reached if the filter is correct
@@ -60,5 +58,5 @@ async def on_moderation_confirm(
             text=result.message,
             reply_markup=None,
             logger_instance=logger,
-            log_context=f"process_user_action_selection ({callback_data.action.value})"
+            log_context=f"process_user_action_selection ({callback_data.action.value})",
         )
