@@ -14,6 +14,7 @@ from bot.config import Settings
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot import command_constants as tt_cmds  # Added
 from bot.teamtalk_bot.commands import (
     _handle_deeplink_command,
     _manage_admin_ids,
@@ -91,24 +92,27 @@ class PrivateMessageCommandHandlers:
     ) -> None:
         """Handles the add admin command."""
         _ = translator.gettext
-        await _manage_admin_ids(
-            tt_message=tt_message,
-            args_str=args_str,
-            translator=translator,
-            repo_action=self.uow.admins.add,
-            is_add_action=True,
-            prompt_msg_key=_(
-                "Please provide Telegram IDs. Example: {cmd} 12345678"
-            ).format(cmd=tt_cmds.TT_CMD_ADD_ADMIN),
-            error_msg_key=_("ID {telegram_id} is already an admin or failed to add."),
-            invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric ID."),
-            header_msg_key=_("Action Results:"),
-            settings=self.settings,
-            cache=self.cache,
-            event_bus=self.event_bus,
-            admin_repo=self.uow.admins,
-            user_repo=self.uow.users,
-        )
+        async with self.uow:  # Added
+            await _manage_admin_ids(
+                tt_message=tt_message,
+                args_str=args_str,
+                translator=translator,
+                repo_action=self.uow.admins.add,
+                is_add_action=True,
+                prompt_msg_key=_(
+                    "Please provide Telegram IDs. Example: {cmd} 12345678"
+                ).format(cmd=tt_cmds.TT_CMD_ADD_ADMIN),
+                error_msg_key=_(
+                    "ID {telegram_id} is already an admin or failed to add."
+                ),
+                invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric ID."),
+                header_msg_key=_("Action Results:"),
+                settings=self.settings,
+                cache=self.cache,
+                event_bus=self.event_bus,
+                admin_repo=self.uow.admins,
+                user_repo=self.uow.users,
+            )
 
     async def on_remove_admin(
         self,
@@ -118,23 +122,24 @@ class PrivateMessageCommandHandlers:
     ) -> None:
         """Handles the remove admin command."""
         _ = translator.gettext
-        await _manage_admin_ids(
-            tt_message=tt_message,
-            args_str=args_str,
-            translator=translator,
-            repo_action=self.uow.admins.delete,
-            is_add_action=False,
-            prompt_msg_key=_(
-                "Please provide Telegram IDs. Example: {cmd} 12345678"
-            ).format(cmd=tt_cmds.TT_CMD_REMOVE_ADMIN),
-            error_msg_key=(
-                _("Admin with ID {telegram_id} not found or failed to remove.")
-            ),
-            invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric ID."),
-            header_msg_key=_("Action Results:"),
-            settings=self.settings,
-            cache=self.cache,
-            event_bus=self.event_bus,
-            admin_repo=self.uow.admins,
-            user_repo=self.uow.users,
-        )
+        async with self.uow:  # Added
+            await _manage_admin_ids(
+                tt_message=tt_message,
+                args_str=args_str,
+                translator=translator,
+                repo_action=self.uow.admins.delete,
+                is_add_action=False,
+                prompt_msg_key=_(
+                    "Please provide Telegram IDs. Example: {cmd} 12345678"
+                ).format(cmd=tt_cmds.TT_CMD_REMOVE_ADMIN),
+                error_msg_key=(
+                    _("Admin with ID {telegram_id} not found or failed to remove.")
+                ),
+                invalid_id_msg_key=_("'{telegram_id_str}' is not a valid numeric ID."),
+                header_msg_key=_("Action Results:"),
+                settings=self.settings,
+                cache=self.cache,
+                event_bus=self.event_bus,
+                admin_repo=self.uow.admins,
+                user_repo=self.uow.users,
+            )
