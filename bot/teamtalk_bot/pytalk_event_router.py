@@ -273,7 +273,7 @@ class PytalkEventRouter:
         )
 
         event = event_class(
-            user_nickname=connection.ttstr(user.nickname),
+            user_nickname=connection.ttstr(user.nickname).strip(),
             username=connection.ttstr(user.username),
             user_id=user.id,
             server_name=server_name,

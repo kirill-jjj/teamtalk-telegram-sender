@@ -49,19 +49,17 @@ def get_effective_server_name(
 ) -> str:
     """Determines the effective server name to display.
 
-    It prioritizes the server name from `app_cfg.SERVER_NAME`.
+    It prioritizes the server name from `app_cfg.teamtalk.server_name`.
     If not set, it attempts to fetch it from the TeamTalk instance.
     Falls back to "Unknown Server" if unavailable.
-
-    Args:
-        tt_instance: The TeamTalk instance, or None.
-        translator: The gettext translator object.
-        app_cfg: The application configuration object.
-
-    Returns:
-        The server name string.
     """
     _ = translator.gettext
+
+    # Prioritize the server name from app_cfg.teamtalk.server_name
+    if app_cfg.teamtalk.server_name:
+        return app_cfg.teamtalk.server_name
+
+    # If not set in config, attempt to fetch it from the TeamTalk instance
     server_name_from_instance: str | None = None
     if tt_instance and tt_instance.connected:
         try:
@@ -76,8 +74,8 @@ def get_effective_server_name(
 
     if server_name_from_instance:
         return server_name_from_instance
-    if app_cfg.teamtalk.server_name:
-        return app_cfg.teamtalk.server_name
+
+    # Fallback
     return _("Unknown Server")
 
 

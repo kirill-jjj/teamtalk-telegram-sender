@@ -45,7 +45,8 @@ class CommandRouter:
             async with self.dishka_container(
                 context={TeamTalkMessage: tt_message, NullTranslations: translator}
             ) as request_container:
-                await request_container.execute(on_help)
+                on_help_callable = await request_container.get(on_help)
+                await on_help_callable(tt_message, translator)
             return
 
         if cmd not in [
