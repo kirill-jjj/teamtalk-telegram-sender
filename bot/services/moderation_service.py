@@ -107,7 +107,7 @@ class ModerationService:
         # msgstr "User {telegram_id} was successfully unbanned."
         return OperationResult(
             success=True,
-            message_key=_("unban_success"),
+            message_key=_("User has been successfully unbanned."),
             message_args={"telegram_id": telegram_id},
         )
 

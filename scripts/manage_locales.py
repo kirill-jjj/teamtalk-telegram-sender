@@ -6,6 +6,17 @@ import subprocess
 import sys
 import tomllib
 
+if sys.platform == "win32":
+    import os
+    # Set console encoding to UTF-8 for Windows
+    # This might not be strictly necessary if sys.stdout.reconfigure works,
+    # but it's a common practice for Windows console output.
+    os.system("chcp 65001 > nul") # Change console codepage to UTF-8
+
+    # Reconfigure stdout and stderr to use UTF-8
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 PROJECT_NAME = "teamtalk-telegram-sender"
 COPYRIGHT_HOLDER = "kirill-jjj"
 BABEL_CONFIG = "babel.cfg"
@@ -71,7 +82,7 @@ def extract() -> None:
         # Assuming source files are scanned from BASE_DIR
         ".",
     ]
-    print(f"▶️  Executing: {' '.join(command)}")
+    print(f"--- Executing: {' '.join(command)}")
     try:
         subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
@@ -103,7 +114,7 @@ def update() -> None:
         LOCALE_DOMAIN,
         "--previous",  # Use .po~ backup files
     ]
-    print(f"▶️  Executing: {' '.join(command)}")
+    print(f"--- Executing: {' '.join(command)}")
     try:
         subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
@@ -128,7 +139,7 @@ def compile_cmd() -> None:
         LOCALE_DOMAIN,
         "--statistics",
     ]
-    print(f"▶️  Executing: {' '.join(command)}")
+    print(f"--- Executing: {' '.join(command)}")
     try:
         result = subprocess.run(  # noqa: S603
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
