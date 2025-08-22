@@ -2,6 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 import functools
+from gettext import NullTranslations
 import logging
 from typing import Any
 
@@ -12,10 +13,12 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
+from bot.config import Settings
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.telegram_bot.formatters import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 
@@ -195,15 +198,15 @@ class PytalkEventRouter:
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
-        # This is a trick to ensure the connection provider runs and populates
-        # the connections dict before the router is initialized.
-        _connection_starter: TeamTalkConnection,
+        translator_factory: Callable[[str], NullTranslations],
+        _connection_starter: TeamTalkConnection | None,  # noqa: ARG002
     ) -> None:
         """Initializes the PytalkEventRouter."""
         self.app_container = app_container
         self.tt_bot = tt_bot
         self.connections = connections
         self.event_bus = event_bus
+        self.translator_factory = translator_factory
         self.logger = logging.getLogger(__name__)
         self._register_pytalk_event_handlers()
         self.logger.info(
@@ -257,11 +260,12 @@ class PytalkEventRouter:
         if not connection.instance:
             return
 
-        # This is now incorrect, translator_factory is not on self
-        # This logic needs to move to the event handler itself.
-        # For now, we publish the event without the formatted server name.
-        # The handler will need to fetch the translator.
-        server_name = connection.server_info.host  # Fallback
+        # The router now has the translator factory and can get the settings
+        # from the connection object to resolve the effective server name.
+        translator = self.translator_factory(connection.settings.general.default_lang)
+        server_name = get_effective_server_name(
+            connection.instance, translator, connection.settings
+        )
 
         event = event_class(
             user_nickname=connection.ttstr(user.nickname).strip(),

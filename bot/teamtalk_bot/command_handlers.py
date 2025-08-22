@@ -282,27 +282,29 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        await _handle_deeplink_command(
-            tt_message,
-            self.uow,
-            translator,
-            self.settings,
-            self.cache,
-            DeeplinkAction.SUBSCRIBE,
-        )
+        async with self.uow:
+            await _handle_deeplink_command(
+                tt_message,
+                self.uow,
+                translator,
+                self.settings,
+                self.cache,
+                DeeplinkAction.SUBSCRIBE,
+            )
 
     async def on_unsubscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
         """Handles the unsubscribe command."""
-        await _handle_deeplink_command(
-            tt_message,
-            self.uow,
-            translator,
-            self.settings,
-            self.cache,
-            DeeplinkAction.UNSUBSCRIBE,
-        )
+        async with self.uow:
+            await _handle_deeplink_command(
+                tt_message,
+                self.uow,
+                translator,
+                self.settings,
+                self.cache,
+                DeeplinkAction.UNSUBSCRIBE,
+            )
 
     @_is_tt_admin
     async def on_add_admin(
@@ -312,12 +314,13 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the add admin command."""
-        await self._manage_admin_ids(
-            tt_message=tt_message,
-            args_str=args_str,
-            translator=translator,
-            is_add_action=True,
-        )
+        async with self.uow:
+            await self._manage_admin_ids(
+                tt_message=tt_message,
+                args_str=args_str,
+                translator=translator,
+                is_add_action=True,
+            )
 
     @_is_tt_admin
     async def on_remove_admin(
@@ -327,12 +330,13 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the remove admin command."""
-        await self._manage_admin_ids(
-            tt_message=tt_message,
-            args_str=args_str,
-            translator=translator,
-            is_add_action=False,
-        )
+        async with self.uow:
+            await self._manage_admin_ids(
+                tt_message=tt_message,
+                args_str=args_str,
+                translator=translator,
+                is_add_action=False,
+            )
 
     async def _manage_admin_ids(
         self,

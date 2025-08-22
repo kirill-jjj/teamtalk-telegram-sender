@@ -152,14 +152,14 @@ class AppProvider(Provider):
             user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
         )
 
-    @provide(provides=TeamTalkConnection)
+    @provide(provides=TeamTalkConnection | None)
     async def get_tt_connection(
         self,
         settings: FromDishka[Settings],
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
         connections: FromDishka[dict[str, TeamTalkConnection]],
-    ) -> AsyncGenerator[TeamTalkConnection, None]:
+    ) -> AsyncGenerator[TeamTalkConnection | None, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
         tt_config = settings.teamtalk
         server_info = pytalk.TeamTalkServerInfo(
@@ -190,12 +190,18 @@ class AppProvider(Provider):
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         connections[server_key] = connection
 
-        if not await connection.connect():
-            raise TeamTalkConnectionError(
-                f"Failed to connect to TeamTalk server {server_key}"
+        try:
+            if not await connection.connect():
+                raise TeamTalkConnectionError(
+                    f"Failed to connect to TeamTalk server {server_key}"
+                )
+            yield connection
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Failed to establish TeamTalk connection. Bot will run without it."
             )
-
-        yield connection
+            yield None
+            return
 
         await connection.disconnect_instance()
 
@@ -206,7 +212,8 @@ class AppProvider(Provider):
         tt_bot: FromDishka[pytalk.TeamTalkBot],
         connections: FromDishka[dict[str, TeamTalkConnection]],
         event_bus: FromDishka[EventBus],
-        _connection_starter: FromDishka[TeamTalkConnection],
+        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        _connection_starter: FromDishka[TeamTalkConnection | None],
     ) -> "PytalkEventRouter":
         """Provides the Pytalk event router."""
         return PytalkEventRouter(
@@ -214,7 +221,9 @@ class AppProvider(Provider):
             tt_bot=tt_bot,
             connections=connections,
             event_bus=event_bus,
-        )  # type: ignore[call-arg]
+            translator_factory=translator_factory,
+            _connection_starter=_connection_starter,
+        )
 
     @provide
     def get_notification_recipient_service(

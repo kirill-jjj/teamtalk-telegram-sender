@@ -240,6 +240,7 @@ class TeamTalkConnection:
 
     async def on_my_login(self, server: PytalkServer) -> None:
         """Handles the bot's own login event for this connection."""
+        logger.info("[%s] on_my_login event received.", self.server_info.host)
         # The 'server' argument is part of Pytalk's event signature but not used here.
         _ = server  # Mark as unused to satisfy linters like Ruff (ARG002)
         self.login_complete_time = None
