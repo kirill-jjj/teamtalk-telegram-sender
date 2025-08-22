@@ -14,6 +14,7 @@ from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
 from bot.command_bus.bus import CommandBus
+from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
@@ -208,6 +209,36 @@ class AppProvider(Provider):
         """Provides the TeamTalk reply handler."""
         return TeamTalkReplyHandler(connections=connections)
 
+    @provide(provides=TeamTalkConnection | None)
+    def get_tt_connection(
+        self, connections: FromDishka[dict[str, TeamTalkConnection]]
+    ) -> TeamTalkConnection | None:
+        """Provides the active TeamTalk connection."""
+        if not connections:
+            return None
+        return next(iter(connections.values()), None)
+
+    @provide
+    def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
+        """Provides a ReportService."""
+        return ReportService(settings=settings)
+
+    @provide
+    def get_teamtalk_command_handlers(
+        self,
+        tt_connection: FromDishka[TeamTalkConnection | None],
+        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        report_service: FromDishka[ReportService],
+    ) -> TeamTalkCommandHandlers | None:
+        """Provides the TeamTalk command handlers if a connection is available."""
+        if not tt_connection:
+            return None
+        return TeamTalkCommandHandlers(
+            tt_connection=tt_connection,
+            translator_factory=translator_factory,
+            report_service=report_service,
+        )
+
 
 class RequestProvider(Provider):
     """Provides request-scoped dependencies."""
@@ -277,11 +308,6 @@ class RequestProvider(Provider):
         return ModerationService(uow, subscription_service, cache)
 
     @provide
-    def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
-        """Provides a ReportService."""
-        return ReportService(settings=settings)
-
-    @provide
     def get_user_from_event(self, event: TelegramObject) -> User | None:
         """Extracts the User object from the incoming event, if it exists.
 
@@ -333,12 +359,3 @@ class RequestProvider(Provider):
             else settings.general.default_lang
         )
         return translator_factory(lang_code)
-
-    @provide(provides=TeamTalkConnection | None)
-    def get_tt_connection(
-        self, connections: FromDishka[dict[str, TeamTalkConnection]]
-    ) -> TeamTalkConnection | None:
-        """Provides the active TeamTalk connection."""
-        if not connections:
-            return None
-        return next(iter(connections.values()), None)

@@ -21,8 +21,6 @@ from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
-from bot.services.report_service import ReportService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -52,6 +50,7 @@ async def on_startup(  # noqa: PLR0915
     command_bus: FromDishka[CommandBus],
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
+    tt_handlers: FromDishka[TeamTalkCommandHandlers | None],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -116,18 +115,7 @@ async def on_startup(  # noqa: PLR0915
     logger.info("Telegram bot commands set.")
 
     # Register command handlers
-    connections = None
-    dishka_container = dispatcher.workflow_data.get("dishka_container")
-    if dishka_container:
-        connections = await dishka_container.get(dict[str, TeamTalkConnection])
-
-    if connections:
-        main_connection = next(iter(connections.values()))
-        report_service = ReportService(settings=settings)
-        tt_handlers = TeamTalkCommandHandlers(
-            main_connection, translator_factory, report_service
-        )
-
+    if tt_handlers:
         command_bus.register(GetOnlineUsersCommand, tt_handlers.handle_get_online_users)
         command_bus.register(KickUserCommand, tt_handlers.handle_kick_user)
         command_bus.register(BanUserCommand, tt_handlers.handle_ban_user)
