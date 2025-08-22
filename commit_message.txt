@@ -1,13 +1,8 @@
-refactor: Remove ActiveTeamTalkConnectionMiddleware
+fix: Revert incorrect Scope.TRANSIENT usage in UoW provider
 
-The `ActiveTeamTalkConnectionMiddleware` has been removed.
-TeamTalkConnection is now directly injected into handlers and services
-using Dishka's dependency injection mechanism, simplifying the architecture
-and reducing reliance on middleware for dependency resolution.
+Reverted the previous change that incorrectly added `scope=Scope.TRANSIENT`
+to the `get_uow` provider. In Dishka, the transient scope behavior (creating
+a new instance on each request) is the default when no explicit scope is
+specified.
 
-This change includes:
-- Deletion of `bot/telegram_bot/middlewares/teamtalk_connection.py`.
-- Removal of middleware registration in `sender.py` and handler routers.
-- Direct injection of `TeamTalkConnection` in relevant handlers.
-- Removal of `tt_connection` from `WorkflowData` as it's no longer passed via middleware.
-- Removal of `require_tt_connection` and `ensure_tt_user_exists` decorators.
+This fixes the `AttributeError: TRANSIENT` encountered during bot startup.
