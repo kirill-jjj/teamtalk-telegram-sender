@@ -47,6 +47,7 @@ class MessageHandler:
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
         command_handlers: PrivateMessageCommandHandlers,
+        connection: TeamTalkConnection,
     ) -> None:
         """Initializes the message handler with injected dependencies."""
         self.command_router = command_router
@@ -55,10 +56,6 @@ class MessageHandler:
         self.cache = cache
         self.translator_factory = translator_factory
         self.command_handlers = command_handlers
-        self.connection: TeamTalkConnection | None = None
-
-    def set_connection(self, connection: TeamTalkConnection) -> None:
-        """Sets the connection context for the handler."""
         self.connection = connection
 
     async def route_message(self, tt_message: TeamTalkMessage) -> None:

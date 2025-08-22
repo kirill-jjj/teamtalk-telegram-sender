@@ -21,6 +21,7 @@ from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -50,8 +51,9 @@ async def on_startup(  # noqa: PLR0915
     command_bus: FromDishka[CommandBus],
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
-    tt_handlers: FromDishka[TeamTalkCommandHandlers | None],
+    tt_handlers: FromDishka[TeamTalkCommandHandlers],
     _tt_event_handler: FromDishka[PytalkEventRouter],
+    _tt_connection: FromDishka[TeamTalkConnection],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
@@ -115,16 +117,10 @@ async def on_startup(  # noqa: PLR0915
     logger.info("Telegram bot commands set.")
 
     # Register command handlers
-    if tt_handlers:
-        command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
-        command_bus.register(KickUserCommand, tt_handlers.kick_user)
-        command_bus.register(BanUserCommand, tt_handlers.ban_user)
-        logger.info("Command handlers registered.")
-    else:
-        logger.warning(
-            "No TeamTalk connections found during startup, "
-            "command handlers not registered."
-        )
+    command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
+    command_bus.register(KickUserCommand, tt_handlers.kick_user)
+    command_bus.register(BanUserCommand, tt_handlers.ban_user)
+    logger.info("Command handlers registered.")
 
     logger.info("Subscribing event handlers...")
     event_bus.subscribe(UserJoinedEvent, telegram_handler.handle_user_joined)

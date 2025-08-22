@@ -198,7 +198,6 @@ class PytalkEventRouter:
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
         translator_factory: Callable[[str], NullTranslations],
-        _connection_starter: TeamTalkConnection | None,
     ) -> None:
         """Initializes the PytalkEventRouter."""
         self.app_container = app_container
@@ -313,7 +312,6 @@ class PytalkEventRouter:
             context={TeamTalkMessage: message, TeamTalkConnection: connection}
         ) as request_container:
             message_handler = await request_container.get(MessageHandler)
-            message_handler.set_connection(connection)
             await message_handler.route_message(message)
 
     @route_event_to_connection

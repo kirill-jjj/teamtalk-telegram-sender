@@ -1,48 +1,35 @@
 """Dishka providers for dependency injection."""
 
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable
 import gettext
 from gettext import NullTranslations
-import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
-from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
-import pytalk
+from dishka import FromDishka, Provider, Scope, provide
 
 from bot.command_bus.bus import CommandBus
-from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
-from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
-from bot.core.exceptions import TeamTalkConnectionError
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
 from bot.services.notification_service import NotificationRecipientService
-from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
 from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
-
-if TYPE_CHECKING:
-    from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
 
 def create_translator_factory(
@@ -109,20 +96,14 @@ class AppProvider(Provider):
         """Provides the aiogram Dispatcher."""
         return Dispatcher()
 
-    @provide
-    def get_teamtalk_bot(self, settings: Settings) -> pytalk.TeamTalkBot:
-        """Provides the TeamTalk bot instance."""
-        return pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
+
 
     @provide
     def get_translator_cache(self) -> dict[str, NullTranslations]:
         """Provides a cache for translator objects."""
         return {}
 
-    @provide
-    def get_connections_dict(self) -> dict[str, TeamTalkConnection]:
-        """Provides a dictionary for active TeamTalk connections."""
-        return {}
+
 
     @provide
     def get_available_languages(self) -> list[LanguageInfo]:
@@ -153,80 +134,9 @@ class AppProvider(Provider):
             user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
         )
 
-    @provide(provides=TeamTalkConnection | None)
-    async def get_tt_connection(
-        self,
-        settings: FromDishka[Settings],
-        pytalk_bot: FromDishka[pytalk.TeamTalkBot],
-        event_bus: FromDishka[EventBus],
-        connections: FromDishka[dict[str, TeamTalkConnection]],
-    ) -> AsyncGenerator[TeamTalkConnection | None, None]:
-        """Provider for TeamTalkConnection with managed lifecycle."""
-        await pytalk_bot._async_setup_hook()
-        tt_config = settings.teamtalk
-        server_info = pytalk.TeamTalkServerInfo(
-            host=tt_config.host_name,
-            tcp_port=tt_config.port,
-            udp_port=tt_config.port,
-            username=tt_config.user_name,
-            password=tt_config.password,
-            encrypted=tt_config.encrypted,
-            nickname=settings.teamtalk.nick_name,
-            join_channel_id=int(tt_config.channel)
-            if tt_config.channel.isdigit()
-            else INVALID_CHANNEL_ID,
-            join_channel_password=tt_config.channel_password or "",
-        )
 
-        conn_manager = TeamTalkConnectionManager(pytalk_bot)
-        cache_manager = TeamTalkCache(settings)
 
-        connection = TeamTalkConnection(
-            server_info=server_info,
-            settings=settings,
-            event_bus=event_bus,
-            connection_manager=conn_manager,
-            cache_manager=cache_manager,
-        )
 
-        server_key = f"{server_info.host}:{server_info.tcp_port}"
-        connections[server_key] = connection
-
-        def _raise_connection_error() -> None:
-            raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED)
-
-        try:
-            if not await connection.connect():
-                _raise_connection_error()
-            yield connection
-        except Exception:
-            logging.getLogger(__name__).exception(
-                "Failed to establish TeamTalk connection. Bot will run without it."
-            )
-            yield None
-            return
-
-        await connection.disconnect_instance()
-
-    @provide
-    def get_pytalk_event_router(
-        self,
-        app_container: FromDishka[AsyncContainer],
-        tt_bot: FromDishka[pytalk.TeamTalkBot],
-        connections: FromDishka[dict[str, TeamTalkConnection]],
-        event_bus: FromDishka[EventBus],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
-        _connection_starter: FromDishka[TeamTalkConnection | None],
-    ) -> "PytalkEventRouter":
-        """Provides the Pytalk event router."""
-        return PytalkEventRouter(
-            app_container=app_container,
-            tt_bot=tt_bot,
-            connections=connections,
-            event_bus=event_bus,
-            translator_factory=translator_factory,
-            _connection_starter=_connection_starter,
-        )
 
     @provide
     def get_notification_recipient_service(
@@ -259,34 +169,11 @@ class AppProvider(Provider):
             recipient_service=recipient_service,
         )
 
-    @provide
-    def get_teamtalk_reply_handler(
-        self,
-        connections: FromDishka[dict[str, TeamTalkConnection]],
-    ) -> TeamTalkReplyHandler:
-        """Provides the TeamTalk reply handler."""
-        return TeamTalkReplyHandler(connections=connections)
 
-    @provide
-    def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
-        """Provides a ReportService."""
-        return ReportService(settings=settings)
 
-    @provide
-    def get_teamtalk_command_handlers(
-        self,
-        tt_connection: FromDishka[TeamTalkConnection | None],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
-        report_service: FromDishka[ReportService],
-    ) -> TeamTalkCommandHandlers | None:
-        """Provides the TeamTalk command handlers if a connection is available."""
-        if not tt_connection:
-            return None
-        return TeamTalkCommandHandlers(
-            tt_connection=tt_connection,
-            translator_factory=translator_factory,
-            report_service=report_service,
-        )
+
+
+
 
 
 class RequestProvider(Provider):
@@ -308,6 +195,7 @@ class RequestProvider(Provider):
         cache: FromDishka[CacheService],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
         command_handlers: FromDishka[PrivateMessageCommandHandlers],
+        connection: FromDishka[TeamTalkConnection],
     ) -> MessageHandler:
         """Provides a MessageHandler instance for a request."""
         return MessageHandler(
@@ -317,6 +205,7 @@ class RequestProvider(Provider):
             cache=cache,
             translator_factory=translator_factory,
             command_handlers=command_handlers,
+            connection=connection,
         )
 
     @provide
