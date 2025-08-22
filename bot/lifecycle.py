@@ -116,9 +116,9 @@ async def on_startup(  # noqa: PLR0915
 
     # Register command handlers
     if tt_handlers:
-        command_bus.register(GetOnlineUsersCommand, tt_handlers.handle_get_online_users)
-        command_bus.register(KickUserCommand, tt_handlers.handle_kick_user)
-        command_bus.register(BanUserCommand, tt_handlers.handle_ban_user)
+        command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
+        command_bus.register(KickUserCommand, tt_handlers.kick_user)
+        command_bus.register(BanUserCommand, tt_handlers.ban_user)
         logger.info("Command handlers registered.")
     else:
         logger.warning(

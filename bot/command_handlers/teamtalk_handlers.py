@@ -42,7 +42,7 @@ class TeamTalkCommandHandlers:
         self._translator_factory = translator_factory
         self._report_service = report_service
 
-    async def handle_get_online_users(
+    async def get_online_users(
         self, command: GetOnlineUsersCommand
     ) -> GetOnlineUsersResult:
         """Handles the command to get online users."""
@@ -65,7 +65,7 @@ class TeamTalkCommandHandlers:
             users=list(self._tt_connection.cache_manager.online_users_cache.values()),
         )
 
-    async def handle_kick_user(self, command: KickUserCommand) -> ModerationResult:
+    async def kick_user(self, command: KickUserCommand) -> ModerationResult:
         """Handles the command to kick a user."""
         translator = self._translator_factory(
             "en"
@@ -78,7 +78,7 @@ class TeamTalkCommandHandlers:
             translator=translator,
         )
 
-    async def handle_ban_user(self, command: BanUserCommand) -> ModerationResult:
+    async def ban_user(self, command: BanUserCommand) -> ModerationResult:
         """Handles the command to ban a user."""
         translator = self._translator_factory(
             "en"
