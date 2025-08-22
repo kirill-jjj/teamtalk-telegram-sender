@@ -17,7 +17,7 @@ from bot.commands import (
 )
 from bot.services.report_service import ReportService
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.telegram_bot.formatters import get_tt_user_display_name
+from bot.teamtalk_bot.formatters import get_tt_user_display_name
 
 logger = logging.getLogger(__name__)
 

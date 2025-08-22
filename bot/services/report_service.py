@@ -16,7 +16,7 @@ from bot.constants import (
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.telegram_bot.formatters import (
+from bot.teamtalk_bot.formatters import (
     get_effective_server_name,
     get_tt_user_display_name,
 )

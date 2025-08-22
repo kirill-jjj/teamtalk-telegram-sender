@@ -19,7 +19,7 @@ from bot.teamtalk_bot.command_handlers import (
     _send_long_tt_reply,
 )
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
-from bot.telegram_bot.formatters import (
+from bot.teamtalk_bot.formatters import (
     get_effective_server_name,
     get_tt_user_display_name,
 )

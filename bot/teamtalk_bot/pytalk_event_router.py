@@ -16,8 +16,8 @@ from pytalk.user import User as PytalkUser
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
+from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.telegram_bot.formatters import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 

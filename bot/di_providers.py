@@ -96,14 +96,10 @@ class AppProvider(Provider):
         """Provides the aiogram Dispatcher."""
         return Dispatcher()
 
-
-
     @provide
     def get_translator_cache(self) -> dict[str, NullTranslations]:
         """Provides a cache for translator objects."""
         return {}
-
-
 
     @provide
     def get_available_languages(self) -> list[LanguageInfo]:
@@ -133,10 +129,6 @@ class AppProvider(Provider):
         return CacheService(
             user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
         )
-
-
-
-
 
     @provide
     def get_notification_recipient_service(
@@ -168,12 +160,6 @@ class AppProvider(Provider):
             event_bus=event_bus,
             recipient_service=recipient_service,
         )
-
-
-
-
-
-
 
 
 class RequestProvider(Provider):

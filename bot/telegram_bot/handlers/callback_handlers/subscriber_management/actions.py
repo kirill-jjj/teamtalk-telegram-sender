@@ -24,9 +24,7 @@ from bot.telegram_bot.callback_data import (
     SubscriberListCallback,
     ViewSubscriberCallback,
 )
-from bot.telegram_bot.formatters import (
-    format_subscriber_details,
-)
+from bot.telegram_bot.formatters import format_subscriber_details
 from bot.telegram_bot.handlers.callback_handlers.list_utils import (
     _show_subscriber_list_page,
 )

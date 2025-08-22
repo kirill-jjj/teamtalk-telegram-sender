@@ -39,6 +39,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 @inject
 async def on_shutdown(
     dispatcher: FromDishka[Dispatcher],

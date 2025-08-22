@@ -24,6 +24,7 @@ from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
 logger = logging.getLogger(__name__)
 
+
 def _thread_safe_dispatch(
     bot_instance: pytalk.TeamTalkBot,
     event: str,
@@ -48,6 +49,7 @@ def _thread_safe_dispatch(
 
 class TeamTalkProvider(Provider):
     """Provides application-scoped dependencies related to TeamTalk."""
+
     scope = Scope.APP
 
     @provide(provides=pytalk.TeamTalkBot)
@@ -73,7 +75,7 @@ class TeamTalkProvider(Provider):
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
         connections: FromDishka[dict[str, TeamTalkConnection]],
-        _router: FromDishka[PytalkEventRouter], # Add _router dependency back
+        _router: FromDishka[PytalkEventRouter],  # Add _router dependency back
     ) -> AsyncGenerator[TeamTalkConnection, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
         tt_config = settings.teamtalk
@@ -118,7 +120,7 @@ class TeamTalkProvider(Provider):
             # 4. Гарантированно отключаемся при завершении
             logging.getLogger(__name__).info("Disconnecting from TeamTalk server...")
             if connection.instance:
-                 await asyncio.to_thread(connection.disconnect_instance)
+                await asyncio.to_thread(connection.disconnect_instance)
 
     @provide
     def get_pytalk_event_router(
