@@ -21,7 +21,6 @@ from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
 from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -52,18 +51,16 @@ async def on_startup(
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
     tt_handlers: FromDishka[TeamTalkCommandHandlers],
-    _tt_event_handler: FromDishka[PytalkEventRouter], # Explicitly request
-    _tt_connection: FromDishka[TeamTalkConnection], # Explicitly request
+    _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
     logger.info("Application startup...")
 
-    # await tt_bot._async_setup_hook() now here
-    await tt_bot._async_setup_hook()
-
+    # Запускаем цикл обработки событий pytalk в фоне
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
+        # _async_setup_hook теперь вызывается в провайдере
         task_name = "teamtalk_bot_task_dispatcher"
         teamtalk_task = asyncio.create_task(tt_bot._start(), name=task_name)
         dispatcher.workflow_data["teamtalk_task"] = teamtalk_task
@@ -71,6 +68,7 @@ async def on_startup(
     else:
         logger.info("Pytalk main event loop task is already running.")
 
+    # Логика подключения теперь полностью внутри провайдера, здесь она не нужна.
     logger.info("Loading all caches from database...")
     async with SqlModelUnitOfWork(session_factory) as uow:
         db_admin_ids = await uow.admins.get_all_ids()

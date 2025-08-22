@@ -8,12 +8,18 @@ from types import ModuleType  # For uvloop typing
 
 from aiogram import Dispatcher
 from dishka import make_async_container
-from dishka.integrations.aiogram import AiogramProvider, setup_dishka
+from dishka.integrations.aiogram import (
+    AiogramProvider,
+    FromDishka,
+    inject,
+    setup_dishka,
+)
 
 from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
 from bot.lifecycle import on_startup
 from bot.logging_setup import setup_logging
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.provider import TeamTalkProvider
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
@@ -32,6 +38,24 @@ except ImportError:
     pass  # uvloop remains None
 
 logger = logging.getLogger(__name__)
+
+@inject
+async def on_shutdown(
+    dispatcher: FromDishka[Dispatcher],
+    tt_connection: FromDishka[TeamTalkConnection],
+) -> None:
+    """Handles application shutdown."""
+    logger.info("Application shutting down...")
+    if tt_connection:
+        await asyncio.to_thread(tt_connection.disconnect_instance)
+
+    teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
+    if teamtalk_task and not teamtalk_task.done():
+        teamtalk_task.cancel()
+        try:
+            await teamtalk_task
+        except asyncio.CancelledError:
+            logger.info("TeamTalk event loop task cancelled.")
 
 
 class Application:
@@ -74,6 +98,7 @@ class Application:
 
         # Register startup handler to be executed when the bot starts
         self.dp.startup.register(on_startup)
+        self.dp.shutdown.register(on_shutdown)
 
         # Set up dishka for aiogram integration
         setup_dishka(container, router=self.dp, auto_inject=True)

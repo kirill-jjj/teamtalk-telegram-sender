@@ -47,8 +47,8 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # as it allows concurrent reads and writes, reducing "database is locked" errors.
     @event.listens_for(Engine, "connect")
     def set_sqlite_pragma(
-        dbapi_connection: Any,  # noqa: ANN401
-        _connection_record: Any,  # noqa: ANN401
+        dbapi_connection: Any,
+        _connection_record: Any,
     ) -> None:
         """Set SQLite PRAGMA for new connections."""
         # In aiosqlite execute() is async, but here we operate at the raw DBAPI

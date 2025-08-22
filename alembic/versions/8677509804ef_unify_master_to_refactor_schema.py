@@ -37,7 +37,7 @@ def _column_exists(
     return column_name in columns
 
 
-def upgrade() -> None:  # noqa: PLR0912, PLR0915
+def upgrade() -> None:  # noqa: PLR0912
     """
     This function updates the database schema from the 'master' branch state
     to the 'refactor' branch state, OR initializes a new database to the

@@ -56,8 +56,8 @@ def with_view_refresh(
         @functools.wraps(func)
         async def wrapper(
             query: CallbackQuery,
-            *args: Any,  # noqa: ANN401
-            **kwargs: Any,  # noqa: ANN401
+            *args: Any,
+            **kwargs: Any,
         ) -> None:
             """Wrapper function for the with_view_refresh decorator."""
             # Call the original handler function
@@ -103,9 +103,9 @@ def ensure_message_context(func: F) -> F:
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any | None:
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())
         )
@@ -139,9 +139,9 @@ def require_tt_connection(func: F) -> F:
     @functools.wraps(func)
     async def wrapper(
         message_or_query: Message | CallbackQuery,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any | None:
         translator = cast(
             NullTranslations, kwargs.get("translator", NullTranslations())
         )
@@ -179,9 +179,9 @@ def ensure_tt_user_exists(func: F) -> F:
         callback_data: T,
         translator: NullTranslations,
         tt_connection: TeamTalkConnection,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any | None:  # noqa: ANN401
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any | None:
         _ = translator.gettext
 
         if not tt_connection.instance:

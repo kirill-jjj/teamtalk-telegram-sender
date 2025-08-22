@@ -1,8 +1,11 @@
 """Dishka providers specific to the TeamTalk bot components."""
 
+import asyncio
 from collections.abc import AsyncGenerator, Callable
+import functools  # Убедитесь, что этот импорт есть
 from gettext import NullTranslations
 import logging
+from typing import Any  # Add this import
 
 from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
@@ -19,16 +22,44 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
+logger = logging.getLogger(__name__)
+
+def _thread_safe_dispatch(
+    bot_instance: pytalk.TeamTalkBot,
+    event: str,
+    /,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
+    """Thread-safe version of the dispatch method for pytalk.
+
+    Uses call_soon_threadsafe to call _schedule_event in the main asyncio loop.
+    """
+    try:
+        coro = getattr(bot_instance, "on_" + event)
+        bot_instance.loop.call_soon_threadsafe(
+            bot_instance._schedule_event, coro, "on_" + event, *args, **kwargs
+        )
+    except AttributeError:
+        pass  # Игнорируем события без обработчиков
+    except Exception:
+        logger.exception("Error in thread-safe dispatch.")
+
 
 class TeamTalkProvider(Provider):
     """Provides application-scoped dependencies related to TeamTalk."""
-
     scope = Scope.APP
 
-    @provide
-    def get_teamtalk_bot(self, settings: FromDishka[Settings]) -> pytalk.TeamTalkBot:
-        """Provides the TeamTalk bot instance."""
-        return pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
+    @provide(provides=pytalk.TeamTalkBot)
+    async def get_patched_pytalk_bot(
+        self, settings: FromDishka[Settings]
+    ) -> pytalk.TeamTalkBot:
+        """Creates, configures, and patches the TeamTalkBot instance."""
+        bot = pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
+        await bot._async_setup_hook()
+        logger.info("Applying thread-safe patch to pytalk dispatcher.")
+        bot.dispatch = functools.partial(_thread_safe_dispatch, bot)
+        return bot
 
     @provide
     def get_connections_dict(self) -> dict[str, TeamTalkConnection]:
@@ -42,7 +73,7 @@ class TeamTalkProvider(Provider):
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
         connections: FromDishka[dict[str, TeamTalkConnection]],
-        _router: FromDishka[PytalkEventRouter],
+        _router: FromDishka[PytalkEventRouter], # Add _router dependency back
     ) -> AsyncGenerator[TeamTalkConnection, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
         tt_config = settings.teamtalk
@@ -74,20 +105,20 @@ class TeamTalkProvider(Provider):
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         connections[server_key] = connection
 
-        def _raise_connection_error() -> None:
-            raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED)
-
         try:
-            if not await connection.connect():
-                _raise_connection_error()
-            yield connection
-        except Exception as e:
-            logging.getLogger(__name__).exception(
-                "Failed to establish TeamTalk connection. Bot will run without it."
-            )
-            raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED) from e
+            # 2. Выполняем блокирующее подключение в отдельном потоке
+            is_connected = await asyncio.to_thread(connection.connect)
+            if not is_connected:
+                raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED)
 
-        await connection.disconnect_instance()
+            # 3. Передаем готовое и подключенное соединение в приложение
+            yield connection
+
+        finally:
+            # 4. Гарантированно отключаемся при завершении
+            logging.getLogger(__name__).info("Disconnecting from TeamTalk server...")
+            if connection.instance:
+                 await asyncio.to_thread(connection.disconnect_instance)
 
     @provide
     def get_pytalk_event_router(

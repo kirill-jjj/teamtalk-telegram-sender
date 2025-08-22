@@ -36,9 +36,9 @@ def route_event_to_connection(
     @functools.wraps(handler_method_on_event_handler_class)
     async def wrapper(
         self_event_handler: "PytalkEventRouter",
-        event_primary_obj: Any,  # noqa: ANN401 # Intentionally Any for generic event object
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        event_primary_obj: Any,  # Intentionally Any for generic event object
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """Wrapper function for the decorator to handle event routing."""
         tt_instance = None
@@ -126,11 +126,11 @@ def route_event_to_connection(
 
 async def _broadcast_event_to_all_connections(
     self_event_handler: "PytalkEventRouter",
-    event_primary_obj: Any,  # noqa: ANN401
+    event_primary_obj: Any,
     method_name_on_connection: str,
     handler_name_for_logs: str,
-    *args: Any,  # noqa: ANN401
-    **kwargs: Any,  # noqa: ANN401
+    *args: Any,
+    **kwargs: Any,
 ) -> None:
     """Helper to broadcast an event to all active TeamTalkConnection instances."""
     logger.info(

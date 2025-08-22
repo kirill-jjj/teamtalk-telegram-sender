@@ -146,8 +146,8 @@ def _is_tt_admin(
         self: PrivateMessageCommandHandlers,
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         _ = translator.gettext
         if (

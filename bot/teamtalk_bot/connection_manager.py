@@ -24,7 +24,7 @@ class TeamTalkConnectionManager:
         """Sets the connection context after initialization to avoid circular deps."""
         self.connection = connection
 
-    async def connect(self) -> bool:
+    def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
         if not self.connection:
             logger.error("ConnectionManager: connect called before connection was set.")
@@ -37,16 +37,25 @@ class TeamTalkConnectionManager:
             conn.server_info.tcp_port,
         )
         try:
-            num_instances_before = len(self.pytalk_bot.teamtalks)
-            await self.pytalk_bot.add_server(conn.server_info)
-            num_instances_after = len(self.pytalk_bot.teamtalks)
-            if num_instances_after > num_instances_before:
-                conn.instance = self.pytalk_bot.teamtalks[-1]
-                conn.mark_finalized(status=False)
-                conn.login_complete_time = None
-            else:
+            # Logic from pytalk.bot.TeamTalkBot.add_server
+            tt_instance = pytalk.instance.TeamTalkInstance(
+                self.pytalk_bot, conn.server_info
+            )
+
+            # Blocking calls
+            if not tt_instance.connect():
                 return False
+            if not tt_instance.login():
+                return False
+
+            # Success
+            self.pytalk_bot.teamtalks.append(tt_instance)
+            conn.instance = tt_instance
+            conn.mark_finalized(status=False)
+            conn.login_complete_time = None
+
         except Exception:
+            logger.exception("Failed to add and connect server.")
             return False
         else:
             return True

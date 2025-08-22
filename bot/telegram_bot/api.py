@@ -58,7 +58,7 @@ async def send_telegram_message(
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     tt_user_is_online: bool = False,
-    **kwargs: Any,  # noqa: ANN401
+    **kwargs: Any,
 ) -> bool:
     """Sends a single Telegram message to a user, allowing errors to propagate."""
     send_silently = _should_send_silently(

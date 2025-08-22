@@ -90,7 +90,7 @@ def _add_pagination_controls_generic(
     current_page: int,
     total_pages: int,
     pagination_callback_factory: "Callable[..., Any]",
-    **factory_kwargs: Any,  # noqa: ANN401
+    **factory_kwargs: Any,
 ) -> None:
     """Adds generic pagination controls (Previous/Next) to the keyboard builder."""
     _ = translator.gettext

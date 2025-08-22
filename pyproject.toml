@@ -90,6 +90,9 @@ ignore = [
     "D203",
     "D213",
     "PLR0913",
+    "PLR0915", # Ignore too many statements in a function
+    "TRY301", # Abstract `raise` to an inner function
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
     "RUF001", # Ignore ambiguous unicode character rule, as we use emojis
 ]
 fixable = ["ALL"]

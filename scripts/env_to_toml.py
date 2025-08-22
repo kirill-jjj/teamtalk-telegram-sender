@@ -10,7 +10,7 @@ from dotenv import dotenv_values  # For reading .env files
 import toml  # For writing TOML
 
 
-def parse_comma_separated_string_to_list(v: Any) -> list[str]:  # noqa: ANN401
+def parse_comma_separated_string_to_list(v: Any) -> list[str]:
     """Parses a comma-separated string into a list of stripped strings.
 
     Returns an empty list if the input is not a string or is an empty/whitespace string.
@@ -95,7 +95,7 @@ DEFAULT_EXCLUDE_DIRS = [
 ]
 
 
-def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:  # noqa: ANN401
+def convert_value(raw_value: Any, conversion_rule: ConversionRule, env_key: str) -> Any:
     """Applies the specified conversion rule to the raw value from .env."""
     # dotenv_values typically returns None if the key exists but has no value
     # (e.g. KEY=)

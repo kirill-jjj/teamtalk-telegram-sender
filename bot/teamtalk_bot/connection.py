@@ -50,9 +50,9 @@ class TeamTalkConnection:
         self._is_finalized = False
         self.ttstr = pytalk.instance.sdk.ttstr
 
-    async def connect(self) -> bool:
+    def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
-        return await self.connection_manager.connect()
+        return self.connection_manager.connect()
 
     async def disconnect_instance(self) -> None:
         """Disconnects the TeamTalk instance and cleans up resources."""

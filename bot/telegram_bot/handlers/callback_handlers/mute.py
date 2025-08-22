@@ -370,7 +370,7 @@ async def refresh_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    **kwargs: Any,  # noqa: ANN401
+    **kwargs: Any,
 ) -> None:
     """Refresher function for the manage muted menu."""
     await show_manage_muted_menu(callback_query, translator, user_settings)
