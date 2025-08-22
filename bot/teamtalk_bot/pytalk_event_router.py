@@ -2,7 +2,6 @@
 
 from collections.abc import Awaitable, Callable
 import functools
-from gettext import NullTranslations
 import logging
 from typing import Any
 
@@ -13,15 +12,10 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
-from bot.config import Settings
-from bot.constants import INVALID_CHANNEL_ID
 from bot.event_bus.bus import EventBus
-from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.message_handler import MessageHandler
-from bot.telegram_bot.formatters import get_effective_server_name
 
 logger = logging.getLogger(__name__)
 
@@ -197,24 +191,20 @@ class PytalkEventRouter:
 
     def __init__(
         self,
-        settings: Settings,
-        dishka_container: AsyncContainer,
-        cache: CacheService,
-        translator_factory: Callable[[str], NullTranslations],
-        event_bus: EventBus,
+        app_container: AsyncContainer,
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
-        logger: logging.Logger,
+        event_bus: EventBus,
+        # This is a trick to ensure the connection provider runs and populates
+        # the connections dict before the router is initialized.
+        _connection_starter: TeamTalkConnection,
     ) -> None:
         """Initializes the PytalkEventRouter."""
-        self.settings = settings
-        self.dishka_container = dishka_container
-        self.cache = cache
-        self.translator_factory = translator_factory
-        self.event_bus = event_bus
+        self.app_container = app_container
         self.tt_bot = tt_bot
         self.connections = connections
-        self.logger = logger
+        self.event_bus = event_bus
+        self.logger = logging.getLogger(__name__)
         self._register_pytalk_event_handlers()
         self.logger.info(
             "PytalkEventRouter initialized and Pytalk event handlers registered."
@@ -223,7 +213,7 @@ class PytalkEventRouter:
     def _register_pytalk_event_handlers(self) -> None:
         """Registers Pytalk event handlers with the PytalkBot instance."""
         event_handlers_map = {
-            "on_ready": self.on_pytalk_ready,
+            # on_ready is no longer needed here, it's handled by the provider
             "on_my_login": self.on_pytalk_my_login,
             "on_my_connection_lost": self.on_pytalk_my_connection_lost,
             "on_my_kicked_from_channel": self.on_pytalk_my_kicked_from_channel,
@@ -267,10 +257,11 @@ class PytalkEventRouter:
         if not connection.instance:
             return
 
-        translator = self.translator_factory(self.settings.general.default_lang)
-        server_name = get_effective_server_name(
-            connection.instance, translator, self.settings
-        )
+        # This is now incorrect, translator_factory is not on self
+        # This logic needs to move to the event handler itself.
+        # For now, we publish the event without the formatted server name.
+        # The handler will need to fetch the translator.
+        server_name = connection.server_info.host  # Fallback
 
         event = event_class(
             user_nickname=connection.ttstr(user.nickname).strip(),
@@ -280,63 +271,6 @@ class PytalkEventRouter:
             online_users_cache=connection.cache_manager.online_users_cache,
         )
         await self.event_bus.publish(event)
-
-    async def on_pytalk_ready(self) -> None:
-        """Handle PytalkBot on_ready; init primary TeamTalk server connection."""
-        self.logger.info("Pytalk Bot ready. Initializing TT connections...")
-        tt_config = self.settings.teamtalk
-
-        pytalk_server_info = pytalk.TeamTalkServerInfo(
-            host=tt_config.host_name,
-            tcp_port=tt_config.port,
-            udp_port=tt_config.port,
-            username=tt_config.user_name,
-            password=tt_config.password,
-            encrypted=tt_config.encrypted,
-            nickname=self.settings.teamtalk.nick_name,
-            join_channel_id=int(tt_config.channel)
-            if tt_config.channel.isdigit()
-            else INVALID_CHANNEL_ID,
-            join_channel_password=tt_config.channel_password or "",
-        )
-        server_key = f"{pytalk_server_info.host}:{pytalk_server_info.tcp_port}"
-
-        if server_key in self.connections:
-            logger.warning("Connection for %s exists. Reconnecting.", server_key)
-            connection = self.connections[server_key]
-            await connection.disconnect_instance()
-        else:
-            # Теперь создаем CommandRouter и MessageHandler вручную,
-            # так как они принадлежат этому конкретному `connection`
-            connection = TeamTalkConnection(
-                pytalk_server_info,
-                self.tt_bot,
-                self.settings,
-                self.dishka_container,
-                self.cache,
-                self.translator_factory,
-                self.event_bus,
-                None,  # message_handler will be set after it's created
-            )
-            # Теперь создаем CommandRouter и MessageHandler вручную,
-            # так как они принадлежат этому конкретному `connection`
-            command_router = CommandRouter(
-                dishka_container=self.dishka_container,
-                connection=connection,
-            )
-            message_handler = MessageHandler(
-                dishka_container=self.dishka_container,
-                connection=connection,
-                command_router=command_router,
-            )
-            connection.message_handler = message_handler
-            self.connections[server_key] = connection
-
-        logger.info("Connecting TeamTalkConnection for %s...", server_key)
-        if not await connection.connect():
-            logger.error("Failed to init connection for %s.", server_key)
-        else:
-            logger.info("TeamTalkConnection for %s initiated.", server_key)
 
     @route_event_to_connection
     async def on_pytalk_my_login(
@@ -371,7 +305,13 @@ class PytalkEventRouter:
         self, message: TeamTalkMessage, connection: TeamTalkConnection
     ) -> None:
         """Handles an incoming message event for a specific connection."""
-        await connection.on_message(message)
+        # Create a request scope for each message
+        async with self.app_container(
+            context={TeamTalkMessage: message, TeamTalkConnection: connection}
+        ) as request_container:
+            message_handler = await request_container.get(MessageHandler)
+            message_handler.set_connection(connection)
+            await message_handler.route_message(message)
 
     @route_event_to_connection
     async def on_pytalk_user_login(

@@ -1,17 +1,13 @@
 """Manages a single connection to a TeamTalk server, including state and caches."""
 
-from collections.abc import Callable
 import datetime as dt
 from datetime import datetime
-from gettext import NullTranslations
 import logging
 
-from dishka import AsyncContainer
 import pytalk
 from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import Status as PytalkStatus
 from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
-from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
@@ -20,10 +16,8 @@ from bot.constants import (
     INVALID_CHANNEL_ID,
 )
 from bot.event_bus.bus import EventBus
-from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
-from bot.teamtalk_bot.message_handler import MessageHandler
 
 logger = logging.getLogger(__name__)
 
@@ -34,29 +28,27 @@ class TeamTalkConnection:
     def __init__(
         self,
         server_info: PytalkTeamTalkServerInfo,
-        pytalk_bot: pytalk.TeamTalkBot,
         settings: Settings,
-        dishka_container: AsyncContainer,
-        cache: CacheService,
-        translator_factory: Callable[[str], NullTranslations],
         event_bus: EventBus,
-        message_handler: MessageHandler | None = None,
+        # These components will be injected by dishka
+        connection_manager: TeamTalkConnectionManager,
+        cache_manager: TeamTalkCache,
     ) -> None:
         """Initializes a TeamTalkConnection instance."""
         self.server_info = server_info
-        self.pytalk_bot = pytalk_bot
         self.settings = settings
-        self.dishka_container = dishka_container
-        self.cache = cache
-        self.translator_factory = translator_factory
         self.event_bus = event_bus
+        self.connection_manager = connection_manager
+        self.cache_manager = cache_manager
+
+        # Set back-references to break circular dependencies at creation time
+        self.connection_manager.set_connection(self)
+        self.cache_manager.set_connection(self)
+
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
         self._is_finalized = False
         self.ttstr = pytalk.instance.sdk.ttstr
-        self.cache_manager = TeamTalkCache(self)
-        self.connection_manager = TeamTalkConnectionManager(self)
-        self.message_handler = message_handler
 
     async def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""
@@ -326,11 +318,6 @@ class TeamTalkConnection:
         self.login_complete_time = None
         await self.cache_manager.stop_background_tasks()
         await self._initiate_reconnect()
-
-    async def on_message(self, message: TeamTalkMessage) -> None:
-        """Handles an incoming message on this server connection."""
-        if self.message_handler:
-            await self.message_handler.route_message(message)
 
     async def on_user_update(self, user: PytalkUser) -> None:
         """Handles updates to a user's information on this server connection."""

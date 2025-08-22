@@ -9,6 +9,8 @@ import pytalk
 from pytalk.user import User as PytalkUser
 from pytalk.user_account import UserAccount as PytalkUserAccount
 
+from bot.config import Settings
+
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
@@ -18,15 +20,19 @@ logger = logging.getLogger(__name__)
 class TeamTalkCache:
     """Manages caches for a single TeamTalk server instance."""
 
-    def __init__(self, connection: "TeamTalkConnection") -> None:
+    def __init__(self, settings: Settings) -> None:
         """Initializes the TeamTalkCache."""
-        self.connection = connection
-        self.settings = connection.settings
+        self.settings = settings
+        self.connection: TeamTalkConnection | None = None
         self.online_users_cache: dict[int, PytalkUser] = {}
         self.user_accounts_cache: dict[str, PytalkUserAccount] = {}
         self._periodic_sync_task: asyncio.Task[Any] | None = None
         self._populate_accounts_task: asyncio.Task[Any] | None = None
         self.ttstr = pytalk.instance.sdk.ttstr
+
+    def set_connection(self, connection: "TeamTalkConnection") -> None:
+        """Sets the connection context after initialization to avoid circular deps."""
+        self.connection = connection
 
     def _get_username_as_str(
         self, user_or_account: PytalkUser | PytalkUserAccount
@@ -47,7 +53,7 @@ class TeamTalkCache:
 
     async def _periodic_cache_sync(self) -> None:
         """Periodically synchronizes the online users cache with the server."""
-        if not self.connection.instance:
+        if not self.connection or not self.connection.instance:
             return
         cfg_params = self.settings.operational_parameters
         sync_interval = cfg_params.online_users_cache_sync_interval_seconds
@@ -70,7 +76,7 @@ class TeamTalkCache:
 
     async def populate_user_accounts_cache(self) -> None:
         """Populates the cache of user accounts from the TeamTalk server."""
-        if not self.connection.is_ready:
+        if not self.connection or not self.connection.is_ready:
             return
         with contextlib.suppress(Exception):
             if self.connection.instance:
@@ -87,7 +93,7 @@ class TeamTalkCache:
 
     def start_background_tasks(self) -> None:
         """Starts background tasks for this connection (cache syncs)."""
-        if not self.connection.instance:
+        if not self.connection or not self.connection.instance:
             return
         if self._periodic_sync_task is None or self._periodic_sync_task.done():
             self._periodic_sync_task = asyncio.create_task(self._periodic_cache_sync())

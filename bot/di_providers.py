@@ -1,9 +1,8 @@
 """Dishka providers for dependency injection."""
 
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 import gettext
 from gettext import NullTranslations
-import logging
 from typing import TYPE_CHECKING, cast
 
 from aiogram import Bot, Dispatcher
@@ -16,6 +15,8 @@ import pytalk
 from bot.command_bus.bus import CommandBus
 from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
+from bot.constants import INVALID_CHANNEL_ID
+from bot.core.exceptions import TeamTalkConnectionError
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
@@ -30,8 +31,12 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
+from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
+from bot.teamtalk_bot.message_handler import MessageHandler
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot, MessageBot
 
@@ -147,28 +152,69 @@ class AppProvider(Provider):
             user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
         )
 
+    @provide(provides=TeamTalkConnection)
+    async def get_tt_connection(
+        self,
+        settings: FromDishka[Settings],
+        pytalk_bot: FromDishka[pytalk.TeamTalkBot],
+        event_bus: FromDishka[EventBus],
+        connections: FromDishka[dict[str, TeamTalkConnection]],
+    ) -> AsyncGenerator[TeamTalkConnection, None]:
+        """Provider for TeamTalkConnection with managed lifecycle."""
+        tt_config = settings.teamtalk
+        server_info = pytalk.TeamTalkServerInfo(
+            host=tt_config.host_name,
+            tcp_port=tt_config.port,
+            udp_port=tt_config.port,
+            username=tt_config.user_name,
+            password=tt_config.password,
+            encrypted=tt_config.encrypted,
+            nickname=settings.teamtalk.nick_name,
+            join_channel_id=int(tt_config.channel)
+            if tt_config.channel.isdigit()
+            else INVALID_CHANNEL_ID,
+            join_channel_password=tt_config.channel_password or "",
+        )
+
+        conn_manager = TeamTalkConnectionManager(pytalk_bot)
+        cache_manager = TeamTalkCache(settings)
+
+        connection = TeamTalkConnection(
+            server_info=server_info,
+            settings=settings,
+            event_bus=event_bus,
+            connection_manager=conn_manager,
+            cache_manager=cache_manager,
+        )
+
+        server_key = f"{server_info.host}:{server_info.tcp_port}"
+        connections[server_key] = connection
+
+        if not await connection.connect():
+            raise TeamTalkConnectionError(
+                f"Failed to connect to TeamTalk server {server_key}"
+            )
+
+        yield connection
+
+        await connection.disconnect_instance()
+
     @provide
     def get_pytalk_event_router(
         self,
-        settings: FromDishka[Settings],
-        dishka_container: FromDishka[AsyncContainer],
-        cache: FromDishka[CacheService],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
-        event_bus: FromDishka[EventBus],
+        app_container: FromDishka[AsyncContainer],
         tt_bot: FromDishka[pytalk.TeamTalkBot],
         connections: FromDishka[dict[str, TeamTalkConnection]],
+        event_bus: FromDishka[EventBus],
+        _connection_starter: FromDishka[TeamTalkConnection],
     ) -> "PytalkEventRouter":
         """Provides the Pytalk event router."""
         return PytalkEventRouter(
-            settings=settings,
-            dishka_container=dishka_container,
-            cache=cache,
-            translator_factory=translator_factory,
-            event_bus=event_bus,
+            app_container=app_container,
             tt_bot=tt_bot,
             connections=connections,
-            logger=logging.getLogger(PytalkEventRouter.__module__),
-        )
+            event_bus=event_bus,
+        )  # type: ignore[call-arg]
 
     @provide
     def get_notification_recipient_service(
@@ -209,15 +255,6 @@ class AppProvider(Provider):
         """Provides the TeamTalk reply handler."""
         return TeamTalkReplyHandler(connections=connections)
 
-    @provide(provides=TeamTalkConnection | None)
-    def get_tt_connection(
-        self, connections: FromDishka[dict[str, TeamTalkConnection]]
-    ) -> TeamTalkConnection | None:
-        """Provides the active TeamTalk connection."""
-        if not connections:
-            return None
-        return next(iter(connections.values()), None)
-
     @provide
     def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
         """Provides a ReportService."""
@@ -244,6 +281,31 @@ class RequestProvider(Provider):
     """Provides request-scoped dependencies."""
 
     scope = Scope.REQUEST
+
+    @provide
+    def get_command_router(self) -> CommandRouter:
+        """Provides a CommandRouter instance."""
+        return CommandRouter()
+
+    @provide
+    def get_message_handler(
+        self,
+        command_router: FromDishka[CommandRouter],
+        event_bus: FromDishka[EventBus],
+        settings: FromDishka[Settings],
+        cache: FromDishka[CacheService],
+        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        command_handlers: FromDishka[PrivateMessageCommandHandlers],
+    ) -> MessageHandler:
+        """Provides a MessageHandler instance for a request."""
+        return MessageHandler(
+            command_router=command_router,
+            event_bus=event_bus,
+            settings=settings,
+            cache=cache,
+            translator_factory=translator_factory,
+            command_handlers=command_handlers,
+        )
 
     @provide
     def get_tt_pm_handlers(

@@ -7,14 +7,17 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
-from dishka import AsyncContainer
 import pytalk
 
 from bot.config import Settings
 from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.command_router import CommandRouter
+from bot.teamtalk_bot import command_constants as tt_cmds
+from bot.teamtalk_bot.command_handlers import (
+    PrivateMessageCommandHandlers,
+    _send_long_tt_reply,
+)
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.telegram_bot.formatters import (
     get_effective_server_name,
@@ -38,83 +41,173 @@ class MessageHandler:
 
     def __init__(
         self,
-        dishka_container: AsyncContainer,
-        connection: TeamTalkConnection,
         command_router: CommandRouter,
-    ) -> None:
-        """Initializes the message handler."""
-        self.dishka_container = dishka_container
-        self.connection = connection
-        self.command_router = command_router
-
-    async def route_message(self, tt_message: TeamTalkMessage) -> None:
-        """Public method to handle an incoming TeamTalk message."""
-        if not self._is_valid_message(tt_message):
-            return
-
-        async with self.dishka_container() as request_container:
-            settings = await request_container.get(Settings)
-            cache = await request_container.get(CacheService)
-            translator_factory = await request_container.get(
-                Callable[[str], NullTranslations]
-            )
-            event_bus = await request_container.get(EventBus)
-
-            translator = await self._get_translator(settings, cache, translator_factory)
-            content = tt_message.content.strip()
-            from_user = tt_message.user
-            from_user_nickname = get_tt_user_display_name(from_user, translator)
-            from_user_username = ttstr(from_user.username)
-
-            logger.debug(
-                "[%s] Private msg from %s: '%s'",
-                self.connection.server_info.host,
-                from_user_username,
-                content[:50],
-            )
-
-            if content.startswith("/"):
-                parts = content.split(maxsplit=1)
-                cmd = parts[0].lower()
-                args = parts[1] if len(parts) > 1 else None
-                await self.command_router.route(cmd, args, tt_message, translator)
-            else:
-                server_name = get_effective_server_name(
-                    self.connection.instance, translator, settings
-                )
-                server_key = (
-                    f"{self.connection.server_info.host}:"
-                    f"{self.connection.server_info.tcp_port}"
-                )
-                await event_bus.publish(
-                    PrivateMessageReceivedEvent(
-                        from_user_id=from_user.id,
-                        from_user_nickname=from_user_nickname,
-                        from_user_username=from_user_username,
-                        content=content,
-                        server_name=server_name,
-                        connection_id=server_key,
-                    )
-                )
-
-    async def _get_translator(
-        self,
+        event_bus: EventBus,
         settings: Settings,
         cache: CacheService,
         translator_factory: Callable[[str], NullTranslations],
-    ) -> NullTranslations:
+        command_handlers: PrivateMessageCommandHandlers,
+    ) -> None:
+        """Initializes the message handler with injected dependencies."""
+        self.command_router = command_router
+        self.event_bus = event_bus
+        self.settings = settings
+        self.cache = cache
+        self.translator_factory = translator_factory
+        self.command_handlers = command_handlers
+        self.connection: TeamTalkConnection | None = None
+
+    def set_connection(self, connection: TeamTalkConnection) -> None:
+        """Sets the connection context for the handler."""
+        self.connection = connection
+
+    async def route_message(self, tt_message: TeamTalkMessage) -> None:
+        """Public method to handle an incoming TeamTalk message."""
+        if not self.connection or not self._is_valid_message(tt_message):
+            return
+
+        translator = await self._get_translator()
+        content = tt_message.content.strip()
+
+        if content.startswith("/"):
+            parts = content.split(maxsplit=1)
+            cmd = parts[0].lower()
+            args = parts[1] if len(parts) > 1 else None
+
+            known_commands = [
+                tt_cmds.TT_CMD_SUBSCRIBE,
+                tt_cmds.TT_CMD_UNSUBSCRIBE,
+                tt_cmds.TT_CMD_ADD_ADMIN,
+                tt_cmds.TT_CMD_REMOVE_ADMIN,
+            ]
+
+            if cmd == tt_cmds.TT_CMD_HELP:
+                await self._on_help(tt_message, translator)
+            elif cmd in known_commands:
+                await self.command_router.route(
+                    cmd, args, self.command_handlers, tt_message, translator
+                )
+            else:
+                await self._on_unknown(tt_message, translator)
+        else:
+            await self._publish_private_message_event(tt_message, translator)
+
+    def _build_teamtalk_help_message(
+        self,
+        translator: NullTranslations,
+        *,
+        is_admin: bool,
+    ) -> str:
+        """Builds the help message for TeamTalk users."""
+        _ = translator.gettext
+        parts = [
+            _("Available commands:"),
+            _(
+                "/sub - Get a link to subscribe to notifications.\n"
+                "/unsub - Get a link to unsubscribe from notifications.\n"
+                "/help - Show help."
+            ),
+        ]
+        if is_admin:
+            parts.extend(
+                [
+                    _("\nAdmin commands (MAIN_ADMIN from config only):"),
+                    _(
+                        "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
+                        "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."
+                    ),
+                ]
+            )
+        return "\n".join(parts)
+
+    async def _on_help(
+        self, tt_message: TeamTalkMessage, translator: NullTranslations
+    ) -> None:
+        """Handles the /help command from a TeamTalk user."""
+        tt_username_str = ttstr(tt_message.user.username)
+        is_main_tt_admin = bool(
+            self.settings.general.admin_username
+            and tt_username_str == self.settings.general.admin_username
+        )
+        help_text = self._build_teamtalk_help_message(
+            translator, is_admin=is_main_tt_admin
+        )
+        await _send_long_tt_reply(tt_message.reply, help_text)
+
+    async def _on_unknown(
+        self, tt_message: TeamTalkMessage, translator: NullTranslations
+    ) -> None:
+        """Handles unknown commands received from a TeamTalk user."""
+        _ = translator.gettext
+        available_commands = ", ".join(
+            [
+                tt_cmds.TT_CMD_SUBSCRIBE,
+                tt_cmds.TT_CMD_UNSUBSCRIBE,
+                tt_cmds.TT_CMD_ADD_ADMIN,
+                tt_cmds.TT_CMD_REMOVE_ADMIN,
+                tt_cmds.TT_CMD_HELP,
+            ]
+        )
+        reply_text = _("Unknown command. Available commands: {commands}.").format(
+            commands=available_commands
+        )
+        tt_message.reply(reply_text)
+        if self.connection:
+            logger.warning(
+                "Unknown TT command from %s on %s: %s",
+                ttstr(tt_message.user.username),
+                self.connection.server_info.host,
+                tt_message.content[:100],
+            )
+
+    async def _publish_private_message_event(
+        self, tt_message: TeamTalkMessage, translator: NullTranslations
+    ) -> None:
+        """Publishes an event for a non-command private message."""
+        if not self.connection or not self.connection.instance:
+            return
+
+        from_user = tt_message.user
+        from_user_nickname = get_tt_user_display_name(from_user, translator)
+        from_user_username = ttstr(from_user.username)
+
+        logger.debug(
+            "[%s] Private msg from %s: '%s'",
+            self.connection.server_info.host,
+            from_user_username,
+            tt_message.content[:50],
+        )
+
+        server_name = get_effective_server_name(
+            self.connection.instance, translator, self.settings
+        )
+        server_key = (
+            f"{self.connection.server_info.host}:{self.connection.server_info.tcp_port}"
+        )
+        await self.event_bus.publish(
+            PrivateMessageReceivedEvent(
+                from_user_id=from_user.id,
+                from_user_nickname=from_user_nickname,
+                from_user_username=from_user_username,
+                content=tt_message.content,
+                server_name=server_name,
+                connection_id=server_key,
+            )
+        )
+
+    async def _get_translator(self) -> NullTranslations:
         """Determines the language for the reply and returns a translator."""
-        admin_cfg = settings.telegram.admin_chat_id
-        reply_lang = settings.general.default_lang
+        admin_cfg = self.settings.telegram.admin_chat_id
+        reply_lang = self.settings.general.default_lang
         if admin_cfg:
-            admin_settings = cache.get_user_settings(admin_cfg)
+            admin_settings = self.cache.get_user_settings(admin_cfg)
             if admin_settings and admin_settings.language_code:
                 reply_lang = admin_settings.language_code
-        return translator_factory(reply_lang)
+        return self.translator_factory(reply_lang)
 
     def _is_valid_message(self, tt_message: TeamTalkMessage) -> bool:
         """Performs initial checks to see if the message should be processed."""
-        if not self.connection.instance:
+        if not self.connection or not self.connection.instance:
             logger.warning("Handler has no connection instance, skipping message.")
             return False
 

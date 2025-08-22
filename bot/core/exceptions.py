@@ -27,6 +27,10 @@ class NoActiveTeamTalkConnectionError(BotError):
     """Raised when no active TeamTalk connection is available."""
 
 
+class TeamTalkConnectionError(BotError):
+    """Raised when a connection to the TeamTalk server fails."""
+
+
 class MissingTranslatorError(DependencyError):
     """Raised when the translator is not found or of incorrect type."""
 
