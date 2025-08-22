@@ -12,9 +12,6 @@ from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
 from bot.config import Settings
-from bot.constants import (
-    INVALID_CHANNEL_ID,
-)
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
@@ -81,7 +78,7 @@ class TeamTalkConnection:
             "finalized" if status else "NOT finalized",
         )
 
-    async def _finalize_bot_login_sequence(self, channel: PytalkChannel) -> None:
+    async def finalize_bot_login_sequence(self, channel: PytalkChannel) -> None:
         """Finalizes the bot's login sequence for this connection."""
         if self.is_finalized:
             logger.info(
@@ -133,111 +130,6 @@ class TeamTalkConnection:
                 "[%s] Error finalizing login (status/time).", self.server_info.host
             )
 
-    async def _initiate_reconnect(self) -> None:
-        """Initiates a reconnection sequence for this connection."""
-        await self.connection_manager.initiate_reconnect()
-
-    async def _determine_target_channel(self) -> tuple[int, str]:
-        """Determines the target channel ID and name from config."""
-        if not self.instance:
-            return INVALID_CHANNEL_ID, ""
-
-        cfg_tt = self.settings.teamtalk
-        chan_path = cfg_tt.channel
-        target_chan_name = chan_path
-        final_chan_id = INVALID_CHANNEL_ID
-
-        if chan_path.isdigit():
-            final_chan_id = int(chan_path)
-            ch_obj = self.instance.get_channel(final_chan_id)
-            if ch_obj:
-                target_chan_name = self.ttstr(ch_obj.name)
-            else:  # Channel ID specified but not found
-                logger.warning(
-                    "[%s] Channel ID '%s' not found.", self.server_info.host, chan_path
-                )
-                final_chan_id = INVALID_CHANNEL_ID  # Reset if not found
-        else:
-            ch_obj = self.instance.get_channel_from_path(chan_path)
-            if ch_obj:
-                final_chan_id = ch_obj.id
-                target_chan_name = self.ttstr(ch_obj.name)
-            else:
-                logger.error(
-                    "[%s] Channel path '%s' not found.",
-                    self.server_info.host,
-                    chan_path,
-                )
-        return final_chan_id, target_chan_name
-
-    async def _join_configured_channel(self) -> None:
-        """Joins the configured TeamTalk channel."""
-        if not self.instance:
-            logger.error("[%s] No instance to join channel.", self.server_info.host)
-            await self._initiate_reconnect()
-            return
-
-        final_chan_id, target_chan_name = await self._determine_target_channel()
-        chan_pass = self.settings.teamtalk.channel_password or ""
-
-        try:
-            if final_chan_id != INVALID_CHANNEL_ID:
-                logger.info(
-                    "[%s] Joining chan: '%s' (ID: %s).",
-                    self.server_info.host,
-                    target_chan_name,
-                    final_chan_id,
-                )
-                self.instance.join_channel_by_id(final_chan_id, password=chan_pass)
-            else:
-                logger.warning(
-                    "[%s] No valid target channel found/configured. "
-                    "Staying in default channel.",
-                    self.server_info.host,
-                )
-                # If not joining a specific channel, finalize with the current one.
-                curr_chan_id = self.instance.getMyCurrentChannelID()
-                ch_to_finalize = self.instance.get_channel(
-                    curr_chan_id if curr_chan_id is not None else 0
-                )
-                if ch_to_finalize:
-                    await self._finalize_bot_login_sequence(ch_to_finalize)
-                else:
-                    logger.warning(
-                        "[%s] Could not get current/root channel to finalize.",
-                        self.server_info.host,
-                    )
-
-        except pytalk.exceptions.PermissionError:
-            logger.exception(
-                "[%s] PermissionError joining '%s'. Will try to finalize in "
-                "current/default channel.",
-                self.server_info.host,
-                target_chan_name,
-            )
-            # Attempt to finalize in the current channel if join failed
-            # due to permissions
-            curr_chan_id_after_fail = self.instance.getMyCurrentChannelID()
-            ch_id_to_get = (
-                curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
-            )
-            ch_to_finalize_after_fail = self.instance.get_channel(ch_id_to_get)
-            if ch_to_finalize_after_fail:
-                await self._finalize_bot_login_sequence(ch_to_finalize_after_fail)
-            else:
-                logger.exception(  # In except block, so changed from error to exception
-                    "[%s] Could not get current channel (ID: %s) to finalize "
-                    "after permission error.",
-                    self.server_info.host,
-                    ch_id_to_get,
-                )
-
-        except Exception:
-            logger.exception(
-                "[%s] Error during channel join/finalization.", self.server_info.host
-            )
-            await self._initiate_reconnect()
-
     async def on_my_login(self, server: PytalkServer) -> None:
         """Handles the bot's own login event for this connection."""
         logger.info("[%s] on_my_login event received.", self.server_info.host)
@@ -261,7 +153,7 @@ class TeamTalkConnection:
                 "[%s] No instance available at start of on_my_login.",
                 self.server_info.host,
             )
-            await self._initiate_reconnect()  # Attempt to recover
+            await self.connection_manager.initiate_reconnect()  # Attempt to recover
             return
 
         logger.info(
@@ -269,7 +161,7 @@ class TeamTalkConnection:
             self.server_info.host,
             self.instance,
         )
-        await self._join_configured_channel()
+        await self.connection_manager.join_configured_channel()
 
     async def on_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Handles another user joining a channel on this server connection."""
@@ -285,7 +177,7 @@ class TeamTalkConnection:
             return
         if user.id == my_user_id:
             if not self.is_finalized:
-                await self._finalize_bot_login_sequence(channel)
+                await self.finalize_bot_login_sequence(channel)
             else:
                 logger.info(
                     "[%s] Bot re-joined chan %s (finalized).",
@@ -301,7 +193,7 @@ class TeamTalkConnection:
         self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.cache_manager.stop_background_tasks()
-        await self._initiate_reconnect()
+        await self.connection_manager.initiate_reconnect()
 
     async def on_my_kicked_from_channel(self, channel_obj: PytalkChannel) -> None:
         """Handles being kicked from a channel on this server connection."""
@@ -318,7 +210,7 @@ class TeamTalkConnection:
         self.mark_finalized(status=False)
         self.login_complete_time = None
         await self.cache_manager.stop_background_tasks()
-        await self._initiate_reconnect()
+        await self.connection_manager.initiate_reconnect()
 
     async def on_user_update(self, user: PytalkUser) -> None:
         """Handles updates to a user's information on this server connection."""

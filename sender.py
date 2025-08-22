@@ -48,7 +48,10 @@ async def on_shutdown(
     """Handles application shutdown."""
     logger.info("Application shutting down...")
     if tt_connection:
-        await asyncio.to_thread(tt_connection.disconnect_instance)
+        try:
+            await tt_connection.disconnect_instance()
+        except asyncio.CancelledError:
+            logger.info("TeamTalk connection disconnect cancelled.")
 
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task and not teamtalk_task.done():
