@@ -60,29 +60,24 @@ async def send_telegram_message(
     tt_user_is_online: bool = False,
     **kwargs: Any,  # noqa: ANN401
 ) -> bool:
-    """Sends a single Telegram message to a user, handling potential errors."""
+    """Sends a single Telegram message to a user, allowing errors to propagate."""
     send_silently = _should_send_silently(
         chat_id=chat_id, tt_user_is_online=tt_user_is_online, cache=cache
     )
 
-    try:
-        await bot_instance.send_message(
-            chat_id=chat_id,
-            reply_markup=reply_markup,
-            disable_notification=send_silently,
-            **kwargs,
-        )
-        logger.debug(
-            "Message sent to %s. Silent: %s, kwargs used: %s",
-            chat_id,
-            send_silently,
-            kwargs,
-        )
-    except TelegramAPIError as e:
-        logger.warning("Telegram API error sending message to %s: %s", chat_id, e)
-        return False
-    else:
-        return True
+    await bot_instance.send_message(
+        chat_id=chat_id,
+        reply_markup=reply_markup,
+        disable_notification=send_silently,
+        **kwargs,
+    )
+    logger.debug(
+        "Message sent to %s. Silent: %s, kwargs used: %s",
+        chat_id,
+        send_silently,
+        kwargs,
+    )
+    return True
 
 
 async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int, str]:
