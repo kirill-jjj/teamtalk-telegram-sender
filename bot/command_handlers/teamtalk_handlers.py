@@ -102,7 +102,7 @@ class TeamTalkCommandHandlers:
         _ = translator.gettext
         if not self._tt_connection or not self._tt_connection.instance:
             return ModerationResult(
-                success=False, message=self._("Error: No active TeamTalk connection.")
+                success=False, message=_("Error: No active TeamTalk connection.")
             )
 
         user_to_act_on = self._tt_connection.instance.get_user(user_id)
@@ -146,7 +146,7 @@ class TeamTalkCommandHandlers:
             logger.exception("Error during '%s' on TT user ID %s", action, user_id)
             return ModerationResult(
                 success=False,
-                message=self._("An error occurred. Please try again later."),
+                message=_("An error occurred. Please try again later."),
             )
 
-        return ModerationResult(success=False, message=self._("Unknown action."))
+        return ModerationResult(success=False, message=_("Unknown action."))

@@ -7,12 +7,17 @@ import sys
 import tomllib
 
 if sys.platform == "win32":
-    import os
+    import shutil
 
     # Set console encoding to UTF-8 for Windows
     # This might not be strictly necessary if sys.stdout.reconfigure works,
     # but it's a common practice for Windows console output.
-    os.system("chcp 65001 > nul")  # Change console codepage to UTF-8
+    if chcp_path := shutil.which("chcp"):
+        subprocess.run(
+            [chcp_path, "65001"],
+            capture_output=True,
+            check=False,
+        )
 
     # Reconfigure stdout and stderr to use UTF-8
     sys.stdout.reconfigure(encoding="utf-8")
@@ -85,7 +90,7 @@ def extract() -> None:
     ]
     print(f"--- Executing: {' '.join(command)}")
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         print(f"✅ Messages extracted to '{POT_FILE.relative_to(BASE_DIR)}'")
@@ -117,7 +122,7 @@ def update() -> None:
     ]
     print(f"--- Executing: {' '.join(command)}")
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         print("✅ Translation catalogs (.po) successfully updated by pybabel.")
@@ -142,7 +147,7 @@ def compile_cmd() -> None:
     ]
     print(f"--- Executing: {' '.join(command)}")
     try:
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             command, check=True, cwd=BASE_DIR, text=True, capture_output=True
         )
         if result.stdout:

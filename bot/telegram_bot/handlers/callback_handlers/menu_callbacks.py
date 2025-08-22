@@ -85,20 +85,22 @@ async def menu_settings_handler(
     await query.answer()
 
 
-@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
-@ensure_message_context
-async def menu_kick_handler(
+async def _handle_menu_moderation_command(
     query: CallbackQuery,
-    translator: FromDishka[NullTranslations],
-    command_bus: FromDishka[CommandBus],
-    settings: FromDishka[Settings],
+    command_type: AdminCommand,
+    translator: NullTranslations,
+    command_bus: CommandBus,
+    settings: Settings,
 ) -> None:
-    """Handles the 'Kick User' admin menu button click."""
+    """Generic handler for menu-based moderation commands."""
     _ = translator.gettext
     if isinstance(query.message, Message):
         try:
             result: GetOnlineUsersResult = await command_bus.execute(
-                GetOnlineUsersCommand(is_caller_admin=True)
+                GetOnlineUsersCommand(
+                    is_caller_admin=True,
+                    lang_code=translator.info().get("language", "en"),
+                )
             )
         except NoHandlerFoundError:
             logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
@@ -109,7 +111,7 @@ async def menu_kick_handler(
         if result.success and result.users:
             await show_user_buttons_from_list(
                 query.message,
-                AdminCommand.KICK,
+                command_type,
                 translator,
                 result.users,
                 settings.teamtalk.host_name,
@@ -119,6 +121,20 @@ async def menu_kick_handler(
                 result.error_message or _("Failed to get user list.")
             )
     await query.answer()
+
+
+@admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
+@ensure_message_context
+async def menu_kick_handler(
+    query: CallbackQuery,
+    translator: FromDishka[NullTranslations],
+    command_bus: FromDishka[CommandBus],
+    settings: FromDishka[Settings],
+) -> None:
+    """Handles the 'Kick User' admin menu button click."""
+    await _handle_menu_moderation_command(
+        query, AdminCommand.KICK, translator, command_bus, settings
+    )
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "ban"))
@@ -130,31 +146,9 @@ async def menu_ban_handler(
     settings: FromDishka[Settings],
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
-    _ = translator.gettext
-    if isinstance(query.message, Message):
-        try:
-            result: GetOnlineUsersResult = await command_bus.execute(
-                GetOnlineUsersCommand(is_caller_admin=True)
-            )
-        except NoHandlerFoundError:
-            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            await query.message.reply(_("This feature is temporarily unavailable."))
-            await query.answer()
-            return
-
-        if result.success and result.users:
-            await show_user_buttons_from_list(
-                query.message,
-                AdminCommand.BAN,
-                translator,
-                result.users,
-                settings.teamtalk.host_name,
-            )
-        else:
-            await query.message.reply(
-                result.error_message or _("Failed to get user list.")
-            )
-    await query.answer()
+    await _handle_menu_moderation_command(
+        query, AdminCommand.BAN, translator, command_bus, settings
+    )
 
 
 @admin_menu_callback_router.callback_query(

@@ -9,6 +9,7 @@ from pytalk.user import User as TeamTalkUser
 from sqlalchemy import and_, or_
 from sqlmodel import select
 
+from bot.constants import NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
@@ -86,11 +87,11 @@ class NotificationRecipientService:
                 UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
                 UserSettings.notification_settings != NotificationSetting.NONE,
             ]
-            if event_type == "join":
+            if event_type == NOTIFICATION_EVENT_JOIN:
                 filters.append(
                     UserSettings.notification_settings != NotificationSetting.JOIN_OFF
                 )
-            elif event_type == "leave":
+            elif event_type == NOTIFICATION_EVENT_LEAVE:
                 filters.append(
                     UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
                 )

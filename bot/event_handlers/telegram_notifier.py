@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 """Handles sending Telegram notifications in response to domain events."""
 
 from collections.abc import Callable

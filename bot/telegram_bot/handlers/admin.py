@@ -69,18 +69,20 @@ async def show_user_buttons_from_list(
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
 
-@admin_router.message(Command("kick"), IsAdmin())
-async def on_kick_command(
+async def _handle_moderation_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
-    settings: Annotated[Settings, FromDishka()],
+    command_type: AdminCommand,
+    translator: NullTranslations,
+    command_bus: CommandBus,
+    settings: Settings,
 ) -> None:
-    """Handles the /kick command for administrators."""
+    """Generic handler for moderation commands like kick and ban."""
     _ = translator.gettext
     try:
         result: GetOnlineUsersResult = await command_bus.execute(
-            GetOnlineUsersCommand(is_caller_admin=True)
+            GetOnlineUsersCommand(
+                is_caller_admin=True, lang_code=translator.info().get("language", "en")
+            )
         )
     except NoHandlerFoundError:
         logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
@@ -90,13 +92,26 @@ async def on_kick_command(
     if result.success and result.users:
         await show_user_buttons_from_list(
             message,
-            AdminCommand.KICK,
+            command_type,
             translator,
             result.users,
             settings.teamtalk.host_name,
         )
     else:
         await message.reply(result.error_message or _("Failed to get user list."))
+
+
+@admin_router.message(Command("kick"), IsAdmin())
+async def on_kick_command(
+    message: Message,
+    translator: Annotated[NullTranslations, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
+) -> None:
+    """Handles the /kick command for administrators."""
+    await _handle_moderation_command(
+        message, AdminCommand.KICK, translator, command_bus, settings
+    )
 
 
 @admin_router.message(Command("ban"), IsAdmin())
@@ -107,26 +122,9 @@ async def on_ban_command(
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
-    _ = translator.gettext
-    try:
-        result: GetOnlineUsersResult = await command_bus.execute(
-            GetOnlineUsersCommand(is_caller_admin=True)
-        )
-    except NoHandlerFoundError:
-        logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-        await message.reply(_("This feature is temporarily unavailable."))
-        return
-
-    if result.success and result.users:
-        await show_user_buttons_from_list(
-            message,
-            AdminCommand.BAN,
-            translator,
-            result.users,
-            settings.teamtalk.host_name,
-        )
-    else:
-        await message.reply(result.error_message or _("Failed to get user list."))
+    await _handle_moderation_command(
+        message, AdminCommand.BAN, translator, command_bus, settings
+    )
 
 
 @admin_router.message(Command("subscribers"), IsAdmin())

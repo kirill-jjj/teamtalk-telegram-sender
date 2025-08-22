@@ -63,7 +63,7 @@ def main() -> None:
 
     try:
         # Run the Alembic command
-        subprocess.run(command, check=True, env=env_vars, cwd=project_root)  # noqa: S603
+        subprocess.run(command, check=True, env=env_vars, cwd=project_root)
     except FileNotFoundError:
         print(
             f"Error: '{alembic_executable}' command not found. \n"
