@@ -25,14 +25,10 @@ from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
     create_main_settings_keyboard,
 )
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")
-user_commands_router.message.middleware(
-    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-)
 
 
 @user_commands_router.message(CommandStart(deep_link=True, magic=F.args.as_("token")))

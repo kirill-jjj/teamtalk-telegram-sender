@@ -8,7 +8,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
 from bot.models import UserSettings
-from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
 class WorkflowData(TypedDict, total=False):
@@ -23,6 +22,6 @@ class WorkflowData(TypedDict, total=False):
     session: AsyncSession
     user_settings: UserSettings
     translator: NullTranslations
-    tt_connection: TeamTalkConnection | None
+
     event_from_user: User
     config: Settings

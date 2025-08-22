@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import cast
+from typing import Annotated, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -82,7 +82,7 @@ async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
-    tt_connection: TeamTalkConnection,
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
 ) -> None:
     """Handle 'Link/Change TeamTalk Account' action by showing linkable accounts."""
     await _display_linkable_tt_accounts_page(
@@ -108,7 +108,7 @@ async def _display_linkable_tt_accounts_page(
     _ = translator.gettext
 
     cache = tt_connection.cache_manager.user_accounts_cache
-    if not tt_connection.is_ready or not cache:
+    if not tt_connection or not tt_connection.is_ready or not cache:
         logger.warning(
             "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for "
             "displaying linkable accounts. User %s.",
@@ -189,7 +189,7 @@ async def _display_linkable_tt_accounts_page(
 async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
-    tt_connection: TeamTalkConnection,
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
     translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""

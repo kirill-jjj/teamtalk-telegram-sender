@@ -37,7 +37,6 @@ from bot.telegram_bot.keyboards.shared import (
     _build_user_toggle_keyboard,
     _create_back_button_text,
 )
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.ui_utils import (
     display_paginated_list,
     paginate_list,
@@ -46,9 +45,7 @@ from bot.telegram_bot.ui_utils import (
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
-mute_router.callback_query.middleware(
-    ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-)
+
 ttstr = pytalk.instance.sdk.ttstr
 
 T = TypeVar("T")
@@ -164,6 +161,11 @@ async def _display_all_server_accounts_list(
     page: int = 0,
 ) -> None:
     _ = translator.gettext
+    if not tt_connection:
+        await callback_query.answer(
+            _("TeamTalk connection is not active."), show_alert=True
+        )
+        return
     if not tt_connection.cache_manager.user_accounts_cache:
         try:
             await cast(Message, callback_query.message).edit_text(
@@ -279,7 +281,7 @@ async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    tt_connection: TeamTalkConnection | None,
+    tt_connection: TeamTalkConnection,
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -446,7 +448,7 @@ async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings | None],
-    tt_connection: FromDishka[TeamTalkConnection | None],
+    tt_connection: FromDishka[TeamTalkConnection],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
@@ -477,12 +479,17 @@ async def toggle_user_mute(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     uow: FromDishka[IUnitOfWork],
-    tt_connection: FromDishka[TeamTalkConnection | None],
+    tt_connection: FromDishka[TeamTalkConnection],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
+    if not tt_connection:
+        await callback_query.answer(
+            _("TeamTalk connection is not active."), show_alert=True
+        )
+        return
     username_to_toggle = None
     list_type = callback_data.list_type
 

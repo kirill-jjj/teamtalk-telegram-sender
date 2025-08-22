@@ -26,7 +26,6 @@ from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.errors import error_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 from bot.telegram_bot.handlers.user import user_commands_router
-from bot.telegram_bot.middlewares import ActiveTeamTalkConnectionMiddleware
 from bot.telegram_bot.types.bots import EventBot
 
 uvloop: ModuleType | None = None
@@ -89,9 +88,6 @@ class Application:
         self.dp.workflow_data["dishka_container"] = container
 
         # Register middlewares
-        self.dp.update.middleware.register(
-            ActiveTeamTalkConnectionMiddleware(default_server_key=None)
-        )
 
         # Include routers
         self.dp.include_router(user_commands_router)
