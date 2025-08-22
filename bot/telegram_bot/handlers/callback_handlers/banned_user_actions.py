@@ -12,15 +12,15 @@ from bot.core.enums import SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.telegram_bot.callback_data import SubscriberCallback
-from bot.telegram_bot.handlers.callback_handlers.list_utils import (
-    _show_banned_list_page,
-    _show_subscriber_list_page,
-)
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
     with_view_refresh,
 )
 from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.ui_utils import (
+    _show_banned_list_page,
+    _show_subscriber_list_page,
+)
 
 logger = logging.getLogger(__name__)
 banned_user_actions_router = Router(name="banned_user_actions_router")

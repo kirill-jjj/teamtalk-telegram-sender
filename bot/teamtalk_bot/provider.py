@@ -14,6 +14,10 @@ from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
+from bot.database.uow import IUnitOfWork
+from bot.database.repositories.user_repository import UserRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.ban_repository import BanRepository
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.services.report_service import ReportService
@@ -21,6 +25,7 @@ from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
+from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +154,22 @@ class TeamTalkProvider(Provider):
         return TeamTalkReplyHandler(connections=connections)
 
     @provide
-    def get_report_service(self, settings: FromDishka[Settings]) -> ReportService:
+    def get_report_service(
+        self,
+        settings: FromDishka[Settings],
+        user_repo: FromDishka[UserRepository],
+        subscriber_repo: FromDishka[SubscriberRepository],
+        ban_repo: FromDishka[BanRepository],
+        bot: FromDishka[EventBot],
+    ) -> ReportService:
         """Provides a ReportService."""
-        return ReportService(settings=settings)
+        return ReportService(
+            settings=settings,
+            user_repo=user_repo,
+            subscriber_repo=subscriber_repo,
+            ban_repo=ban_repo,
+            bot=bot,
+        )
 
     @provide
     def get_teamtalk_command_handlers(

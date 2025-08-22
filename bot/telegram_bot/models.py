@@ -3,14 +3,6 @@
 from pydantic import BaseModel
 
 
-class SubscriberInfo(BaseModel):
-    """Pydantic model for subscriber information for display purposes."""
-
-    telegram_id: int
-    display_name: str
-    teamtalk_username: str | None = None
-
-
 class WhoUser(BaseModel):
     """Pydantic model representing a user in the /who command output."""
 

@@ -10,7 +10,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.constants import MSG_GENERAL_ERROR
+from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.schemas import OperationResult, UserAccountInfo
@@ -21,7 +21,7 @@ from bot.telegram_bot.callback_data import (
     PaginateLinkableAccountsCallback,
     SubscriberCallback,
 )
-from bot.telegram_bot.handlers.callback_handlers.list_utils import SUBSCRIBERS_PER_PAGE
+
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_linkable_tt_account_list_keyboard,

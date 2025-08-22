@@ -9,11 +9,10 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand, SubscriberListAction
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
+from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.api import get_display_name_for_id
 from bot.telegram_bot.callback_data import (
@@ -25,15 +24,15 @@ from bot.telegram_bot.callback_data import (
     ViewSubscriberCallback,
 )
 from bot.telegram_bot.formatters import format_subscriber_details
-from bot.telegram_bot.handlers.callback_handlers.list_utils import (
-    _show_subscriber_list_page,
-)
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
     with_view_refresh,
 )
 from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
 from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.ui_utils import (
+    _show_subscriber_list_page,
+)
 
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
@@ -99,8 +98,7 @@ async def refresh_subscriber_view(
 
 async def _refresh_and_display_subscriber_list(
     query: CallbackQuery,
-    user_repo: UserRepository,
-    subscriber_repo: SubscriberRepository,
+    report_service: ReportService,
     bot: EventBot,
     return_page: int,
     translator: NullTranslations,
@@ -108,8 +106,7 @@ async def _refresh_and_display_subscriber_list(
     """Refresh and display paginated subscribers list via the central display func."""
     await _show_subscriber_list_page(
         target=query,
-        user_repo=user_repo,
-        subscriber_repo=subscriber_repo,
+        report_service=report_service,
         bot=bot,
         translator=translator,
         page=return_page,
@@ -122,13 +119,13 @@ async def refresh_subscriber_list_view(
     translator: NullTranslations,
     bot: EventBot,
     uow: IUnitOfWork,
+    report_service: ReportService,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
     await _refresh_and_display_subscriber_list(
         query=query,
-        user_repo=uow.users,
-        subscriber_repo=uow.subscribers,
+        report_service=report_service,
         bot=bot,
         return_page=callback_data.page,
         translator=translator,

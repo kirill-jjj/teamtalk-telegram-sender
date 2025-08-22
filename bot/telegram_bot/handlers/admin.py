@@ -15,13 +15,12 @@ from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
-from bot.database.uow import IUnitOfWork
+from bot.services.report_service import ReportService
 from bot.teamtalk_bot.formatters import get_tt_user_display_name
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
-
-from .callback_handlers.list_utils import (
+from bot.telegram_bot.ui_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,
 )
@@ -132,18 +131,16 @@ async def on_subscribers_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    async with uow:
-        await _show_subscriber_list_page(
-            target=message,
-            user_repo=uow.users,
-            subscriber_repo=uow.subscribers,
-            bot=bot,
-            translator=translator,
-            page=0,
-        )
+    await _show_subscriber_list_page(
+        target=message,
+        report_service=report_service,
+        bot=bot,
+        translator=translator,
+        page=0,
+    )
 
 
 @admin_router.message(Command("unban"), IsAdmin())
@@ -151,18 +148,16 @@ async def on_unban_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
-    async with uow:
-        await _show_banned_list_page(
-            target=message,
-            ban_repo=uow.bans,
-            user_repo=uow.users,
-            bot=bot,
-            page=0,
-            translator=translator,
-        )
+    await _show_banned_list_page(
+        target=message,
+        report_service=report_service,
+        bot=bot,
+        translator=translator,
+        page=0,
+    )
 
 
 @admin_router.message(Command("exit"), IsAdmin())
@@ -177,3 +172,6 @@ async def on_exit_command(
     await message.reply(_("Shutting down..."))
     await dispatcher.stop_polling()
     await bot.session.close()
+
+
+

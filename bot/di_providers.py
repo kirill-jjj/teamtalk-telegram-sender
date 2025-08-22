@@ -16,6 +16,11 @@ from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
+from bot.database.repositories.admin_repository import AdminRepository
+from bot.database.repositories.ban_repository import BanRepository
+from bot.database.repositories.deeplink_repository import DeeplinkRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import UserSettings
@@ -160,6 +165,27 @@ class AppProvider(Provider):
             event_bus=event_bus,
             recipient_service=recipient_service,
         )
+
+    @provide
+    def get_user_repository(
+        self, session_factory: FromDishka[AsyncSessionFactoryType]
+    ) -> UserRepository:
+        """Provides a UserRepository instance."""
+        return UserRepository(session_factory())
+
+    @provide
+    def get_subscriber_repository(
+        self, session_factory: FromDishka[AsyncSessionFactoryType]
+    ) -> SubscriberRepository:
+        """Provides a SubscriberRepository instance."""
+        return SubscriberRepository(session_factory())
+
+    @provide
+    def get_ban_repository(
+        self, session_factory: FromDishka[AsyncSessionFactoryType]
+    ) -> BanRepository:
+        """Provides a BanRepository instance."""
+        return BanRepository(session_factory())
 
 
 class RequestProvider(Provider):

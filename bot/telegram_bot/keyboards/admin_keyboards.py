@@ -32,7 +32,7 @@ from bot.telegram_bot.callback_data import (
     SubscriberListCallback,
     ViewSubscriberCallback,
 )
-from bot.telegram_bot.models import SubscriberInfo
+from bot.services.schemas import SubscriberInfo
 
 from .keyboard_utils import (
     get_language_options,

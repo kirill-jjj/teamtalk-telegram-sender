@@ -1,6 +1,6 @@
 """Pydantic schemas for service layer inputs and outputs (DTOs)."""
 
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +11,26 @@ class UserAccountInfo(BaseModel):
     """A simple DTO for TeamTalk user account information."""
 
     username: str
+
+
+class SubscriberInfo(BaseModel):
+    """Pydantic model for subscriber information for display purposes."""
+
+    telegram_id: int
+    display_name: str
+    teamtalk_username: str | None = None
+
+
+T = TypeVar("T")
+
+
+class PaginatedResult(BaseModel, Generic[T]):
+    """Represents a paginated list of items."""
+
+    items: list[T]
+    total_items: int
+    total_pages: int
+    current_page: int
 
 
 class OperationResult(BaseModel):

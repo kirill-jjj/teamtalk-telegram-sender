@@ -13,8 +13,8 @@ from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
-from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
+from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
@@ -24,8 +24,7 @@ from bot.telegram_bot.handlers.user import (
     on_who_command,
 )
 from bot.telegram_bot.types.bots import EventBot
-
-from .list_utils import (
+from bot.telegram_bot.ui_utils import (
     _show_banned_list_page,
     _show_subscriber_list_page,
 )
@@ -159,18 +158,16 @@ async def menu_subscribers_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    uow: FromDishka[IUnitOfWork],
+    report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    async with uow:
-        await _show_subscriber_list_page(
-            cast(Message, query.message),
-            uow.users,
-            uow.subscribers,
-            bot,
-            translator,
-            page=0,
-        )
+    await _show_subscriber_list_page(
+        cast(Message, query.message),
+        report_service,
+        bot,
+        translator,
+        page=0,
+    )
     await query.answer()
 
 
@@ -180,16 +177,14 @@ async def menu_unban_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    uow: FromDishka[IUnitOfWork],
+    report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
-    async with uow:
-        await _show_banned_list_page(
-            target=cast(Message, query.message),
-            ban_repo=uow.bans,
-            user_repo=uow.users,
-            bot=bot,
-            page=0,
-            translator=translator,
-        )
+    await _show_banned_list_page(
+        target=cast(Message, query.message),
+        report_service=report_service,
+        bot=bot,
+        translator=translator,
+        page=0,
+    )
     await query.answer()
