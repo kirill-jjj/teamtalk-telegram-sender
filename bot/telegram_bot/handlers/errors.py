@@ -5,12 +5,19 @@ from gettext import NullTranslations
 import logging
 
 from aiogram import Router
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramForbiddenError,
+)
 from aiogram.types.error_event import ErrorEvent
 from aiogram.utils.formatting import Bold, Text
 from dishka.integrations.aiogram import FromDishka
 
 from bot.config import Settings
+from bot.database.uow import IUnitOfWork
+from bot.services.cache_service import CacheService
+from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.types.bots import EventBot
 
 error_router = Router(name="error_router")
@@ -23,6 +30,9 @@ async def universal_error_handler(
     bot: FromDishka[EventBot],
     settings: FromDishka[Settings],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
+    subscription_service: FromDishka[SubscriptionService],
+    cache: FromDishka[CacheService],
+    uow: FromDishka[IUnitOfWork],
 ) -> bool:
     """Catches all exceptions that were not handled in other handlers."""
     translator = translator_factory(settings.general.default_lang)
@@ -40,6 +50,27 @@ async def universal_error_handler(
     ) or update_dict.get("callback_query", {}).get("from", {}).get("id")
 
     if chat_id:
+        if isinstance(event.exception, TelegramForbiddenError) and (
+            "bot was blocked" in str(event.exception)
+            or "user is deactivated" in str(event.exception)
+        ):
+            logger.warning(
+                "User %s blocked the bot or is deactivated. Deleting all user data...",
+                chat_id,
+            )
+            await subscription_service.delete_profile(chat_id, translator, uow)
+            return True
+        if isinstance(event.exception, TelegramBadRequest) and "chat not found" in str(
+            event.exception
+        ):
+            logger.warning(
+                "Chat not found for TG ID %s. Deleting user data. Error: %s",
+                chat_id,
+                event.exception,
+            )
+            await subscription_service.delete_profile(chat_id, translator, uow)
+            return True
+
         try:
             user_error_message = _(
                 "An unexpected error occurred. We are already working on fixing it. "

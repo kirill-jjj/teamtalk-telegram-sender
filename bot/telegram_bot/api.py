@@ -11,7 +11,6 @@ from aiogram import Bot as AiogramBot
 from aiogram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest,
-    TelegramForbiddenError,
 )
 from aiogram.types import (
     Chat,
@@ -30,54 +29,6 @@ from bot.telegram_bot.formatters import format_telegram_user_display_name
 
 ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
-
-
-async def _handle_telegram_api_error(
-    error: TelegramAPIError,
-    chat_id: int,
-    cache: CacheService,
-) -> None:
-    """Handles specific Telegram API errors using structural pattern matching."""
-    logger.debug(
-        "Handling Telegram API error '%s' for chat_id %d", type(error).__name__, chat_id
-    )
-
-    match error:
-        case TelegramForbiddenError() if "bot was blocked" in str(
-            error
-        ) or "user is deactivated" in str(error):
-            logger.warning(
-                "User %s blocked the bot or is deactivated. Deleting all user data...",
-                chat_id,
-            )
-            # This is a bit tricky now. We don't have access to the full services here.
-            # For now, we just log and remove from cache. A full cleanup would
-            # require a different approach.
-            cache.remove_user_profile(chat_id)
-            logger.info(
-                "Removed user %s from cache due to being blocked/deactivated.", chat_id
-            )
-
-        case TelegramBadRequest() if "chat not found" in str(error):
-            logger.warning(
-                "Chat not found for TG ID %s. Deleting user data. Error: %s",
-                chat_id,
-                error,
-            )
-            cache.remove_user_profile(chat_id)
-            logger.info("Removed user %s from cache due to chat not found.", chat_id)
-
-        case TelegramForbiddenError() | TelegramBadRequest():
-            logger.error(
-                "Unhandled Telegram Forbidden/Bad Request error for chat_id %s: %s",
-                chat_id,
-                error,
-            )
-
-        case TelegramAPIError():
-            logger.error(
-                "Unhandled Telegram API error for chat_id %s: %s", chat_id, error
-            )
 
 
 def _should_send_silently(
@@ -128,7 +79,7 @@ async def send_telegram_message(
             kwargs,
         )
     except TelegramAPIError as e:
-        await _handle_telegram_api_error(e, chat_id, cache=cache)
+        logger.warning("Telegram API error sending message to %s: %s", chat_id, e)
         return False
     else:
         return True
