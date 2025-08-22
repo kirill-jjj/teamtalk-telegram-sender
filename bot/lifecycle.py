@@ -38,7 +38,7 @@ from bot.telegram_bot.types.bots import EventBot
 
 
 @inject
-async def on_startup(  # noqa: PLR0915
+async def on_startup(
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
@@ -52,16 +52,18 @@ async def on_startup(  # noqa: PLR0915
     telegram_handler: FromDishka[TelegramNotificationHandler],
     teamtalk_replier: FromDishka[TeamTalkReplyHandler],
     tt_handlers: FromDishka[TeamTalkCommandHandlers],
-    _tt_event_handler: FromDishka[PytalkEventRouter],
-    _tt_connection: FromDishka[TeamTalkConnection],
+    _tt_event_handler: FromDishka[PytalkEventRouter], # Explicitly request
+    _tt_connection: FromDishka[TeamTalkConnection], # Explicitly request
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
     logger.info("Application startup...")
 
+    # await tt_bot._async_setup_hook() now here
+    await tt_bot._async_setup_hook()
+
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
-        await tt_bot._async_setup_hook()
         task_name = "teamtalk_bot_task_dispatcher"
         teamtalk_task = asyncio.create_task(tt_bot._start(), name=task_name)
         dispatcher.workflow_data["teamtalk_task"] = teamtalk_task

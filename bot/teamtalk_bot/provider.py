@@ -42,9 +42,9 @@ class TeamTalkProvider(Provider):
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
         connections: FromDishka[dict[str, TeamTalkConnection]],
+        _router: FromDishka[PytalkEventRouter],
     ) -> AsyncGenerator[TeamTalkConnection, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
-        await pytalk_bot._async_setup_hook()
         tt_config = settings.teamtalk
         server_info = pytalk.TeamTalkServerInfo(
             host=tt_config.host_name,
@@ -85,7 +85,7 @@ class TeamTalkProvider(Provider):
             logging.getLogger(__name__).exception(
                 "Failed to establish TeamTalk connection. Bot will run without it."
             )
-            raise TeamTalkConnectionError("Failed to establish TeamTalk connection") from e
+            raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED) from e
 
         await connection.disconnect_instance()
 
