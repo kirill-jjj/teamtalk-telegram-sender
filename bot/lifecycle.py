@@ -11,7 +11,12 @@ import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
-from bot.commands import BanUserCommand, GetOnlineUsersCommand, KickUserCommand
+from bot.commands import (
+    BanUserCommand,
+    GetAllTeamTalkAccountsCommand,
+    GetOnlineUsersCommand,
+    KickUserCommand,
+)
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType
@@ -120,6 +125,7 @@ async def on_startup(
     command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
     command_bus.register(KickUserCommand, tt_handlers.kick_user)
     command_bus.register(BanUserCommand, tt_handlers.ban_user)
+    command_bus.register(GetAllTeamTalkAccountsCommand, tt_handlers.get_all_tt_accounts)
     logger.info("Command handlers registered.")
 
     logger.info("Subscribing event handlers...")

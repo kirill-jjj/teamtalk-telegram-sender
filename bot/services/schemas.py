@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field
 from bot.models import UserSettings
 
 
+class UserAccountInfo(BaseModel):
+    """A simple DTO for TeamTalk user account information."""
+
+    username: str
+
+
 class OperationResult(BaseModel):
     """Represents a structured result for service operations."""
 

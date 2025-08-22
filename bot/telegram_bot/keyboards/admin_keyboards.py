@@ -16,6 +16,7 @@ from bot.core.enums import (
 )
 from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting
+from bot.services.schemas import UserAccountInfo
 from bot.teamtalk_bot.formatters import get_tt_user_display_name
 from bot.telegram_bot.callback_data import (
     AdminCallback,
@@ -44,8 +45,6 @@ from .shared import (
     create_back_button,
     create_paginated_keyboard,
 )
-
-ttstr = pytalk.instance.sdk.ttstr
 
 
 async def create_banned_user_list_keyboard(
@@ -382,7 +381,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
 
 async def create_linkable_tt_account_list_keyboard(
     translator: NullTranslations,
-    page_items: list[pytalk.UserAccount],
+    page_items: list[UserAccountInfo],
     current_page: int,
     total_pages: int,
     target_telegram_id: int,
@@ -391,11 +390,11 @@ async def create_linkable_tt_account_list_keyboard(
     """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
 
     def _create_tt_account_button(
-        account_obj: pytalk.UserAccount,
+        account_obj: UserAccountInfo,
         _page_num: int,
         _translate: "Callable[[str], str]",
     ) -> InlineKeyboardButton:
-        username_str = ttstr(account_obj.username)
+        username_str = account_obj.username
         return InlineKeyboardButton(
             text=username_str,
             callback_data=LinkTTAccountChosenCallback(

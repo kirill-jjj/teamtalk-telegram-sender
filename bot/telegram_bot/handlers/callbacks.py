@@ -34,5 +34,3 @@ callback_router.include_router(mute_router)
 callback_router.include_router(navigation_router)
 callback_router.include_router(subscriber_list_router)
 callback_router.include_router(banned_user_actions_router)
-
-

@@ -7,14 +7,14 @@ from typing import Annotated, cast
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
-import pytalk
 
+from bot.command_bus.bus import CommandBus
+from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
-from bot.services.schemas import OperationResult
+from bot.services.schemas import OperationResult, UserAccountInfo
 from bot.services.subscription_service import SubscriptionService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
@@ -82,7 +82,7 @@ async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
 ) -> None:
     """Handle 'Link/Change TeamTalk Account' action by showing linkable accounts."""
     await _display_linkable_tt_accounts_page(
@@ -90,7 +90,7 @@ async def link_new_tt_account_choice(
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_context_page=callback_data.page,
         linkable_accounts_page_to_show=0,
-        tt_connection=tt_connection,
+        command_bus=command_bus,
         translator=translator,
     )
     await query.answer()
@@ -101,41 +101,29 @@ async def _display_linkable_tt_accounts_page(
     target_telegram_id: int,
     subscriber_context_page: int,
     linkable_accounts_page_to_show: int,
-    tt_connection: TeamTalkConnection,
+    command_bus: CommandBus,
     translator: NullTranslations,
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
 
-    cache = tt_connection.cache_manager.user_accounts_cache
-    if not tt_connection or not tt_connection.is_ready or not cache:
-        logger.warning(
-            "TeamTalk connection not ready or USER_ACCOUNTS_CACHE is empty for "
-            "displaying linkable accounts. User %s.",
-            query.from_user.id,
-        )
-        await query.answer(
-            _(
-                "TeamTalk server accounts are currently unavailable. "
-                "Please try again later."
-            ),
-            show_alert=True,
-        )
-        return
-
-    all_server_accounts: list[pytalk.UserAccount] = list(
-        tt_connection.cache_manager.user_accounts_cache.values()
+    result: GetAllTeamTalkAccountsResult = await command_bus.execute(
+        GetAllTeamTalkAccountsCommand(lang_code=translator.info().get("language", "en"))
     )
 
-    try:
-        sdk_ttstr = pytalk.instance.sdk.ttstr
-        all_server_accounts.sort(
-            key=lambda acc: (
-                sdk_ttstr(acc.username).lower()
-                if isinstance(acc.username, str | bytes)
-                else str(acc.username).lower()
-            )
+    if not result.success:
+        logger.warning(
+            "Failed to get TeamTalk accounts for linking. User %s. Error: %s",
+            query.from_user.id,
+            result.error_message,
         )
+        await query.answer(result.error_message, show_alert=True)
+        return
+
+    all_server_accounts: list[UserAccountInfo] = result.accounts
+
+    try:
+        all_server_accounts.sort(key=lambda acc: acc.username.lower())
     except Exception:
         logger.exception(
             "Error sorting server accounts for user %s. Proceeding with unsorted list.",
@@ -143,16 +131,13 @@ async def _display_linkable_tt_accounts_page(
         )
 
     title_text = _(
-        "Select a TeamTalk account from {server_host} to link to subscriber "
-        "{telegram_id}:"
-    ).format(server_host=tt_connection.server_info.host, telegram_id=target_telegram_id)
-    empty_list_text = _("No TeamTalk server accounts found on {server_host}.").format(
-        server_host=tt_connection.server_info.host
-    )
+        "Select a TeamTalk account to link to subscriber {telegram_id}:"
+    ).format(telegram_id=target_telegram_id)
+    empty_list_text = _("No TeamTalk server accounts found.")
+
     if not all_server_accounts:
-        empty_list_text = _(
-            "No TeamTalk server accounts found on {server_host} or unable to fetch."
-        ).format(server_host=tt_connection.server_info.host)
+        empty_list_text = _("No TeamTalk server accounts found or unable to fetch.")
+
     if query.bot is None:
         logger.error(
             "_display_linkable_tt_accounts_page: query.bot is None. "
@@ -189,7 +174,7 @@ async def _display_linkable_tt_accounts_page(
 async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
     translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
@@ -198,7 +183,7 @@ async def paginate_linkable_accounts(
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_context_page=callback_data.subscriber_context_page,
         linkable_accounts_page_to_show=callback_data.page,
-        tt_connection=tt_connection,
+        command_bus=command_bus,
         translator=translator,
     )
     await query.answer()

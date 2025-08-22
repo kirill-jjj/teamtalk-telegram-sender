@@ -10,12 +10,15 @@ from pytalk.exceptions import TeamTalkException as PytalkException
 
 from bot.commands import (
     BanUserCommand,
+    GetAllTeamTalkAccountsCommand,
+    GetAllTeamTalkAccountsResult,
     GetOnlineUsersCommand,
     GetOnlineUsersResult,
     KickUserCommand,
     ModerationResult,
 )
 from bot.services.report_service import ReportService
+from bot.services.schemas import UserAccountInfo
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import get_tt_user_display_name
 
@@ -64,6 +67,37 @@ class TeamTalkCommandHandlers:
             report_text=report_text,
             users=list(self._tt_connection.cache_manager.online_users_cache.values()),
         )
+
+    async def get_all_tt_accounts(
+        self, command: GetAllTeamTalkAccountsCommand
+    ) -> GetAllTeamTalkAccountsResult:
+        """Handles the command to get all user accounts from the TT server."""
+        translator = self._translator_factory(command.lang_code)
+        _ = translator.gettext
+
+        if not self._tt_connection or not self._tt_connection.is_ready:
+            return GetAllTeamTalkAccountsResult(
+                success=False,
+                error_message=_("Error: No active TeamTalk connection."),
+            )
+
+        cache = self._tt_connection.cache_manager.user_accounts_cache
+        if not cache:
+            return GetAllTeamTalkAccountsResult(
+                success=False,
+                error_message=_(
+                    "Server user accounts are not loaded yet. "
+                    "Please try again in a moment."
+                ),
+            )
+
+        # Конвертируем объекты pytalk в простые DTO
+        accounts_info = [
+            UserAccountInfo(username=self._tt_connection.ttstr(acc.username))
+            for acc in cache.values()
+        ]
+
+        return GetAllTeamTalkAccountsResult(success=True, accounts=accounts_info)
 
     async def kick_user(self, command: KickUserCommand) -> ModerationResult:
         """Handles the command to kick a user."""

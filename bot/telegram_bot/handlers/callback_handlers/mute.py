@@ -3,14 +3,14 @@
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from aiogram import F, Router, html
-from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-import pytalk
 
+from bot.command_bus.bus import CommandBus
+from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
@@ -20,8 +20,8 @@ from bot.core.enums import (
 from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
+from bot.services.schemas import UserAccountInfo
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
     PaginateUsersCallback,
@@ -46,7 +46,6 @@ from bot.telegram_bot.ui_utils import (
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
 
-ttstr = pytalk.instance.sdk.ttstr
 
 T = TypeVar("T")
 
@@ -157,34 +156,23 @@ async def _display_all_server_accounts_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    tt_connection: TeamTalkConnection,
+    command_bus: CommandBus,
     page: int = 0,
 ) -> None:
     _ = translator.gettext
-    if not tt_connection:
-        await callback_query.answer(
-            _("TeamTalk connection is not active."), show_alert=True
-        )
-        return
-    if not tt_connection.cache_manager.user_accounts_cache:
-        try:
-            await cast(Message, callback_query.message).edit_text(
-                _(
-                    "Server user accounts are not loaded yet for {server_host}. "
-                    "Please try again in a moment."
-                ).format(server_host=tt_connection.server_info.host)
-            )
-        except TelegramAPIError:
-            logger.exception(
-                "Error informing user about empty accounts_cache for %s.",
-                tt_connection.server_info.host,
-            )
+
+    result: GetAllTeamTalkAccountsResult = await command_bus.execute(
+        GetAllTeamTalkAccountsCommand(lang_code=translator.info().get("language", "en"))
+    )
+
+    if not result.success:
+        await callback_query.answer(result.error_message, show_alert=True)
         return
 
-    items = list(tt_connection.cache_manager.user_accounts_cache.values())
+    items = result.accounts
 
-    def username_extractor(item: pytalk.UserAccount) -> str:
-        return cast(str, ttstr(item.username))
+    def username_extractor(item: UserAccountInfo) -> str:
+        return item.username
 
     await _display_user_list(
         callback_query=callback_query,
@@ -192,11 +180,7 @@ async def _display_all_server_accounts_list(
         user_settings=user_settings,
         page=page,
         items=items,
-        sort_key_extractor=lambda acc: (
-            ttstr(acc.username).lower()
-            if isinstance(acc.username, bytes)
-            else str(acc.username).lower()
-        ),
+        sort_key_extractor=lambda acc: acc.username.lower(),
         title_text=_("All Server Accounts"),
         empty_list_text=_("No user accounts found on the server."),
         keyboard_factory_kwargs={
@@ -211,32 +195,9 @@ async def _display_all_server_accounts_list(
                 translator, "Mute Management"
             ),
         },
-        server_host_for_display=tt_connection.server_info.host,
+        server_host_for_display=None,  # Server host is now handled
+        # by the command result
     )
-
-
-async def _get_username_from_all_accounts(
-    callback_data: ToggleMuteCallback,
-    tt_connection: TeamTalkConnection,
-) -> str | None:
-    """Retrieves a username from the cached list of all server accounts."""
-    if not tt_connection.cache_manager.user_accounts_cache:
-        logger.warning("Cannot get username from 'all_accounts': cache empty/None.")
-        return None
-
-    account = _get_item_from_paginated_list(
-        items=list(tt_connection.cache_manager.user_accounts_cache.values()),
-        sort_key_extractor=lambda acc: (
-            ttstr(acc.username).lower()
-            if isinstance(acc.username, bytes)
-            else str(acc.username).lower()
-        ),
-        page=callback_data.current_page,
-        idx_on_page=callback_data.user_idx,
-    )
-    if account:
-        return cast(str, ttstr(account.username))
-    return None
 
 
 def _get_username_from_muted_list(
@@ -281,7 +242,7 @@ async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    tt_connection: TeamTalkConnection,
+    command_bus: CommandBus,
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -293,25 +254,13 @@ async def _refresh_mute_related_ui(
     # No need to refresh it from the session.
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
-        if tt_connection and tt_connection.is_ready:
-            await _display_all_server_accounts_list(
-                callback_query,
-                translator,
-                user_settings,
-                tt_connection,
-                current_page_for_refresh,
-            )
-        else:
-            await callback_query.answer(
-                _("TeamTalk bot is disconnected. UI could not be fully refreshed."),
-                show_alert=True,
-            )
-            manage_muted_cb_data = NotificationCallback(
-                action=NotificationControl.MANAGE_MUTED
-            )
-            await show_manage_muted_menu(
-                callback_query, translator, user_settings, manage_muted_cb_data
-            )
+        await _display_all_server_accounts_list(
+            callback_query,
+            translator,
+            user_settings,
+            command_bus,
+            current_page_for_refresh,
+        )
     else:
         await _display_internal_user_list(
             callback_query,
@@ -448,7 +397,7 @@ async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings | None],
-    tt_connection: FromDishka[TeamTalkConnection],
+    command_bus: FromDishka[CommandBus],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
@@ -461,14 +410,8 @@ async def display_all_accounts_list(
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    if not tt_connection:
-        _ = translator.gettext
-        await callback_query.answer(
-            _("TeamTalk connection is not active."), show_alert=True
-        )
-        return
     await _display_all_server_accounts_list(
-        callback_query, translator, user_settings, tt_connection, callback_data.page
+        callback_query, translator, user_settings, command_bus, callback_data.page
     )
     await callback_query.answer()
 
@@ -479,17 +422,12 @@ async def toggle_user_mute(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     uow: FromDishka[IUnitOfWork],
-    tt_connection: FromDishka[TeamTalkConnection],
+    command_bus: FromDishka[CommandBus],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
-    if not tt_connection:
-        await callback_query.answer(
-            _("TeamTalk connection is not active."), show_alert=True
-        )
-        return
     username_to_toggle = None
     list_type = callback_data.list_type
 
@@ -506,10 +444,20 @@ async def toggle_user_mute(
             return
 
         if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-            if tt_connection:
-                username_to_toggle = await _get_username_from_all_accounts(
-                    callback_data, tt_connection
+            result: GetAllTeamTalkAccountsResult = await command_bus.execute(
+                GetAllTeamTalkAccountsCommand(
+                    lang_code=translator.info().get("language", "en")
                 )
+            )
+            if result.success:
+                account = _get_item_from_paginated_list(
+                    items=result.accounts,
+                    sort_key_extractor=lambda acc: acc.username.lower(),
+                    page=callback_data.current_page,
+                    idx_on_page=callback_data.user_idx,
+                )
+                if account:
+                    username_to_toggle = account.username
         elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
             username_to_toggle = _get_username_from_muted_list(
                 callback_data, user_settings
@@ -542,6 +490,6 @@ async def toggle_user_mute(
                 callback_query,
                 translator,
                 result.user_settings,
-                tt_connection,
+                command_bus,
                 callback_data,
             )

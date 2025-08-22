@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pytalk
 
 from bot.command_bus.types import BaseCommand
+from bot.services.schemas import UserAccountInfo
 
 
 # --- GetOnlineUsers Command ---
@@ -45,3 +46,18 @@ class BanUserCommand(BaseCommand):
 
     user_id: int
     admin_telegram_id: int
+
+
+# --- GetAllTeamTalkAccounts Command ---
+class GetAllTeamTalkAccountsResult(BaseModel):
+    """Represents the result of getting all user accounts."""
+
+    success: bool
+    accounts: list[UserAccountInfo] = []
+    error_message: str | None = None
+
+
+class GetAllTeamTalkAccountsCommand(BaseCommand):
+    """A command to get the list of all user accounts from a TeamTalk server."""
+
+    lang_code: str
