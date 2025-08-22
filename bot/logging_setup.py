@@ -27,6 +27,7 @@ def setup_logging() -> logging.Logger:
 
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
     logging.getLogger("aiogram.dispatcher").setLevel(logging.WARNING)
+    logging.getLogger("pytalk").setLevel(logging.DEBUG)
 
     logger = logging.getLogger(__name__)
     logger.info("Logging configured.")

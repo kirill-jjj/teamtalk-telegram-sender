@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator, Callable
 import gettext
 from gettext import NullTranslations
+import logging
 from typing import TYPE_CHECKING, cast
 
 from aiogram import Bot, Dispatcher
@@ -15,7 +16,7 @@ import pytalk
 from bot.command_bus.bus import CommandBus
 from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
-from bot.constants import INVALID_CHANNEL_ID
+from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
@@ -161,6 +162,7 @@ class AppProvider(Provider):
         connections: FromDishka[dict[str, TeamTalkConnection]],
     ) -> AsyncGenerator[TeamTalkConnection | None, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
+        await pytalk_bot._async_setup_hook()
         tt_config = settings.teamtalk
         server_info = pytalk.TeamTalkServerInfo(
             host=tt_config.host_name,
@@ -190,11 +192,12 @@ class AppProvider(Provider):
         server_key = f"{server_info.host}:{server_info.tcp_port}"
         connections[server_key] = connection
 
+        def _raise_connection_error() -> None:
+            raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED)
+
         try:
             if not await connection.connect():
-                raise TeamTalkConnectionError(
-                    f"Failed to connect to TeamTalk server {server_key}"
-                )
+                _raise_connection_error()
             yield connection
         except Exception:
             logging.getLogger(__name__).exception(

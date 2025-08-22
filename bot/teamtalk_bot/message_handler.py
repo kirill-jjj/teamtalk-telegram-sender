@@ -114,7 +114,8 @@ class MessageHandler:
                     _("\nAdmin commands (MAIN_ADMIN from config only):"),
                     _(
                         "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
-                        "/remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin."
+                        "/remove_admin <Telegram ID> [<Telegram ID>...] - "
+                        "Remove bot admin."
                     ),
                 ]
             )

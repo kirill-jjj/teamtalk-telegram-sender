@@ -13,7 +13,6 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
-from bot.config import Settings
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
@@ -199,7 +198,7 @@ class PytalkEventRouter:
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
         translator_factory: Callable[[str], NullTranslations],
-        _connection_starter: TeamTalkConnection | None,  # noqa: ARG002
+        _connection_starter: TeamTalkConnection | None,
     ) -> None:
         """Initializes the PytalkEventRouter."""
         self.app_container = app_container

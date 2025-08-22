@@ -55,7 +55,8 @@ class TeamTalkConnectionManager:
         """Disconnects the TeamTalk instance and cleans up resources."""
         if not self.connection:
             logger.error(
-                "ConnectionManager: disconnect_instance called before connection was set."
+                "ConnectionManager: disconnect_instance called "
+                "before connection was set."
             )
             return
 

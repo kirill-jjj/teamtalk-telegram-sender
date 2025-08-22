@@ -52,3 +52,15 @@ class UserLeftEvent(BaseEvent):
     user_id: int
     server_name: str
     online_users_cache: dict[int, pytalk.user.User]
+
+
+class ConnectionEstablishedEvent(BaseEvent):
+    """Event published when a TeamTalk connection is successfully established."""
+
+    connection_id: str
+
+
+class LoginSuccessfulEvent(BaseEvent):
+    """Event published when a TeamTalk bot successfully logs in to a server."""
+
+    connection_id: str

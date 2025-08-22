@@ -35,6 +35,7 @@ DEEPLINK_TOKEN_LENGTH_BYTES = 16
 # --- UI Message Keys ---
 # Used with gettext _() to provide consistent, translatable user-facing messages.
 MSG_GENERAL_ERROR = "An error occurred. Please try again later."
+MSG_TEAMTALK_CONNECTION_FAILED = "Failed to connect to TeamTalk server"
 
 
 # --- Callback Prefixes ---
