@@ -2,10 +2,10 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Callable
-import functools  # Убедитесь, что этот импорт есть
+import functools
 from gettext import NullTranslations
 import logging
-from typing import Any  # Add this import
+from typing import Any
 
 from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
@@ -47,7 +47,7 @@ def _thread_safe_dispatch(
             bot_instance._schedule_event, coro, "on_" + event, *args, **kwargs
         )
     except AttributeError:
-        pass  # Игнорируем события без обработчиков
+        pass  # Ignore events without handlers
     except Exception:
         logger.exception("Error in thread-safe dispatch.")
 
@@ -113,16 +113,16 @@ class TeamTalkProvider(Provider):
         connections[server_key] = connection
 
         try:
-            # 2. Выполняем блокирующее подключение в отдельном потоке
+            # 2. Execute the blocking connection in a separate thread
             is_connected = await asyncio.to_thread(connection.connect)
             if not is_connected:
                 raise TeamTalkConnectionError(MSG_TEAMTALK_CONNECTION_FAILED)
 
-            # 3. Передаем готовое и подключенное соединение в приложение
+            # 3. Pass the ready and connected connection to the application
             yield connection
 
         finally:
-            # 4. Гарантированно отключаемся при завершении
+            # 4. Disconnect gracefully on exit
             logging.getLogger(__name__).info("Disconnecting from TeamTalk server...")
             if connection.instance:
                 await asyncio.to_thread(connection.disconnect_instance)

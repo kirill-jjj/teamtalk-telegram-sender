@@ -62,10 +62,9 @@ async def on_startup(
     logger = logging.getLogger(__name__)
     logger.info("Application startup...")
 
-    # Запускаем цикл обработки событий pytalk в фоне
+    # Start the pytalk event loop in the background
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
-        # _async_setup_hook теперь вызывается в провайдере
         task_name = "teamtalk_bot_task_dispatcher"
         teamtalk_task = asyncio.create_task(tt_bot._start(), name=task_name)
         dispatcher.workflow_data["teamtalk_task"] = teamtalk_task
@@ -73,7 +72,6 @@ async def on_startup(
     else:
         logger.info("Pytalk main event loop task is already running.")
 
-    # Логика подключения теперь полностью внутри провайдера, здесь она не нужна.
     logger.info("Loading all caches from database...")
     async with SqlModelUnitOfWork(session_factory) as uow:
         db_admin_ids = await uow.admins.get_all_ids()

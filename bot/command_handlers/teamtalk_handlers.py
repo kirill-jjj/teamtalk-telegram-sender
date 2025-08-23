@@ -91,7 +91,7 @@ class TeamTalkCommandHandlers:
                 ),
             )
 
-        # Конвертируем объекты pytalk в простые DTO
+        # Convert pytalk objects to simple DTOs
         accounts_info = [
             UserAccountInfo(username=self._tt_connection.ttstr(acc.username))
             for acc in cache.values()

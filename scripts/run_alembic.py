@@ -21,7 +21,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--config",
-        default="config.toml",  # Changed default from .env to config.toml
+        default="config.toml",
         help="Path to the TOML configuration file for Alembic's database settings. "
         "This path is relative to the project root. (default: config.toml)",
     )
