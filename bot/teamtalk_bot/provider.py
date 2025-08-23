@@ -124,7 +124,7 @@ class TeamTalkProvider(Provider):
             # 4. Disconnect gracefully on exit
             logging.getLogger(__name__).info("Disconnecting from TeamTalk server...")
             if connection.instance:
-                await asyncio.to_thread(connection.disconnect_instance)
+                await connection.disconnect_instance()
 
     @provide
     def get_pytalk_event_router(

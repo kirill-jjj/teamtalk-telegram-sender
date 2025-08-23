@@ -11,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 from bot.core.enums import SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
+from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import SubscriberCallback
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
@@ -31,14 +32,13 @@ async def refresh_banned_list_view(
     callback_data: SubscriberCallback,
     translator: NullTranslations,
     bot: EventBot,
-    uow: IUnitOfWork,
+    report_service: ReportService,
     **kwargs: object,
 ) -> None:
     """Refresher function for the banned user list view."""
     await _show_banned_list_page(
         target=query,
-        ban_repo=uow.bans,
-        user_repo=uow.users,
+        report_service=report_service,
         bot=bot,
         page=callback_data.page,
         translator=translator,
@@ -55,7 +55,7 @@ async def unban_subscriber(
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
-    bot: FromDishka[EventBot],
+    report_service: Annotated[ReportService, FromDishka()],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
@@ -66,7 +66,7 @@ async def unban_subscriber(
         result = await moderation_service.unban_subscriber(
             target_telegram_id, translator, uow=uow
         )
-        message = result.message_key.format(**(result.message_args or {}))
+        message = result.message_key.format(**(result.message_args or dict()))
     return result.success, message, None
 
 
@@ -75,14 +75,13 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback,
     translator: NullTranslations,
     bot: EventBot,
-    uow: IUnitOfWork,
+    report_service: ReportService,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
     await _show_subscriber_list_page(
         target=query,
-        user_repo=uow.users,
-        subscriber_repo=uow.subscribers,
+        report_service=report_service,
         bot=bot,
         translator=translator,
         page=callback_data.page,
@@ -99,7 +98,7 @@ async def ban_subscriber(
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
-    bot: FromDishka[EventBot],
+    report_service: Annotated[ReportService, FromDishka()],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber."""
@@ -116,5 +115,5 @@ async def ban_subscriber(
                 "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
             )
 
-        short_message = result.message_key.format(**(result.message_args or {}))
+        short_message = result.message_key.format(**(result.message_args or dict()))
     return result.success, short_message, None

@@ -1,5 +1,6 @@
 """Manages the lifecycle of TeamTalk server connections."""
 
+import asyncio
 import contextlib
 import logging
 from typing import TYPE_CHECKING
@@ -85,14 +86,15 @@ class TeamTalkConnectionManager:
     async def initiate_reconnect(self) -> None:
         """Initiates a reconnection sequence for this connection."""
         await self.disconnect_instance()
-        await self.connect()
+        await asyncio.to_thread(self.connect)
 
     async def determine_target_channel(self) -> tuple[int, str]:
         """Determines the target channel ID and name from config."""
-        if not self.connection or not self.connection.instance:
+        conn = self.connection
+        if not conn or not conn.instance:
             return INVALID_CHANNEL_ID, ""
 
-        conn = self.connection
+        instance = conn.instance
         cfg_tt = conn.settings.teamtalk
         chan_path = cfg_tt.channel
         target_chan_name = chan_path
@@ -100,7 +102,7 @@ class TeamTalkConnectionManager:
 
         if chan_path.isdigit():
             final_chan_id = int(chan_path)
-            ch_obj = conn.instance.get_channel(final_chan_id)
+            ch_obj = instance.get_channel(final_chan_id)
             if ch_obj:
                 target_chan_name = conn.ttstr(ch_obj.name)
             else:  # Channel ID specified but not found
@@ -109,7 +111,7 @@ class TeamTalkConnectionManager:
                 )
                 final_chan_id = INVALID_CHANNEL_ID  # Reset if not found
         else:
-            ch_obj = conn.instance.get_channel_from_path(chan_path)
+            ch_obj = instance.get_channel_from_path(chan_path)
             if ch_obj:
                 final_chan_id = ch_obj.id
                 target_chan_name = conn.ttstr(ch_obj.name)
@@ -123,14 +125,17 @@ class TeamTalkConnectionManager:
 
     async def join_configured_channel(self) -> None:
         """Joins the configured TeamTalk channel."""
-        if not self.connection or not self.connection.instance:
+        conn = self.connection
+        if not conn or not conn.instance:
+            host = conn.server_info.host if conn else "Unknown"
             logger.error(
-                "[%s] No instance to join channel.", self.connection.server_info.host
+                "[%s] No instance to join channel.",
+                host,
             )
             await self.initiate_reconnect()
             return
 
-        conn = self.connection
+        instance = conn.instance
         final_chan_id, target_chan_name = await self.determine_target_channel()
         chan_pass = conn.settings.teamtalk.channel_password or ""
 
@@ -142,7 +147,7 @@ class TeamTalkConnectionManager:
                     target_chan_name,
                     final_chan_id,
                 )
-                conn.instance.join_channel_by_id(final_chan_id, password=chan_pass)
+                instance.join_channel_by_id(final_chan_id, password=chan_pass)
             else:
                 logger.warning(
                     "[%s] No valid target channel found/configured. "
@@ -150,8 +155,8 @@ class TeamTalkConnectionManager:
                     conn.server_info.host,
                 )
                 # If not joining a specific channel, finalize with the current one.
-                curr_chan_id = conn.instance.getMyCurrentChannelID()
-                ch_to_finalize = conn.instance.get_channel(
+                curr_chan_id = instance.getMyCurrentChannelID()
+                ch_to_finalize = instance.get_channel(
                     curr_chan_id if curr_chan_id is not None else 0
                 )
                 if ch_to_finalize:
@@ -171,11 +176,11 @@ class TeamTalkConnectionManager:
             )
             # Attempt to finalize in the current channel if join failed
             # due to permissions
-            curr_chan_id_after_fail = conn.instance.getMyCurrentChannelID()
+            curr_chan_id_after_fail = instance.getMyCurrentChannelID()
             ch_id_to_get = (
                 curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
             )
-            ch_to_finalize_after_fail = conn.instance.get_channel(ch_id_to_get)
+            ch_to_finalize_after_fail = instance.get_channel(ch_id_to_get)
             if ch_to_finalize_after_fail:
                 await conn.finalize_bot_login_sequence(ch_to_finalize_after_fail)
             else:

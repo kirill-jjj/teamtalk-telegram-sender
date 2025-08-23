@@ -4,4 +4,4 @@
 
 # It's good practice to define __all__ to specify what gets imported
 # when `from .middlewares import *` is used, though explicit imports are better.
-__all__ = []
+__all__: list[str] = []

@@ -476,20 +476,20 @@ async def toggle_user_mute(
             )
             return
 
-        result = await moderation_service.toggle_mute_status(
+        toggle_result = await moderation_service.toggle_mute_status(
             user_settings, username_to_toggle, translator, uow=uow
         )
 
-        toast_message = translator.gettext(result.message_key).format(
-            **(result.message_args or {})
+        toast_message = translator.gettext(toggle_result.message_key).format(
+            **(toggle_result.message_args or {})
         )
-        await callback_query.answer(toast_message, show_alert=not result.success)
+        await callback_query.answer(toast_message, show_alert=not toggle_result.success)
 
-        if result.success and result.user_settings:
+        if toggle_result.success and toggle_result.user_settings:
             await _refresh_mute_related_ui(
                 callback_query,
                 translator,
-                result.user_settings,
+                toggle_result.user_settings,
                 command_bus,
                 callback_data,
             )
