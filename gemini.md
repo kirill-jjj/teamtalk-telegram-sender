@@ -24,6 +24,7 @@ This document is the single source of truth for any agent contributing to this c
 7.  [Codebase Map (Where to Find What)](#7-codebase-map-where-to-find-what)
 8.  [Adding a New Dependency (Service)](#8-adding-a-new-dependency-service)
 9.  [Debugging](#9-debugging)
+10. [Using Local Documentation](#10-using-local-documentation)
 
 ---
 
@@ -326,3 +327,13 @@ Direct `print()` calls are forbidden in the application code (`bot/`, `sender.py
 
 *   **Recommended Method:** Use the `logging` module. For temporary debugging, you can add `logger.debug("My variable: %s", my_variable)`. Remember to remove these debug statements before creating a commit.
 *   **Running with Debug Logs:** To see debug-level logs, you may need to adjust the logging level in `bot/logging_setup.py` locally. Do not commit changes to this file.
+
+## 10. Using Local Documentation
+
+The `ai-docs` directory contains offline documentation for the key libraries used in this project. Before performing a complex task involving Aiogram, Dishka, or another major library, you should consult this documentation.
+
+**Workflow:**
+1.  The contents of `ai-docs` are ignored by default. You must explicitly bypass this rule to see the files.
+2.  Use `glob` to find relevant documentation files. You must set `respect_git_ignore` to `False`. For example: `glob(pattern='ai-docs/aiogram-docs/**/*.rst', respect_git_ignore=False)`.
+3.  Once you have a list of files, use `read_many_files` or `read_file` to get their content.
+4.  Use the information to ensure your code modifications are idiomatic and use the library's API correctly.
