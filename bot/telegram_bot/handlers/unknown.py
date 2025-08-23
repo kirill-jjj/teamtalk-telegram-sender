@@ -7,11 +7,13 @@ from aiogram import Router
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
 
+from bot.telegram_bot.filters.subscription import IsSubscribed
+
 logger = logging.getLogger(__name__)
 catch_all_router = Router(name="catch_all_router")
 
 
-@catch_all_router.message()
+@catch_all_router.message(IsSubscribed())
 async def on_unknown_message(
     message: Message, translator: FromDishka[NullTranslations]
 ) -> None:
