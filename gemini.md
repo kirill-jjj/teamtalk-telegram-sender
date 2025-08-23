@@ -27,6 +27,11 @@ This document is the single source of truth for any agent contributing to this c
 
 ---
 
+## Development Environment
+**Operating System:** This project is developed on **Windows**. Do not use Linux-specific shell commands (e.g., `rm`, `ls`, `grep`). Use Windows equivalents (`del`, `dir`, `findstr`) or cross-platform tools when available.
+
+---
+
 ## 1. Project Overview
 
 **Objective:** This project is an asynchronous bot that bridges a **TeamTalk 5** server with **Telegram**.

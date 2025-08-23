@@ -1,8 +1,3 @@
-fix: Revert incorrect Scope.TRANSIENT usage in UoW provider
+docs(gemini): 📚 add windows environment notice
 
-Reverted the previous change that incorrectly added `scope=Scope.TRANSIENT`
-to the `get_uow` provider. In Dishka, the transient scope behavior (creating
-a new instance on each request) is the default when no explicit scope is
-specified.
-
-This fixes the `AttributeError: TRANSIENT` encountered during bot startup.
+Add a prominent note to the development guide specifying that the required OS is Windows and that Linux-specific commands should not be used. This prevents environment-related errors, such as using 'rm' instead of 'del'.
