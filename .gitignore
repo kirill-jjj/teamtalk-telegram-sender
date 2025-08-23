@@ -51,3 +51,4 @@ locales/**/*.mo
 !pyproject.toml
 ai-docs
 .geminiignore
+commit_message.txt

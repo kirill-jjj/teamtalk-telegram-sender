@@ -1,5 +1,32 @@
 This document is the single source of truth for any agent contributing to this codebase. Its purpose is to ensure consistency, quality, and maintainability. Adherence to these principles is mandatory for all contributions.
 
+## Golden Rules for the AI Assistant
+
+*   **Analyze First:** Before writing any code, always use `glob`, `search_file_content`, and `read_file` to understand existing patterns, conventions, and the relevant context.
+*   **Services Hold Business Logic:** All business logic **must** reside in the `bot/services` layer. This includes orchestrating data from repositories and performing actions.
+*   **Handlers are Thin:** Handlers in `bot/telegram_bot/handlers` and `bot/teamtalk_bot/command_handlers` must be "thin." Their only job is to parse incoming requests, call a single service method, and present the result. They should **never** contain business logic.
+*   **Use `replace` for Modifications:** For changing existing code, the `replace` tool is strongly preferred over `write_file` due to its precision and safety. `write_file` should only be used for creating new files or for large-scale refactoring of an entire file.
+*   **Follow Existing Patterns:** Mimic the style, structure, and conventions of the surrounding code. This is more important than any personal preference.
+*   **Validate Your Work:** After making changes, always run the project's validation suite: `uv run ruff format .`, `uv run ruff check --fix .`, `uv run mypy .`, and `uv run pytest`.
+
+---
+
+## Table of Contents
+1.  [Project Overview](#1-project-overview)
+2.  [Core Architectural Principles](#2-core-architectural-principles)
+    1.  [Dependency Injection (DI)](#21-dependency-injection-di)
+    2.  [Event-Driven Architecture](#22-event-driven-architecture)
+    3.  [Separation of Concerns (SoC)](#23-separation-of-concerns-soc)
+3.  [Database and Migrations](#3-database-and-migrations)
+4.  [Internationalization (i18n)](#4-internationalization-i18n)
+5.  [Code Quality and Contribution Guidelines](#5-code-quality-and-contribution-guidelines)
+6.  [Development Workflow](#6-development-workflow)
+7.  [Codebase Map (Where to Find What)](#7-codebase-map-where-to-find-what)
+8.  [Adding a New Dependency (Service)](#8-adding-a-new-dependency-service)
+9.  [Debugging](#9-debugging)
+
+---
+
 ## 1. Project Overview
 
 **Objective:** This project is an asynchronous bot that bridges a **TeamTalk 5** server with **Telegram**.
@@ -40,20 +67,41 @@ To ensure loose coupling between the major components of the application (`teleg
 This pattern ensures that the `teamtalk_bot` can operate and be tested independently of the `telegram_bot`, and vice-versa.
 
 ### 2.3. Separation of Concerns (SoC)
-The codebase is organized into distinct layers and modules, each with a single responsibility.
-*   `bot/core`: Cross-cutting concerns, core enums, and business logic not tied to a specific platform.
-*   `bot/database`: Contains the data access layer (Repositories, Models, etc.).
-*   `bot/event_bus`: The core implementation of the event bus system.
-*   `bot/event_handlers`: Contains the subscribers/listeners that react to events and perform actions (e.g., sending notifications).
-*   `bot/services`: Contains the application's business logic.
-*   `bot/telegram_bot`: All components specific to the Telegram bot. It does **not** directly depend on the `teamtalk_bot`.
-*   `bot/teamtalk_bot`: All components specific to the TeamTalk client. This module is now decomposed into several key components:
-    *   `PytalkEventRouter`: The primary adapter to the `pytalk` library. It listens for raw events and is the **sole publisher** of domain events (e.g., `UserJoinedEvent`) to the `EventBus`.
-    *   `TeamTalkConnection`: A state container for a single server connection. It owns the `TeamTalkConnectionManager` and `TeamTalkCache`.
-    *   `TeamTalkConnectionManager`: Manages the connection lifecycle (`connect`, `disconnect`, `reconnect`).
-    *   `TeamTalkCache`: Manages caches (`online_users_cache`, etc.) and their background sync tasks for a single connection.
-    *   `MessageHandler` & `CommandRouter`: Handle incoming private messages and commands for a single connection.
-*   `scripts`: Standalone utility scripts for development and maintenance.
+The codebase is organized into distinct layers and modules, each with a single, well-defined responsibility. Adhering to this separation is critical for maintainability.
+
+#### Target Architecture
+*   **Handlers (`bot/telegram_bot/handlers`, `bot/teamtalk_bot/command_handlers`)**
+    *   **Role:** Entry point for user interaction.
+    *   **Responsibilities:**
+        *   Parse incoming messages, commands, or callback queries.
+        *   Extract necessary data (e.g., user ID, arguments).
+        *   Call **one** appropriate method from a **Service** layer class.
+        *   Present the result from the service to the user (e.g., sending a message, editing a keyboard).
+    *   **Rule:** Handlers **must be thin**. They should **never** contain business logic, database queries, or complex state manipulation.
+
+*   **Services (`bot/services`)**
+    *   **Role:** The core of the application's business logic.
+    *   **Responsibilities:**
+        *   Contain all business rules and use case logic (e.g., how to subscribe a user, what steps to take to ban someone).
+        *   Orchestrate operations between different components, primarily repositories.
+        *   Interact with the database **only** through the `Unit of Work (UoW)` and its repositories.
+        *   May call other services to compose more complex operations.
+    *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service.
+
+*   **Repositories (`bot/database/repositories`)**
+    *   **Role:** Data Access Layer (DAL).
+    *   **Responsibilities:**
+        *   Provide a clean API for accessing database tables (e.g., `get_by_id`, `get_all`, custom queries).
+        *   Abstract away the specifics of `SQLModel` or `SQLAlchemy` queries.
+    *   **Rule:** Repositories should **only** contain database query logic. They do not contain business rules and are always accessed via the `UoW` in the service layer.
+
+#### Working with Existing Code
+You may encounter business logic within handlers. This is a known area for future refactoring. When modifying an existing handler that contains business logic, you have two options:
+
+*   **Option A (Preferred):** If the task is small, refactor the existing logic out of the handler and into a new or existing service, then add your new logic in the service. Propose this refactoring to the user as part of your plan.
+*   **Option B:** If the change is very minor (e.g., fixing a typo in a string), you can make the change directly in the handler. However, for any logic changes, prefer Option A.
+
+The goal is to leave the code better than you found it. Always strive to move business logic to the service layer when you touch a related part of the code.
 
 ## 3. Database and Migrations
 *   **Models:** All database tables are defined as `SQLModel` classes in `bot/models.py`.
@@ -147,7 +195,21 @@ Adherence to this fundamental principle is essential for clarity.
 *   **Classes, variables, and data structures** must be nouns that describe the entity they represent (e.g., `User`, `Settings`, `main_menu_keyboard`).
 *   **Boolean variables or functions** should be named to read like a question (e.g., `is_admin`, `is_ready`, `has_permissions`).
 
-### 5.6. Linting and Formatting
+### 5.6. Code Modification
+When modifying existing code, the `replace` tool is strongly preferred over `write_file`.
+
+*   **Precision:** The `replace` tool is designed for surgical precision. It requires a significant amount of context (the `old_string` parameter) around the code to be changed, which ensures that the modification is applied exactly where intended. This minimizes the risk of accidental changes or corrupting the file.
+*   **Safety:** Unlike `write_file`, which overwrites the entire file, `replace` only targets a specific block of text. This makes it a much safer option for small to medium-sized changes.
+*   **Usage:** To use `replace` effectively, first use `read_file` to get the exact content of the file. Then, construct the `old_string` parameter by copying at least 3-5 lines of code before and after the target block, including all original whitespace and indentation. The `new_string` parameter will contain the replacement code.
+
+**Example Workflow:**
+1.  `read_file('path/to/file.py')`
+2.  Identify the block to change from the output.
+3.  Use `replace` with the `old_string` containing the identified block plus its surrounding context, and the `new_string` containing the updated code.
+
+Using `write_file` for minor changes is discouraged and should only be used when creating a new file or performing a very large-scale refactoring that makes `replace` impractical.
+
+### 5.7. Linting and Formatting
 All code must be validated against `ruff` before committing. The key commands are `uv run ruff check --fix .` and `uv run ruff format .`. Key enforced rules include:
 *   **`D` (pydocstyle):** All public modules, functions, classes, and methods **must** have a docstring in the Google convention. This is non-negotiable.
 *   **`SIM` (flake8-simplify):** Code must be simplified where possible. `ruff --fix` will handle most of this.
@@ -162,20 +224,100 @@ Before starting, ensure your environment is set up and all dependencies are inst
 Follow this workflow for every task.
 
 1.  **Code Implementation:** Write code that adheres to all the principles outlined above.
+
 2.  **Localization (if new user-facing strings were added):**
     1.  Wrap new strings in `_()`.
     2.  Run `uv run i18n update` to update the `.pot` template and the `.po` files.
     3.  Add translations to the `.po` files.
     4.  Run `uv run i18n compile` to create the `.mo` files.
+
 3.  **Database Migration (if `bot/models.py` was changed):**
     1.  Run `uv run migrate revision -m "Descriptive message" --autogenerate`.
     2.  **CRITICAL: Manually inspect the generated migration script for correctness.**
         *   **Data integrity is the highest priority. Under NO circumstances shall a migration lead to data loss for existing users. Never.**
         *   Pay special attention to column renames or type changes. Alembic's `autogenerate` often detects a rename as a `DROP` of the old column and an `ADD` of the new one. This is **unacceptable** as it deletes all data in that column. You **must** manually edit the script to use `op.alter_column()` instead.
         *   Always question if a destructive change (like dropping a table or column) is truly necessary and plan for it carefully.
+
 4.  **Validation:**
     1.  Run `uv run ruff format .` to format the code.
     2.  Run `uv run ruff check --fix .` to check for and fix issues.
     3.  Run `uv run mypy .` to validate type hints.
     4.  Run `uv run pytest` to execute the test suite.
-5.  **Commit:** Write a clear and descriptive commit message following the Conventional Commits specification.
+    5.  **Runtime Verification:** After all static checks pass, you **must** attempt to run the application with `uv run sender` to ensure it initializes without errors. **Do not proceed to the commit step if the application fails to start.**
+
+5.  **Commit:** After successfully implementing and validating a task (including the runtime verification), you **must** always proactively offer to create a commit for the changes.
+
+    *   **Tooling & Process:**
+        1.  **Compose the Message:** For any non-trivial change, compose the full, multi-line commit message in a temporary file named `commit_message.txt` using the `write_file` tool. This is the **required workflow** because the `-m` flag is not suitable for the detailed, multi-line messages expected in this project.
+        2.  **Commit from File:** Run the commit command using the file: `git commit -F commit_message.txt`. This ensures the message is formatted correctly.
+        3.  **Clean Up:** Delete the temporary file after the commit is successful.
+
+    *   **Format:** The commit message must follow this structure:
+        ```
+        <emoji> <type>(<scope>): <subject>
+        <BLANK LINE>
+        <body>
+        <BLANK LINE>
+        <footer>
+        ```
+
+    *   **Components:**
+        *   **Emoji:** Start with a relevant emoji from the Gitmoji standard.
+        *   **Type:** Must be one of the following:
+            *   `feat`: A new feature.
+            *   `fix`: A bug fix.
+            *   `docs`: Documentation only changes.
+            *   `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc).
+            *   `refactor`: A code change that neither fixes a bug nor adds a feature.
+            *   `perf`: A code change that improves performance.
+            *   `test`: Adding missing tests or correcting existing tests.
+            *   `build`: Changes that affect the build system or external dependencies.
+            *   `ci`: Changes to our CI configuration files and scripts.
+            *   `chore`: Other changes that don't modify src or test files.
+        *   **Scope (optional):** A noun describing the section of the codebase affected (e.g., `auth`, `db`, `telegram_handlers`).
+        *   **Subject:** A concise description of the change in the imperative mood (e.g., "Add `replace` tool guide", not "Added..."). No capitalization, no period at the end.
+        *   **Body (optional):** A more detailed explanation of the changes. Explain the *why* behind the change, not the *how*.
+        *   **Footer (optional):** Contains "BREAKING CHANGE:" for breaking changes or references to issues (e.g., "Closes #123").
+
+    *   **Gitmoji Quick Reference:**
+        | Emoji | Code | Type | Description |
+        |---|---|---|---|
+        | ✨ | `:sparkles:` | `feat` | Introduce a new feature. |
+        | 🐛 | `:bug:` | `fix` | Fix a bug. |
+        | 📚 | `:books:` | `docs` | Write or update documentation. |
+        | ♻️ | `:recycle:` | `refactor` | Refactor code. |
+        | ✅ | `:white_check_mark:` | `test` | Add, update, or pass tests. |
+        | 🔧 | `:wrench:` | `chore` | Add or update configuration files. |
+        | 🚀 | `:rocket:` | `chore` | Deploy stuff. |
+        | 💄 | `:lipstick:` | `style` | Add or update the UI and style files. |
+        | 🔥 | `:fire:` | `refactor` | Remove code or files. |
+        | 💥 | `:boom:` | `feat` | Introduce breaking changes. |
+        | 📦 | `:package:` | `build` | Add or update compiled files or packages. |
+        | 👷 | `:construction_worker:` | `ci` | Add or update CI build system. |
+
+## 7. Codebase Map (Where to Find What)
+
+Use this as a quick guide to locate code for common tasks:
+
+*   **User-facing text & keyboards:** Look in `bot/telegram_bot/handlers/` for the command logic and `bot/telegram_bot/keyboards/` for the button layouts and text. User-facing strings must be wrapped in `_()` for localization.
+*   **Business Logic (e.g., subscribing a user, banning):** All core logic should be in the `bot/services/` directory. Start your search here for how the application *works*.
+*   **Database Schema:** The single source of truth for the database structure is `bot/models.py`.
+*   **Database Queries:** All `SELECT`, `INSERT`, `UPDATE`, `DELETE` operations are encapsulated within repositories in `bot/database/repositories/`.
+*   **Dependency Injection:** To see how components are wired together or to add a new one, see `bot/di_providers.py`.
+*   **TeamTalk Events (Join/Leave):** The initial handling and routing of raw events from the `py-talk-ex` library happens in `bot/teamtalk_bot/pytalk_event_router.py`.
+*   **Startup & Shutdown Logic:** See `bot/lifecycle.py`.
+
+## 8. Adding a New Dependency (Service)
+
+This project uses `dishka` for dependency injection. To add a new service and make it available to a handler, follow these steps:
+
+1.  **Create the Service:** Write your new service class in a file within the `bot/services/` directory.
+2.  **Add a Provider:** Open `bot/di_providers.py`. In the appropriate provider class (`AppProvider` for app-level singletons, `RequestProvider` for per-request instances), add a new `@provide` method that creates and returns an instance of your service.
+3.  **Inject the Service:** In the `__init__` or handler function where you need the service, add it as a parameter with the type hint `FromDishka[YourNewService]`. Dishka will automatically provide it.
+
+## 9. Debugging
+
+Direct `print()` calls are forbidden in the application code (`bot/`, `sender.py`) and will be caught by the linter.
+
+*   **Recommended Method:** Use the `logging` module. For temporary debugging, you can add `logger.debug("My variable: %s", my_variable)`. Remember to remove these debug statements before creating a commit.
+*   **Running with Debug Logs:** To see debug-level logs, you may need to adjust the logging level in `bot/logging_setup.py` locally. Do not commit changes to this file.
