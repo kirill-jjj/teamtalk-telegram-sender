@@ -21,7 +21,6 @@ from bot.telegram_bot.callback_data import (
     PaginateLinkableAccountsCallback,
     SubscriberCallback,
 )
-
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_linkable_tt_account_list_keyboard,
@@ -147,7 +146,7 @@ async def _display_linkable_tt_accounts_page(
         return
 
     page_slice, _, current_page_idx = paginate_list(
-        all_server_accounts, linkable_accounts_page_to_show, SUBSCRIBERS_PER_PAGE
+        all_server_accounts, linkable_accounts_page_to_show, USERS_PER_PAGE
     )
 
     await display_paginated_list(
@@ -164,7 +163,7 @@ async def _display_linkable_tt_accounts_page(
             "target_telegram_id": target_telegram_id,
             "subscriber_list_page": subscriber_context_page,
         },
-        page_size=SUBSCRIBERS_PER_PAGE,
+        page_size=USERS_PER_PAGE,
         server_host_for_display=None,
     )
 

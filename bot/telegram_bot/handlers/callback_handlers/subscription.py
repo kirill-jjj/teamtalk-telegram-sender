@@ -8,7 +8,7 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import Field, RootModel, ValidationError
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
 from bot.database.uow import IUnitOfWork
@@ -22,10 +22,10 @@ from bot.telegram_bot.ui_utils import safe_edit_text
 logger = logging.getLogger(__name__)
 
 
-class SubscriptionUpdate(BaseModel):
+class SubscriptionUpdate(RootModel[NotificationSetting]):
     """Pydantic model for validating subscription update callback data."""
 
-    setting: NotificationSetting = Field(validation_alias="setting_value")
+    root: NotificationSetting = Field(validation_alias="setting_value")
 
 
 subscription_router = Router(name="callback_handlers.subscription")
@@ -84,7 +84,7 @@ async def set_subscription_setting(
     _ = translator.gettext
     try:
         update_data = SubscriptionUpdate.model_validate(callback_data.model_dump())
-        new_setting_enum = update_data.setting
+        new_setting_enum = update_data.root
     except ValidationError:
         logger.exception(
             "Invalid subscription setting value for user %s: %s",

@@ -14,10 +14,9 @@ from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
-from bot.database.uow import IUnitOfWork
-from bot.database.repositories.user_repository import UserRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.ban_repository import BanRepository
+from bot.database.repositories.subscriber_repository import SubscriberRepository
+from bot.database.repositories.user_repository import UserRepository
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.services.report_service import ReportService
