@@ -1,16 +1,25 @@
 """Service for moderation actions like banning and muting."""
 
+from collections.abc import Callable
 from gettext import NullTranslations
 import logging
-from typing import Annotated
+from typing import Annotated, Any, TypeVar
 
 from pydantic import ConfigDict, Field, validate_call
 
+from bot.command_bus.bus import CommandBus
+from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
+from bot.constants import USERS_PER_PAGE
+from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
+from bot.telegram_bot.callback_data import ToggleMuteCallback
+from bot.telegram_bot.ui_utils import paginate_list
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -163,3 +172,56 @@ class ModerationService:
             message_args={"username": tt_username_to_toggle},
             user_settings=user_settings,
         )
+
+    def _get_item_from_paginated_list(
+        self,
+        items: list[T],
+        sort_key_extractor: Callable[[T], Any],
+        page: int,
+        idx_on_page: int,
+    ) -> T | None:
+        """Gets a specific item from a paginated list."""
+        sorted_items = sorted(items, key=sort_key_extractor)
+        page_items, _, _ = paginate_list(sorted_items, page, USERS_PER_PAGE)
+        if 0 <= idx_on_page < len(page_items):
+            return page_items[idx_on_page]
+        return None
+
+    async def get_target_username_for_toggle(
+        self,
+        callback_data: ToggleMuteCallback,
+        user_settings: UserSettings,
+        command_bus: CommandBus,
+        translator: NullTranslations,
+    ) -> str | None:
+        """Determines the username to toggle mute status for based on callback data."""
+        _ = translator.gettext
+        username_to_toggle = None
+        list_type = callback_data.list_type
+
+        if list_type == UserListAction.LIST_ALL_ACCOUNTS:
+            result: GetAllTeamTalkAccountsResult = await command_bus.execute(
+                GetAllTeamTalkAccountsCommand(
+                    lang_code=translator.info().get("language", "en")
+                )
+            )
+            if result.success:
+                account = self._get_item_from_paginated_list(
+                    items=result.accounts,
+                    sort_key_extractor=lambda acc: acc.username.lower(),
+                    page=callback_data.current_page,
+                    idx_on_page=callback_data.user_idx,
+                )
+                if account:
+                    username_to_toggle = account.username
+        elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
+            username_to_toggle = self._get_item_from_paginated_list(
+                items=[
+                    muted.muted_teamtalk_username
+                    for muted in user_settings.muted_users_list
+                ],
+                sort_key_extractor=lambda x: x.lower(),
+                page=callback_data.current_page,
+                idx_on_page=callback_data.user_idx,
+            )
+        return username_to_toggle

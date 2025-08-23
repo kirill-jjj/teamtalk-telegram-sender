@@ -429,7 +429,6 @@ async def toggle_user_mute(
     """Handles the action of toggling the mute status for a specific user."""
     _ = translator.gettext
     username_to_toggle = None
-    list_type = callback_data.list_type
 
     async with uow:
         user_settings = await uow.users.get_by_id(callback_query.from_user.id)
@@ -443,25 +442,9 @@ async def toggle_user_mute(
             )
             return
 
-        if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-            result: GetAllTeamTalkAccountsResult = await command_bus.execute(
-                GetAllTeamTalkAccountsCommand(
-                    lang_code=translator.info().get("language", "en")
-                )
-            )
-            if result.success:
-                account = _get_item_from_paginated_list(
-                    items=result.accounts,
-                    sort_key_extractor=lambda acc: acc.username.lower(),
-                    page=callback_data.current_page,
-                    idx_on_page=callback_data.user_idx,
-                )
-                if account:
-                    username_to_toggle = account.username
-        elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-            username_to_toggle = _get_username_from_muted_list(
-                callback_data, user_settings
-            )
+        username_to_toggle = await moderation_service.get_target_username_for_toggle(
+            callback_data, user_settings, command_bus, translator
+        )
 
         if not username_to_toggle:
             logger.warning(

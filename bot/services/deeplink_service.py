@@ -136,8 +136,7 @@ class DeeplinkService:
             and deeplink.expected_telegram_id != message.from_user.id
         ):
             await message.reply(
-                _("This confirmation link was intended for "
-                  "a different Telegram account.")
+                _("This confirmation link was intended for a different Telegram account.")
             )
             return
 
