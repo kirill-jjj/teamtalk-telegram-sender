@@ -2,7 +2,7 @@ This document is the single source of truth for any agent contributing to this c
 
 ## Golden Rules for the AI Assistant
 
-*   **Analyze First:** Before writing any code, always use `glob`, `search_file_content`, and `read_file` to understand existing patterns, conventions, and the relevant context.
+*   **Analyze First:** Before writing any code, always use tools to understand existing patterns. Use **`rg` (ripgrep)** for fast, repository-aware code searching, `glob` for file structure analysis, and `read_file` to examine specific files. This is preferable to using the more generic `search_file_content` tool.
 *   **Services Hold Business Logic:** All business logic **must** reside in the `bot/services` layer. This includes orchestrating data from repositories and performing actions.
 *   **Handlers are Thin:** Handlers in `bot/telegram_bot/handlers` and `bot/teamtalk_bot/command_handlers` must be "thin." Their only job is to parse incoming requests, call a single service method, and present the result. They should **never** contain business logic.
 *   **Use `replace` for Modifications:** For changing existing code, the `replace` tool is strongly preferred over `write_file` due to its precision and safety. `write_file` should only be used for creating new files or for large-scale refactoring of an entire file.

@@ -1,3 +1,3 @@
-docs(gemini): 📚 add windows environment notice
+docs(gemini): 📚 recommend ripgrep for code searching
 
-Add a prominent note to the development guide specifying that the required OS is Windows and that Linux-specific commands should not be used. This prevents environment-related errors, such as using 'rm' instead of 'del'.
+Update the "Analyze First" golden rule to recommend using 'rg' (ripgrep) for fast code searching over the generic 'search_file_content' tool. This makes the development guide aware of the newly available and more efficient tooling.
