@@ -66,7 +66,7 @@ async def unban_subscriber(
         result = await moderation_service.unban_subscriber(
             target_telegram_id, translator, uow=uow
         )
-        message = result.message_key.format(**(result.message_args or dict()))
+        message = result.message_key.format(**(result.message_args or {}))
     return result.success, message, None
 
 
@@ -115,5 +115,5 @@ async def ban_subscriber(
                 "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
             )
 
-        short_message = result.message_key.format(**(result.message_args or dict()))
+        short_message = result.message_key.format(**(result.message_args or {}))
     return result.success, short_message, None

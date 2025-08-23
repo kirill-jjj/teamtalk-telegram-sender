@@ -172,6 +172,3 @@ async def on_exit_command(
     await message.reply(_("Shutting down..."))
     await dispatcher.stop_polling()
     await bot.session.close()
-
-
-

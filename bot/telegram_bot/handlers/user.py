@@ -19,7 +19,6 @@ from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.telegram_bot.api import safe_delete_message
-from bot.telegram_bot.deeplink import handle_deeplink
 from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
@@ -49,13 +48,11 @@ async def on_start_with_payload(
             message.from_user.id,
             defaults={"language_code": settings.general.default_lang},
         )
-        await handle_deeplink(
+        await deeplink_service.process_telegram_deeplink(
             message,
             token,
             translator,
             user_settings,
-            uow=uow,
-            deeplink_service=deeplink_service,
         )
 
 

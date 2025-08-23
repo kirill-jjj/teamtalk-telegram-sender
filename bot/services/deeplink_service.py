@@ -3,6 +3,8 @@
 from gettext import NullTranslations
 import logging
 
+from aiogram.types import Message
+
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
@@ -100,3 +102,49 @@ class DeeplinkService:
 
         logger.warning("No handler for deeplink action: %s", action)
         return translator.gettext("Invalid deeplink action.")
+
+    async def process_telegram_deeplink(
+        self,
+        message: Message,
+        token: str,
+        translator: NullTranslations,
+        user_settings: UserSettings,
+    ) -> None:
+        """Handles a /start command with a deeplink token.
+
+        Validates the token, executes the associated action, and replies to the user.
+
+        Args:
+            message: The Aiogram Message object.
+            token: The deeplink token from the command arguments.
+            translator: The gettext translator object.
+            user_settings: The UserSettings object for the user.
+        """
+        _ = translator.gettext
+        if not message.from_user:
+            logger.warning("Cannot handle deeplink: message.from_user is None.")
+            await message.reply(_(MSG_GENERAL_ERROR))
+            return
+
+        deeplink = await self._uow.deeplinks.get_and_delete_if_expired(token)
+        if not deeplink:
+            await message.reply(_("Invalid or expired deeplink."))
+            return
+
+        if (
+            deeplink.expected_telegram_id
+            and deeplink.expected_telegram_id != message.from_user.id
+        ):
+            await message.reply(
+                _("This confirmation link was intended for "
+                  "a different Telegram account.")
+            )
+            return
+
+        reply_text = await self.execute_deeplink(
+            deeplink, user_settings, translator, self._uow
+        )
+        await message.reply(reply_text)
+
+        # The token is now used, so we should delete it.
+        await self._uow.deeplinks.delete(deeplink)
