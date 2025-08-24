@@ -254,7 +254,7 @@ Follow this workflow for every task.
 5.  **Commit:** After successfully implementing and validating a task (including the runtime verification), you **must** always proactively offer to create a commit for the changes.
 
     *   **Tooling & Process:**
-        1.  **Compose the Message:** For any non-trivial change, compose the full, multi-line commit message in a temporary file named `commit_message.txt` using the `write_file` tool. This is the **required workflow** because the `-m` flag is not suitable for the detailed, multi-line messages expected in this project.
+        1.  **Compose the Message:** For any non-trivial change, compose the full, multi-line commit message in a temporary file named `commit_message.txt` using the `write_file` tool. Always use an absolute path for `commit_message.txt` to avoid issues. This is the **required workflow** because the `-m` flag is not suitable for the detailed, multi-line messages expected in this project.
         2.  **Commit from File:** Run the commit command using the file: `git commit -F commit_message.txt`. This ensures the message is formatted correctly.
         3.  **Clean Up:** Delete the temporary file after the commit is successful.
 
