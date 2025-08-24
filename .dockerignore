@@ -1,0 +1,36 @@
+# Исключаем файлы и папки, которые не нужны в Docker-образе
+
+# Git
+.git
+.gitignore
+
+# Виртуальное окружение
+.venv
+venv/
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Кэш инструментов
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Файлы IDE
+.idea/
+.vscode/
+
+# Локальные конфигурации и данные
+*.db
+*.db-journal*
+*.sqlite3
+config.toml
+*.log
+
+# Документация для ИИ и временные файлы
+ai-docs/
+.geminiignore
+commit_message.txt
