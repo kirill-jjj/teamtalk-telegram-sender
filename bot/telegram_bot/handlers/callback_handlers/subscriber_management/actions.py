@@ -72,7 +72,6 @@ async def refresh_subscriber_view(
     | SubscriberCallback,
     translator: NullTranslations,
     bot: "EventBot",
-    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
@@ -81,20 +80,23 @@ async def refresh_subscriber_view(
         callback_data, "subscriber_page_context", getattr(callback_data, "page", 0)
     )
 
-    async with uow:
-        user_settings = await uow.users.get_by_id(target_telegram_id)
-        if not user_settings:
-            await query.answer("User not found.", show_alert=True)
-            return
-
-        await _display_subscriber_view(
-            query=query,
-            target_telegram_id=target_telegram_id,
-            page_context=page_context,
-            user_settings=user_settings,
-            translator=translator,
-            bot=bot,
+    user_settings: UserSettings | None = cast(UserSettings, kwargs.get("user_settings"))
+    if not user_settings:
+        logger.error(
+            "refresh_subscriber_view called without 'user_settings' in kwargs for TG ID %s",
+            target_telegram_id,
         )
+        await query.answer("Internal error: User settings not found.", show_alert=True)
+        return
+
+    await _display_subscriber_view(
+        query=query,
+        target_telegram_id=target_telegram_id,
+        page_context=page_context,
+        user_settings=user_settings,
+        translator=translator,
+        bot=bot,
+    )
 
 
 async def _refresh_and_display_subscriber_list(
@@ -143,6 +145,7 @@ async def delete_subscriber_from_list(
     callback_data: SubscriberListCallback,
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],
+    report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles deleting a subscriber directly from the subscriber list."""
@@ -158,7 +161,7 @@ async def delete_subscriber_from_list(
             target_telegram_id, translator, uow=uow
         )
 
-    message = result.message_key.format(**(result.message_args or {{}}))
+    message = result.message_key.format(**(result.message_args or {}))
 
     return result.success, message, None
 
@@ -174,6 +177,7 @@ async def on_ban_subscriber_confirm(
     translator: FromDishka[NullTranslations],
     moderation_service: FromDishka[ModerationService],
     bot: FromDishka[EventBot],
+    report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber after admin confirmation."""
@@ -190,7 +194,7 @@ async def on_ban_subscriber_confirm(
                 "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
             )
 
-        short_message = _(result.message_key).format(**(result.message_args or {{}}))
+        short_message = _(result.message_key).format(**(result.message_args or {}))
     return result.success, short_message, None
 
 
@@ -205,6 +209,7 @@ async def delete_subscriber(
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],
     bot: FromDishka[EventBot],
+    report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles deleting a subscriber."""
@@ -217,7 +222,7 @@ async def delete_subscriber(
             target_telegram_id, translator, uow=uow
         )
 
-    message = result.message_key.format(**(result.message_args or {{}}))
+    message = result.message_key.format(**(result.message_args or {}))
 
     return result.success, message, None
 

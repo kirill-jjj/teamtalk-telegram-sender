@@ -77,7 +77,7 @@ async def toggle_noon_setting(
     updated_settings: UserSettings | None = None
     async with uow:
         updated_settings = await user_settings_service.toggle_noon_setting(
-            user_settings=user_settings, actor=Actor.USER, uow=uow
+            user_settings=user_settings, actor=Actor.USER
         )
 
     if not updated_settings:
