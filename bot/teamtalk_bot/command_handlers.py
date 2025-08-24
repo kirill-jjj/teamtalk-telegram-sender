@@ -19,11 +19,10 @@ from bot.constants import (
     TT_MAX_MESSAGE_BYTES,
 )
 from bot.core.enums import DeeplinkAction
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
-from bot.services.schemas import BatchOperationResult
-from bot.teamtalk_bot import command_constants as tt_cmds
 
 if TYPE_CHECKING:
     pass
@@ -174,12 +173,14 @@ class PrivateMessageCommandHandlers:
         cache: CacheService,
         deeplink_service: DeeplinkService,
         moderation_service: ModerationService,
+        uow: IUnitOfWork,
     ) -> None:
         """Initializes the command handlers with necessary dependencies."""
         self.settings = settings
         self.cache = cache
         self.deeplink_service = deeplink_service
         self.moderation_service = moderation_service
+        self.uow = uow
 
     async def on_subscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
@@ -255,37 +256,14 @@ class PrivateMessageCommandHandlers:
         is_add_action: bool,
     ) -> None:
         _ = translator.gettext
-        args = _AdminIdArgs.model_validate(args_str)
-
-        if not args.valid_ids and not args.invalid_entries:
-            prompt_msg_key = (
-                _("Please provide Telegram IDs. Example: {cmd} 12345678").format(
-                    cmd=tt_cmds.TT_CMD_ADD_ADMIN
-                )
-                if is_add_action
-                else _("Please provide Telegram IDs. Example: {cmd} 12345678").format(
-                    cmd=tt_cmds.TT_CMD_REMOVE_ADMIN
-                )
-            )
-            tt_message.reply(prompt_msg_key)
+        if args_str is None:
+            tt_message.reply(_("Please provide Telegram IDs."))
             return
 
-        result: BatchOperationResult
-        if is_add_action:
-            result = await self.moderation_service.add_admins_in_batch(args.valid_ids)
-        else:
-            result = await self.moderation_service.remove_admins_in_batch(
-                args.valid_ids
-            )
-
-        report = self._create_admin_action_report(
-            translator,
-            success_count=len(result.successful_ids),
-            failed_ids=result.failed_ids,
-            invalid_entries=args.invalid_entries,
-            is_add_action=is_add_action,
+        response_message = await self.moderation_service.process_admin_id_management(
+            args_str, is_add_action=is_add_action
         )
-        tt_message.reply(report)
+        tt_message.reply(response_message)
 
     def _create_admin_action_report(
         self,

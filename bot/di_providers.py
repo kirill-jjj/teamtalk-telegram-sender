@@ -225,6 +225,7 @@ class RequestProvider(Provider):
         cache: FromDishka[CacheService],
         deeplink_service: FromDishka[DeeplinkService],
         moderation_service: FromDishka[ModerationService],
+        uow: FromDishka[IUnitOfWork],
     ) -> PrivateMessageCommandHandlers:
         """Provides an instance of PrivateMessageCommandHandlers."""
         return PrivateMessageCommandHandlers(
@@ -232,6 +233,7 @@ class RequestProvider(Provider):
             cache=cache,
             deeplink_service=deeplink_service,
             moderation_service=moderation_service,
+            uow=uow,
         )
 
     @provide

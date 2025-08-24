@@ -59,7 +59,7 @@ def main() -> None:
     # For display, convert Path objects in command to string if any were used
     # (though alembic_executable and alembic_cli_args are strings here)
     display_command = [str(c) for c in command]
-    print(f"▶️  Executing: {' '.join(display_command)} (CWD: {project_root})")
+    print(f"> Executing: {' '.join(display_command)} (CWD: {project_root})")
 
     try:
         # Run the Alembic command
