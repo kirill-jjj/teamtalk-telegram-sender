@@ -206,7 +206,7 @@ When modifying existing code, the `replace` tool is strongly preferred over `wri
 
 *   **Precision:** The `replace` tool is designed for surgical precision. It requires a significant amount of context (the `old_string` parameter) around the code to be changed, which ensures that the modification is applied exactly where intended. This minimizes the risk of accidental changes or corrupting the file.
 *   **Safety:** Unlike `write_file`, which overwrites the entire file, `replace` only targets a specific block of text. This makes it a much safer option for small to medium-sized changes.
-*   **Usage:** To use `replace` effectively, first use `read_file` to get the exact content of the file. Then, construct the `old_string` parameter by copying at least 3-5 lines of code before and after the target block, including all original whitespace and indentation. The `new_string` parameter will contain the replacement code.
+*   **Usage:** To use `replace` effectively, first use `read_file` to get the exact content of the file. Always re-read the file immediately before using `replace` to ensure the `old_string` accurately reflects the current file content. Then, construct the `old_string` parameter by copying at least 3-5 lines of code before and after the target block, including all original whitespace and indentation. The `new_string` parameter will contain the replacement code.
 
 **Example Workflow:**
 1.  `read_file('path/to/file.py')`
