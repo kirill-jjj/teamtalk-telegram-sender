@@ -9,7 +9,7 @@ from pydantic import ConfigDict, Field, validate_call
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.constants import USERS_PER_PAGE
+from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
@@ -270,3 +270,44 @@ class ModerationService:
                 idx_on_page=callback_data.user_idx,
             )
         return username_to_toggle
+
+    async def toggle_mute_from_callback(
+        self,
+        callback_data: ToggleMuteCallback,
+        telegram_id: int,
+        command_bus: CommandBus,
+        translator: NullTranslations,
+    ) -> OperationResult:
+        """Orchestrates the entire mute/unmute toggle process from a callback."""
+        _ = translator.gettext
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.warning(
+                    "Could not get user settings for user %s in "
+                    "toggle_mute_from_callback",
+                    telegram_id,
+                )
+                return OperationResult(
+                    success=False, message_key=MSG_GENERAL_ERROR
+                )
+
+            username_to_toggle = await self.get_target_username_for_toggle(
+                callback_data, user_settings, command_bus, translator
+            )
+
+            if not username_to_toggle:
+                logger.warning(
+                    "Could not determine username to toggle mute for user %s.",
+                    telegram_id,
+                )
+                return OperationResult(
+                    success=False,
+                    message_key=_("Error determining user to mute/unmute. Try again."),
+                )
+
+            toggle_result = await self.toggle_mute_status(
+                user_settings, username_to_toggle, translator, uow=self._uow
+            )
+            await self._uow.commit()
+            return toggle_result

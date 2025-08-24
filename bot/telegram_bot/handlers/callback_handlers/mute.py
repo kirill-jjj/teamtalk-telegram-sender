@@ -17,7 +17,6 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
-from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.schemas import UserAccountInfo
@@ -333,7 +332,6 @@ async def refresh_manage_muted_menu(
 async def set_mute_mode(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
 ) -> tuple[bool, str, UserSettings | None]:
@@ -341,21 +339,18 @@ async def set_mute_mode(
     _ = translator.gettext
     new_mode = callback_data.mode
 
-    async with uow:
-        original_user_settings = await uow.users.get_by_id(callback_query.from_user.id)
-        if not original_user_settings:
-            logger.warning(
-                "Could not get user settings for user %s in set_mute_mode",
-                callback_query.from_user.id,
-            )
-            return False, _("An error occurred. Please try again."), None
+    user_settings = await user_settings_service.get_or_create(
+        callback_query.from_user.id, "en"
+    )
+    if new_mode.value == user_settings.mute_list_mode:
+        return True, "", None
 
-        updated_user_settings = await user_settings_service.update_mute_mode(
-            original_user_settings, new_mode, actor=Actor.USER, uow=uow
-        )
+    updated_user_settings = await user_settings_service.update_mute_mode(
+        telegram_id=callback_query.from_user.id, new_mode=new_mode, actor=Actor.USER
+    )
 
     if not updated_user_settings:
-        return False, _(MSG_GENERAL_ERROR), original_user_settings
+        return False, _(MSG_GENERAL_ERROR), None
 
     mode_text = (
         _("Blacklist")
@@ -421,58 +416,28 @@ async def display_all_accounts_list(
 async def toggle_user_mute(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
     command_bus: FromDishka[CommandBus],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
-    _ = translator.gettext
-    username_to_toggle = None
+    toggle_result = await moderation_service.toggle_mute_from_callback(
+        callback_data,
+        callback_query.from_user.id,
+        command_bus,
+        translator,
+    )
 
-    async with uow:
-        user_settings = await uow.users.get_by_id(callback_query.from_user.id)
-        if not user_settings:
-            logger.warning(
-                "Could not get user settings for user %s in toggle_user_mute",
-                callback_query.from_user.id,
-            )
-            await callback_query.answer(
-                _("An error occurred. Please try again."), show_alert=True
-            )
-            return
+    toast_message = translator.gettext(toggle_result.message_key).format(
+        **(toggle_result.message_args or {})
+    )
+    await callback_query.answer(toast_message, show_alert=not toggle_result.success)
 
-        username_to_toggle = await moderation_service.get_target_username_for_toggle(
-            callback_data, user_settings, command_bus, translator
+    if toggle_result.success and toggle_result.user_settings:
+        await _refresh_mute_related_ui(
+            callback_query,
+            translator,
+            toggle_result.user_settings,
+            command_bus,
+            callback_data,
         )
-
-        if not username_to_toggle:
-            logger.warning(
-                "Could not determine username to toggle mute for user %s. "
-                "Callback data: %s",
-                callback_query.from_user.id,
-                callback_data,
-            )
-            await callback_query.answer(
-                _("Error determining user to mute/unmute. Try again."),
-                show_alert=True,
-            )
-            return
-
-        toggle_result = await moderation_service.toggle_mute_status(
-            user_settings, username_to_toggle, translator, uow=uow
-        )
-
-        toast_message = translator.gettext(toggle_result.message_key).format(
-            **(toggle_result.message_args or {})
-        )
-        await callback_query.answer(toast_message, show_alert=not toggle_result.success)
-
-        if toggle_result.success and toggle_result.user_settings:
-            await _refresh_mute_related_ui(
-                callback_query,
-                translator,
-                toggle_result.user_settings,
-                command_bus,
-                callback_data,
-            )

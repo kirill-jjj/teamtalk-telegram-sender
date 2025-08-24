@@ -139,16 +139,26 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_mute_mode(
         self,
-        user_settings: UserSettings,
+        telegram_id: int,
         new_mode: MuteListMode,
         actor: Actor = Actor.USER,
-        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
-        return await self._update_setting(
-            user_settings, "mute_list_mode", new_mode, log_context, uow=uow
-        )
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.error("Could not find user_settings for user %s", telegram_id)
+                return None
+
+            updated_settings = await self._update_setting(
+                user_settings, "mute_list_mode", new_mode, log_context, uow=self._uow
+            )
+            if updated_settings:
+                await self._uow.commit()
+            else:
+                await self._uow.rollback()
+        return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_notification_preference(
