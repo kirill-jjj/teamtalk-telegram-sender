@@ -33,7 +33,7 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # Resolve the path relative to the configuration file's directory
     # The `_config_dir` is a private attribute, so we use a type ignore.
     if not db_file_path.is_absolute():
-        db_file_path = config._config_dir / db_file_path  # type: ignore[attr-defined]
+        db_file_path = config._config_dir / db_file_path
 
     db_path = db_file_path.resolve()
     db_url = f"sqlite+aiosqlite:///{db_path}"
@@ -63,4 +63,6 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature
     # when class_ is specified.
-    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    return sessionmaker(  # type: ignore[call-overload, no-any-return]
+        bind=engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+    )

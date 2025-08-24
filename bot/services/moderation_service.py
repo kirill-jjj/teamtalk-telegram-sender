@@ -288,9 +288,7 @@ class ModerationService:
                     "toggle_mute_from_callback",
                     telegram_id,
                 )
-                return OperationResult(
-                    success=False, message_key=MSG_GENERAL_ERROR
-                )
+                return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
 
             username_to_toggle = await self.get_target_username_for_toggle(
                 callback_data, user_settings, command_bus, translator

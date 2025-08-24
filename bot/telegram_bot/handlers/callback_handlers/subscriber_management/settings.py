@@ -374,7 +374,7 @@ async def admin_set_any_subscriber_setting(
             ).format(tg_id=target_telegram_id, value=new_pref.value)
         elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
             updated_settings = await user_settings_service.update_mute_mode(
-                user_settings, callback_data.mode, Actor.ADMIN, uow=uow
+                target_telegram_id, callback_data.mode, Actor.ADMIN
             )
             success_msg = _(
                 "Mute list mode for subscriber {tg_id} set to: {value}."

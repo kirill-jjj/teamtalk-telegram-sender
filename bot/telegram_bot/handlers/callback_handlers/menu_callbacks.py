@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import cast
+from typing import Annotated, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -13,6 +13,7 @@ from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import MenuCallback
@@ -38,10 +39,12 @@ admin_menu_callback_router = Router(name="admin_menu_callback_router")
 @ensure_message_context
 async def menu_who_handler(
     query: CallbackQuery,
-    translator: FromDishka[NullTranslations],
-    cache: FromDishka[CacheService],
-    bot: FromDishka[EventBot],
-    command_bus: FromDishka[CommandBus],
+    translator: Annotated[NullTranslations, FromDishka()],
+    cache: Annotated[CacheService, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     await on_who_command(
@@ -50,6 +53,8 @@ async def menu_who_handler(
         cache=cache,
         bot=bot,
         command_bus=command_bus,
+        uow=uow,
+        settings=settings,
     )
     await query.answer()
 

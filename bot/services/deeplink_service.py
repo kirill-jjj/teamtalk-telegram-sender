@@ -69,9 +69,7 @@ class DeeplinkService:
                 "(link valid for 5 minutes):\n{deeplink_url}"
             ),
         }
-        reply_text_source = reply_text_map.get(
-            action, "Invalid action for deeplink."
-        )
+        reply_text_source = reply_text_map.get(action, "Invalid action for deeplink.")
 
         return reply_text_source.format(deeplink_url=deeplink_url)
 
