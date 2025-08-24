@@ -13,9 +13,9 @@ from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
-from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
@@ -43,7 +43,7 @@ async def menu_who_handler(
     cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    user_settings_service: Annotated[UserSettingsService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
@@ -53,7 +53,7 @@ async def menu_who_handler(
         cache=cache,
         bot=bot,
         command_bus=command_bus,
-        uow=uow,
+        user_settings_service=user_settings_service,
         settings=settings,
     )
     await query.answer()

@@ -171,7 +171,11 @@ class UserSettingsService:
         log_context = f" by {actor.value}"
         async with self._uow:
             updated_settings = await self._update_setting(
-                user_settings, "notification_settings", new_pref, log_context, uow=self._uow
+                user_settings,
+                "notification_settings",
+                new_pref,
+                log_context,
+                uow=self._uow,
             )
             if updated_settings:
                 await self._uow.commit()

@@ -50,6 +50,10 @@ async def universal_error_handler(
     ) or update_dict.get("callback_query", {}).get("from", {}).get("id")
 
     if chat_id:
+        user_error_message = _(
+            "An unexpected error occurred. We are already working on fixing it. "
+            "Please try again later."
+        )
         if isinstance(event.exception, TelegramForbiddenError) and (
             "bot was blocked" in str(event.exception)
             or "user is deactivated" in str(event.exception)
@@ -72,11 +76,12 @@ async def universal_error_handler(
             return True
 
         try:
-            user_error_message = _(
-                "An unexpected error occurred. We are already working on fixing it. "
-                "Please try again later."
-            )
-            await bot.send_message(chat_id, text=user_error_message)
+            if event.update.callback_query:
+                await event.update.callback_query.answer(
+                    user_error_message, show_alert=True
+                )
+            else:
+                await bot.send_message(chat_id, text=user_error_message)
         except TelegramAPIError:
             logger.exception("Failed to send the error message to user %s", chat_id)
 
