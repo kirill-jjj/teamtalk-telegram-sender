@@ -7,7 +7,7 @@ This document is the single source of truth for any agent contributing to this c
 *   **Handlers are Thin:** Handlers in `bot/telegram_bot/handlers` and `bot/teamtalk_bot/command_handlers` must be "thin." Their only job is to parse incoming requests, call a single service method, and present the result. They should **never** contain business logic.
 *   **Use `replace` for Modifications:** For changing existing code, the `replace` tool is strongly preferred over `write_file` due to its precision and safety. `write_file` should only be used for creating new files or for large-scale refactoring of an entire file.
 *   **Follow Existing Patterns:** Mimic the style, structure, and conventions of the surrounding code. This is more important than any personal preference.
-*   **Validate Your Work:** After making changes, always run the project's validation suite: `uv run ruff format .`, `uv run ruff check --fix .`, `uv run mypy`, and `uv run pytest`.
+*   **Validate Your Work:** After making changes, always run the project's validation suite: `uv run ruff format`, `uv run ruff check --fix`, `uv run mypy`, and `uv run pytest`.
 
 ---
 
