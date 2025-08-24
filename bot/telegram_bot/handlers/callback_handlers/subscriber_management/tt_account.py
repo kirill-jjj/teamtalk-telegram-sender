@@ -11,12 +11,11 @@ from dishka.integrations.aiogram import FromDishka
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
-from bot.core.enums import ManageTTAccountAction, SubscriberCommand
+from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
-from bot.services.schemas import OperationResult, UserAccountInfo
-from bot.services.subscription_service import SubscriptionService
+from bot.services.schemas import UserAccountInfo
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
-    LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
     SubscriberCallback,
@@ -188,19 +187,20 @@ async def paginate_linkable_accounts(
     await query.answer()
 
 
-@tt_account_router.callback_query(LinkTTAccountChosenCallback.filter())
+@tt_account_router.callback_query(
+    ManageTTAccountCallback.filter(F.action == ManageTTAccountAction.UNLINK)
+)
 @ensure_message_context
-async def link_tt_account_chosen(
+async def unlink_tt_account(
     query: CallbackQuery,
-    callback_data: LinkTTAccountChosenCallback,
+    callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
     uow: FromDishka[IUnitOfWork],
-    subscription_service: FromDishka[SubscriptionService],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
-    """Handles linking a chosen TeamTalk account to a subscriber."""
+    """Handles unlinking a TeamTalk account from a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    tt_username_to_link = callback_data.tt_username
     return_page = callback_data.page
 
     async with uow:
@@ -209,39 +209,47 @@ async def link_tt_account_chosen(
             await query.answer(_("Subscriber not found."), show_alert=True)
             return
 
-        operation_result: OperationResult = await subscription_service.link_tt_account(
-            user_settings, tt_username_to_link, translator, uow=uow
+        (
+            updated_settings,
+            original_username,
+        ) = await user_settings_service.unlink_tt_account(
+            user_settings, actor=Actor.ADMIN, uow=uow
         )
 
-        alert_message_args = operation_result.message_args or {}
-        if "tt_username" not in alert_message_args:
-            alert_message_args["tt_username"] = tt_username_to_link
-        if "new_tt_username" not in alert_message_args:
-            alert_message_args["new_tt_username"] = tt_username_to_link
-
-        alert_message = operation_result.message_key.format(**alert_message_args)
-        await query.answer(alert_message, show_alert=True)
-
-        final_tt_username_for_keyboard: str | None
-        if operation_result.success and operation_result.user_settings:
-            final_tt_username_for_keyboard = (
-                operation_result.user_settings.teamtalk_username
+        if not updated_settings:
+            await query.answer(
+                _("Failed to unlink account. Please try again."), show_alert=True
             )
-        else:
-            user_s_for_kb = await uow.users.get_by_id(target_telegram_id)
-            final_tt_username_for_keyboard = (
-                user_s_for_kb.teamtalk_username if user_s_for_kb else None
-            )
+            return
 
-        updated_keyboard = await create_manage_tt_account_keyboard(
-            translator,
-            target_telegram_id=target_telegram_id,
-            current_tt_username=final_tt_username_for_keyboard,
-            page=return_page,
-        )
-        await cast(Message, query.message).edit_text(
-            _("Manage TeamTalk account link for subscriber {telegram_id}:").format(
-                telegram_id=target_telegram_id
-            ),
-            reply_markup=updated_keyboard,
-        )
+        if original_username is None:
+            await query.answer(_("Account was not linked."), show_alert=False)
+            return
+
+        await uow.commit()
+
+    # Обновление интерфейса
+    toast_message = _("Account {username} has been unlinked.").format(
+        username=original_username
+    )
+    await query.answer(toast_message, show_alert=True)
+
+    keyboard = await create_manage_tt_account_keyboard(
+        translator,
+        target_telegram_id=target_telegram_id,
+        current_tt_username=None,  # Теперь аккаунт отвязан
+        page=return_page,
+    )
+    message_text = _(
+        "Manage TeamTalk account link for subscriber {telegram_id}:"
+    ).format(telegram_id=target_telegram_id)
+    if not query.message:
+        logger.error("CallbackQuery message is None in unlink_tt_account.")
+        await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
+
+    await safe_edit_text(
+        message_to_edit=query.message,
+        text=message_text,
+        reply_markup=keyboard,
+    )

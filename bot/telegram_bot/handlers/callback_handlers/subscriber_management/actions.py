@@ -83,7 +83,8 @@ async def refresh_subscriber_view(
     user_settings: UserSettings | None = cast(UserSettings, kwargs.get("user_settings"))
     if not user_settings:
         logger.error(
-            "refresh_subscriber_view called without 'user_settings' in kwargs for TG ID %s",
+            "refresh_subscriber_view called without 'user_settings' "
+            "in kwargs for TG ID %s",
             target_telegram_id,
         )
         await query.answer("Internal error: User settings not found.", show_alert=True)

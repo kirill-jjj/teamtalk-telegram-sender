@@ -226,3 +226,23 @@ class UserSettingsService:
 
             await self._uow.commit()
             return updated_settings
+
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    async def unlink_tt_account(
+        self,
+        user_settings: UserSettings,
+        actor: Actor = Actor.ADMIN,
+        uow: IUnitOfWork | None = None,
+    ) -> tuple[UserSettings | None, str | None]:
+        """Unlinks a TeamTalk account from a user's settings."""
+        original_username = user_settings.teamtalk_username
+        if not original_username:
+            return user_settings, None
+
+        log_context = f" by {actor.value}"
+        active_uow = uow or self._uow
+
+        updated_settings = await self._update_setting(
+            user_settings, "teamtalk_username", None, log_context, uow=active_uow
+        )
+        return updated_settings, original_username
