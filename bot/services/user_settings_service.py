@@ -101,26 +101,39 @@ class UserSettingsService:
     async def update_language(
         self,
         bot: EventBot,
-        user_settings: UserSettings,
+        telegram_id: int,
         new_lang_code: str,
         translator_factory: Callable[[str], NullTranslations],
         actor: Actor = Actor.USER,
-        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
-        updated_settings = await self._update_setting(
-            user_settings, "language_code", new_lang_code, log_context, uow=uow
-        )
-        if updated_settings:
-            new_translator = translator_factory(new_lang_code)
-            await update_user_bot_commands(
-                telegram_id=user_settings.telegram_id,
-                new_lang_code=new_lang_code,
-                cache=self._cache,
-                bot=bot,
-                translator=new_translator,
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.error("Could not find user_settings for user %s", telegram_id)
+                return None
+
+            updated_settings = await self._update_setting(
+                user_settings,
+                "language_code",
+                new_lang_code,
+                log_context,
+                uow=self._uow,
             )
+            if updated_settings:
+                new_translator = translator_factory(new_lang_code)
+                await update_user_bot_commands(
+                    telegram_id=telegram_id,
+                    new_lang_code=new_lang_code,
+                    cache=self._cache,
+                    bot=bot,
+                    translator=new_translator,
+                )
+                await self._uow.commit()
+            else:
+                await self._uow.rollback()
+
         return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

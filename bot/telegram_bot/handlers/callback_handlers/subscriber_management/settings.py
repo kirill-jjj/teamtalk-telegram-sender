@@ -354,11 +354,10 @@ async def admin_set_any_subscriber_setting(
         if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
             updated_settings = await user_settings_service.update_language(
                 bot,
-                user_settings,
+                target_telegram_id,
                 callback_data.lang_code,
                 translator_factory,
                 Actor.ADMIN,
-                uow=uow,
             )
             success_msg = _(
                 "Language for subscriber {tg_id} changed to {value}."

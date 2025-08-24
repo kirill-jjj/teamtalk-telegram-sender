@@ -8,10 +8,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
-from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
@@ -61,7 +59,6 @@ async def show_language_menu(
 @with_view_refresh(refresh_main_settings_view)
 async def set_language(
     query: CallbackQuery,
-    uow: FromDishka[IUnitOfWork],
     translator: FromDishka[NullTranslations],
     callback_data: LanguageCallback,
     bot: FromDishka[EventBot],
@@ -79,29 +76,23 @@ async def set_language(
         )
         return False, _("Invalid language selection."), None
 
-    async with uow:
-        user_settings = await uow.users.get_by_id(query.from_user.id)
-        if not user_settings:
-            logger.error("Could not find user_settings for user %s", query.from_user.id)
-            return False, _(MSG_GENERAL_ERROR), None
+    if new_lang_code == translator.info().get("language"):
+        return True, "", None
 
-        if new_lang_code == user_settings.language_code:
-            return True, "", None
+    updated_settings = await user_settings_service.update_language(
+        bot=bot,
+        telegram_id=query.from_user.id,
+        new_lang_code=new_lang_code,
+        translator_factory=translator_factory,
+        actor=Actor.USER,
+    )
 
-        updated_settings = await user_settings_service.update_language(
-            bot=bot,
-            user_settings=user_settings,
-            new_lang_code=new_lang_code,
-            translator_factory=translator_factory,
-            actor=Actor.USER,
-            uow=uow,
+    if updated_settings:
+        new_translator = translator_factory(new_lang_code)
+        return (
+            True,
+            new_translator.gettext("Language has been changed."),
+            updated_settings,
         )
 
-        if updated_settings:
-            new_translator = translator_factory(new_lang_code)
-            return (
-                True,
-                new_translator.gettext("Language has been changed."),
-                updated_settings,
-            )
     return False, _("Failed to change language. Please try again."), None

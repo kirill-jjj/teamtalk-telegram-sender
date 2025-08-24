@@ -63,4 +63,4 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature
     # when class_ is specified.
-    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[no-any-return, call-overload]
+    return sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
