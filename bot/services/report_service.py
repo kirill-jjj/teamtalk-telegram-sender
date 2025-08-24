@@ -1,12 +1,17 @@
 """Service for generating reports."""
 
 from gettext import NullTranslations
+import logging
 from typing import TYPE_CHECKING
 
 from aiogram.utils.formatting import Bold, Text, as_list
 import pytalk
 from pytalk.user import User as TeamTalkUser
 
+# These imports are needed for get_telegram_who_report
+from bot.command_bus.bus import CommandBus
+from bot.command_bus.exceptions import NoHandlerFoundError
+from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.constants import (
     USERS_PER_PAGE,
@@ -17,7 +22,10 @@ from bot.constants import (
 from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+from bot.services.cache_service import CacheService
 from bot.services.schemas import PaginatedResult, SubscriberInfo
+from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.types.bots import EventBot
 
@@ -29,6 +37,7 @@ from bot.teamtalk_bot.formatters import (
 )
 from bot.telegram_bot.models import WhoChannelGroup, WhoUser
 
+logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
@@ -201,6 +210,64 @@ class ReportService:
         return _format_who_message(
             grouped_data, total_users, translator=translator, server_host=server_name
         )
+
+    async def get_telegram_who_report(
+        self,
+        telegram_user_id: int,
+        translator: NullTranslations,
+        cache_service: CacheService,
+        user_settings_service: UserSettingsService,
+        command_bus: CommandBus,
+    ) -> str:
+        """Generates a formatted report of online users for Telegram."""
+        _ = translator.gettext
+        user_settings = await user_settings_service.get_or_create(
+            telegram_user_id, self._settings.general.default_lang
+        )
+        is_admin = cache_service.is_admin(telegram_user_id)
+        command = GetOnlineUsersCommand(
+            is_caller_admin=is_admin, lang_code=user_settings.language_code
+        )
+        try:
+            result: GetOnlineUsersResult = await command_bus.execute(command)
+        except NoHandlerFoundError:
+            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+            return _("This feature is temporarily unavailable.")
+
+        if not result.success:
+            return result.error_message or _("An error occurred.")
+
+        if result.report_text:
+            return result.report_text
+        return _("Failed to generate the report.")
+
+    def get_help_text(self, translator: NullTranslations, *, is_admin: bool) -> str:
+        """Builds the help message for Telegram users."""
+        _ = translator.gettext
+        parts = [
+            _("<b>Available Commands:</b>"),
+            _(
+                "/who - Show online users.\n"
+                "/settings - Access the interactive settings menu "
+                "(language, notifications, mute lists, NOON feature).\n"
+                "/help - Show this help message.\n"
+                "(Note: `/start` is used to initiate the bot and process deeplinks.)"
+            ),
+        ]
+        if is_admin:
+            parts.extend(
+                [
+                    _("\n<b>Admin Commands:</b>"),
+                    _(
+                        "/kick - Kick a user from the server (via buttons).\n"
+                        "/ban - Ban a user from the server (via buttons).\n"
+                        "/unban - Unban a user from the server "
+                        "(shows a list of banned users).\n"
+                        "/subscribers - View and manage subscribed users."
+                    ),
+                ]
+            )
+        return "\n".join(parts)
 
     async def get_subscribers_info(self, page: int) -> PaginatedResult[SubscriberInfo]:
         """Fetches and prepares a paginated list of subscribers."""

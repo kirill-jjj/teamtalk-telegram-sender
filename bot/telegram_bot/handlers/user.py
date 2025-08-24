@@ -12,11 +12,10 @@ from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.command_bus.exceptions import NoHandlerFoundError
-from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
+from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.filters.subscription import IsSubscribed
@@ -65,11 +64,11 @@ async def on_start_command(
 async def on_who_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
+    cache: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
-    settings: Annotated[Settings, FromDishka()],
+    command_bus: Annotated[CommandBus, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     _ = translator.gettext
@@ -77,59 +76,14 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        user_settings = await user_settings_service.get_or_create(
-            message.from_user.id, settings.general.default_lang
+        report_text = await report_service.get_telegram_who_report(
+            message.from_user.id,
+            translator,
+            cache,
+            user_settings_service,
+            command_bus,
         )
-        is_admin = cache.is_admin(message.from_user.id)
-        command = GetOnlineUsersCommand(
-            is_caller_admin=is_admin, lang_code=user_settings.language_code
-        )
-        try:
-            result: GetOnlineUsersResult = await command_bus.execute(command)
-        except NoHandlerFoundError:
-            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            await message.reply(_("This feature is temporarily unavailable."))
-            return
-
-        if not result.success:
-            await message.reply(result.error_message or _("An error occurred."))
-            return
-
-        if result.report_text:
-            await message.reply(result.report_text)
-        else:
-            await message.reply(_("Failed to generate the report."))
-
-
-def _build_telegram_help_message(
-    translator: NullTranslations, *, is_admin: bool
-) -> str:
-    """Builds the help message for Telegram users."""
-    _ = translator.gettext
-    parts = [
-        _("<b>Available Commands:</b>"),
-        _(
-            "/who - Show online users.\n"
-            "/settings - Access the interactive settings menu "
-            "(language, notifications, mute lists, NOON feature).\n"
-            "/help - Show this help message.\n"
-            "(Note: `/start` is used to initiate the bot and process deeplinks.)"
-        ),
-    ]
-    if is_admin:
-        parts.extend(
-            [
-                _("\n<b>Admin Commands:</b>"),
-                _(
-                    "/kick - Kick a user from the server (via buttons).\n"
-                    "/ban - Ban a user from the server (via buttons).\n"
-                    "/unban - Unban a user from the server "
-                    "(shows a list of banned users).\n"
-                    "/subscribers - View and manage subscribed users."
-                ),
-            ]
-        )
-    return "\n".join(parts)
+        await message.reply(report_text)
 
 
 @user_commands_router.message(Command("help"), IsSubscribed())
@@ -137,13 +91,14 @@ async def on_help_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /help command, showing available commands."""
     if not message.from_user:
         return
 
     is_admin = cache.is_admin(message.from_user.id)
-    help_text = _build_telegram_help_message(translator, is_admin=is_admin)
+    help_text = report_service.get_help_text(translator, is_admin=is_admin)
     await message.reply(help_text, parse_mode="HTML")
 
 

@@ -26,6 +26,7 @@ from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
 from bot.services.notification_service import NotificationRecipientService
+from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
@@ -141,6 +142,24 @@ class AppProvider(Provider):
     ) -> NotificationRecipientService:
         """Provides a NotificationRecipientService."""
         return NotificationRecipientService(session_factory, cache)
+
+    @provide
+    def get_report_service(
+        self,
+        settings: FromDishka[Settings],
+        user_repo: FromDishka[UserRepository],
+        subscriber_repo: FromDishka[SubscriberRepository],
+        ban_repo: FromDishka[BanRepository],
+        bot: FromDishka[EventBot],
+    ) -> ReportService:
+        """Provides a ReportService."""
+        return ReportService(
+            settings=settings,
+            user_repo=user_repo,
+            subscriber_repo=subscriber_repo,
+            ban_repo=ban_repo,
+            bot=bot,
+        )
 
     @provide
     def get_telegram_notification_handler(
