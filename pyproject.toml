@@ -1,7 +1,7 @@
 [build-system]
 requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
-backend-path = ["."]
+
 
 [project]
 name = "teamtalk-telegram-sender"
@@ -141,6 +141,7 @@ pythonpath = [
 ]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+norecursedirs = ["ai-docs"]
 
 [project.optional-dependencies]
 dev = [
@@ -160,7 +161,7 @@ files = ["bot", "scripts", "sender.py"]
 exclude = [
     "alembic/versions/.*\\.py$",
     "\\.venv",
-    "bot/core/notifications\\.py$", # Temporarily exclude to bypass stubborn errors
+    
     "build/", # Exclude the build directory from mypy checking
 ]
 ignore_missing_imports = true
