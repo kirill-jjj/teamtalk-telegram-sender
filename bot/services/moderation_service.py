@@ -119,15 +119,16 @@ class ModerationService:
     async def process_admin_id_management(
         self, args_string: str, *, is_add_action: bool
     ) -> str:
-        """Processes admin ID management commands (add/remove) and returns a
-        report string.
-
-        """
+        """Processes admin ID management commands (add/remove) and returns a report string."""  # noqa: E501
         if not args_string:
-            return _("Please provide a list of Telegram IDs to add or remove, "
-                     "separated by spaces.")
+            return _(
+                "Please provide a list of Telegram IDs to add or remove, "
+                "separated by spaces."
+            )
 
-        add_ids_from_args, remove_ids_from_args, error_messages = self._parse_admin_ids_args(args_string)
+        add_ids_from_args, remove_ids_from_args, error_messages = (
+            self._parse_admin_ids_args(args_string)
+        )
 
         response_parts = []
         if error_messages:
@@ -136,10 +137,14 @@ class ModerationService:
         # Process IDs based on is_add_action flag
         if is_add_action:
             add_result = await self.add_admins_in_batch(add_ids_from_args)
-            remove_result = await self.remove_admins_in_batch(remove_ids_from_args) # Explicit removals still apply
-        else: # is_add_action is False, so treat non-prefixed IDs as removals
-            add_result = BatchOperationResult() # No additions
-            remove_result = await self.remove_admins_in_batch(add_ids_from_args + remove_ids_from_args)
+            remove_result = await self.remove_admins_in_batch(
+                remove_ids_from_args
+            )  # Explicit removals still apply
+        else:  # is_add_action is False, so treat non-prefixed IDs as removals
+            add_result = BatchOperationResult()  # No additions
+            remove_result = await self.remove_admins_in_batch(
+                add_ids_from_args + remove_ids_from_args
+            )
 
         if add_result.successful_ids:
             response_parts.append(
@@ -147,8 +152,10 @@ class ModerationService:
             )
         if add_result.failed_ids:
             response_parts.append(
-                _(f"Failed to add {len(add_result.failed_ids)} admins "
-                  "(already admins or invalid IDs).")
+                _(
+                    f"Failed to add {len(add_result.failed_ids)} admins "
+                    "(already admins or invalid IDs)."
+                )
             )
         if remove_result.successful_ids:
             response_parts.append(
@@ -156,8 +163,10 @@ class ModerationService:
             )
         if remove_result.failed_ids:
             response_parts.append(
-                _(f"Failed to remove {len(remove_result.failed_ids)} admins "
-                  "(not admins or invalid IDs).")
+                _(
+                    f"Failed to remove {len(remove_result.failed_ids)} admins "
+                    "(not admins or invalid IDs)."
+                )
             )
 
         if not response_parts:
@@ -165,7 +174,9 @@ class ModerationService:
 
         return "\n".join(response_parts)
 
-    def _parse_admin_ids_args(self, args_string: str) -> tuple[list[int], list[int], list[str]]:
+    def _parse_admin_ids_args(
+        self, args_string: str
+    ) -> tuple[list[int], list[int], list[str]]:
         add_ids = []
         remove_ids = []
         error_messages = []
