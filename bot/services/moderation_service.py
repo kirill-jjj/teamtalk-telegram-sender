@@ -12,10 +12,12 @@ from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsRe
 from bot.constants import USERS_PER_PAGE
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
-from bot.models import MutedUser, UserSettings
+from bot.event_bus.bus import EventBus
+from bot.models import Admin, MutedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
+from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.telegram_bot.callback_data import ToggleMuteCallback
 from bot.telegram_bot.ui_utils import paginate_list
 
@@ -32,11 +34,54 @@ class ModerationService:
         uow: IUnitOfWork,
         subscription_service: SubscriptionService,
         cache: CacheService,
+        event_bus: EventBus,
     ) -> None:
         """Initializes the moderation service."""
         self._uow = uow
         self._subscription_service = subscription_service
         self._cache = cache
+        self._event_bus = event_bus
+
+    async def add_admin(self, telegram_id: int) -> bool:
+        """Adds a new admin, updating DB, cache, and publishing an event."""
+        async with self._uow:
+            if await self._uow.admins.get_by_id(telegram_id):
+                return False  # Already an admin
+
+            await self._uow.admins.add(Admin(telegram_id=telegram_id))
+            self._cache.add_admin(telegram_id)
+
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            await self._event_bus.publish(
+                AdminStatusChangedEvent(
+                    telegram_id=telegram_id,
+                    is_admin=True,
+                    lang_code=user_settings.language_code if user_settings else None,
+                )
+            )
+            await self._uow.commit()
+        return True
+
+    async def remove_admin(self, telegram_id: int) -> bool:
+        """Removes an admin, updating DB, cache, and publishing an event."""
+        async with self._uow:
+            admin = await self._uow.admins.get_by_id(telegram_id)
+            if not admin:
+                return False  # Not an admin
+
+            await self._uow.admins.delete(admin)
+            self._cache.remove_admin(telegram_id)
+
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            await self._event_bus.publish(
+                AdminStatusChangedEvent(
+                    telegram_id=telegram_id,
+                    is_admin=False,
+                    lang_code=user_settings.language_code if user_settings else None,
+                )
+            )
+            await self._uow.commit()
+        return True
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_and_delete_subscriber(

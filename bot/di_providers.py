@@ -221,17 +221,17 @@ class RequestProvider(Provider):
     @provide
     def get_tt_pm_handlers(
         self,
-        uow: FromDishka[IUnitOfWork],
         settings: FromDishka[Settings],
         cache: FromDishka[CacheService],
-        event_bus: FromDishka[EventBus],
+        deeplink_service: FromDishka[DeeplinkService],
+        moderation_service: FromDishka[ModerationService],
     ) -> PrivateMessageCommandHandlers:
         """Provides an instance of PrivateMessageCommandHandlers."""
         return PrivateMessageCommandHandlers(
-            uow=uow,
             settings=settings,
             cache=cache,
-            event_bus=event_bus,
+            deeplink_service=deeplink_service,
+            moderation_service=moderation_service,
         )
 
     @provide
@@ -276,9 +276,10 @@ class RequestProvider(Provider):
         uow: FromDishka[IUnitOfWork],
         subscription_service: FromDishka[SubscriptionService],
         cache: FromDishka[CacheService],
+        event_bus: FromDishka[EventBus],
     ) -> ModerationService:
         """Provides a ModerationService."""
-        return ModerationService(uow, subscription_service, cache)
+        return ModerationService(uow, subscription_service, cache, event_bus)
 
     @provide
     def get_user_from_event(self, event: TelegramObject) -> User | None:

@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 import functools
 from gettext import NullTranslations
 import logging
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, model_validator
 import pytalk
@@ -19,12 +19,10 @@ from bot.constants import (
     TT_MAX_MESSAGE_BYTES,
 )
 from bot.core.enums import DeeplinkAction
-from bot.database.uow import IUnitOfWork
-from bot.event_bus.bus import EventBus
-from bot.models import Admin
 from bot.services.cache_service import CacheService
+from bot.services.deeplink_service import DeeplinkService
+from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.events import AdminStatusChangedEvent
 
 if TYPE_CHECKING:
     pass
@@ -166,105 +164,21 @@ def _is_tt_admin(
     return wrapper
 
 
-async def _reply_with_deeplink(
-    tt_message: TeamTalkMessage,
-    uow: IUnitOfWork,
-    translator: NullTranslations,
-    action: DeeplinkAction,
-    reply_text_source: str,
-    settings: Settings,
-    cache: CacheService,
-    payload: str | None = None,
-) -> None:
-    """Generates a deeplink and replies to the user with it."""
-    _ = translator.gettext
-    deeplink = await uow.deeplinks.create(
-        action,
-        settings.operational_parameters.deeplink_ttl_seconds,
-        payload=payload,
-    )
-    bot_username = cache.get_bot_username()
-    if not bot_username:
-        logger.error("Bot username not found in cache. Cannot create deeplink.")
-        tt_message.reply(
-            _("Could not generate a link, bot username is not configured.")
-        )
-        return
-    deeplink_url = f"https://t.me/{bot_username}?start={deeplink.token}"
-    logger.info(
-        "Generated deeplink %s for TT user %s",
-        deeplink.token,
-        ttstr(tt_message.user.username),
-    )
-    tt_message.reply(_(reply_text_source).format(deeplink_url=deeplink_url))
-
-
-class _DeeplinkConfig(TypedDict):
-    """Configuration for a deeplink action."""
-
-    get_payload: Callable[[TeamTalkMessage], str | None]
-    reply_text_key: str
-
-
-DEEPLINK_CONFIG: dict[DeeplinkAction, _DeeplinkConfig] = {
-    DeeplinkAction.SUBSCRIBE: {
-        "get_payload": lambda msg: ttstr(msg.user.username),
-        "reply_text_key": (
-            "Click this link to subscribe to notifications "
-            "(link valid for 5 minutes):\n{deeplink_url}"
-        ),
-    },
-    DeeplinkAction.UNSUBSCRIBE: {
-        "get_payload": lambda _: None,
-        "reply_text_key": (
-            "Click this link to unsubscribe from notifications "
-            "(link valid for 5 minutes):\n{deeplink_url}"
-        ),
-    },
-}
-
-
-async def _handle_deeplink_command(
-    tt_message: TeamTalkMessage,
-    uow: IUnitOfWork,
-    translator: NullTranslations,
-    settings: Settings,
-    cache: CacheService,
-    action: DeeplinkAction,
-) -> None:
-    """Generic handler for subscribe/unsubscribe commands."""
-    _ = translator.gettext
-    config = DEEPLINK_CONFIG[action]
-    payload = config["get_payload"](tt_message)
-    reply_text_source = _(config["reply_text_key"])
-
-    await _reply_with_deeplink(
-        tt_message=tt_message,
-        uow=uow,
-        translator=translator,
-        action=action,
-        payload=payload,
-        reply_text_source=reply_text_source,
-        settings=settings,
-        cache=cache,
-    )
-
-
 class PrivateMessageCommandHandlers:
     """Contains handlers for commands received via TeamTalk private messages."""
 
     def __init__(
         self,
-        uow: IUnitOfWork,
         settings: Settings,
         cache: CacheService,
-        event_bus: EventBus,
+        deeplink_service: DeeplinkService,
+        moderation_service: ModerationService,
     ) -> None:
         """Initializes the command handlers with necessary dependencies."""
-        self.uow = uow
         self.settings = settings
         self.cache = cache
-        self.event_bus = event_bus
+        self.deeplink_service = deeplink_service
+        self.moderation_service = moderation_service
 
     async def on_subscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
@@ -282,29 +196,24 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        async with self.uow:
-            await _handle_deeplink_command(
-                tt_message,
-                self.uow,
-                translator,
-                self.settings,
-                self.cache,
-                DeeplinkAction.SUBSCRIBE,
-            )
+        reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+            translator=translator,
+            action=DeeplinkAction.SUBSCRIBE,
+            ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
+            payload=ttstr(tt_message.user.username),
+        )
+        tt_message.reply(reply_text)
 
     async def on_unsubscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
         """Handles the unsubscribe command."""
-        async with self.uow:
-            await _handle_deeplink_command(
-                tt_message,
-                self.uow,
-                translator,
-                self.settings,
-                self.cache,
-                DeeplinkAction.UNSUBSCRIBE,
-            )
+        reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+            translator=translator,
+            action=DeeplinkAction.UNSUBSCRIBE,
+            ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
+        )
+        tt_message.reply(reply_text)
 
     @_is_tt_admin
     async def on_add_admin(
@@ -314,13 +223,12 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the add admin command."""
-        async with self.uow:
-            await self._manage_admin_ids(
-                tt_message=tt_message,
-                args_str=args_str,
-                translator=translator,
-                is_add_action=True,
-            )
+        await self._manage_admin_ids(
+            tt_message=tt_message,
+            args_str=args_str,
+            translator=translator,
+            is_add_action=True,
+        )
 
     @_is_tt_admin
     async def on_remove_admin(
@@ -330,13 +238,12 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the remove admin command."""
-        async with self.uow:
-            await self._manage_admin_ids(
-                tt_message=tt_message,
-                args_str=args_str,
-                translator=translator,
-                is_add_action=False,
-            )
+        await self._manage_admin_ids(
+            tt_message=tt_message,
+            args_str=args_str,
+            translator=translator,
+            is_add_action=False,
+        )
 
     async def _manage_admin_ids(
         self,
@@ -367,29 +274,15 @@ class PrivateMessageCommandHandlers:
 
         for telegram_id in args.valid_ids:
             try:
-                admin = await self.uow.admins.get_by_id(telegram_id)
-                if (is_add_action and not admin) or (not is_add_action and admin):
-                    if is_add_action:
-                        await self.uow.admins.add(Admin(telegram_id=telegram_id))
-                    elif admin:
-                        await self.uow.admins.delete(admin)
-
                 if is_add_action:
-                    self.cache.add_admin(telegram_id)
+                    success = await self.moderation_service.add_admin(telegram_id)
                 else:
-                    self.cache.remove_admin(telegram_id)
+                    success = await self.moderation_service.remove_admin(telegram_id)
 
-                user_settings = await self.uow.users.get_or_create(
-                    telegram_id, {"language_code": self.settings.general.default_lang}
-                )
-                await self.event_bus.publish(
-                    AdminStatusChangedEvent(
-                        telegram_id=telegram_id,
-                        is_admin=is_add_action,
-                        lang_code=user_settings.language_code,
-                    )
-                )
-                success_count += 1
+                if success:
+                    success_count += 1
+                else:
+                    failed_action_ids.append(telegram_id)
             except Exception:
                 failed_action_ids.append(telegram_id)
                 action_str = "add" if is_add_action else "remove"
@@ -434,7 +327,7 @@ class PrivateMessageCommandHandlers:
         if success_count > 0:
             reply_parts.append(success_message)
 
-        invalid_id_msg_key = _("'{telegram_id_str}' is not a valid numeric ID.")
+        invalid_id_msg_key = _("'{{telegram_id_str}}' is not a valid numeric ID.")
         errors = [
             error_msg_key.format(telegram_id=failed_id) for failed_id in failed_ids
         ]
