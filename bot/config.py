@@ -7,7 +7,6 @@ from typing import Literal
 from pydantic import Field, PrivateAttr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Type for gender, can be expanded if needed
 GenderType = Literal["male", "female", "neutral"]
 
 

@@ -42,20 +42,15 @@ async def show_subscriptions_menu(
         )
         return
 
-    # Callback answering handled by decorator or safe_edit_text.
-
-    # Decorator ensures callback_query.message is a Message object.
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_markup = (
-        await create_subscription_settings_keyboard(  # Renamed variable
-            translator, current_notification_setting
-        )
+    subscription_settings_markup = await create_subscription_settings_keyboard(
+        translator, current_notification_setting
     )
 
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
-        reply_markup=subscription_settings_markup,  # Use directly
+        reply_markup=subscription_settings_markup,
         logger_instance=logger,
         log_context="cq_show_subscriptions_menu",
     )

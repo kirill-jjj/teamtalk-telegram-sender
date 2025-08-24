@@ -9,9 +9,6 @@ import tomllib
 if sys.platform == "win32":
     import shutil
 
-    # Set console encoding to UTF-8 for Windows
-    # This might not be strictly necessary if sys.stdout.reconfigure works,
-    # but it's a common practice for Windows console output.
     if chcp_path := shutil.which("chcp"):
         subprocess.run(
             [chcp_path, "65001"],
@@ -19,7 +16,6 @@ if sys.platform == "win32":
             check=False,
         )
 
-    # Reconfigure stdout and stderr to use UTF-8
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
@@ -29,12 +25,11 @@ BABEL_CONFIG = "babel.cfg"
 LOCALE_DOMAIN = "messages"
 
 try:
-    # Correct BASE_DIR to be the project root (parent of the 'scripts' directory)
     BASE_DIR = Path(__file__).resolve().parent.parent
-    LOCALE_DIR = BASE_DIR / "locales"  # Now relative to project root
+    LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
-except NameError:  # Fallback for __file__ not defined
-    BASE_DIR = Path.cwd()  # If run directly from project root, cwd() is fine
+except NameError:
+    BASE_DIR = Path.cwd()
     LOCALE_DIR = BASE_DIR / "locales"
     POT_FILE = LOCALE_DIR / f"{LOCALE_DOMAIN}.pot"
 
@@ -45,7 +40,6 @@ def get_project_version() -> str:
     try:
         with pyproject_path.open("rb") as f:
             data = tomllib.load(f)
-        # Assuming version is under [project][version]
         version = data.get("project", {}).get("version")
         if version:
             return str(version)
@@ -59,17 +53,15 @@ def get_project_version() -> str:
             f"Cannot determine project version.",
             file=sys.stderr,
         )
-        return "0.0.0"  # Fallback version
-    # Broader catch for TOML issues or structure changes
+        return "0.0.0"
     except (tomllib.TOMLDecodeError, KeyError, AttributeError, TypeError) as e:
         print(
             f"⚠️ Warning: Could not read version from pyproject.toml: {e}",
             file=sys.stderr,
         )
-        return "0.0.0"  # Fallback version
+        return "0.0.0"
     else:
-        # and no exception occurred.
-        return "0.0.0"  # Fallback version
+        return "0.0.0"
 
 
 def extract() -> None:
@@ -85,7 +77,6 @@ def extract() -> None:
         f"--project={PROJECT_NAME}",
         f"--version={version}",
         f"--copyright-holder={COPYRIGHT_HOLDER}",
-        # Assuming source files are scanned from BASE_DIR
         ".",
     ]
     print(f"--- Executing: {' '.join(command)}")
@@ -118,7 +109,7 @@ def update() -> None:
         str(LOCALE_DIR),
         "-D",
         LOCALE_DOMAIN,
-        "--previous",  # Use .po~ backup files
+        "--previous",
     ]
     print(f"--- Executing: {' '.join(command)}")
     try:
@@ -158,14 +149,14 @@ def compile_cmd() -> None:
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error executing 'pybabel compile': {e.stderr}", file=sys.stderr)
-        if e.stdout:  # Babel compile might print stats to stdout even on error
+        if e.stdout:
             print(f"Output from compile: {e.stdout}", file=sys.stderr)
         sys.exit(e.returncode)
 
 
 def main() -> None:
     """Main function to handle CLI arguments for locale management."""
-    if len(sys.argv) < 2:  # noqa: PLR2004 - 2 is standard for checking script name + one argument
+    if len(sys.argv) < 2:  # noqa: PLR2004
         print("Usage: python manage-locales.py [update|compile]")
         sys.exit(1)
 

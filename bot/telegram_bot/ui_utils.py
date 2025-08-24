@@ -117,7 +117,6 @@ async def display_paginated_list(
     )
 
     if isinstance(target, CallbackQuery) and isinstance(target.message, Message):
-        # Edit existing message from callback query
         await safe_edit_text(
             message_to_edit=target.message,
             text=final_message_text,
@@ -128,7 +127,6 @@ async def display_paginated_list(
         )
 
     elif isinstance(target, Message):
-        # Send new message
         try:
             await bot.send_message(
                 chat_id=target.chat.id,
@@ -142,17 +140,7 @@ async def display_paginated_list(
                 title_text,
                 target.chat.id,
             )
-    # The case `isinstance(target, CallbackQuery) and target.message is None` is
-    # considered unreachable
-    # because all callback handlers that would call this function are decorated
-    # with `@ensure_message_context`,
-    # which prevents execution if `query.message` is None.
     else:
-        # This 'else' now catches cases where target is not a CallbackQuery
-        # with a message,
-        # nor a direct Message object. This could be an improperly constructed
-        # CallbackQuery
-        # (though unlikely if from Aiogram) or an unexpected type.
         logger.error(
             "Invalid target type or unexpected state for display_paginated_list "
             "for '%s'. Target type: %s",

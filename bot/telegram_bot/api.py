@@ -3,8 +3,6 @@
 import asyncio
 from collections.abc import Callable
 import logging
-
-# For type hinting Services
 from typing import Any
 
 from aiogram import Bot as AiogramBot

@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import logging
 import traceback
-from types import ModuleType  # For uvloop typing
+from types import ModuleType
 
 from aiogram import Dispatcher
 from dishka import make_async_container
@@ -34,7 +34,7 @@ try:
 
     uvloop = uvloop_module
 except ImportError:
-    pass  # uvloop remains None
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,6 @@ class Application:
         """
         self.app_config = app_config_instance
         self.logger = setup_logging()
-        # self.dp will be provided by dishka
         self.dp: Dispatcher | None = None
 
     async def run(self) -> None:
@@ -87,27 +86,20 @@ class Application:
         self.dp = await container.get(Dispatcher)
         self.dp.workflow_data["dishka_container"] = container
 
-        # Register middlewares
-
-        # Include routers
         self.dp.include_router(user_commands_router)
         self.dp.include_router(admin_router)
         self.dp.include_router(callback_router)
         self.dp.include_router(catch_all_router)
         self.dp.include_router(error_router)
 
-        # Register startup handler to be executed when the bot starts
         self.dp.startup.register(on_startup)
         self.dp.shutdown.register(on_shutdown)
 
-        # Set up dishka for aiogram integration
         setup_dishka(container, router=self.dp, auto_inject=True)
 
         self.logger.info("Starting Telegram polling...")
         try:
-            # Retrieve the EventBot instance directly from the container
             bot_instance = await container.get(EventBot)
-            # Start polling with the retrieved bot instance
             await self.dp.start_polling(bot_instance)
         finally:
             self.logger.info("Closing dishka container.")
