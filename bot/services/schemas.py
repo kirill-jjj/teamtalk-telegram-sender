@@ -41,3 +41,10 @@ class OperationResult(BaseModel):
     message_args: dict[str, Any] | None = Field(default=None)
     user_settings: UserSettings | None = Field(default=None)
     long_message: str | None = Field(default=None)
+
+
+class BatchOperationResult(BaseModel):
+    """Represents the result of a batch operation."""
+
+    successful_ids: list[int] = Field(default_factory=list)
+    failed_ids: list[int] = Field(default_factory=list)

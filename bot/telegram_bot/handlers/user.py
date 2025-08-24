@@ -15,9 +15,9 @@ from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
-from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.keyboards import (
@@ -35,7 +35,6 @@ async def on_start_with_payload(
     message: Message,
     token: str,
     translator: Annotated[NullTranslations, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
     deeplink_service: Annotated[DeeplinkService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
@@ -43,17 +42,13 @@ async def on_start_with_payload(
     if not message.from_user:
         return
 
-    async with uow:
-        user_settings = await uow.users.get_or_create(
-            message.from_user.id,
-            defaults={"language_code": settings.general.default_lang},
-        )
-        await deeplink_service.process_telegram_deeplink(
-            message,
-            token,
-            translator,
-            user_settings,
-        )
+    await deeplink_service.process_telegram_deeplink(
+        message,
+        token,
+        translator,
+        message.from_user.id,
+        settings.general.default_lang,
+    )
 
 
 @user_commands_router.message(CommandStart(deep_link=False))
@@ -73,7 +68,7 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    user_settings_service: Annotated[UserSettingsService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
@@ -82,11 +77,9 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        async with uow:
-            user_settings = await uow.users.get_or_create(
-                message.from_user.id,
-                defaults={"language_code": settings.general.default_lang},
-            )
+        user_settings = await user_settings_service.get_or_create(
+            message.from_user.id, settings.general.default_lang
+        )
         is_admin = cache.is_admin(message.from_user.id)
         command = GetOnlineUsersCommand(
             is_caller_admin=is_admin, lang_code=user_settings.language_code

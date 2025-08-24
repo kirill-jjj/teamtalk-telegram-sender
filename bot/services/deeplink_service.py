@@ -151,7 +151,8 @@ class DeeplinkService:
         message: Message,
         token: str,
         translator: NullTranslations,
-        user_settings: UserSettings,
+        telegram_id: int,
+        default_lang: str,
     ) -> None:
         """Handles a /start command with a deeplink token.
 
@@ -161,7 +162,8 @@ class DeeplinkService:
             message: The Aiogram Message object.
             token: The deeplink token from the command arguments.
             translator: The gettext translator object.
-            user_settings: The UserSettings object for the user.
+            telegram_id: The telegram id of the user.
+            default_lang: The default language code from settings.
         """
         _ = translator.gettext
         if not message.from_user:
@@ -169,27 +171,33 @@ class DeeplinkService:
             await message.reply(_(MSG_GENERAL_ERROR))
             return
 
-        deeplink = await self._uow.deeplinks.get_and_delete_if_expired(token)
-        if not deeplink:
-            await message.reply(_("Invalid or expired deeplink."))
-            return
-
-        if (
-            deeplink.expected_telegram_id
-            and deeplink.expected_telegram_id != message.from_user.id
-        ):
-            await message.reply(
-                _(
-                    "This confirmation link was intended for a different "
-                    "Telegram account."
-                )
+        async with self._uow:
+            user_settings = await self._uow.users.get_or_create(
+                telegram_id, defaults={"language_code": default_lang}
             )
-            return
 
-        reply_text = await self.execute_deeplink(
-            deeplink, user_settings, translator, self._uow
-        )
-        await message.reply(reply_text)
+            deeplink = await self._uow.deeplinks.get_and_delete_if_expired(token)
+            if not deeplink:
+                await message.reply(_("Invalid or expired deeplink."))
+                return
 
-        # The token is now used, so we should delete it.
-        await self._uow.deeplinks.delete(deeplink)
+            if (
+                deeplink.expected_telegram_id
+                and deeplink.expected_telegram_id != message.from_user.id
+            ):
+                await message.reply(
+                    _(
+                        "This confirmation link was intended for a different "
+                        "Telegram account."
+                    )
+                )
+                return
+
+            reply_text = await self.execute_deeplink(
+                deeplink, user_settings, translator, self._uow
+            )
+            await message.reply(reply_text)
+
+            # The token is now used, so we should delete it.
+            await self._uow.deeplinks.delete(deeplink)
+            await self._uow.commit()

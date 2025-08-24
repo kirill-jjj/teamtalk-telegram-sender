@@ -22,6 +22,7 @@ from bot.core.enums import DeeplinkAction
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
+from bot.services.schemas import BatchOperationResult
 from bot.teamtalk_bot import command_constants as tt_cmds
 
 if TYPE_CHECKING:
@@ -269,30 +270,19 @@ class PrivateMessageCommandHandlers:
             tt_message.reply(prompt_msg_key)
             return
 
-        success_count = 0
-        failed_action_ids = []
-
-        for telegram_id in args.valid_ids:
-            try:
-                if is_add_action:
-                    success = await self.moderation_service.add_admin(telegram_id)
-                else:
-                    success = await self.moderation_service.remove_admin(telegram_id)
-
-                if success:
-                    success_count += 1
-                else:
-                    failed_action_ids.append(telegram_id)
-            except Exception:
-                failed_action_ids.append(telegram_id)
-                action_str = "add" if is_add_action else "remove"
-                logger.exception("Failed to %s admin %s", action_str, telegram_id)
+        result: BatchOperationResult
+        if is_add_action:
+            result = await self.moderation_service.add_admins_in_batch(args.valid_ids)
+        else:
+            result = await self.moderation_service.remove_admins_in_batch(
+                args.valid_ids
+            )
 
         report = self._create_admin_action_report(
             translator,
-            success_count,
-            failed_action_ids,
-            args.invalid_entries,
+            success_count=len(result.successful_ids),
+            failed_ids=result.failed_ids,
+            invalid_entries=args.invalid_entries,
             is_add_action=is_add_action,
         )
         tt_message.reply(report)

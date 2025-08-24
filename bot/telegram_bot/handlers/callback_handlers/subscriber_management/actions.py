@@ -14,6 +14,7 @@ from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.services.subscription_service import SubscriptionService
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_name_for_id
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -157,7 +158,7 @@ async def delete_subscriber_from_list(
             target_telegram_id, translator, uow=uow
         )
 
-    message = result.message_key.format(**(result.message_args or {}))
+    message = result.message_key.format(**(result.message_args or {{}}))
 
     return result.success, message, None
 
@@ -189,7 +190,7 @@ async def on_ban_subscriber_confirm(
                 "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
             )
 
-        short_message = _(result.message_key).format(**(result.message_args or {}))
+        short_message = _(result.message_key).format(**(result.message_args or {{}}))
     return result.success, short_message, None
 
 
@@ -216,7 +217,7 @@ async def delete_subscriber(
             target_telegram_id, translator, uow=uow
         )
 
-    message = result.message_key.format(**(result.message_args or {}))
+    message = result.message_key.format(**(result.message_args or {{}}))
 
     return result.success, message, None
 
@@ -228,20 +229,22 @@ async def view_subscriber(
     callback_data: ViewSubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
-    uow: FromDishka[IUnitOfWork],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handle viewing details and actions for a subscriber via the display helper."""
-    async with uow:
-        user_settings = await uow.users.get_by_id(callback_data.telegram_id)
-        if not user_settings:
-            await query.answer("User not found.", show_alert=True)
-            return
+    user_settings = await user_settings_service.get_or_create(
+        callback_data.telegram_id,
+        "en",  # lang doesn't matter here
+    )
+    if not user_settings:
+        await query.answer("User not found.", show_alert=True)
+        return
 
-        await _display_subscriber_view(
-            query=query,
-            target_telegram_id=callback_data.telegram_id,
-            page_context=callback_data.page,
-            user_settings=user_settings,
-            translator=translator,
-            bot=bot,
-        )
+    await _display_subscriber_view(
+        query=query,
+        target_telegram_id=callback_data.telegram_id,
+        page_context=callback_data.page,
+        user_settings=user_settings,
+        translator=translator,
+        bot=bot,
+    )

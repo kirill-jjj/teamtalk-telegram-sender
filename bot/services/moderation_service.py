@@ -15,7 +15,7 @@ from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.models import Admin, MutedUser, UserSettings
 from bot.services.cache_service import CacheService
-from bot.services.schemas import OperationResult
+from bot.services.schemas import BatchOperationResult, OperationResult
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.telegram_bot.callback_data import ToggleMuteCallback
@@ -82,6 +82,38 @@ class ModerationService:
             )
             await self._uow.commit()
         return True
+
+    async def add_admins_in_batch(
+        self, telegram_ids: list[int]
+    ) -> BatchOperationResult:
+        """Adds multiple admins in a batch, returning successful and failed IDs."""
+        result = BatchOperationResult()
+        for telegram_id in telegram_ids:
+            try:
+                if await self.add_admin(telegram_id):
+                    result.successful_ids.append(telegram_id)
+                else:
+                    result.failed_ids.append(telegram_id)
+            except Exception:
+                logger.exception("Failed to add admin %s in batch", telegram_id)
+                result.failed_ids.append(telegram_id)
+        return result
+
+    async def remove_admins_in_batch(
+        self, telegram_ids: list[int]
+    ) -> BatchOperationResult:
+        """Removes multiple admins in a batch, returning successful and failed IDs."""
+        result = BatchOperationResult()
+        for telegram_id in telegram_ids:
+            try:
+                if await self.remove_admin(telegram_id):
+                    result.successful_ids.append(telegram_id)
+                else:
+                    result.failed_ids.append(telegram_id)
+            except Exception:
+                logger.exception("Failed to remove admin %s in batch", telegram_id)
+                result.failed_ids.append(telegram_id)
+        return result
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_and_delete_subscriber(

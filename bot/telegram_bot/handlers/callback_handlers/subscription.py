@@ -10,7 +10,6 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
-from bot.database.uow import IUnitOfWork
 from bot.models import NotificationSetting, UserSettings
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
@@ -64,7 +63,6 @@ async def show_subscriptions_menu(
 async def set_subscription_setting(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
     callback_data: SubscriptionCallback,
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
@@ -72,28 +70,19 @@ async def set_subscription_setting(
     _ = translator.gettext
     new_setting_enum = NotificationSetting(callback_data.setting_value)
 
-    updated_settings: UserSettings | None = None
-    original_settings: UserSettings | None = None
+    original_settings = await user_settings_service.get_or_create(
+        callback_query.from_user.id, "en"
+    )
 
-    async with uow:
-        original_settings = await uow.users.get_by_id(callback_query.from_user.id)
-        if not original_settings:
-            logger.warning(
-                "User settings not found for user %s", callback_query.from_user.id
-            )
-            await callback_query.answer(_("User data not found."), show_alert=True)
-            return
+    if new_setting_enum == original_settings.notification_settings:
+        await callback_query.answer()
+        return
 
-        if new_setting_enum == original_settings.notification_settings:
-            await callback_query.answer()
-            return
-
-        updated_settings = await user_settings_service.update_notification_preference(
-            user_settings=original_settings,
-            new_pref=new_setting_enum,
-            actor=Actor.USER,
-            uow=uow,
-        )
+    updated_settings = await user_settings_service.update_notification_preference(
+        user_settings=original_settings,
+        new_pref=new_setting_enum,
+        actor=Actor.USER,
+    )
 
     if not updated_settings:
         await callback_query.answer(

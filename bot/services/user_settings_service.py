@@ -166,48 +166,59 @@ class UserSettingsService:
         user_settings: UserSettings,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
-        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
-        return await self._update_setting(
-            user_settings, "notification_settings", new_pref, log_context, uow=uow
-        )
+        async with self._uow:
+            updated_settings = await self._update_setting(
+                user_settings, "notification_settings", new_pref, log_context, uow=self._uow
+            )
+            if updated_settings:
+                await self._uow.commit()
+            else:
+                await self._uow.rollback()
+        return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_noon_setting(
         self,
         user_settings: UserSettings,
         actor: Actor = Actor.USER,
-        uow: IUnitOfWork | None = None,
     ) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
-        new_noon_value = not user_settings.not_on_online_enabled
-        log_context = f" by {actor.value} (toggle NOON)"
+        async with self._uow:
+            new_noon_value = not user_settings.not_on_online_enabled
+            log_context = f" by {actor.value} (toggle NOON)"
 
-        updated_settings = await self._update_setting(
-            user_settings,
-            "not_on_online_enabled",
-            new_noon_value,
-            log_context,
-            uow=uow,
-        )
-
-        if not updated_settings:
-            return None
-
-        if (
-            updated_settings.not_on_online_enabled
-            and not updated_settings.not_on_online_confirmed
-        ):
-            confirm_log_context = f" by {actor.value} (confirm NOON after toggle)"
-            confirmed_settings = await self._update_setting(
-                user_settings=updated_settings,
-                field_name="not_on_online_confirmed",
-                new_value=True,
-                log_context=confirm_log_context,
-                uow=uow,
+            updated_settings = await self._update_setting(
+                user_settings,
+                "not_on_online_enabled",
+                new_noon_value,
+                log_context,
+                uow=self._uow,
             )
-            return confirmed_settings or updated_settings
 
-        return updated_settings
+            if not updated_settings:
+                await self._uow.rollback()
+                return None
+
+            if (
+                updated_settings.not_on_online_enabled
+                and not updated_settings.not_on_online_confirmed
+            ):
+                confirm_log_context = f" by {actor.value} (confirm NOON after toggle)"
+                confirmed_settings = await self._update_setting(
+                    user_settings=updated_settings,
+                    field_name="not_on_online_confirmed",
+                    new_value=True,
+                    log_context=confirm_log_context,
+                    uow=self._uow,
+                )
+                if confirmed_settings:
+                    await self._uow.commit()
+                    return confirmed_settings
+                await self._uow.rollback()
+                return updated_settings
+
+            await self._uow.commit()
+            return updated_settings
