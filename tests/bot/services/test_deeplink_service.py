@@ -331,7 +331,12 @@ async def test_execute_deeplink_subscribe_action(
     mock_subscription_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
-    deeplink = DeeplinkModel(action=DeeplinkAction.SUBSCRIBE, token="abc", payload="test_tt_user", expiry_time=datetime.now(UTC) + timedelta(minutes=5))
+    deeplink = DeeplinkModel(
+        action=DeeplinkAction.SUBSCRIBE,
+        token="abc",
+        payload="test_tt_user",
+        expiry_time=datetime.now(UTC) + timedelta(minutes=5),
+    )
     user_settings = UserSettings(telegram_id=123, language_code="en")
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
