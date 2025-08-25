@@ -3,6 +3,7 @@
 from datetime import datetime
 import enum
 
+import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -43,7 +44,8 @@ class UserSettings(SQLModel, table=True):
     telegram_id: int = Field(default=None, primary_key=True, index=True)
     language_code: str = Field(nullable=False)
     notification_settings: NotificationSetting = Field(
-        default=NotificationSetting.ALL, nullable=False
+        default=NotificationSetting.ALL,
+        sa_column=sa.Column(sa.Enum(NotificationSetting, values_callable=lambda x: [e.value for e in x], name="notification_setting_enum"), nullable=False)
     )
     mute_list_mode: "MuteListMode" = Field(
         default=MuteListMode.blacklist, nullable=False
