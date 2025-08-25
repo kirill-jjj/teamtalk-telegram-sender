@@ -1,6 +1,7 @@
 """Functions for formatting data for display."""
 
 import gettext
+from gettext import NullTranslations
 import logging
 
 import pytalk
@@ -8,6 +9,11 @@ from pytalk.instance import TeamTalkInstance
 from pytalk.user import User as TeamTalkUser
 
 from bot.config import Settings
+from bot.constants import (
+    WHO_CHANNEL_ID_ROOT,
+    WHO_CHANNEL_ID_SERVER_ROOT_ALT,
+    WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
+)
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -71,3 +77,36 @@ def get_tt_user_display_name(
     if not display_name:
         display_name = _("unknown user")
     return display_name
+
+
+def get_user_display_channel_name(
+    user_obj: TeamTalkUser, *, is_caller_admin: bool, translator: "NullTranslations"
+) -> str:
+    """Gets the display name of the channel a user is in."""
+    channel_obj = user_obj.channel
+    if not channel_obj:
+        return translator.gettext("in unknown location")
+
+    is_channel_hidden = (
+        hasattr(pytalk.instance.sdk, "ChannelType")
+        and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN)
+        != 0
+    )
+
+    server_root_ids = [
+        WHO_CHANNEL_ID_SERVER_ROOT_ALT,
+        WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
+    ]
+
+    if channel_obj.id in server_root_ids:
+        return translator.gettext("under server")
+
+    if is_caller_admin or not is_channel_hidden:
+        channel_name = ttstr(channel_obj.name)
+        # If the channel name is empty and it's the root channel, use a fallback name
+        if not channel_name and channel_obj.id == WHO_CHANNEL_ID_ROOT:
+            channel_name = translator.gettext("the root channel")
+
+        return translator.gettext("in {channel_name}").format(channel_name=channel_name)
+
+    return translator.gettext("under server")
