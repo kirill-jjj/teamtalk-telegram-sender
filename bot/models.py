@@ -51,8 +51,8 @@ class UserSettings(SQLModel, table=True):
                 values_callable=lambda x: [e.value for e in x],
                 name="notification_setting_enum",
             ),
-            nullable=False
-        )
+            nullable=False,
+        ),
     )
     mute_list_mode: "MuteListMode" = Field(
         default=MuteListMode.blacklist, nullable=False

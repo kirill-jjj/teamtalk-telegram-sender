@@ -57,6 +57,7 @@ async def unban_subscriber(
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
     uow: FromDishka[IUnitOfWork],
+    bot: Annotated[EventBot, FromDishka()],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
     _ = translator.gettext
