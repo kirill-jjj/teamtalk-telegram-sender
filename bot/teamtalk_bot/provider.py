@@ -175,11 +175,9 @@ class TeamTalkProvider(Provider):
         self,
         tt_connection: FromDishka[TeamTalkConnection],
         translator_factory: FromDishka[Callable[[str], NullTranslations]],
-        report_service: FromDishka[ReportService],
     ) -> TeamTalkCommandHandlers:
         """Provides the TeamTalk command handlers if a connection is available."""
         return TeamTalkCommandHandlers(
             tt_connection=tt_connection,
             translator_factory=translator_factory,
-            report_service=report_service,
         )

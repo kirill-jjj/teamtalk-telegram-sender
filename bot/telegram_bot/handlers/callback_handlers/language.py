@@ -11,8 +11,10 @@ from dishka.integrations.aiogram import FromDishka
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
 from bot.models import UserSettings
+from bot.services.cache_service import CacheService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
+from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
     with_view_refresh,
@@ -64,6 +66,7 @@ async def set_language(
     bot: FromDishka[EventBot],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     user_settings_service: FromDishka[UserSettingsService],
+    cache: FromDishka[CacheService],
 ) -> tuple[bool, str, UserSettings | None]:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
@@ -80,15 +83,20 @@ async def set_language(
         return True, "", None
 
     updated_settings = await user_settings_service.update_language(
-        bot=bot,
         telegram_id=query.from_user.id,
         new_lang_code=new_lang_code,
-        translator_factory=translator_factory,
         actor=Actor.USER,
     )
 
     if updated_settings:
         new_translator = translator_factory(new_lang_code)
+        await update_user_bot_commands(
+            telegram_id=query.from_user.id,
+            new_lang_code=new_lang_code,
+            cache=cache,
+            bot=bot,
+            translator=new_translator,
+        )
         return (
             True,
             new_translator.gettext("Language has been changed."),

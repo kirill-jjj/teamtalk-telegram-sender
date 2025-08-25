@@ -17,8 +17,13 @@ from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.filters.subscription import IsSubscribed
+from bot.telegram_bot.formatters import (
+    format_who_message,
+    group_users_for_who_command,
+)
 from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
     create_main_settings_keyboard,
@@ -38,16 +43,19 @@ async def on_start_with_payload(
     settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
+    _ = translator.gettext
     if not message.from_user:
+        logger.warning("Cannot handle deeplink: message.from_user is None.")
+        await message.reply(_("An error occurred. Please try again later."))
         return
 
-    await deeplink_service.process_telegram_deeplink(
-        message,
-        token,
-        translator,
-        message.from_user.id,
-        settings.general.default_lang,
+    reply_text, success = await deeplink_service.process_telegram_deeplink(
+        token=token,
+        translator=translator,
+        telegram_id=message.from_user.id,
+        default_lang=settings.general.default_lang,
     )
+    await message.reply(reply_text)
 
 
 @user_commands_router.message(CommandStart(deep_link=False))
@@ -69,6 +77,7 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
+    settings: Annotated[Settings, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     _ = translator.gettext
@@ -76,13 +85,35 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        report_text = await report_service.get_telegram_who_report(
-            message.from_user.id,
-            translator,
-            cache,
-            user_settings_service,
-            command_bus,
+        is_admin = cache.is_admin(message.from_user.id)
+
+        result = await report_service.get_telegram_who_report(
+            telegram_user_id=message.from_user.id,
+            translator=translator,
+            cache_service=cache,
+            user_settings_service=user_settings_service,
+            command_bus=command_bus,
         )
+
+        if not result.success:
+            report_text = result.error_message or _("An error occurred.")
+        else:
+            server_name = get_effective_server_name(
+                None, translator, settings
+            )  # Pass None for tt_instance as it's not available here
+            grouped_data, total_users = group_users_for_who_command(
+                result.users,
+                None,  # bot_user_id is not needed for formatting here
+                is_caller_admin=is_admin,
+                translator=translator,
+            )
+            report_text = format_who_message(
+                grouped_data,
+                total_users,
+                translator=translator,
+                server_host=server_name,
+            )
+
         await message.reply(report_text)
 
 

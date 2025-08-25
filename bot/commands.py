@@ -15,7 +15,7 @@ class GetOnlineUsersResult(BaseModel):
 
     success: bool
     users: list[pytalk.user.User] = []
-    report_text: str | None = None
+    server_name: str | None = None
     error_message: str | None = None
 
 

@@ -16,13 +16,17 @@ from bot.core.enums import AdminCommand
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.callback_data import MenuCallback
+from bot.telegram_bot.formatters import (
+    format_who_message,
+    group_users_for_who_command,
+)
 from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.handlers.user import (
     on_help_command,
     on_settings_command,
-    on_who_command,
 )
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import (
@@ -45,17 +49,41 @@ async def menu_who_handler(
     command_bus: Annotated[CommandBus, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
-    await on_who_command(
-        message=query.message,
+    _ = translator.gettext
+    if not query.from_user:
+        return
+
+    is_admin = cache.is_admin(query.from_user.id)
+
+    result = await report_service.get_telegram_who_report(
+        telegram_user_id=query.from_user.id,
         translator=translator,
-        cache=cache,
-        bot=bot,
-        command_bus=command_bus,
+        cache_service=cache,
         user_settings_service=user_settings_service,
-        settings=settings,
+        command_bus=command_bus,
     )
+
+    if not result.success:
+        report_text = result.error_message or _("An error occurred.")
+    else:
+        server_name = get_effective_server_name(
+            None, translator, settings
+        )  # Pass None for tt_instance as it's not available here
+        grouped_data, total_users = group_users_for_who_command(
+            result.users,
+            None,  # bot_user_id is not needed for formatting here
+            is_caller_admin=is_admin,
+            translator=translator,
+        )
+        report_text = format_who_message(
+            grouped_data, total_users, translator=translator, server_host=server_name
+        )
+
+    if query.message:
+        await query.message.reply(report_text)
     await query.answer()
 
 

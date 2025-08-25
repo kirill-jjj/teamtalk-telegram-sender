@@ -22,12 +22,7 @@ from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.types.bots import EventBot
 
 if TYPE_CHECKING:
-    from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.formatters import get_effective_server_name
-from bot.telegram_bot.formatters import (
-    format_who_message,
-    group_users_for_who_command,
-)
+    pass
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
@@ -51,34 +46,6 @@ class ReportService:
         self._ban_repo = ban_repo
         self._bot = bot
 
-    def get_online_users_report(
-        self,
-        tt_connection: "TeamTalkConnection",
-        *,
-        is_caller_admin: bool,
-        translator: NullTranslations,
-    ) -> str:
-        """Generates a formatted report of online users."""
-        if not tt_connection.instance:
-            return translator.gettext("Error: No active TeamTalk connection.")
-
-        all_users = list(tt_connection.cache_manager.online_users_cache.values())
-        bot_user_id = tt_connection.instance.getMyUserID()
-        server_name = get_effective_server_name(
-            tt_connection.instance, translator, self._settings
-        )
-
-        grouped_data, total_users = group_users_for_who_command(
-            all_users,
-            bot_user_id,
-            is_caller_admin=is_caller_admin,
-            translator=translator,
-        )
-
-        return format_who_message(
-            grouped_data, total_users, translator=translator, server_host=server_name
-        )
-
     async def get_telegram_who_report(
         self,
         telegram_user_id: int,
@@ -86,7 +53,7 @@ class ReportService:
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
         command_bus: CommandBus,
-    ) -> str:
+    ) -> GetOnlineUsersResult:
         """Generates a formatted report of online users for Telegram."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
@@ -100,14 +67,12 @@ class ReportService:
             result: GetOnlineUsersResult = await command_bus.execute(command)
         except NoHandlerFoundError:
             logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            return _("This feature is temporarily unavailable.")
+            return GetOnlineUsersResult(
+                success=False,
+                error_message=_("This feature is temporarily unavailable."),
+            )
 
-        if not result.success:
-            return result.error_message or _("An error occurred.")
-
-        if result.report_text:
-            return result.report_text
-        return _("Failed to generate the report.")
+        return result
 
     def get_help_text(self, translator: NullTranslations, *, is_admin: bool) -> str:
         """Builds the help message for Telegram users."""

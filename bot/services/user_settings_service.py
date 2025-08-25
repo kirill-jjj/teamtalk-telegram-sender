@@ -1,7 +1,5 @@
 """Service for managing user-specific settings."""
 
-from collections.abc import Callable
-from gettext import NullTranslations
 import logging
 from typing import TypeVar
 
@@ -11,8 +9,6 @@ from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
-from bot.telegram_bot.commands import update_user_bot_commands
-from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +96,8 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_language(
         self,
-        bot: EventBot,
         telegram_id: int,
         new_lang_code: str,
-        translator_factory: Callable[[str], NullTranslations],
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
@@ -122,14 +116,6 @@ class UserSettingsService:
                 uow=self._uow,
             )
             if updated_settings:
-                new_translator = translator_factory(new_lang_code)
-                await update_user_bot_commands(
-                    telegram_id=telegram_id,
-                    new_lang_code=new_lang_code,
-                    cache=self._cache,
-                    bot=bot,
-                    translator=new_translator,
-                )
                 await self._uow.commit()
             else:
                 await self._uow.rollback()

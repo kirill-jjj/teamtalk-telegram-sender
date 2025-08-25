@@ -17,7 +17,6 @@ from bot.commands import (
     KickUserCommand,
     ModerationResult,
 )
-from bot.services.report_service import ReportService
 from bot.services.schemas import UserAccountInfo
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import get_tt_user_display_name
@@ -32,40 +31,28 @@ class TeamTalkCommandHandlers:
         self,
         tt_connection: TeamTalkConnection,
         translator_factory: Callable[[str], NullTranslations],
-        report_service: ReportService,
     ) -> None:
         """Initializes the TeamTalkCommandHandlers.
 
         Args:
             tt_connection: The TeamTalk connection instance.
             translator_factory: The translator factory instance.
-            report_service: The service for generating reports.
         """
         self._tt_connection = tt_connection
         self._translator_factory = translator_factory
-        self._report_service = report_service
 
-    async def get_online_users(
-        self, command: GetOnlineUsersCommand
-    ) -> GetOnlineUsersResult:
+    async def get_online_users(self, _: GetOnlineUsersCommand) -> GetOnlineUsersResult:
         """Handles the command to get online users."""
         if not self._tt_connection or not self._tt_connection.is_ready:
             return GetOnlineUsersResult(
                 success=False, error_message="TeamTalk connection is not active."
             )
 
-        translator = self._translator_factory(command.lang_code)
-        _ = translator.gettext
-
-        report_text = self._report_service.get_online_users_report(
-            tt_connection=self._tt_connection,
-            is_caller_admin=command.is_caller_admin,
-            translator=translator,
-        )
+        server_name = self._tt_connection.server_info.host
         return GetOnlineUsersResult(
             success=True,
-            report_text=report_text,
             users=list(self._tt_connection.cache_manager.online_users_cache.values()),
+            server_name=server_name,
         )
 
     async def get_all_tt_accounts(
