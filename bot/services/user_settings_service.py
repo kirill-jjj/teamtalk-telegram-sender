@@ -64,7 +64,7 @@ class UserSettingsService:
                 new_value,
                 log_context,
             )
-            return user_settings
+            return None
 
         setattr(user_settings, field_name, new_value)
         active_uow = uow or self._uow
@@ -117,8 +117,6 @@ class UserSettingsService:
             )
             if updated_settings:
                 await self._uow.commit()
-            else:
-                await self._uow.rollback()
 
         return updated_settings
 
@@ -142,8 +140,6 @@ class UserSettingsService:
             )
             if updated_settings:
                 await self._uow.commit()
-            else:
-                await self._uow.rollback()
         return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -165,8 +161,6 @@ class UserSettingsService:
             )
             if updated_settings:
                 await self._uow.commit()
-            else:
-                await self._uow.rollback()
         return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -189,7 +183,6 @@ class UserSettingsService:
             )
 
             if not updated_settings:
-                await self._uow.rollback()
                 return None
 
             if (
@@ -207,8 +200,6 @@ class UserSettingsService:
                 if confirmed_settings:
                     await self._uow.commit()
                     return confirmed_settings
-                await self._uow.rollback()
-                return updated_settings
 
             await self._uow.commit()
             return updated_settings

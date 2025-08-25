@@ -1,0 +1,276 @@
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from bot.database.uow import IUnitOfWork
+from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.services.user_settings_service import UserSettingsService
+
+
+@pytest.fixture
+def mock_uow() -> AsyncMock:
+    uow = AsyncMock(spec=IUnitOfWork)
+    uow.users = AsyncMock()
+    return uow
+
+
+@pytest.fixture
+def mock_cache() -> MagicMock:
+    cache = MagicMock()
+    cache.get_user_settings = MagicMock()
+    cache.update_user_settings = MagicMock()
+    return cache
+
+
+@pytest.fixture
+def user_settings_service(
+    mock_uow: AsyncMock, mock_cache: MagicMock
+) -> UserSettingsService:
+    return UserSettingsService(mock_uow, mock_cache)
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_from_cache(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    default_lang = "en"
+    cached_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
+    mock_cache.get_user_settings.return_value = cached_settings
+
+    result = await user_settings_service.get_or_create(telegram_id, default_lang)
+
+    assert result == cached_settings
+    mock_cache.get_user_settings.assert_called_once_with(telegram_id)
+    mock_uow.users.get_or_create.assert_not_called()
+    mock_uow.commit.assert_not_called()
+    mock_cache.update_user_settings.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_from_db(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    default_lang = "en"
+    db_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
+
+    mock_cache.get_user_settings.return_value = None
+    mock_uow.users.get_or_create.return_value = db_settings
+
+    result = await user_settings_service.get_or_create(telegram_id, default_lang)
+
+    assert result == db_settings
+    mock_cache.get_user_settings.assert_called_once_with(telegram_id)
+    mock_uow.users.get_or_create.assert_called_once_with(
+        telegram_id, defaults={"language_code": default_lang}
+    )
+    mock_uow.commit.assert_called_once()
+    mock_cache.update_user_settings.assert_called_once_with(db_settings)
+
+
+@pytest.mark.asyncio
+async def test_update_language_success(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_lang_code = "ru"
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+
+    mock_uow.users.get_by_id.return_value = user_settings
+
+    result = await user_settings_service.update_language(telegram_id, new_lang_code)
+
+    assert result.language_code == new_lang_code
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_called_once_with(user_settings)
+    mock_cache.update_user_settings.assert_called_once_with(user_settings)
+    mock_uow.commit.assert_called_once()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_language_no_change(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_lang_code = "en"
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+
+    mock_uow.users.get_by_id.return_value = user_settings
+
+    result = await user_settings_service.update_language(telegram_id, new_lang_code)
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
+    mock_cache.update_user_settings.assert_not_called()
+    mock_uow.commit.assert_not_called()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_language_user_not_found(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_lang_code = "ru"
+
+    mock_uow.users.get_by_id.return_value = None
+
+    result = await user_settings_service.update_language(telegram_id, new_lang_code)
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
+    mock_cache.update_user_settings.assert_not_called()
+    mock_uow.commit.assert_not_called()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_mute_mode_success(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_mode = MuteListMode.whitelist
+    user_settings = UserSettings(
+        telegram_id=telegram_id,
+        language_code="en",
+        mute_list_mode=MuteListMode.blacklist,
+    )
+
+    mock_uow.users.get_by_id.return_value = user_settings
+
+    result = await user_settings_service.update_mute_mode(telegram_id, new_mode)
+
+    assert result.mute_list_mode == new_mode
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_called_once_with(user_settings)
+    mock_cache.update_user_settings.assert_called_once_with(user_settings)
+    mock_uow.commit.assert_called_once()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_notification_preference_success(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_pref = NotificationSetting.JOIN_OFF
+    user_settings = UserSettings(
+        telegram_id=telegram_id,
+        language_code="en",
+        notification_settings=NotificationSetting.ALL,
+    )
+
+    # Note: update_notification_preference takes user_settings directly, not telegram_id
+    result = await user_settings_service.update_notification_preference(
+        user_settings, new_pref
+    )
+
+    assert result.notification_settings == new_pref
+    mock_uow.users.save.assert_called_once_with(user_settings)
+    mock_cache.update_user_settings.assert_called_once_with(user_settings)
+    mock_uow.commit.assert_called_once()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_toggle_noon_setting_enable(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    user_settings = UserSettings(
+        telegram_id=123,
+        language_code="en",
+        not_on_online_enabled=False,
+        not_on_online_confirmed=False,
+    )
+
+    result = await user_settings_service.toggle_noon_setting(user_settings)
+
+    assert result.not_on_online_enabled is True
+    assert result.not_on_online_confirmed is True
+    expected_calls = 2
+    assert mock_uow.users.save.call_count == expected_calls  # Enable/confirm
+    assert mock_cache.update_user_settings.call_count == expected_calls
+    assert mock_uow.commit.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_toggle_noon_setting_disable(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    user_settings = UserSettings(
+        telegram_id=123,
+        language_code="en",
+        not_on_online_enabled=True,
+        not_on_online_confirmed=True,
+    )
+
+    result = await user_settings_service.toggle_noon_setting(user_settings)
+
+    assert result.not_on_online_enabled is False
+    assert result.not_on_online_confirmed is True  # Confirmed status should remain true
+    expected_calls = 1
+    assert mock_uow.users.save.call_count == expected_calls
+    assert mock_cache.update_user_settings.call_count == expected_calls
+    assert mock_uow.commit.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_unlink_tt_account_success(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    user_settings = UserSettings(
+        telegram_id=123, language_code="en", teamtalk_username="linked_tt_user"
+    )
+
+    result_settings, result_username = await user_settings_service.unlink_tt_account(
+        user_settings
+    )
+
+    assert result_settings.teamtalk_username is None
+    assert result_username == "linked_tt_user"
+    mock_uow.users.save.assert_called_once_with(user_settings)
+    mock_cache.update_user_settings.assert_called_once_with(user_settings)
+
+
+@pytest.mark.asyncio
+async def test_unlink_tt_account_no_account_linked(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    user_settings = UserSettings(
+        telegram_id=123, language_code="en", teamtalk_username=None
+    )
+
+    result_settings, result_username = await user_settings_service.unlink_tt_account(
+        user_settings
+    )
+
+    assert result_settings.teamtalk_username is None
+    assert result_username is None
+    mock_uow.users.save.assert_not_called()
+    mock_cache.update_user_settings.assert_not_called()
