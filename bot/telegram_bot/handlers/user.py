@@ -17,6 +17,7 @@ from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.filters.subscription import IsSubscribed
@@ -78,6 +79,7 @@ async def on_who_command(
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
+    tt_connection: Annotated[TeamTalkConnection, FromDishka()],  # Added this line
 ) -> None:
     """Handles the /who command by calling the user service to generate a report."""
     _ = translator.gettext
@@ -99,8 +101,10 @@ async def on_who_command(
             report_text = result.error_message or _("An error occurred.")
         else:
             server_name = get_effective_server_name(
-                None, translator, settings
-            )  # Pass None for tt_instance as it's not available here
+                tt_connection.instance,
+                translator,
+                settings,  # Changed this line
+            )
             grouped_data, total_users = group_users_for_who_command(
                 result.users,
                 None,  # bot_user_id is not needed for formatting here
