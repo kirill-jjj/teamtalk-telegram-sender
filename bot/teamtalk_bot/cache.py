@@ -10,6 +10,7 @@ from pytalk.user import User as PytalkUser
 from pytalk.user_account import UserAccount as PytalkUserAccount
 
 from bot.config import Settings
+from bot.teamtalk_bot.enums import PytalkEvent
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -112,24 +113,28 @@ class TeamTalkCache:
                     await task
 
     def update_caches_on_event(
-        self, event_type: str, data: PytalkUser | PytalkUserAccount
+        self, event_type: PytalkEvent, data: PytalkUser | PytalkUserAccount
     ) -> None:
         """Updates internal caches based on TeamTalk user or account events."""
         user_id = getattr(data, "id", None)
 
-        if event_type in ["user_login", "user_join", "user_update"]:
+        if event_type in [
+            PytalkEvent.USER_LOGIN,
+            PytalkEvent.USER_JOIN,
+            PytalkEvent.USER_UPDATE,
+        ]:
             user_data: PytalkUser = data
             if user_id is not None:
                 self.online_users_cache[user_id] = user_data
-        elif event_type == "user_logout":
+        elif event_type == PytalkEvent.USER_LOGOUT:
             if user_id is not None and user_id in self.online_users_cache:
                 del self.online_users_cache[user_id]
-        elif event_type == "user_account_new":
+        elif event_type == PytalkEvent.USER_ACCOUNT_NEW:
             new_acc: PytalkUserAccount = data
             acc_username = self._get_username_as_str(new_acc)
             if acc_username:
                 self.user_accounts_cache[acc_username] = new_acc
-        elif event_type == "user_account_remove":
+        elif event_type == PytalkEvent.USER_ACCOUNT_REMOVE:
             removed_acc: PytalkUserAccount = data
             acc_username = self._get_username_as_str(removed_acc)
             if acc_username and acc_username in self.user_accounts_cache:

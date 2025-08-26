@@ -27,9 +27,9 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.ui_utils import (
     display_paginated_list,
-    paginate_list,
     safe_edit_text,
 )
+from bot.utils.pagination import paginate_list
 
 logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
@@ -204,16 +204,11 @@ async def unlink_tt_account(
     return_page = callback_data.page
 
     async with uow:
-        user_settings = await uow.users.get_by_id(target_telegram_id)
-        if not user_settings:
-            await query.answer(_("Subscriber not found."), show_alert=True)
-            return
-
         (
             updated_settings,
             original_username,
         ) = await user_settings_service.unlink_tt_account(
-            user_settings, actor=Actor.ADMIN, uow=uow
+            target_telegram_id, actor=Actor.ADMIN, uow=uow
         )
 
         if not updated_settings:

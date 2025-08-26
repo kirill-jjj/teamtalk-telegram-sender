@@ -17,14 +17,9 @@ from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.filters.subscription import IsSubscribed
-from bot.telegram_bot.formatters import (
-    format_who_message,
-    group_users_for_who_command,
-)
+from bot.telegram_bot.formatters import format_who_report_to_html
 from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
     create_main_settings_keyboard,
@@ -78,18 +73,13 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
-    settings: Annotated[Settings, FromDishka()],
-    tt_connection: Annotated[TeamTalkConnection, FromDishka()],  # Added this line
 ) -> None:
-    """Handles the /who command by calling the user service to generate a report."""
-    _ = translator.gettext
+    """Handles the /who command by calling the report service and formatter."""
     if not message.from_user:
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        is_admin = cache.is_admin(message.from_user.id)
-
-        result = await report_service.get_telegram_who_report(
+        report_data = await report_service.get_who_report_data(
             telegram_user_id=message.from_user.id,
             translator=translator,
             cache_service=cache,
@@ -97,26 +87,12 @@ async def on_who_command(
             command_bus=command_bus,
         )
 
-        if not result.success:
-            report_text = result.error_message or _("An error occurred.")
+        if isinstance(report_data, str):
+            # Service returned an error message string
+            report_text = report_data
         else:
-            server_name = get_effective_server_name(
-                tt_connection.instance,
-                translator,
-                settings,  # Changed this line
-            )
-            grouped_data, total_users = group_users_for_who_command(
-                result.users,
-                None,  # bot_user_id is not needed for formatting here
-                is_caller_admin=is_admin,
-                translator=translator,
-            )
-            report_text = format_who_message(
-                grouped_data,
-                total_users,
-                translator=translator,
-                server_host=server_name,
-            )
+            # Service returned a data object, pass it to the formatter
+            report_text = format_who_report_to_html(report_data, translator)
 
         await message.reply(report_text)
 

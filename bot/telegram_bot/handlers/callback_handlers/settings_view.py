@@ -32,8 +32,6 @@ async def refresh_main_settings_view(
         message_to_edit=cast(Message, query.message),
         text=_("Settings"),
         reply_markup=main_settings_builder.as_markup(),
-        logger_instance=logger,
-        log_context="refresh_main_settings_view",
     )
 
 
@@ -58,6 +56,4 @@ async def refresh_notification_settings_view(
         message_to_edit=cast(Message, query.message),
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),
-        logger_instance=logger,
-        log_context="refresh_notification_settings_view",
     )

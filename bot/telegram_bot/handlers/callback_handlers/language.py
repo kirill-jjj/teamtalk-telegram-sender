@@ -10,15 +10,11 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
-from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback
 from bot.telegram_bot.commands import update_user_bot_commands
-from bot.telegram_bot.handlers.decorators import (
-    ensure_message_context,
-    with_view_refresh,
-)
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_language_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import safe_edit_text
@@ -48,8 +44,6 @@ async def show_language_menu(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Please choose your language:"),
         reply_markup=language_markup,
-        logger_instance=logger,
-        log_context="cq_show_language_menu",
     )
     await callback_query.answer()
 
@@ -58,7 +52,6 @@ async def show_language_menu(
     LanguageCallback.filter(F.action == LanguageChoice.SET_LANG)
 )
 @ensure_message_context
-@with_view_refresh(refresh_main_settings_view)
 async def set_language(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
@@ -67,7 +60,7 @@ async def set_language(
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     user_settings_service: FromDishka[UserSettingsService],
     cache: FromDishka[CacheService],
-) -> tuple[bool, str, UserSettings | None]:
+) -> None:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
     new_lang_code = callback_data.lang_code
@@ -77,10 +70,12 @@ async def set_language(
             "LanguageCallback received with lang_code=None for user %s",
             query.from_user.id,
         )
-        return False, _("Invalid language selection."), None
+        await query.answer(_("Invalid language selection."), show_alert=True)
+        return
 
     if new_lang_code == translator.info().get("language"):
-        return True, "", None
+        await query.answer()
+        return
 
     updated_settings = await user_settings_service.update_language(
         telegram_id=query.from_user.id,
@@ -97,10 +92,9 @@ async def set_language(
             bot=bot,
             translator=new_translator,
         )
-        return (
-            True,
-            new_translator.gettext("Language has been changed."),
-            updated_settings,
+        await query.answer(new_translator.gettext("Language has been changed."))
+        await refresh_main_settings_view(query, new_translator)
+    else:
+        await query.answer(
+            _("Failed to change language. Please try again."), show_alert=True
         )
-
-    return False, _("Failed to change language. Please try again."), None

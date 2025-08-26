@@ -44,6 +44,8 @@ class TeamTalkConnectionManager:
             tt_instance = pytalk.instance.TeamTalkInstance(
                 self.pytalk_bot, conn.server_info
             )
+            # Assign the instance to the connection object *before* connecting
+            conn.instance = tt_instance
 
             # Blocking calls
             if not tt_instance.connect():
@@ -53,7 +55,6 @@ class TeamTalkConnectionManager:
 
             # Success
             self.pytalk_bot.teamtalks.append(tt_instance)
-            conn.instance = tt_instance
             conn.mark_finalized(status=False)
             conn.login_complete_time = None
 

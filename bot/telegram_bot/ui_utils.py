@@ -26,33 +26,6 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-def paginate_list(
-    full_list: list[T], page: int, page_size: int = USERS_PER_PAGE
-) -> tuple[list[T], int, int]:
-    """Paginates a given list.
-
-    Args:
-        full_list: The full list of items to paginate.
-        page: The requested page number (0-indexed).
-        page_size: The number of items per page.
-
-    Returns:
-        A tuple containing:
-            - page_slice: The slice of the list for the current page.
-            - total_pages: The total number of pages.
-            - current_page_idx: The validated current page index.
-    """
-    total_items = len(full_list)
-    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
-    current_page_idx = max(0, min(page, total_pages - 1))
-
-    start_index = current_page_idx * page_size
-    end_index = start_index + page_size
-    page_slice: list[T] = full_list[start_index:end_index]
-
-    return page_slice, total_pages, current_page_idx
-
-
 async def display_paginated_list(
     target: CallbackQuery | Message,
     bot: Bot,
@@ -122,8 +95,6 @@ async def display_paginated_list(
             text=final_message_text,
             reply_markup=keyboard_markup,
             parse_mode="HTML",
-            logger_instance=logger,
-            log_context=f"display_paginated_list (edit) for {title_text}",
         )
 
     elif isinstance(target, Message):
@@ -218,17 +189,9 @@ async def safe_edit_text(
     parse_mode: str | None = None,
     *,
     disable_web_page_preview: bool | None = None,
-    logger_instance: logging.Logger | None = None,
-    log_context: str = "",
 ) -> bool:
     """Safely edits a message text, handling common Telegram API errors."""
-    current_logger = logger_instance or logger
-    context_for_log = f" ({log_context})" if log_context else ""
-
     if not isinstance(message_to_edit, Message):
-        current_logger.warning(
-            "Attempted to edit an inaccessible message%s.", context_for_log
-        )
         return False
 
     try:
@@ -240,19 +203,18 @@ async def safe_edit_text(
         )
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            current_logger.exception(
-                "TelegramBadRequest editing message%s.", context_for_log
+            logger.warning(
+                "TelegramBadRequest editing message for chat_id %s: %s",
+                message_to_edit.chat.id,
+                e,
             )
             return False
-        current_logger.debug(
-            "Message not modified for %s (chat_id %s), skipping edit. Error: %s",
-            log_context,
-            message_to_edit.chat.id,
-            e,
-        )
+        # Message not modified is not a failure condition
         return True
     except TelegramAPIError:
-        current_logger.exception("TelegramAPIError editing message%s.", context_for_log)
+        logger.warning(
+            "TelegramAPIError editing message for chat_id %s", message_to_edit.chat.id
+        )
         return False
     else:
         return True

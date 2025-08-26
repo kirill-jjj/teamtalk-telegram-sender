@@ -50,8 +50,6 @@ async def show_subscriptions_menu(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_markup,
-        logger_instance=logger,
-        log_context="cq_show_subscriptions_menu",
     )
     await callback_query.answer()
 
@@ -70,16 +68,8 @@ async def set_subscription_setting(
     _ = translator.gettext
     new_setting_enum = NotificationSetting(callback_data.setting_value)
 
-    original_settings = await user_settings_service.get_or_create(
-        callback_query.from_user.id, "en"
-    )
-
-    if new_setting_enum == original_settings.notification_settings:
-        await callback_query.answer()
-        return
-
     updated_settings = await user_settings_service.update_notification_preference(
-        user_settings=original_settings,
+        telegram_id=callback_query.from_user.id,
         new_pref=new_setting_enum,
         actor=Actor.USER,
     )
@@ -89,6 +79,12 @@ async def set_subscription_setting(
             _("Failed to update setting. Please try again."), show_alert=True
         )
         return
+
+    # If the setting was not changed, updated_settings will be None, but we check above.
+    # The old logic of checking if the setting is the same is now inside the service.
+    await (
+        callback_query.answer()
+    )  # Acknowledge the press, toast is shown by service now
 
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),
@@ -111,6 +107,4 @@ async def set_subscription_setting(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=keyboard_markup,
-        logger_instance=logger,
-        log_context="cq_set_subscription_setting_ui_refresh",
     )

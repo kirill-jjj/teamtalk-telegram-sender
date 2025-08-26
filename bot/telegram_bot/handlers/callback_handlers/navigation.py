@@ -34,7 +34,5 @@ async def back_to_main_settings_menu(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=main_settings_text,
         reply_markup=main_settings_builder.as_markup(),
-        logger_instance=logger,
-        log_context="cq_back_to_main_settings_menu",
     )
     await callback_query.answer()

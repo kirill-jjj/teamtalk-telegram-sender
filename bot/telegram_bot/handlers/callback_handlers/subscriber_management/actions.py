@@ -25,10 +25,7 @@ from bot.telegram_bot.callback_data import (
     ViewSubscriberCallback,
 )
 from bot.telegram_bot.formatters import format_subscriber_details
-from bot.telegram_bot.handlers.decorators import (
-    ensure_message_context,
-    with_view_refresh,
-)
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import (
@@ -119,7 +116,7 @@ async def _refresh_and_display_subscriber_list(
 
 async def refresh_subscriber_list_view(
     query: CallbackQuery,
-    callback_data: SubscriberCallback,
+    callback_data: SubscriberCallback | SubscriberListCallback,
     translator: NullTranslations,
     bot: EventBot,
     uow: IUnitOfWork,
@@ -131,7 +128,7 @@ async def refresh_subscriber_list_view(
         query=query,
         report_service=report_service,
         bot=bot,
-        return_page=callback_data.page,
+        return_page=callback_data.page or 0,
         translator=translator,
     )
 
@@ -140,7 +137,6 @@ async def refresh_subscriber_list_view(
     SubscriberListCallback.filter(F.action == SubscriberListAction.DELETE_SUBSCRIBER)
 )
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber_from_list(
     query: CallbackQuery,
     callback_data: SubscriberListCallback,
@@ -148,12 +144,16 @@ async def delete_subscriber_from_list(
     subscription_service: FromDishka[SubscriptionService],
     report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
-) -> tuple[bool, str, None]:
+    bot: FromDishka[EventBot],
+) -> None:
     """Handles deleting a subscriber directly from the subscriber list."""
     _ = translator.gettext
 
     if callback_data.telegram_id is None:
-        return False, _("Error: No Telegram ID specified for deletion."), None
+        await query.answer(
+            _("Error: No Telegram ID specified for deletion."), show_alert=True
+        )
+        return
 
     target_telegram_id = callback_data.telegram_id
 
@@ -163,15 +163,23 @@ async def delete_subscriber_from_list(
         )
 
     message = result.message_key.format(**(result.message_args or {}))
+    await query.answer(message, show_alert=True)
 
-    return result.success, message, None
+    if result.success:
+        await refresh_subscriber_list_view(
+            query,
+            callback_data,
+            translator,
+            bot,
+            uow,
+            report_service,
+        )
 
 
 @actions_router.callback_query(
     SubscriberCallback.filter(F.action == SubscriberCommand.BAN)
 )
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_list_view)
 async def on_ban_subscriber_confirm(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
@@ -180,7 +188,7 @@ async def on_ban_subscriber_confirm(
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
-) -> tuple[bool, str, None]:
+) -> None:
     """Handles banning and deleting a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -196,14 +204,24 @@ async def on_ban_subscriber_confirm(
             )
 
         short_message = _(result.message_key).format(**(result.message_args or {}))
-    return result.success, short_message, None
+
+    await query.answer(short_message, show_alert=True)
+
+    if result.success:
+        await refresh_subscriber_list_view(
+            query,
+            callback_data,
+            translator,
+            bot,
+            uow,
+            report_service,
+        )
 
 
 @actions_router.callback_query(
     SubscriberCallback.filter(F.action == SubscriberCommand.DELETE)
 )
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_list_view)
 async def delete_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
@@ -212,7 +230,7 @@ async def delete_subscriber(
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
     uow: FromDishka[IUnitOfWork],
-) -> tuple[bool, str, None]:
+) -> None:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
@@ -224,8 +242,17 @@ async def delete_subscriber(
         )
 
     message = result.message_key.format(**(result.message_args or {}))
+    await query.answer(message, show_alert=True)
 
-    return result.success, message, None
+    if result.success:
+        await refresh_subscriber_list_view(
+            query,
+            callback_data,
+            translator,
+            bot,
+            uow,
+            report_service,
+        )
 
 
 @actions_router.callback_query(ViewSubscriberCallback.filter())

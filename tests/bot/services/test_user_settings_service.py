@@ -178,9 +178,11 @@ async def test_update_notification_preference_success(
         notification_settings=NotificationSetting.ALL,
     )
 
+    mock_uow.users.get_by_id.return_value = user_settings
+
     # Note: update_notification_preference takes user_settings directly, not telegram_id
     result = await user_settings_service.update_notification_preference(
-        user_settings, new_pref
+        telegram_id, new_pref
     )
 
     assert result.notification_settings == new_pref
@@ -202,8 +204,9 @@ async def test_toggle_noon_setting_enable(
         not_on_online_enabled=False,
         not_on_online_confirmed=False,
     )
+    mock_uow.users.get_by_id.return_value = user_settings
 
-    result = await user_settings_service.toggle_noon_setting(user_settings)
+    result = await user_settings_service.toggle_noon_setting(user_settings.telegram_id)
 
     assert result.not_on_online_enabled is True
     assert result.not_on_online_confirmed is True
@@ -225,8 +228,9 @@ async def test_toggle_noon_setting_disable(
         not_on_online_enabled=True,
         not_on_online_confirmed=True,
     )
+    mock_uow.users.get_by_id.return_value = user_settings
 
-    result = await user_settings_service.toggle_noon_setting(user_settings)
+    result = await user_settings_service.toggle_noon_setting(user_settings.telegram_id)
 
     assert result.not_on_online_enabled is False
     assert result.not_on_online_confirmed is True  # Confirmed status should remain true
@@ -245,9 +249,10 @@ async def test_unlink_tt_account_success(
     user_settings = UserSettings(
         telegram_id=123, language_code="en", teamtalk_username="linked_tt_user"
     )
+    mock_uow.users.get_by_id.return_value = user_settings
 
     result_settings, result_username = await user_settings_service.unlink_tt_account(
-        user_settings
+        user_settings.telegram_id
     )
 
     assert result_settings.teamtalk_username is None
@@ -265,9 +270,10 @@ async def test_unlink_tt_account_no_account_linked(
     user_settings = UserSettings(
         telegram_id=123, language_code="en", teamtalk_username=None
     )
+    mock_uow.users.get_by_id.return_value = user_settings
 
     result_settings, result_username = await user_settings_service.unlink_tt_account(
-        user_settings
+        user_settings.telegram_id
     )
 
     assert result_settings.teamtalk_username is None

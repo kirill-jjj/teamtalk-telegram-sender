@@ -9,7 +9,6 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, model_validator
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
@@ -110,28 +109,6 @@ async def _send_long_tt_reply(
             except pytalk.exceptions.TeamTalkException:
                 logger.exception("Error sending part %s of TT message.", part_idx + 1)
                 break
-
-
-class _AdminIdArgs(BaseModel):
-    """Parses and validates arguments for admin commands that take Telegram IDs."""
-
-    valid_ids: list[int] = Field(default_factory=list)
-    invalid_entries: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def parse_str_to_dict(cls, data: str | None) -> dict[str, list[int] | list[str]]:
-        """Parse a string of space-separated args into valid IDs and invalid entries."""
-        if not isinstance(data, str) or not (command_args_str := data.strip()):
-            return {"valid_ids": [], "invalid_entries": []}
-        valid_ids = []
-        invalid_entries = []
-        for part in command_args_str.split():
-            if part.isdigit():
-                valid_ids.append(int(part))
-            else:
-                invalid_entries.append(part)
-        return {"valid_ids": valid_ids, "invalid_entries": invalid_entries}
 
 
 def _is_tt_admin(
@@ -247,6 +224,32 @@ class PrivateMessageCommandHandlers:
             is_add_action=False,
         )
 
+    def _parse_admin_ids_args(
+        self, args_string: str, translator: NullTranslations
+    ) -> tuple[list[int], list[int], list[str]]:
+        _ = translator.gettext
+        add_ids = []
+        remove_ids = []
+        error_messages = []
+
+        args = args_string.split()
+        for arg in args:
+            if arg.startswith("-"):
+                try:
+                    remove_ids.append(int(arg[1:]))
+                except ValueError:
+                    error_messages.append(
+                        _("Invalid Telegram ID to remove: {}").format(arg[1:])
+                    )
+            else:
+                try:
+                    add_ids.append(int(arg))
+                except ValueError:
+                    error_messages.append(
+                        _("Invalid Telegram ID to add: {}").format(arg)
+                    )
+        return add_ids, remove_ids, error_messages
+
     async def _manage_admin_ids(
         self,
         tt_message: TeamTalkMessage,
@@ -256,62 +259,19 @@ class PrivateMessageCommandHandlers:
         is_add_action: bool,
     ) -> None:
         _ = translator.gettext
-        if args_str is None:
+        if not args_str:
             tt_message.reply(_("Please provide Telegram IDs."))
             return
 
-        response_message = await self.moderation_service.process_admin_id_management(
-            args_str, is_add_action=is_add_action
+        add_ids, remove_ids, error_messages = self._parse_admin_ids_args(
+            args_str, translator
+        )
+
+        response_message = await self.moderation_service.manage_admin_ids(
+            add_ids=add_ids,
+            remove_ids=remove_ids,
+            is_add_action=is_add_action,
+            error_messages=error_messages,
+            translator=translator,
         )
         tt_message.reply(response_message)
-
-    def _create_admin_action_report(
-        self,
-        translator: NullTranslations,
-        success_count: int,
-        failed_ids: list[int],
-        invalid_entries: list[str],
-        *,
-        is_add_action: bool,
-    ) -> str:
-        _ = translator.gettext
-
-        if is_add_action:
-            s_msg = "Successfully added {count} admin."
-            p_msg = "Successfully added {count} admins."
-            error_msg_key = _("ID {telegram_id} is already an admin or failed to add.")
-        else:
-            s_msg = "Successfully removed {count} admin."
-            p_msg = "Successfully removed {count} admins."
-            error_msg_key = _(
-                "Admin with ID {telegram_id} not found or failed to remove."
-            )
-
-        success_message = translator.ngettext(s_msg, p_msg, success_count).format(
-            count=success_count
-        )
-
-        reply_parts = []
-        if success_count > 0:
-            reply_parts.append(success_message)
-
-        invalid_id_msg_key = _("'{{telegram_id_str}}' is not a valid numeric ID.")
-        errors = [
-            error_msg_key.format(telegram_id=failed_id) for failed_id in failed_ids
-        ]
-        errors.extend(
-            [
-                invalid_id_msg_key.format(telegram_id_str=invalid_entry)
-                for invalid_entry in invalid_entries
-            ]
-        )
-
-        if errors:
-            header = _("Action Results:")
-            error_list_str = "\n".join(f"- {error}" for error in errors)
-            reply_parts.append(f"{header}\n{error_list_str}")
-
-        if not reply_parts:
-            return str(_("No action was performed. Please check the IDs provided."))
-
-        return "\n\n".join(reply_parts)

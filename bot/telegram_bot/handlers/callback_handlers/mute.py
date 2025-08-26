@@ -27,10 +27,7 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
-from bot.telegram_bot.handlers.decorators import (
-    ensure_message_context,
-    with_view_refresh,
-)
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
     _build_user_toggle_keyboard,
@@ -38,29 +35,15 @@ from bot.telegram_bot.keyboards.shared import (
 )
 from bot.telegram_bot.ui_utils import (
     display_paginated_list,
-    paginate_list,
     safe_edit_text,
 )
+from bot.utils.pagination import get_item_from_paginated_list, paginate_list
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
 
 
 T = TypeVar("T")
-
-
-def _get_item_from_paginated_list(
-    items: list[T],
-    sort_key_extractor: Callable[[T], Any],
-    page: int,
-    idx_on_page: int,
-) -> T | None:
-    """Gets a specific item from a paginated list."""
-    sorted_items = sorted(items, key=sort_key_extractor)
-    page_items, _, _ = paginate_list(sorted_items, page, USERS_PER_PAGE)
-    if 0 <= idx_on_page < len(page_items):
-        return page_items[idx_on_page]
-    return None
 
 
 async def _display_user_list(
@@ -204,7 +187,7 @@ def _get_username_from_muted_list(
     user_settings: UserSettings,
 ) -> str | None:
     """Retrieves a username from the user's persisted mute list."""
-    return _get_item_from_paginated_list(
+    return get_item_from_paginated_list(
         items=[
             muted.muted_teamtalk_username for muted in user_settings.muted_users_list
         ],
@@ -310,8 +293,6 @@ async def show_manage_muted_menu(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
-        logger_instance=logger,
-        log_context="cq_show_manage_muted_menu",
     )
     await callback_query.answer()
 
@@ -328,13 +309,12 @@ async def refresh_manage_muted_menu(
 
 @mute_router.callback_query(SetMuteModeCallback.filter())
 @ensure_message_context
-@with_view_refresh(refresh_manage_muted_menu)
 async def set_mute_mode(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
-) -> tuple[bool, str, UserSettings | None]:
+) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
     new_mode = callback_data.mode
@@ -343,14 +323,16 @@ async def set_mute_mode(
         callback_query.from_user.id, "en"
     )
     if new_mode.value == user_settings.mute_list_mode:
-        return True, "", None
+        await callback_query.answer()
+        return
 
     updated_user_settings = await user_settings_service.update_mute_mode(
         telegram_id=callback_query.from_user.id, new_mode=new_mode, actor=Actor.USER
     )
 
     if not updated_user_settings:
-        return False, _(MSG_GENERAL_ERROR), None
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
 
     mode_text = (
         _("Blacklist")
@@ -358,7 +340,8 @@ async def set_mute_mode(
         else _("Whitelist")
     )
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
-    return True, success_toast_text, updated_user_settings
+    await callback_query.answer(success_toast_text)
+    await refresh_manage_muted_menu(callback_query, translator, updated_user_settings)
 
 
 @mute_router.callback_query(

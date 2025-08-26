@@ -10,29 +10,14 @@ from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
 
 from bot.command_bus.bus import CommandBus
-from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
-from bot.commands import (
-    BanUserCommand,
-    GetAllTeamTalkAccountsCommand,
-    GetOnlineUsersCommand,
-    KickUserCommand,
-)
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
-from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.models import Admin
+from bot.registration import register_all_handlers
 from bot.services.cache_service import CacheService
-from bot.teamtalk_bot.events import (
-    AdminStatusChangedEvent,
-    PrivateMessageReceivedEvent,
-    ReplyToTeamTalkUserEvent,
-    UserJoinedEvent,
-    UserLeftEvent,
-)
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
@@ -53,9 +38,6 @@ async def on_startup(
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
     command_bus: FromDishka[CommandBus],
-    telegram_handler: FromDishka[TelegramNotificationHandler],
-    teamtalk_replier: FromDishka[TeamTalkReplyHandler],
-    tt_handlers: FromDishka[TeamTalkCommandHandlers],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -119,24 +101,9 @@ async def on_startup(
     )
     logger.info("Telegram bot commands set.")
 
-    # Register command handlers
-    command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
-    command_bus.register(KickUserCommand, tt_handlers.kick_user)
-    command_bus.register(BanUserCommand, tt_handlers.ban_user)
-    command_bus.register(GetAllTeamTalkAccountsCommand, tt_handlers.get_all_tt_accounts)
-    logger.info("Command handlers registered.")
-
-    logger.info("Subscribing event handlers...")
-    event_bus.subscribe(UserJoinedEvent, telegram_handler.handle_user_joined)
-    event_bus.subscribe(UserLeftEvent, telegram_handler.handle_user_left)
-    event_bus.subscribe(
-        PrivateMessageReceivedEvent, telegram_handler.handle_private_message
-    )
-    event_bus.subscribe(
-        AdminStatusChangedEvent, telegram_handler.handle_admin_status_changed
-    )
-    event_bus.subscribe(ReplyToTeamTalkUserEvent, teamtalk_replier.handle_reply_event)
-    logger.info("Event handlers subscribed.")
+    # Get container from dispatcher to pass to registration function
+    container = dispatcher.workflow_data["dishka_container"]
+    await register_all_handlers(command_bus, event_bus, container)
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())
     logger.info("Application startup sequence complete.")

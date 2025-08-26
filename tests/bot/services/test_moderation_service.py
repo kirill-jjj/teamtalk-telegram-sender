@@ -217,18 +217,26 @@ async def test_remove_admins_in_batch(
 
 
 @pytest.mark.asyncio
-async def test_process_admin_id_management_add_success(
-    moderation_service: ModerationService, mock_uow: AsyncMock
+async def test_manage_admin_ids_add_success(
+    moderation_service: ModerationService,
+    mock_uow: AsyncMock,
+    mock_translator: MagicMock,
 ) -> None:
-    args_string = "101 102"
+    add_ids = [101, 102]
+    remove_ids = []
+    error_messages = []
     mock_uow.admins.get_by_id.side_effect = [None, None]
     mock_uow.users.get_by_id.side_effect = [
         UserSettings(telegram_id=101, language_code="en"),
         UserSettings(telegram_id=102, language_code="en"),
     ]
 
-    result = await moderation_service.process_admin_id_management(
-        args_string, is_add_action=True
+    result = await moderation_service.manage_admin_ids(
+        add_ids=add_ids,
+        remove_ids=remove_ids,
+        is_add_action=True,
+        error_messages=error_messages,
+        translator=mock_translator,
     )
 
     assert "Successfully added 2 admins." in result
@@ -238,10 +246,14 @@ async def test_process_admin_id_management_add_success(
 
 
 @pytest.mark.asyncio
-async def test_process_admin_id_management_remove_success(
-    moderation_service: ModerationService, mock_uow: AsyncMock
+async def test_manage_admin_ids_remove_success(
+    moderation_service: ModerationService,
+    mock_uow: AsyncMock,
+    mock_translator: MagicMock,
 ) -> None:
-    args_string = "201 202"
+    add_ids = []
+    remove_ids = [201, 202]
+    error_messages = []
     mock_admin_201 = Admin(telegram_id=201)
     mock_admin_202 = Admin(telegram_id=202)
     mock_uow.admins.get_by_id.side_effect = [mock_admin_201, mock_admin_202]
@@ -250,8 +262,12 @@ async def test_process_admin_id_management_remove_success(
         UserSettings(telegram_id=202, language_code="en"),
     ]
 
-    result = await moderation_service.process_admin_id_management(
-        args_string, is_add_action=False
+    result = await moderation_service.manage_admin_ids(
+        add_ids=add_ids,
+        remove_ids=remove_ids,
+        is_add_action=False,
+        error_messages=error_messages,
+        translator=mock_translator,
     )
 
     assert "Successfully removed 2 admins." in result
@@ -261,10 +277,14 @@ async def test_process_admin_id_management_remove_success(
 
 
 @pytest.mark.asyncio
-async def test_process_admin_id_management_mixed_add_remove(
-    moderation_service: ModerationService, mock_uow: AsyncMock
+async def test_manage_admin_ids_mixed_add_remove(
+    moderation_service: ModerationService,
+    mock_uow: AsyncMock,
+    mock_translator: MagicMock,
 ) -> None:
-    args_string = "101 -201"  # Add 101, Remove 201
+    add_ids = [101]
+    remove_ids = [201]
+    error_messages = []
     mock_uow.admins.get_by_id.side_effect = [
         None,
         Admin(telegram_id=201),
@@ -274,88 +294,66 @@ async def test_process_admin_id_management_mixed_add_remove(
         UserSettings(telegram_id=201, language_code="en"),
     ]
 
-    result = await moderation_service.process_admin_id_management(
-        args_string, is_add_action=True
+    result = await moderation_service.manage_admin_ids(
+        add_ids=add_ids,
+        remove_ids=remove_ids,
+        is_add_action=True,
+        error_messages=error_messages,
+        translator=mock_translator,
     )
 
-    assert "Successfully added 1 admins." in result  # Changed to plural
-    assert "Successfully removed 1 admins." in result  # Changed to plural
+    assert "Successfully added 1 admins." in result
+    assert "Successfully removed 1 admins." in result
     assert mock_uow.admins.add.call_count == 1
     assert mock_uow.admins.delete.call_count == 1
     expected_commit_calls = 2
-    assert mock_uow.commit.call_count == expected_commit_calls  # Add/remove commits
+    assert mock_uow.commit.call_count == expected_commit_calls
 
 
 @pytest.mark.asyncio
-async def test_process_admin_id_management_invalid_args(
-    moderation_service: ModerationService, mock_uow: AsyncMock
+async def test_manage_admin_ids_invalid_args(
+    moderation_service: ModerationService,
+    mock_uow: AsyncMock,
+    mock_translator: MagicMock,
 ) -> None:
-    args_string = "abc 123 -def"
+    add_ids = [123]
+    remove_ids = []
+    error_messages = [
+        "Invalid Telegram ID to add: abc",
+        "Invalid Telegram ID to remove: def",
+    ]
     mock_uow.admins.get_by_id.return_value = None  # For 123
     mock_uow.users.get_by_id.return_value = UserSettings(
         telegram_id=123, language_code="en"
     )
 
-    result = await moderation_service.process_admin_id_management(
-        args_string, is_add_action=True
+    result = await moderation_service.manage_admin_ids(
+        add_ids=add_ids,
+        remove_ids=remove_ids,
+        is_add_action=True,
+        error_messages=error_messages,
+        translator=mock_translator,
     )
 
     assert "Invalid Telegram ID to add: abc" in result
     assert "Invalid Telegram ID to remove: def" in result
-    assert "Successfully added 1 admins." in result  # Changed to plural
+    assert "Successfully added 1 admins." in result
     assert mock_uow.admins.add.call_count == 1
     assert mock_uow.commit.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_process_admin_id_management_empty_args(
-    moderation_service: ModerationService,
+async def test_manage_admin_ids_empty_args(
+    moderation_service: ModerationService, mock_translator: MagicMock
 ) -> None:
-    args_string = ""
-    result = await moderation_service.process_admin_id_management(
-        args_string, is_add_action=True
+    result = await moderation_service.manage_admin_ids(
+        add_ids=[],
+        remove_ids=[],
+        is_add_action=True,
+        error_messages=[],
+        translator=mock_translator,
     )
-    assert (
-        "Please provide a list of Telegram IDs to add or remove, separated by spaces."
-        in result
-    )
-
-
-def test_parse_admin_ids_args_valid_input(
-    moderation_service: ModerationService,
-) -> None:
-    args_string = "123 456 -789"
-    add_ids, remove_ids, error_messages = moderation_service._parse_admin_ids_args(
-        args_string
-    )
-    assert add_ids == [123, 456]
-    assert remove_ids == [789]
-    assert error_messages == []
-
-
-def test_parse_admin_ids_args_mixed_input(
-    moderation_service: ModerationService,
-) -> None:
-    args_string = "123 abc -456 def"
-    add_ids, remove_ids, error_messages = moderation_service._parse_admin_ids_args(
-        args_string
-    )
-    assert add_ids == [123]
-    assert remove_ids == [456]
-    assert "Invalid Telegram ID to add: abc" in error_messages
-    assert "Invalid Telegram ID to add: def" in error_messages  # Corrected assertion
-
-
-def test_parse_admin_ids_args_empty_input(
-    moderation_service: ModerationService,
-) -> None:
-    args_string = ""
-    add_ids, remove_ids, error_messages = moderation_service._parse_admin_ids_args(
-        args_string
-    )
-    assert add_ids == []
-    assert remove_ids == []
-    assert error_messages == []
+    assert "No valid admin IDs provided for adding or removing." in result
 
 
 @pytest.mark.asyncio

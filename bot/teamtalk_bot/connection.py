@@ -15,6 +15,7 @@ from bot.config import Settings
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
+from bot.teamtalk_bot.enums import PytalkEvent
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,7 @@ class TeamTalkConnection:
 
     async def on_user_join(self, user: PytalkUser, channel: PytalkChannel) -> None:
         """Handles another user joining a channel on this server connection."""
-        self.cache_manager.update_caches_on_event("user_join", user)
+        self.cache_manager.update_caches_on_event(PytalkEvent.USER_JOIN, user)
         if not self.instance:
             logger.error("[%s] No instance in on_user_join.", self.server_info.host)
             return
@@ -214,15 +215,17 @@ class TeamTalkConnection:
 
     async def on_user_update(self, user: PytalkUser) -> None:
         """Handles updates to a user's information on this server connection."""
-        self.cache_manager.update_caches_on_event("user_update", user)
+        self.cache_manager.update_caches_on_event(PytalkEvent.USER_UPDATE, user)
 
     async def on_user_account_new(self, account: pytalk.UserAccount) -> None:
         """Handles a new user account being created on this server."""
-        self.cache_manager.update_caches_on_event("user_account_new", account)
+        self.cache_manager.update_caches_on_event(PytalkEvent.USER_ACCOUNT_NEW, account)
 
     async def on_user_account_remove(self, account: pytalk.UserAccount) -> None:
         """Handles a user account being removed from this server."""
-        self.cache_manager.update_caches_on_event("user_account_remove", account)
+        self.cache_manager.update_caches_on_event(
+            PytalkEvent.USER_ACCOUNT_REMOVE, account
+        )
 
     def __repr__(self) -> str:
         """Returns a string representation of the TeamTalkConnection object."""

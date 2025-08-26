@@ -30,10 +30,7 @@ from bot.telegram_bot.formatters import format_telegram_user_display_name
 from bot.telegram_bot.handlers.callback_handlers.subscriber_management.actions import (
     refresh_subscriber_view,
 )
-from bot.telegram_bot.handlers.decorators import (
-    ensure_message_context,
-    with_view_refresh,
-)
+from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_admin_subscriber_lang_keyboard,
     create_admin_subscriber_mute_mode_keyboard,
@@ -146,24 +143,19 @@ async def admin_set_setting_choice(
     SubscriberCallback.filter(F.action == SubscriberCommand.ADMIN_TOGGLE_NOON)
 )
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_view)
 async def admin_toggle_noon(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
-) -> tuple[bool, str, UserSettings | None]:
+) -> None:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    user_settings = await user_settings_service.get_or_create(target_telegram_id, "en")
-    if not user_settings:
-        return False, _("Subscriber settings not found."), None
-
     updated_settings = await user_settings_service.toggle_noon_setting(
-        user_settings, actor=Actor.ADMIN
+        target_telegram_id, actor=Actor.ADMIN
     )
 
     if updated_settings:
@@ -173,8 +165,12 @@ async def admin_toggle_noon(
         msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
             tg_id=target_telegram_id, status=status
         )
-        return True, msg, updated_settings
-    return False, _("Failed to toggle NOON status."), None
+        await query.answer(msg)
+        await refresh_subscriber_view(
+            query, callback_data, translator, bot, user_settings=updated_settings
+        )
+    else:
+        await query.answer(_("Failed to toggle NOON status."), show_alert=True)
 
 
 async def _fetch_mute_list_data(
@@ -322,7 +318,6 @@ AnySettingCallback: TypeAlias = (
 @settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
 @settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_view)
 async def admin_set_any_subscriber_setting(
     query: CallbackQuery,
     callback_data: AnySettingCallback,
@@ -330,14 +325,15 @@ async def admin_set_any_subscriber_setting(
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
-) -> tuple[bool, str, UserSettings | None]:
+) -> None:
     """Handles an admin setting a specific subscriber's setting."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
     user_settings = await user_settings_service.get_or_create(target_telegram_id, "en")
     if not user_settings:
-        return False, _("Subscriber settings not found."), None
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        return
 
     updated_settings: UserSettings | None = None
     success_msg = ""
@@ -354,7 +350,7 @@ async def admin_set_any_subscriber_setting(
     elif isinstance(callback_data, AdminSetSubscriberNotificationPrefCallback):
         new_pref = NotificationSetting(callback_data.setting_value)
         updated_settings = await user_settings_service.update_notification_preference(
-            user_settings, new_pref, Actor.ADMIN
+            target_telegram_id, new_pref, Actor.ADMIN
         )
         success_msg = _(
             "Notification preference for subscriber {tg_id} set to: {value}."
@@ -368,6 +364,11 @@ async def admin_set_any_subscriber_setting(
         ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
 
     if updated_settings:
-        return True, success_msg, updated_settings
-
-    return False, _("Failed to update setting. Please try again."), None
+        await query.answer(success_msg)
+        await refresh_subscriber_view(
+            query, callback_data, translator, bot, user_settings=updated_settings
+        )
+    else:
+        await query.answer(
+            _("Failed to update setting. Please try again."), show_alert=True
+        )

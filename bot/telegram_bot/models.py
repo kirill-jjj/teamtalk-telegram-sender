@@ -14,3 +14,11 @@ class WhoChannelGroup(BaseModel):
 
     channel_name: str
     users: list[WhoUser]
+
+
+class WhoReport(BaseModel):
+    """Pydantic model for the structured /who command report."""
+
+    server_name: str | None
+    total_users: int
+    grouped_data: list[WhoChannelGroup]

@@ -18,16 +18,14 @@ from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.callback_data import MenuCallback
-from bot.telegram_bot.formatters import (
-    format_who_message,
-    group_users_for_who_command,
-)
+from bot.telegram_bot.formatters import format_who_report_to_html
 from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.handlers.user import (
     on_help_command,
     on_settings_command,
 )
+from bot.telegram_bot.models import WhoReport
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import (
     _show_banned_list_page,
@@ -56,9 +54,7 @@ async def menu_who_handler(
     if not query.from_user:
         return
 
-    is_admin = cache.is_admin(query.from_user.id)
-
-    result = await report_service.get_telegram_who_report(
+    report_data = await report_service.get_who_report_data(
         telegram_user_id=query.from_user.id,
         translator=translator,
         cache_service=cache,
@@ -66,21 +62,10 @@ async def menu_who_handler(
         command_bus=command_bus,
     )
 
-    if not result.success:
-        report_text = result.error_message or _("An error occurred.")
+    if isinstance(report_data, str):
+        report_text = report_data
     else:
-        server_name = get_effective_server_name(
-            None, translator, settings
-        )  # Pass None for tt_instance as it's not available here
-        grouped_data, total_users = group_users_for_who_command(
-            result.users,
-            None,  # bot_user_id is not needed for formatting here
-            is_caller_admin=is_admin,
-            translator=translator,
-        )
-        report_text = format_who_message(
-            grouped_data, total_users, translator=translator, server_host=server_name
-        )
+        report_text = format_who_report_to_html(report_data, translator)
 
     if query.message:
         await query.message.reply(report_text)

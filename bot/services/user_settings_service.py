@@ -145,13 +145,18 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_notification_preference(
         self,
-        user_settings: UserSettings,
+        telegram_id: int,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
         async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.error("Could not find user_settings for user %s", telegram_id)
+                return None
+
             updated_settings = await self._update_setting(
                 user_settings,
                 "notification_settings",
@@ -166,11 +171,16 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_noon_setting(
         self,
-        user_settings: UserSettings,
+        telegram_id: int,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.error("Could not find user_settings for user %s", telegram_id)
+                return None
+
             new_noon_value = not user_settings.not_on_online_enabled
             log_context = f" by {actor.value} (toggle NOON)"
 
@@ -207,17 +217,21 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def unlink_tt_account(
         self,
-        user_settings: UserSettings,
+        telegram_id: int,
         actor: Actor = Actor.ADMIN,
         uow: IUnitOfWork | None = None,
     ) -> tuple[UserSettings | None, str | None]:
         """Unlinks a TeamTalk account from a user's settings."""
+        active_uow = uow or self._uow
+        user_settings = await active_uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            return None, None
+
         original_username = user_settings.teamtalk_username
         if not original_username:
             return user_settings, None
 
         log_context = f" by {actor.value}"
-        active_uow = uow or self._uow
 
         updated_settings = await self._update_setting(
             user_settings, "teamtalk_username", None, log_context, uow=active_uow

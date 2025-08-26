@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import pytalk
 
-# These imports are needed for get_telegram_who_report
 from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
@@ -18,7 +17,12 @@ from bot.database.repositories.user_repository import UserRepository
 from bot.services.cache_service import CacheService
 from bot.services.schemas import PaginatedResult, SubscriberInfo
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.formatters import (
+    get_tt_user_display_name,
+    get_user_display_channel_name,
+)
 from bot.telegram_bot.api import get_display_names_for_ids
+from bot.telegram_bot.models import WhoChannelGroup, WhoReport, WhoUser
 from bot.telegram_bot.types.bots import EventBot
 
 if TYPE_CHECKING:
@@ -46,15 +50,15 @@ class ReportService:
         self._ban_repo = ban_repo
         self._bot = bot
 
-    async def get_telegram_who_report(
+    async def get_who_report_data(
         self,
         telegram_user_id: int,
         translator: NullTranslations,
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
         command_bus: CommandBus,
-    ) -> GetOnlineUsersResult:
-        """Generates a formatted report of online users for Telegram."""
+    ) -> WhoReport | str:
+        """Gather online user data and return a structured report or an error string."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
             telegram_user_id, self._settings.general.default_lang
@@ -63,16 +67,42 @@ class ReportService:
         command = GetOnlineUsersCommand(
             is_caller_admin=is_admin, lang_code=user_settings.language_code
         )
+
         try:
             result: GetOnlineUsersResult = await command_bus.execute(command)
         except NoHandlerFoundError:
             logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            return GetOnlineUsersResult(
-                success=False,
-                error_message=_("This feature is temporarily unavailable."),
-            )
+            return _("This feature is temporarily unavailable.")
 
-        return result
+        if not result.success or not result.users:
+            return result.error_message or _("No users found online.")
+
+        # Grouping logic is now part of the service
+        channels_data: dict[str, list[str]] = {}
+        user_count = 0
+        for user in result.users:
+            channel_name = get_user_display_channel_name(
+                user, is_caller_admin=is_admin, translator=translator
+            )
+            if channel_name not in channels_data:
+                channels_data[channel_name] = []
+            channels_data[channel_name].append(
+                get_tt_user_display_name(user, translator)
+            )
+            user_count += 1
+
+        grouped_data = [
+            WhoChannelGroup(
+                channel_name=name, users=[WhoUser(nickname=nick) for nick in nicks]
+            )
+            for name, nicks in channels_data.items()
+        ]
+
+        return WhoReport(
+            server_name=result.server_name,
+            total_users=user_count,
+            grouped_data=grouped_data,
+        )
 
     def get_help_text(self, translator: NullTranslations, *, is_admin: bool) -> str:
         """Builds the help message for Telegram users."""

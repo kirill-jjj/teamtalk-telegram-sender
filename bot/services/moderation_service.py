@@ -1,16 +1,14 @@
 """Service for moderation actions like banning and muting."""
 
-from collections.abc import Callable
 from gettext import NullTranslations
-from gettext import gettext as _
 import logging
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, TypeVar
 
 from pydantic import ConfigDict, Field, validate_call
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
@@ -20,7 +18,7 @@ from bot.services.schemas import BatchOperationResult, OperationResult
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.telegram_bot.callback_data import ToggleMuteCallback
-from bot.telegram_bot.ui_utils import paginate_list
+from bot.utils.pagination import get_item_from_paginated_list
 
 T = TypeVar("T")
 
@@ -85,7 +83,8 @@ class ModerationService:
         return True
 
     async def add_admins_in_batch(
-        self, telegram_ids: list[int]
+        self,
+        telegram_ids: list[int],
     ) -> BatchOperationResult:
         """Adds multiple admins in a batch, returning successful and failed IDs."""
         result = BatchOperationResult()
@@ -101,7 +100,8 @@ class ModerationService:
         return result
 
     async def remove_admins_in_batch(
-        self, telegram_ids: list[int]
+        self,
+        telegram_ids: list[int],
     ) -> BatchOperationResult:
         """Removes multiple admins in a batch, returning successful and failed IDs."""
         result = BatchOperationResult()
@@ -116,56 +116,48 @@ class ModerationService:
                 result.failed_ids.append(telegram_id)
         return result
 
-    async def process_admin_id_management(
-        self, args_string: str, *, is_add_action: bool
+    async def manage_admin_ids(
+        self,
+        add_ids: list[int],
+        remove_ids: list[int],
+        *,
+        is_add_action: bool,
+        error_messages: list[str],
+        translator: NullTranslations,
     ) -> str:
-        """Processes admin ID management commands (add/remove) and returns a report string."""  # noqa: E501
-        if not args_string:
-            return _(
-                "Please provide a list of Telegram IDs to add or remove, "
-                "separated by spaces."
-            )
+        """Processes admin ID management commands and returns a report string."""
+        _ = translator.gettext
+        response_parts = error_messages[:]
 
-        add_ids_from_args, remove_ids_from_args, error_messages = (
-            self._parse_admin_ids_args(args_string)
-        )
-
-        response_parts = []
-        if error_messages:
-            response_parts.extend(error_messages)
-
-        # Process IDs based on is_add_action flag
         if is_add_action:
-            add_result = await self.add_admins_in_batch(add_ids_from_args)
-            remove_result = await self.remove_admins_in_batch(
-                remove_ids_from_args
-            )  # Explicit removals still apply
-        else:  # is_add_action is False, so treat non-prefixed IDs as removals
+            add_result = await self.add_admins_in_batch(add_ids)
+            remove_result = await self.remove_admins_in_batch(remove_ids)
+        else:
             add_result = BatchOperationResult()  # No additions
-            remove_result = await self.remove_admins_in_batch(
-                add_ids_from_args + remove_ids_from_args
-            )
+            remove_result = await self.remove_admins_in_batch(add_ids + remove_ids)
 
         if add_result.successful_ids:
             response_parts.append(
-                _(f"Successfully added {len(add_result.successful_ids)} admins.")
+                _("Successfully added {} admins.").format(
+                    len(add_result.successful_ids)
+                )
             )
         if add_result.failed_ids:
             response_parts.append(
-                _(
-                    f"Failed to add {len(add_result.failed_ids)} admins "
-                    "(already admins or invalid IDs)."
+                _("Failed to add {} admins (already admins or invalid IDs).").format(
+                    len(add_result.failed_ids)
                 )
             )
         if remove_result.successful_ids:
             response_parts.append(
-                _(f"Successfully removed {len(remove_result.successful_ids)} admins.")
+                _("Successfully removed {} admins.").format(
+                    len(remove_result.successful_ids)
+                )
             )
         if remove_result.failed_ids:
             response_parts.append(
-                _(
-                    f"Failed to remove {len(remove_result.failed_ids)} admins "
-                    "(not admins or invalid IDs)."
+                _("Failed to remove {} admins (not admins or invalid IDs).").format(
+                    len(remove_result.failed_ids)
                 )
             )
 
@@ -173,29 +165,6 @@ class ModerationService:
             return _("No valid admin IDs provided for adding or removing.")
 
         return "\n".join(response_parts)
-
-    def _parse_admin_ids_args(
-        self, args_string: str
-    ) -> tuple[list[int], list[int], list[str]]:
-        add_ids = []
-        remove_ids = []
-        error_messages = []
-
-        args = args_string.split()
-        for arg in args:
-            if arg.startswith("-"):
-                try:
-                    remove_ids.append(int(arg[1:]))
-                except ValueError:
-                    error_messages.append(
-                        _(f"Invalid Telegram ID to remove: {arg[1:]}")
-                    )
-            else:
-                try:
-                    add_ids.append(int(arg))
-                except ValueError:
-                    error_messages.append(_(f"Invalid Telegram ID to add: {arg}"))
-        return add_ids, remove_ids, error_messages
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_and_delete_subscriber(
@@ -332,20 +301,6 @@ class ModerationService:
             user_settings=user_settings,
         )
 
-    def _get_item_from_paginated_list(
-        self,
-        items: list[T],
-        sort_key_extractor: Callable[[T], Any],
-        page: int,
-        idx_on_page: int,
-    ) -> T | None:
-        """Gets a specific item from a paginated list."""
-        sorted_items = sorted(items, key=sort_key_extractor)
-        page_items, _, _ = paginate_list(sorted_items, page, USERS_PER_PAGE)
-        if 0 <= idx_on_page < len(page_items):
-            return page_items[idx_on_page]
-        return None
-
     async def get_target_username_for_toggle(
         self,
         callback_data: ToggleMuteCallback,
@@ -365,7 +320,7 @@ class ModerationService:
                 )
             )
             if result.success:
-                account = self._get_item_from_paginated_list(
+                account = get_item_from_paginated_list(
                     items=result.accounts,
                     sort_key_extractor=lambda acc: acc.username.lower(),
                     page=callback_data.current_page,
@@ -374,7 +329,7 @@ class ModerationService:
                 if account:
                     username_to_toggle = account.username
         elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
-            username_to_toggle = self._get_item_from_paginated_list(
+            username_to_toggle = get_item_from_paginated_list(
                 items=[
                     muted.muted_teamtalk_username
                     for muted in user_settings.muted_users_list

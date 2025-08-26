@@ -57,6 +57,4 @@ async def on_moderation_confirm(
             message_to_edit=callback_query.message,
             text=result.message,
             reply_markup=None,
-            logger_instance=logger,
-            log_context=f"process_user_action_selection ({callback_data.action.value})",
         )
