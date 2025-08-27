@@ -24,6 +24,10 @@ COPY --from=builder /app/.venv /app/.venv
 # Копируем остальные файлы приложения
 COPY . .
 
+# --- ИСПРАВЛЕНИЕ ---
+# Патчим библиотеку pytalk, чтобы она не завершала работу после установки SDK
+RUN sed -i 's/sys.exit(0)/# sys.exit(0)/' /app/.venv/lib/python3.11/site-packages/pytalk/tools/ttsdk_downloader.py
+
 # Компилируем файлы локализации, добавив .venv/bin в PATH
 RUN PATH="/app/.venv/bin:$PATH" python scripts/manage_locales.py compile
 
