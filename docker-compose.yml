@@ -7,8 +7,5 @@ services:
     volumes:
       - ./config.toml:/app/config.toml:ro
       - ./data:/app/data
-      # Вот ключ: мы монтируем папку для SDK.
-      # Docker создаст папку ttsdk_data на хосте, если ее нет.
-      - ./ttsdk_data:/app/.venv/lib/python3.11/site-packages/pytalk/ttsdk
     # Эта политика автоматически перезапустит контейнер после успешной установки SDK
     restart: unless-stopped
