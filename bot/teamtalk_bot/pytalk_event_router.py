@@ -1,7 +1,6 @@
 """Route Pytalk (TeamTalk) events to the correct TeamTalkConnection."""
 
 from collections.abc import Awaitable, Callable
-import datetime as dt
 import functools
 from gettext import NullTranslations
 import logging
@@ -14,7 +13,6 @@ from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
 
-from bot.constants import INITIAL_LOGIN_IGNORE_DELAY_SECONDS
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.enums import PytalkEvent
@@ -258,19 +256,12 @@ class PytalkEventRouter:
         event_class: type[UserJoinedEvent] | type[UserLeftEvent],
     ) -> None:
         """Generic helper to publish user-related domain events."""
-        if not connection.instance:
+        if not connection.instance or not connection.is_ready:
             return
 
-        if (
-            event_class is UserJoinedEvent
-            and connection.login_complete_time
-            and (
-                dt.datetime.now(dt.UTC) - connection.login_complete_time
-            ).total_seconds()
-            < INITIAL_LOGIN_IGNORE_DELAY_SECONDS
-        ):
+        if event_class is UserJoinedEvent and not connection.is_finalized:
             self.logger.debug(
-                "Ignoring initial user joined event for %s.",
+                "Ignoring initial user joined event for %s (connection not finalized).",
                 connection.ttstr(user.username),
             )
             return
