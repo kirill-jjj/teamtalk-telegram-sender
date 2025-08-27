@@ -13,29 +13,23 @@ RUN pip install uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --all-extras
 
-# Устанавливаем SDK
+# Устанавливаем SDK, запуская Python через uv
 RUN uv run python -c "import pytalk"
 
 # Этап 2: Финальный образ
 FROM python:3.11-slim
 
-# Устанавливаем системные зависимости, которые нужны для работы SDK
-RUN apt-get update && apt-get install -y p7zip-full && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Копируем uv из билдера
-COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+# Копируем ВСЕ виртуальное окружение .venv из билдера
+# Это включает Python-библиотеки, скрипты и установленный SDK
+COPY --from=builder /app/.venv /app/.venv
 
-# Копируем файлы проекта
+# Копируем остальные файлы приложения
 COPY . .
 
-# Устанавливаем зависимости ЗАНОВО, используя кэш Docker.
-# Это создает чистое и рабочее .venv в финальном образе.
-RUN uv sync --all-extras
+# Компилируем файлы локализации, используя Python из нашего .venv
+RUN /app/.venv/bin/python scripts/manage_locales.py compile
 
-# Компилируем локализацию
-RUN uv run i18n compile
-
-# Указываем команду для запуска приложения
-CMD ["uv", "run", "sender", "--config", "config.toml"]
+# Указываем команду для запуска приложения, используя Python из нашего .venv
+CMD ["/app/.venv/bin/python", "-m", "sender", "--config", "config.toml"]
