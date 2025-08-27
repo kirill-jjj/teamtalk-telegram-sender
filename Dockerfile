@@ -14,8 +14,8 @@ RUN uv sync --all-extras
 FROM python:3.11-slim
 
 # --- ИСПРАВЛЕНИЕ ---
-# Устанавливаем системные зависимости, необходимые для распаковки SDK И для его работы (libasound2)
-RUN apt-get update && apt-get install -y p7zip-full libasound2 && rm -rf /var/lib/apt/lists/*
+# Устанавливаем все системные зависимости: для распаковки (p7zip-full) и для работы SDK (libasound2, libpulse0)
+RUN apt-get update && apt-get install -y p7zip-full libasound2 libpulse0 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
