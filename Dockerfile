@@ -31,9 +31,9 @@ COPY --from=builder /app/.venv/bin/ /usr/local/bin/
 # Копируем остальные файлы приложения
 COPY . .
 
-# Компилируем файлы локализации, вызывая скрипт напрямую через Python.
-RUN python scripts/manage_locales.py compile
+# Компилируем файлы локализации, используя абсолютный путь к python.
+RUN /usr/local/bin/python scripts/manage_locales.py compile
 
 # Указываем команду для запуска приложения.
-# Запускаем 'sender' напрямую, так как он теперь в /usr/local/bin/
-CMD ["sender", "--config", "config.toml"]
+# Также используем абсолютный путь, чтобы избежать любых проблем с PATH.
+CMD ["/usr/local/bin/python", "-m", "sender", "--config", "config.toml"]
