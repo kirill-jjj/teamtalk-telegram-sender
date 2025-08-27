@@ -31,8 +31,8 @@ COPY --from=builder /app/.venv/bin/ /usr/local/bin/
 # Копируем остальные файлы приложения
 COPY . .
 
-# Компилируем файлы локализации. 'i18n' теперь доступен глобально.
-RUN i18n compile
+# Компилируем файлы локализации, вызывая скрипт напрямую через Python.
+RUN python scripts/manage_locales.py compile
 
 # Указываем команду для запуска приложения.
 # Запускаем 'sender' напрямую, так как он теперь в /usr/local/bin/
