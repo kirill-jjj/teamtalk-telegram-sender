@@ -4,6 +4,9 @@ FROM python:3.11-slim as builder
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
+# Устанавливаем системные зависимости для сборки
+RUN apt-get update && apt-get install -y p7zip-full && rm -rf /var/lib/apt/lists/*
+
 # Устанавливаем uv
 RUN pip install uv
 
