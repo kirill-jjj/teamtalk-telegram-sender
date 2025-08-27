@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  teamtalk-telegram-sender:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teamtalk-telegram-sender
+    # To use this, you must create a `config.toml` file in the same directory
+    # as this docker-compose.yml file. You can copy and edit config.example.toml.
+    #
+    # For data persistence, we mount a local `./data` directory to `/app/data`.
+    # You should update your `config.toml` to set the database path accordingly:
+    # [database]
+    # db_file = "data/bot_data.db"
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+      - ./data:/app/data
+    restart: unless-stopped
