@@ -24,8 +24,8 @@ COPY --from=builder /app/.venv /app/.venv
 # Копируем остальные файлы приложения
 COPY . .
 
-# Компилируем файлы локализации
-RUN /app/.venv/bin/python scripts/manage_locales.py compile
+# Компилируем файлы локализации, добавив .venv/bin в PATH
+RUN PATH="/app/.venv/bin:$PATH" python scripts/manage_locales.py compile
 
 # Указываем команду для запуска приложения
 CMD ["/app/.venv/bin/python", "-m", "sender", "--config", "config.toml"]
