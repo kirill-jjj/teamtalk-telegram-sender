@@ -68,10 +68,16 @@ class AppProvider(Provider):
 
     scope = Scope.APP
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, config_path: str) -> None:
         """Initializes the provider with application settings."""
         super().__init__()
         self._settings = settings
+        self._config_path = config_path
+
+    @provide
+    def get_config_path(self) -> str:
+        """Provides the path to the application config file."""
+        return self._config_path
 
     @provide
     def get_settings(self) -> Settings:

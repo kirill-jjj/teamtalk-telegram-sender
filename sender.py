@@ -64,13 +64,15 @@ async def on_shutdown(
 class Application:
     """Main application class orchestrating the bot's lifecycle and components."""
 
-    def __init__(self, app_config_instance: Settings) -> None:
+    def __init__(self, app_config_instance: Settings, config_path: str) -> None:
         """Initializes the Application.
 
         Args:
             app_config_instance: The loaded application settings.
+            config_path: The path to the configuration file.
         """
         self.app_config = app_config_instance
+        self.config_path = config_path
         self.logger = setup_logging()
         self.dp: Dispatcher | None = None
 
@@ -78,7 +80,9 @@ class Application:
         """Sets up and runs the main application event loops."""
         self.logger.info("Application starting...")
 
-        app_provider = AppProvider(settings=self.app_config)
+        app_provider = AppProvider(
+            settings=self.app_config, config_path=self.config_path
+        )
         container = make_async_container(
             app_provider, TeamTalkProvider(), RequestProvider(), AiogramProvider()
         )
@@ -127,7 +131,7 @@ def main_cli() -> None:
         else:
             print("uvloop not found, using default asyncio event loop.")
 
-        app = Application(app_config_instance)
+        app = Application(app_config_instance, config_path=args.config)
         asyncio.run(app.run())
 
     except (KeyboardInterrupt, SystemExit):

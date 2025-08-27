@@ -4,8 +4,12 @@ import asyncio
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
+import os
+from pathlib import Path
 
 from aiogram import Dispatcher
+from alembic import command as alembic_command
+from alembic.config import Config
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
 
@@ -26,6 +30,27 @@ from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot
 
 
+def _run_migrations(config_path: str) -> None:
+    """Runs database migrations using Alembic."""
+    logger = logging.getLogger(__name__)
+    logger.info("Checking and applying database migrations...")
+    try:
+        # Set the environment variable that alembic/env.py uses
+        # to ensure Alembic finds the correct config.toml
+        os.environ["APP_CONFIG_FILE"] = str(Path(config_path).resolve())
+
+        alembic_cfg = Config("alembic.ini")
+        alembic_command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations are up to date.")
+    except Exception:
+        logger.critical("Failed to apply database migrations.")
+        raise
+    finally:
+        # Clean up the environment variable
+        if "APP_CONFIG_FILE" in os.environ:
+            del os.environ["APP_CONFIG_FILE"]
+
+
 @inject
 async def on_startup(
     dispatcher: FromDishka[Dispatcher],
@@ -38,10 +63,21 @@ async def on_startup(
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
     command_bus: FromDishka[CommandBus],
+    config_path: FromDishka[str],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
+
+    try:
+        # Run synchronous migration code in a separate thread
+        # to avoid blocking the main event loop.
+        await asyncio.to_thread(_run_migrations, config_path)
+    except Exception:
+        logger.critical("Application startup failed due to migration error.")
+        # Stop the application if migrations fail
+        raise
+
     logger.info("Application startup...")
 
     # Start the pytalk event loop in the background
