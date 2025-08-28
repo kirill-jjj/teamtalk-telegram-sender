@@ -58,8 +58,11 @@ class TeamTalkConnectionManager:
             conn.mark_finalized(status=False)
             conn.login_complete_time = None
 
+        except pytalk.exceptions.TeamTalkException as e:
+            logger.critical("Failed to connect or login to TeamTalk server: %s", e)
+            return False
         except Exception:
-            logger.exception("Failed to add and connect server.")
+            logger.exception("An unexpected error occurred while connecting to the server.")
             return False
         else:
             return True
