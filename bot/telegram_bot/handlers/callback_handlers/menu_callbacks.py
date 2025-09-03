@@ -16,7 +16,6 @@ from bot.core.enums import AdminCommand
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.formatters import get_effective_server_name
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.formatters import format_who_report_to_html
 from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
@@ -25,7 +24,6 @@ from bot.telegram_bot.handlers.user import (
     on_help_command,
     on_settings_command,
 )
-from bot.telegram_bot.models import WhoReport
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import (
     _show_banned_list_page,

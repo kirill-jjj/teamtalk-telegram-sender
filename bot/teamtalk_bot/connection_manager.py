@@ -62,7 +62,9 @@ class TeamTalkConnectionManager:
             logger.critical("Failed to connect or login to TeamTalk server: %s", e)
             return False
         except Exception:
-            logger.exception("An unexpected error occurred while connecting to the server.")
+            logger.exception(
+                "An unexpected error occurred while connecting to the server."
+            )
             return False
         else:
             return True

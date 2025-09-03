@@ -334,9 +334,12 @@ class PytalkEventRouter:
     async def on_pytalk_user_logout(
         self, user: PytalkUser, connection: TeamTalkConnection
     ) -> None:
-        """Handles user logout, updates cache, and publishes a domain event."""
-        connection.cache_manager.update_caches_on_event(PytalkEvent.USER_LOGOUT, user)
+        """Handles user logout, publishes a domain event, and then updates cache."""
+        # First, publish the event while the user is still in the cache,
+        # so downstream handlers have the correct state.
         await self._publish_user_event(user, connection, UserLeftEvent)
+        # Then, update the cache to remove the user.
+        connection.cache_manager.update_caches_on_event(PytalkEvent.USER_LOGOUT, user)
 
     @route_event_to_connection
     async def on_pytalk_user_update(
