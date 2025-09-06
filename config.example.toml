@@ -31,7 +31,7 @@ admin_chat_id = 0 # Replace with the actual admin's Telegram Chat ID (integer)
 [teamtalk]
 # TeamTalk server connection details
 host_name = "teamtalk.example.com" # TeamTalk server address
-port = 10333 # TeamTalk server port (default is 10333 for unencrypted, 10334 for encrypted)
+port = 10333 # TeamTalk server port (default is 10333 for unencrypted)
 encrypted = false # Set to true if connecting to an encrypted TeamTalk port
 
 # TeamTalk user credentials for the bot
