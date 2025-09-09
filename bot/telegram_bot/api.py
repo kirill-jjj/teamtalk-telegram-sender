@@ -9,6 +9,7 @@ from aiogram import Bot as AiogramBot
 from aiogram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest,
+    TelegramForbiddenError,  # <--- ДОБАВИТЬ
 )
 from aiogram.types import (
     Chat,
@@ -75,7 +76,12 @@ async def send_telegram_message(
             send_silently,
             kwargs,
         )
+    except TelegramForbiddenError:
+        # Повторно вызываем именно эту ошибку, чтобы её поймал
+        # глобальный обработчик и запустил процесс очистки данных.
+        raise
     except TelegramAPIError as e:
+        # Остальные ошибки просто логируем и продолжаем работу.
         logger.warning("Failed to send message to chat_id %s: %s", chat_id, e)
         return False
     else:
