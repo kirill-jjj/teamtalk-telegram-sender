@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+from gettext import NullTranslations
 import logging
 from typing import Any
 
@@ -9,21 +10,16 @@ from aiogram import Bot as AiogramBot
 from aiogram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest,
-    TelegramForbiddenError,  # <--- ДОБАВИТЬ
+    TelegramForbiddenError,
 )
-from aiogram.types import (
-    Chat,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import Chat, InlineKeyboardMarkup, Message
 import pytalk
 from pytalk.user import User as TeamTalkUser
 
-from bot.constants import (
-    DEFAULT_LANGUAGE,
-)
+from bot.constants import DEFAULT_LANGUAGE
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
+from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.formatters import format_telegram_user_display_name
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -77,11 +73,10 @@ async def send_telegram_message(
             kwargs,
         )
     except TelegramForbiddenError:
-        # Повторно вызываем именно эту ошибку, чтобы её поймал
-        # глобальный обработчик и запустил процесс очистки данных.
+        # Re-raise this specific error to be caught by the broadcaster
+        # which has more context to handle it (e.g., delete the user).
         raise
     except TelegramAPIError as e:
-        # Остальные ошибки просто логируем и продолжаем работу.
         logger.warning("Failed to send message to chat_id %s: %s", chat_id, e)
         return False
     else:
@@ -143,43 +138,89 @@ async def broadcast_to_users(
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
     cache: CacheService,
+    subscription_service: SubscriptionService,
+    translator_factory: Callable[[str | None], NullTranslations],
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
     | None = None,
 ) -> None:
-    """Send localized messages to a list of recipients using a TaskGroup."""
+    """Sends localized messages to recipients and handles errors individually."""
     if not bot_instance_to_use:
         logger.error("No Telegram bot instance provided to broadcast_to_users.")
         return
 
-    async with asyncio.TaskGroup() as tg:
-        for chat_id, lang_code in recipients_with_lang:
-            language_code = lang_code or DEFAULT_LANGUAGE
-            text = text_generator(language_code)
-            current_reply_markup = (
-                reply_markup_generator(language_code, chat_id)
-                if reply_markup_generator
-                else None
-            )
-
-            individual_tt_user_is_online = False
-            if online_users_cache_for_instance:
-                individual_tt_user_is_online = (
-                    await notification_service.is_linked_user_online(
-                        chat_id, cache, online_users_cache_for_instance
-                    )
-                )
-
-            tg.create_task(
-                send_telegram_message(
-                    bot_instance=bot_instance_to_use,
+    tasks = []
+    for chat_id, lang_code in recipients_with_lang:
+        tasks.append(
+            asyncio.create_task(
+                _send_and_handle_broadcast_error(
+                    bot_instance_to_use=bot_instance_to_use,
                     chat_id=chat_id,
-                    reply_markup=current_reply_markup,
-                    tt_user_is_online=individual_tt_user_is_online,
+                    lang_code=lang_code,
+                    text_generator=text_generator,
                     cache=cache,
-                    text=text,
+                    subscription_service=subscription_service,
+                    translator_factory=translator_factory,
+                    online_users_cache_for_instance=online_users_cache_for_instance,
+                    reply_markup_generator=reply_markup_generator,
                 )
             )
+        )
+
+    if tasks:
+        await asyncio.gather(*tasks)
+
+
+async def _send_and_handle_broadcast_error(
+    bot_instance_to_use: AiogramBot,
+    chat_id: int,
+    lang_code: str | None,
+    text_generator: Callable[[str | None], str],
+    cache: CacheService,
+    subscription_service: SubscriptionService,
+    translator_factory: Callable[[str | None], NullTranslations],
+    online_users_cache_for_instance: dict[int, TeamTalkUser] | None,
+    reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
+    | None,
+) -> None:
+    """Helper coroutine to send a message and handle Forbidden error."""
+    try:
+        language_code = lang_code or DEFAULT_LANGUAGE
+        text = text_generator(language_code)
+        current_reply_markup = (
+            reply_markup_generator(language_code, chat_id)
+            if reply_markup_generator
+            else None
+        )
+
+        individual_tt_user_is_online = False
+        if online_users_cache_for_instance:
+            individual_tt_user_is_online = (
+                await notification_service.is_linked_user_online(
+                    chat_id, cache, online_users_cache_for_instance
+                )
+            )
+
+        await send_telegram_message(
+            bot_instance=bot_instance_to_use,
+            chat_id=chat_id,
+            reply_markup=current_reply_markup,
+            tt_user_is_online=individual_tt_user_is_online,
+            cache=cache,
+            text=text,
+        )
+    except TelegramForbiddenError:
+        logger.warning(
+            "User %s blocked the bot or is deactivated. Deleting all user data...",
+            chat_id,
+        )
+        # Use a default translator for the deletion process logs/messages
+        default_translator = translator_factory(DEFAULT_LANGUAGE)
+        await subscription_service.delete_profile(chat_id, default_translator)
+    except Exception:
+        logger.exception(
+            "An unexpected error occurred during broadcast to chat_id %s.", chat_id
+        )
 
 
 async def safe_delete_message(

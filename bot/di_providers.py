@@ -38,10 +38,12 @@ from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 def create_translator_factory(
     translator_cache: dict[str, NullTranslations],
-) -> Callable[[str], NullTranslations]:
+) -> Callable[[str | None], NullTranslations]:
     """Creates and returns a factory function for retrieving translators."""
 
-    def get_translator(lang_code: str) -> NullTranslations:
+    def get_translator(lang_code: str | None) -> NullTranslations:
+        if not lang_code:
+            return gettext.NullTranslations()
         if lang_code in translator_cache:
             return translator_cache[lang_code]
         translation: NullTranslations
@@ -119,7 +121,7 @@ class AppProvider(Provider):
     @provide
     def get_translator_factory(
         self, translator_cache: dict[str, NullTranslations]
-    ) -> Callable[[str], NullTranslations]:
+    ) -> Callable[[str | None], NullTranslations]:
         """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
@@ -174,9 +176,10 @@ class AppProvider(Provider):
         message_bot: FromDishka[MessageBot],
         cache: FromDishka[CacheService],
         settings: FromDishka[Settings],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
         event_bus: FromDishka[EventBus],
         recipient_service: FromDishka[NotificationRecipientService],
+        subscription_service: FromDishka[SubscriptionService],  # <-- ДОБАВИТЬ
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(
@@ -187,6 +190,7 @@ class AppProvider(Provider):
             translator_factory=translator_factory,
             event_bus=event_bus,
             recipient_service=recipient_service,
+            subscription_service=subscription_service,  # <-- ДОБАВИТЬ
         )
 
     @provide
@@ -228,7 +232,7 @@ class RequestProvider(Provider):
         event_bus: FromDishka[EventBus],
         settings: FromDishka[Settings],
         cache: FromDishka[CacheService],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
         command_handlers: FromDishka[PrivateMessageCommandHandlers],
         connection: FromDishka[TeamTalkConnection],
     ) -> MessageHandler:
@@ -321,7 +325,7 @@ class RequestProvider(Provider):
         self,
         user_settings: UserSettings | None,
         settings: Settings,
-        translator_factory: Callable[[str], NullTranslations],
+        translator_factory: Callable[[str | None], NullTranslations],
     ) -> NullTranslations:
         """Provides a translator for the current user's language."""
         lang_code = (
