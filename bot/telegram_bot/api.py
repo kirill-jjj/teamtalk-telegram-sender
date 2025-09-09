@@ -58,24 +58,28 @@ async def send_telegram_message(
     tt_user_is_online: bool = False,
     **kwargs: Any,
 ) -> bool:
-    """Sends a single Telegram message to a user, allowing errors to propagate."""
+    """Sends a single Telegram message, logs errors, and returns success status."""
     send_silently = _should_send_silently(
         chat_id=chat_id, tt_user_is_online=tt_user_is_online, cache=cache
     )
-
-    await bot_instance.send_message(
-        chat_id=chat_id,
-        reply_markup=reply_markup,
-        disable_notification=send_silently,
-        **kwargs,
-    )
-    logger.debug(
-        "Message sent to %s. Silent: %s, kwargs used: %s",
-        chat_id,
-        send_silently,
-        kwargs,
-    )
-    return True
+    try:
+        await bot_instance.send_message(
+            chat_id=chat_id,
+            reply_markup=reply_markup,
+            disable_notification=send_silently,
+            **kwargs,
+        )
+        logger.debug(
+            "Message sent to %s. Silent: %s, kwargs used: %s",
+            chat_id,
+            send_silently,
+            kwargs,
+        )
+    except TelegramAPIError as e:
+        logger.warning("Failed to send message to chat_id %s: %s", chat_id, e)
+        return False
+    else:
+        return True
 
 
 async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int, str]:
@@ -142,44 +146,34 @@ async def broadcast_to_users(
         logger.error("No Telegram bot instance provided to broadcast_to_users.")
         return
 
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for chat_id, lang_code in recipients_with_lang:
-                language_code = lang_code or DEFAULT_LANGUAGE
-                text = text_generator(language_code)
-                current_reply_markup = (
-                    reply_markup_generator(language_code, chat_id)
-                    if reply_markup_generator
-                    else None
-                )
+    async with asyncio.TaskGroup() as tg:
+        for chat_id, lang_code in recipients_with_lang:
+            language_code = lang_code or DEFAULT_LANGUAGE
+            text = text_generator(language_code)
+            current_reply_markup = (
+                reply_markup_generator(language_code, chat_id)
+                if reply_markup_generator
+                else None
+            )
 
-                individual_tt_user_is_online = False
-                if online_users_cache_for_instance:
-                    individual_tt_user_is_online = (
-                        await notification_service.is_linked_user_online(
-                            chat_id, cache, online_users_cache_for_instance
-                        )
-                    )
-
-                tg.create_task(
-                    send_telegram_message(
-                        bot_instance=bot_instance_to_use,
-                        chat_id=chat_id,
-                        reply_markup=current_reply_markup,
-                        tt_user_is_online=individual_tt_user_is_online,
-                        cache=cache,
-                        text=text,
+            individual_tt_user_is_online = False
+            if online_users_cache_for_instance:
+                individual_tt_user_is_online = (
+                    await notification_service.is_linked_user_online(
+                        chat_id, cache, online_users_cache_for_instance
                     )
                 )
-    except* TelegramAPIError as eg:
-        logger.warning(
-            "Some messages failed to send. Total errors: %d", len(eg.exceptions)
-        )
-        for error in eg.exceptions:
-            # The individual error handler is already called inside
-            # send_telegram_message
-            # So we just log the summary here.
-            logger.debug("Failed to send a message (handled individually): %s", error)
+
+            tg.create_task(
+                send_telegram_message(
+                    bot_instance=bot_instance_to_use,
+                    chat_id=chat_id,
+                    reply_markup=current_reply_markup,
+                    tt_user_is_online=individual_tt_user_is_online,
+                    cache=cache,
+                    text=text,
+                )
+            )
 
 
 async def safe_delete_message(
