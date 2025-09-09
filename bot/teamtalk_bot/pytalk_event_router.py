@@ -198,7 +198,7 @@ class PytalkEventRouter:
         tt_bot: pytalk.TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
-        translator_factory: Callable[[str], NullTranslations],
+        translator_factory: Callable[[str | None], NullTranslations],
     ) -> None:
         """Initializes the PytalkEventRouter."""
         self.app_container = app_container

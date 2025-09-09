@@ -125,6 +125,16 @@ class AppProvider(Provider):
         """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
+    @provide(provides=Callable[[str], NullTranslations])
+    def get_str_translator_factory(
+        self, translator_factory: FromDishka[Callable[[str | None], NullTranslations]]
+    ) -> Callable[[str], NullTranslations]:
+        """Provides a factory for creating translators that only accepts strings."""
+        def factory(lang_code: str) -> NullTranslations:
+            return translator_factory(lang_code)
+
+        return factory
+
     @provide
     def get_event_bus(self) -> EventBus:
         """Provides the application-wide event bus."""
@@ -179,7 +189,7 @@ class AppProvider(Provider):
         translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
         event_bus: FromDishka[EventBus],
         recipient_service: FromDishka[NotificationRecipientService],
-        subscription_service: FromDishka[SubscriptionService],  # <-- ДОБАВИТЬ
+        session_factory: FromDishka[AsyncSessionFactoryType],
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(
@@ -190,7 +200,7 @@ class AppProvider(Provider):
             translator_factory=translator_factory,
             event_bus=event_bus,
             recipient_service=recipient_service,
-            subscription_service=subscription_service,  # <-- ДОБАВИТЬ
+            session_factory=session_factory,
         )
 
     @provide

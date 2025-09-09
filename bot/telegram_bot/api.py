@@ -17,6 +17,8 @@ import pytalk
 from pytalk.user import User as TeamTalkUser
 
 from bot.constants import DEFAULT_LANGUAGE
+from bot.database.engine import AsyncSessionFactoryType
+from bot.database.uow import SqlModelUnitOfWork
 from bot.services import notification_service
 from bot.services.cache_service import CacheService
 from bot.services.subscription_service import SubscriptionService
@@ -138,7 +140,7 @@ async def broadcast_to_users(
     recipients_with_lang: list[tuple[int, str | None]],
     text_generator: Callable[[str | None], str],
     cache: CacheService,
-    subscription_service: SubscriptionService,
+    session_factory: AsyncSessionFactoryType,
     translator_factory: Callable[[str | None], NullTranslations],
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
@@ -159,7 +161,7 @@ async def broadcast_to_users(
                     lang_code=lang_code,
                     text_generator=text_generator,
                     cache=cache,
-                    subscription_service=subscription_service,
+                    session_factory=session_factory,
                     translator_factory=translator_factory,
                     online_users_cache_for_instance=online_users_cache_for_instance,
                     reply_markup_generator=reply_markup_generator,
@@ -177,7 +179,7 @@ async def _send_and_handle_broadcast_error(
     lang_code: str | None,
     text_generator: Callable[[str | None], str],
     cache: CacheService,
-    subscription_service: SubscriptionService,
+    session_factory: AsyncSessionFactoryType,
     translator_factory: Callable[[str | None], NullTranslations],
     online_users_cache_for_instance: dict[int, TeamTalkUser] | None,
     reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
@@ -216,7 +218,10 @@ async def _send_and_handle_broadcast_error(
         )
         # Use a default translator for the deletion process logs/messages
         default_translator = translator_factory(DEFAULT_LANGUAGE)
-        await subscription_service.delete_profile(chat_id, default_translator)
+        async with SqlModelUnitOfWork(session_factory) as uow:
+            subscription_service = SubscriptionService(uow, cache)
+            await subscription_service.delete_profile(chat_id, default_translator)
+            await uow.commit()
     except Exception:
         logger.exception(
             "An unexpected error occurred during broadcast to chat_id %s.", chat_id

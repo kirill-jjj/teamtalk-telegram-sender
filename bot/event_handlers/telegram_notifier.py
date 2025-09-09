@@ -9,10 +9,10 @@ from aiogram.utils.formatting import Bold, Text
 
 from bot.config import Settings
 from bot.constants import NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
+from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import NotificationRecipientService
-from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -39,7 +39,7 @@ class TelegramNotificationHandler:
         translator_factory: Callable[[str | None], NullTranslations],
         event_bus: EventBus,
         recipient_service: NotificationRecipientService,
-        subscription_service: SubscriptionService,  # <-- ДОБАВИТЬ
+        session_factory: AsyncSessionFactoryType,
     ) -> None:
         """Initializes the TelegramNotificationHandler."""
         self.event_bot = event_bot
@@ -49,7 +49,7 @@ class TelegramNotificationHandler:
         self.translator_factory = translator_factory
         self.event_bus = event_bus
         self.recipient_service = recipient_service
-        self.subscription_service = subscription_service  # <-- ДОБАВИТЬ
+        self.session_factory = session_factory
 
     async def handle_user_joined(self, event: UserJoinedEvent) -> None:
         """Handles the UserJoinedEvent and sends notifications."""
@@ -73,8 +73,8 @@ class TelegramNotificationHandler:
             ),
             cache=self.cache,
             online_users_cache_for_instance=event.online_users_cache,
-            subscription_service=self.subscription_service,  # <-- ДОБАВИТЬ
-            translator_factory=self.translator_factory,  # <-- ДОБАВИТЬ
+            session_factory=self.session_factory,
+            translator_factory=self.translator_factory,
         )
 
     async def handle_user_left(self, event: UserLeftEvent) -> None:
@@ -99,8 +99,8 @@ class TelegramNotificationHandler:
             ),
             cache=self.cache,
             online_users_cache_for_instance=event.online_users_cache,
-            subscription_service=self.subscription_service,  # <-- ДОБАВИТЬ
-            translator_factory=self.translator_factory,  # <-- ДОБАВИТЬ
+            session_factory=self.session_factory,
+            translator_factory=self.translator_factory,
         )
 
     async def handle_admin_status_changed(self, event: AdminStatusChangedEvent) -> None:

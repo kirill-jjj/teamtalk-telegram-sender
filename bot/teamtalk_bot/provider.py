@@ -133,7 +133,7 @@ class TeamTalkProvider(Provider):
         tt_bot: FromDishka[pytalk.TeamTalkBot],
         connections: FromDishka[dict[str, TeamTalkConnection]],
         event_bus: FromDishka[EventBus],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
     ) -> "PytalkEventRouter":
         """Provides the Pytalk event router."""
         return PytalkEventRouter(
@@ -174,7 +174,7 @@ class TeamTalkProvider(Provider):
     def get_teamtalk_command_handlers(
         self,
         tt_connection: FromDishka[TeamTalkConnection],
-        translator_factory: FromDishka[Callable[[str], NullTranslations]],
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
     ) -> TeamTalkCommandHandlers:
         """Provides the TeamTalk command handlers if a connection is available."""
         return TeamTalkCommandHandlers(
