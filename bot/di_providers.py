@@ -130,6 +130,7 @@ class AppProvider(Provider):
         self, translator_factory: FromDishka[Callable[[str | None], NullTranslations]]
     ) -> Callable[[str], NullTranslations]:
         """Provides a factory for creating translators that only accepts strings."""
+
         def factory(lang_code: str) -> NullTranslations:
             return translator_factory(lang_code)
 
