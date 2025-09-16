@@ -13,11 +13,13 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
+from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message
+from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.formatters import format_who_report_to_html
 from bot.telegram_bot.keyboards import (
@@ -58,10 +60,28 @@ async def on_start_with_payload(
 async def on_start_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
+    cache: Annotated[CacheService, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
+    user_settings: Annotated["UserSettings", FromDishka()],
 ) -> None:
     """Handles the /start command without a deeplink."""
     _ = translator.gettext
     await message.reply(_("Hello! Use /help to see available commands."))
+
+    # If the user who pressed /start is an admin,
+    # we will try to update the commands for them.
+    if message.from_user and cache.is_admin(message.from_user.id):
+        logger.info(
+            "Admin %s started the bot. Attempting to set admin commands.",
+            message.from_user.id,
+        )
+        await update_user_bot_commands(
+            telegram_id=message.from_user.id,
+            new_lang_code=user_settings.language_code,
+            cache=cache,
+            bot=bot,
+            translator=translator,
+        )
 
 
 @user_commands_router.message(Command("who"), IsSubscribed())

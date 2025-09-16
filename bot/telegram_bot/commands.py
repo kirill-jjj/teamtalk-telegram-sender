@@ -100,6 +100,18 @@ async def set_telegram_commands(
                 admin_id,
                 admin_lang_code,
             )
+        except TelegramBadRequest as e:
+            if "chat not found" in str(e).lower():
+                logger.warning(
+                    "Could not set commands for admin %s: chat not found. "
+                    "This is expected if the admin has not started the bot yet.",
+                    admin_id,
+                )
+            else:
+                logger.exception(
+                    "TelegramBadRequest while setting commands for admin %s.",
+                    admin_id,
+                )
         except TelegramAPIError:
             logger.exception(
                 "Failed to set commands for admin %s (lang: %s).",
