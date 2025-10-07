@@ -67,7 +67,7 @@ async def _display_user_list(
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    page_slice, total_pages, current_page_idx = paginate_list(
+    page_slice, _total_pages, current_page_idx = paginate_list(
         sorted_items, page, USERS_PER_PAGE
     )
 

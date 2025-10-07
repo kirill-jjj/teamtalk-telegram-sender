@@ -17,7 +17,10 @@ from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.enums import PytalkEvent
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
-from bot.teamtalk_bot.formatters import get_effective_server_name
+from bot.teamtalk_bot.formatters import (
+    get_effective_server_name,
+    get_tt_user_display_name,
+)
 from bot.teamtalk_bot.message_handler import MessageHandler
 
 logger = logging.getLogger(__name__)
@@ -272,9 +275,10 @@ class PytalkEventRouter:
         server_name = get_effective_server_name(
             connection.instance, translator, connection.settings
         )
+        user_display_name = get_tt_user_display_name(user, translator)
 
         event = event_class(
-            user_nickname=connection.ttstr(user.nickname).strip(),
+            user_nickname=user_display_name,
             username=connection.ttstr(user.username),
             user_id=user.id,
             server_name=server_name,

@@ -47,7 +47,7 @@ async def on_start_with_payload(
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    reply_text, success = await deeplink_service.process_telegram_deeplink(
+    reply_text, _ = await deeplink_service.process_telegram_deeplink(
         token=token,
         translator=translator,
         telegram_id=message.from_user.id,
