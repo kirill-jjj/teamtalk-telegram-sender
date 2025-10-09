@@ -300,7 +300,7 @@ msgstr "под сервером"
 
 #: bot/teamtalk_bot/formatters.py:108
 msgid "the root channel"
-msgstr "в корневом канале"
+msgstr "корневом канале"
 
 #: bot/teamtalk_bot/formatters.py:110
 #, python-brace-format
