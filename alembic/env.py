@@ -31,7 +31,6 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 
-logger = logging.getLogger(__name__)
 target_metadata = SQLModel.metadata
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -60,7 +59,7 @@ def prevent_empty_revisions(
         and directives[0].upgrade_ops.is_empty()
     ):
         directives[:] = []
-        logger.info(
+        logging.info(
             "INFO  [alembic.autogenerate.compare] No structural changes detected."
         )
 
@@ -77,15 +76,15 @@ def get_db_url() -> str:
     """
     config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
     config_file = Path(config_file_str)
-    logger.info("Attempting to load configuration from: %s", config_file)
+    logging.info("Attempting to load configuration from: %s", config_file)
 
     try:
         settings = Settings.from_toml(str(config_file))  # Ensure it's a string for mypy
     except FileNotFoundError:
-        logger.exception("Configuration file '%s' not found.", config_file)
+        logging.exception("Configuration file '%s' not found.", config_file)
         raise
     except ValueError:  # Covers TOMLDecodeError and other Pydantic validation errors
-        logger.exception("Error loading configuration from '%s'", config_file)
+        logging.exception("Error loading configuration from '%s'", config_file)
         raise
 
     db_file_name = settings.database.db_file
@@ -95,7 +94,7 @@ def get_db_url() -> str:
             f"'database.db_file' in '{config_file}' must be a non-empty string. "
             f"Found: '{db_file_name}'"
         )
-        logger.error(error_message)
+        logging.error(error_message)
         raise ValueError(error_message)
 
     db_path_obj = Path(db_file_name)
@@ -106,7 +105,7 @@ def get_db_url() -> str:
     )
 
     db_url = f"sqlite+aiosqlite:///{db_path}"  # f-string for URL construction is fine
-    logger.info(
+    logging.info(
         "Using database URL: %s (from 'database.db_file' in '%s')", db_url, config_file
     )
     return db_url

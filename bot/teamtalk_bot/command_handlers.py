@@ -3,29 +3,28 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 import functools
+from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
 import pytalk
+from pytalk.message import Message as TeamTalkMessage
 
+from bot.config import Settings
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )
 from bot.core.enums import DeeplinkAction
+from bot.database.uow import IUnitOfWork
+from bot.services.cache_service import CacheService
+from bot.services.deeplink_service import DeeplinkService
+from bot.services.moderation_service import ModerationService
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-    from gettext import NullTranslations
-
-    from pytalk.message import Message as TeamTalkMessage
-
-    from bot.config import Settings
-    from bot.database.uow import IUnitOfWork
-    from bot.services.cache_service import CacheService
-    from bot.services.deeplink_service import DeeplinkService
-    from bot.services.moderation_service import ModerationService
+    pass
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr

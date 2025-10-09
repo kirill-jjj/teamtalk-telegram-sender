@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
@@ -13,6 +13,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
+from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
@@ -26,9 +27,6 @@ from bot.telegram_bot.keyboards import (
     create_main_settings_keyboard,
 )
 from bot.telegram_bot.types.bots import EventBot
-
-if TYPE_CHECKING:
-    from bot.models import UserSettings
 
 logger = logging.getLogger(__name__)
 user_commands_router = Router(name="user_commands_router")

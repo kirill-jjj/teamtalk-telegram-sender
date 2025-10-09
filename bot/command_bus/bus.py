@@ -79,4 +79,4 @@ class CommandBus:
         )
         # We cast here because the type of the handler's result is erased
         # in the generic CommandBus, but known by the caller.
-        return cast("T_Result_co", await handler(command))
+        return cast(T_Result_co, await handler(command))

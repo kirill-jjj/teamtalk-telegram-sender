@@ -55,7 +55,7 @@ async def _display_subscriber_view(
 
     # This assumes query.message is a Message, which is guaranteed by
     # @ensure_message_context
-    await cast("Message", query.message).edit_text(
+    await cast(Message, query.message).edit_text(
         text, reply_markup=keyboard, parse_mode="HTML"
     )
     await query.answer()
@@ -77,9 +77,7 @@ async def refresh_subscriber_view(
         callback_data, "subscriber_page_context", getattr(callback_data, "page", 0)
     )
 
-    user_settings: UserSettings | None = cast(
-        "UserSettings", kwargs.get("user_settings")
-    )
+    user_settings: UserSettings | None = cast(UserSettings, kwargs.get("user_settings"))
     if not user_settings:
         logger.error(
             "refresh_subscriber_view called without 'user_settings' "

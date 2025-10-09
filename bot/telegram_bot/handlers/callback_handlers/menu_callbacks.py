@@ -178,7 +178,7 @@ async def menu_subscribers_handler(
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     await _show_subscriber_list_page(
-        cast("Message", query.message),
+        cast(Message, query.message),
         report_service,
         bot,
         translator,
@@ -197,7 +197,7 @@ async def menu_unban_handler(
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     await _show_banned_list_page(
-        target=cast("Message", query.message),
+        target=cast(Message, query.message),
         report_service=report_service,
         bot=bot,
         translator=translator,

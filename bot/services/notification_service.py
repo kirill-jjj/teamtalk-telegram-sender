@@ -110,4 +110,4 @@ class NotificationRecipientService:
 
             stmt = stmt.where(and_(*filters))
             result = await session.execute(stmt)
-            return cast("list[tuple[int, str | None]]", result.all())
+            return cast(list[tuple[int, str | None]], result.all())
