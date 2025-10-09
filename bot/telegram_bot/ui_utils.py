@@ -15,12 +15,6 @@ from aiogram.types import (
 )
 
 from bot.constants import USERS_PER_PAGE
-from bot.services.report_service import ReportService
-from bot.telegram_bot.keyboards import (
-    create_banned_user_list_keyboard,
-    create_subscriber_list_keyboard,
-)
-from bot.telegram_bot.types.bots import EventBot
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
@@ -126,60 +120,6 @@ async def display_paginated_list(
                     "Failed to answer callback for invalid target type for %s",
                     title_text,
                 )
-
-
-async def _show_subscriber_list_page(
-    target: Message | CallbackQuery,
-    report_service: ReportService,
-    bot: EventBot,
-    translator: NullTranslations,
-    page: int = 0,
-) -> None:
-    """Fetches a paginated list of subscribers from the service and displays it."""
-    _ = translator.gettext
-
-    result = await report_service.get_subscribers_info(page=page)
-
-    await display_paginated_list(
-        target=target,
-        bot=bot,
-        translator=translator,
-        items_on_page=result.items,
-        total_items=result.total_items,
-        page=result.current_page,
-        title_text=_("Here is the list of subscribers."),
-        empty_list_text=_("No subscribers found."),
-        keyboard_factory=create_subscriber_list_keyboard,
-        keyboard_factory_kwargs={},
-        page_size=USERS_PER_PAGE,
-    )
-
-
-async def _show_banned_list_page(
-    target: CallbackQuery | Message,
-    report_service: ReportService,
-    bot: EventBot,
-    translator: NullTranslations,
-    page: int,
-) -> None:
-    """Shows a paginated list of banned users."""
-    _ = translator.gettext
-
-    result = await report_service.get_banned_users_info(page=page)
-
-    await display_paginated_list(
-        target=target,
-        bot=bot,
-        translator=translator,
-        items_on_page=result.items,
-        total_items=result.total_items,
-        page=result.current_page,
-        title_text=_("Banned Users"),
-        empty_list_text=_("The ban list is empty."),
-        keyboard_factory=create_banned_user_list_keyboard,
-        keyboard_factory_kwargs={},
-        page_size=USERS_PER_PAGE,
-    )
 
 
 async def safe_edit_text(

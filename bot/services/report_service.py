@@ -13,7 +13,7 @@ from bot.config import Settings
 from bot.constants import USERS_PER_PAGE
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
-from bot.services.schemas import PaginatedResult, SubscriberInfo
+from bot.services.schemas import PaginatedResult, SubscriberInfo, UserDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.models import WhoChannelGroup, WhoReport, WhoUser
@@ -183,3 +183,36 @@ class ReportService:
                 total_pages=total_pages,
                 current_page=page,
             )
+
+    async def get_sorted_online_users_for_moderation(
+        self,
+        telegram_user_id: int,
+        translator: NullTranslations,
+        cache_service: CacheService,
+        user_settings_service: UserSettingsService,
+        command_bus: CommandBus,
+    ) -> tuple[list[UserDTO], str | None]:
+        """Fetches and sorts online users for moderation purposes.
+
+        Returns a tuple of (sorted_users, error_message).
+        """
+        _ = translator.gettext
+        user_settings = await user_settings_service.get_or_create(
+            telegram_user_id, self._settings.general.default_lang
+        )
+        is_admin = cache_service.is_admin(telegram_user_id)
+        command = GetOnlineUsersCommand(
+            is_caller_admin=is_admin, lang_code=user_settings.language_code
+        )
+
+        try:
+            result: GetOnlineUsersResult = await command_bus.execute(command)
+        except NoHandlerFoundError:
+            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+            return [], _("This feature is temporarily unavailable.")
+
+        if not result.success or not result.users:
+            return [], result.error_message or _("No users found online.")
+
+        sorted_users = sorted(result.users, key=lambda u: u.nickname.lower())
+        return sorted_users, None

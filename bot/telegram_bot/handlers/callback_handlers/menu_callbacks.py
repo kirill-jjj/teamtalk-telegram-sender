@@ -24,11 +24,12 @@ from bot.telegram_bot.handlers.user import (
     on_help_command,
     on_settings_command,
 )
-from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import (
-    _show_banned_list_page,
-    _show_subscriber_list_page,
+from bot.telegram_bot.keyboards import (
+    create_banned_user_list_keyboard,
+    create_subscriber_list_keyboard,
 )
+from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.ui_utils import display_paginated_list
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
@@ -177,12 +178,21 @@ async def menu_subscribers_handler(
     report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
-    await _show_subscriber_list_page(
-        cast(Message, query.message),
-        report_service,
-        bot,
-        translator,
-        page=0,
+    _ = translator.gettext
+
+    result = await report_service.get_subscribers_info(page=0)
+
+    await display_paginated_list(
+        target=cast(Message, query.message),
+        bot=bot,
+        translator=translator,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Here is the list of subscribers."),
+        empty_list_text=_("No subscribers found."),
+        keyboard_factory=create_subscriber_list_keyboard,
+        keyboard_factory_kwargs={},
     )
     await query.answer()
 
@@ -196,11 +206,20 @@ async def menu_unban_handler(
     report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
-    await _show_banned_list_page(
+    _ = translator.gettext
+
+    result = await report_service.get_banned_users_info(page=0)
+
+    await display_paginated_list(
         target=cast(Message, query.message),
-        report_service=report_service,
         bot=bot,
         translator=translator,
-        page=0,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Banned Users"),
+        empty_list_text=_("The ban list is empty."),
+        keyboard_factory=create_banned_user_list_keyboard,
+        keyboard_factory_kwargs={},
     )
     await query.answer()

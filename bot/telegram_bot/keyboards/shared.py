@@ -199,7 +199,7 @@ async def _add_pagination_controls(
         builder.row(*pagination_buttons)
 
 
-async def _build_user_toggle_keyboard(
+async def create_toggle_mute_keyboard(
     translator: NullTranslations,
     page_items: list[Any],
     current_page: int,

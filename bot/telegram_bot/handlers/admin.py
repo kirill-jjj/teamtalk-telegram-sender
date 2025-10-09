@@ -10,19 +10,20 @@ from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.command_bus.exceptions import NoHandlerFoundError
-from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
+from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.services.schemas import UserDTO
+from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.filters.admin import IsAdmin
-from bot.telegram_bot.keyboards import create_user_selection_keyboard
-from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import (
-    _show_banned_list_page,
-    _show_subscriber_list_page,
+from bot.telegram_bot.keyboards import (
+    create_banned_user_list_keyboard,
+    create_subscriber_list_keyboard,
+    create_user_selection_keyboard,
 )
+from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.ui_utils import display_paginated_list
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,7 @@ async def show_user_buttons_from_list(
         )
         return
 
-    sorted_users = sorted(users, key=lambda u: u.nickname.lower())
-    builder = await create_user_selection_keyboard(sorted_users, command_type)
+    builder = await create_user_selection_keyboard(users, command_type)
 
     command_text_map = {
         AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(
@@ -63,36 +63,42 @@ async def show_user_buttons_from_list(
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
 
-async def _handle_moderation_command(
+async def show_moderation_user_list(
     message: Message,
     command_type: AdminCommand,
     translator: NullTranslations,
     command_bus: CommandBus,
     settings: Settings,
+    report_service: ReportService,
+    cache_service: CacheService,
+    user_settings_service: UserSettingsService,
 ) -> None:
     """Generic handler for moderation commands like kick and ban."""
     _ = translator.gettext
-    try:
-        result: GetOnlineUsersResult = await command_bus.execute(
-            GetOnlineUsersCommand(
-                is_caller_admin=True, lang_code=translator.info().get("language", "en")
-            )
-        )
-    except NoHandlerFoundError:
-        logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-        await message.reply(_("This feature is temporarily unavailable."))
+    if not message.from_user:
         return
 
-    if result.success and result.users:
+    (
+        sorted_users,
+        error_message,
+    ) = await report_service.get_sorted_online_users_for_moderation(
+        telegram_user_id=message.from_user.id,
+        translator=translator,
+        cache_service=cache_service,
+        user_settings_service=user_settings_service,
+        command_bus=command_bus,
+    )
+
+    if sorted_users:
         await show_user_buttons_from_list(
             message,
             command_type,
             translator,
-            result.users,
+            sorted_users,
             settings.teamtalk.host_name,
         )
     else:
-        await message.reply(result.error_message or _("Failed to get user list."))
+        await message.reply(error_message or _("Failed to get user list."))
 
 
 @admin_router.message(Command("kick"), IsAdmin())
@@ -101,10 +107,20 @@ async def on_kick_command(
     translator: Annotated[NullTranslations, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
+    cache_service: Annotated[CacheService, FromDishka()],
+    user_settings_service: Annotated[UserSettingsService, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
-    await _handle_moderation_command(
-        message, AdminCommand.KICK, translator, command_bus, settings
+    await show_moderation_user_list(
+        message,
+        AdminCommand.KICK,
+        translator,
+        command_bus,
+        settings,
+        report_service,
+        cache_service,
+        user_settings_service,
     )
 
 
@@ -114,10 +130,20 @@ async def on_ban_command(
     translator: Annotated[NullTranslations, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
+    report_service: Annotated[ReportService, FromDishka()],
+    cache_service: Annotated[CacheService, FromDishka()],
+    user_settings_service: Annotated[UserSettingsService, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
-    await _handle_moderation_command(
-        message, AdminCommand.BAN, translator, command_bus, settings
+    await show_moderation_user_list(
+        message,
+        AdminCommand.BAN,
+        translator,
+        command_bus,
+        settings,
+        report_service,
+        cache_service,
+        user_settings_service,
     )
 
 
@@ -129,12 +155,21 @@ async def on_subscribers_command(
     report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
-    await _show_subscriber_list_page(
+    _ = translator.gettext
+
+    result = await report_service.get_subscribers_info(page=0)
+
+    await display_paginated_list(
         target=message,
-        report_service=report_service,
         bot=bot,
         translator=translator,
-        page=0,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Here is the list of subscribers."),
+        empty_list_text=_("No subscribers found."),
+        keyboard_factory=create_subscriber_list_keyboard,
+        keyboard_factory_kwargs={},
     )
 
 
@@ -146,12 +181,21 @@ async def on_unban_command(
     report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
-    await _show_banned_list_page(
+    _ = translator.gettext
+
+    result = await report_service.get_banned_users_info(page=0)
+
+    await display_paginated_list(
         target=message,
-        report_service=report_service,
         bot=bot,
         translator=translator,
-        page=0,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Banned Users"),
+        empty_list_text=_("The ban list is empty."),
+        keyboard_factory=create_banned_user_list_keyboard,
+        keyboard_factory_kwargs={},
     )
 
 

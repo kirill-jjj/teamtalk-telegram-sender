@@ -18,6 +18,7 @@ from bot.models import (
     NotificationSetting,
     UserSettings,
 )
+from bot.services.schemas import UserSettingsWithDisplayInfo
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -26,7 +27,6 @@ from bot.telegram_bot.callback_data import (
     PaginateMuteListCallback,
     SubscriberCallback,
 )
-from bot.telegram_bot.formatters import format_telegram_user_display_name
 from bot.telegram_bot.handlers.callback_handlers.subscriber_management.actions import (
     refresh_subscriber_view,
 )
@@ -173,21 +173,6 @@ async def admin_toggle_noon(
         await query.answer(_("Failed to toggle NOON status."), show_alert=True)
 
 
-async def _fetch_mute_list_data(
-    uow: IUnitOfWork, target_telegram_id: int, bot: EventBot
-) -> tuple[UserSettings | None, str]:
-    """Fetches user settings and their display name for the mute list view."""
-    user_settings = await uow.users.get_by_id(target_telegram_id)
-    display_name = str(target_telegram_id)
-    if user_settings:
-        try:
-            chat_info = await bot.get_chat(target_telegram_id)
-            display_name = format_telegram_user_display_name(chat_info)
-        except Exception:
-            logger.warning("Could not fetch display name for %s", target_telegram_id)
-    return user_settings, display_name
-
-
 def _build_mute_list_title(
     translator: NullTranslations,
     user_settings: UserSettings,
@@ -220,19 +205,29 @@ async def admin_view_mute_list(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Entry point for an admin to view a specific subscriber's mute list."""
-    async with uow:
-        await _display_subscriber_mute_list_page(
-            query=query,
-            translator=translator,
-            bot=bot,
-            uow=uow,
-            target_telegram_id=callback_data.target_telegram_id,
-            subscriber_list_return_page=callback_data.page,
-            mute_list_page_num=0,
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+    user_settings_with_display_info = (
+        await user_settings_service.get_user_settings_with_display_name(
+            target_telegram_id, translator.info().get("language", "en"), bot
         )
-    await query.answer()
+    )
+    if not user_settings_with_display_info:
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        return
+
+    await _display_subscriber_mute_list_page(
+        query=query,
+        translator=translator,
+        bot=bot,
+        uow=uow,
+        user_settings_with_display_info=user_settings_with_display_info,
+        subscriber_list_return_page=callback_data.page,
+        mute_list_page_num=0,
+    )
 
 
 async def _display_subscriber_mute_list_page(
@@ -240,18 +235,16 @@ async def _display_subscriber_mute_list_page(
     translator: NullTranslations,
     bot: EventBot,
     uow: IUnitOfWork,
-    target_telegram_id: int,
+    user_settings_with_display_info: UserSettingsWithDisplayInfo,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    user_settings, display_name = await _fetch_mute_list_data(
-        uow, target_telegram_id, bot
-    )
-    if not user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
+    user_settings = user_settings_with_display_info.user_settings
+    display_name = user_settings_with_display_info.display_name
+    target_telegram_id = user_settings.telegram_id
+
     if not query.bot:
         return
 
@@ -292,15 +285,28 @@ async def paginate_mute_list(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     uow: FromDishka[IUnitOfWork],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handles pagination for the admin's view of a subscriber's mute list."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+
+    user_settings_with_display_info = (
+        await user_settings_service.get_user_settings_with_display_name(
+            target_telegram_id, translator.info().get("language", "en"), bot
+        )
+    )
+    if not user_settings_with_display_info:
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        return
+
     async with uow:
         await _display_subscriber_mute_list_page(
             query=query,
             translator=translator,
             bot=bot,
             uow=uow,
-            target_telegram_id=callback_data.target_telegram_id,
+            user_settings_with_display_info=user_settings_with_display_info,
             subscriber_list_return_page=callback_data.subscriber_context_page,
             mute_list_page_num=callback_data.mute_list_page,
         )

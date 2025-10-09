@@ -25,11 +25,12 @@ from bot.telegram_bot.callback_data import (
 )
 from bot.telegram_bot.formatters import format_subscriber_details
 from bot.telegram_bot.handlers.decorators import ensure_message_context
-from bot.telegram_bot.keyboards import create_subscriber_action_menu_keyboard
-from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import (
-    _show_subscriber_list_page,
+from bot.telegram_bot.keyboards import (
+    create_subscriber_action_menu_keyboard,
+    create_subscriber_list_keyboard,
 )
+from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.ui_utils import display_paginated_list
 
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
@@ -104,12 +105,21 @@ async def _refresh_and_display_subscriber_list(
     translator: NullTranslations,
 ) -> None:
     """Refresh and display paginated subscribers list via the central display func."""
-    await _show_subscriber_list_page(
+    _ = translator.gettext
+
+    result = await report_service.get_subscribers_info(page=return_page)
+
+    await display_paginated_list(
         target=query,
-        report_service=report_service,
         bot=bot,
         translator=translator,
-        page=return_page,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Here is the list of subscribers."),
+        empty_list_text=_("No subscribers found."),
+        keyboard_factory=create_subscriber_list_keyboard,
+        keyboard_factory_kwargs={},
     )
 
 
@@ -245,12 +255,13 @@ async def view_subscriber(
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handle viewing details and actions for a subscriber via the display helper."""
+    _ = translator.gettext
     user_settings = await user_settings_service.get_or_create(
         callback_data.telegram_id,
         "en",  # lang doesn't matter here
     )
     if not user_settings:
-        await query.answer("User not found.", show_alert=True)
+        await query.answer(_("User not found."), show_alert=True)
         return
 
     await _display_subscriber_view(

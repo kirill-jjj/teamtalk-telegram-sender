@@ -58,7 +58,9 @@ async def create_banned_user_list_keyboard(
     ) -> list[InlineKeyboardButton]:
         user_info_parts = [user.display_name]
         if user.teamtalk_username:
-            user_info_parts.append(f"TT: {user.teamtalk_username}")
+            user_info_parts.append(
+                _("TT: {username}").format(username=user.teamtalk_username)
+            )
         button_text = ", ".join(user_info_parts)
         return [
             InlineKeyboardButton(
@@ -104,7 +106,9 @@ async def create_subscriber_list_keyboard(
     ) -> InlineKeyboardButton:
         user_info_parts = [subscriber.display_name]
         if subscriber.teamtalk_username:
-            user_info_parts.append(f"TT: {subscriber.teamtalk_username}")
+            user_info_parts.append(
+                _("TT: {username}").format(username=subscriber.teamtalk_username)
+            )
         button_text = ", ".join(user_info_parts)
         return InlineKeyboardButton(
             text=button_text,

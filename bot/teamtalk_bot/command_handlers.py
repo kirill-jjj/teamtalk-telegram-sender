@@ -80,37 +80,6 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     return parts_to_send_list
 
 
-async def _send_long_tt_reply(
-    reply_method: Callable[[str], None],
-    text: str,
-    max_len_bytes: int = TT_MAX_MESSAGE_BYTES,
-) -> None:
-    """Splits a long text message into parts suitable for TeamTalk and sends them."""
-    if not text:
-        return
-
-    parts_to_send_list = await asyncio.to_thread(
-        _split_text_for_tt, text, max_len_bytes
-    )
-
-    for part_idx, part_to_send_str in enumerate(parts_to_send_list):
-        if part_to_send_str.strip():
-            try:
-                reply_method(part_to_send_str)
-                encoded_len = len(part_to_send_str.encode("utf-8", errors="ignore"))
-                logger.debug(
-                    "Sent part %s/%s of TT message, length %s bytes.",
-                    part_idx + 1,
-                    len(parts_to_send_list),
-                    encoded_len,
-                )
-                if part_idx < len(parts_to_send_list) - 1:
-                    await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
-            except pytalk.exceptions.TeamTalkException:
-                logger.exception("Error sending part %s of TT message.", part_idx + 1)
-                break
-
-
 def _is_tt_admin(
     func: Callable[..., Awaitable[None]],
 ) -> Callable[..., Awaitable[None]]:
@@ -134,7 +103,9 @@ def _is_tt_admin(
                 ttstr(tt_message.user.username),
                 func.__name__,
             )
-            tt_message.reply(_("You are not authorized to perform this action."))
+            await self._reply_to_tt_message(
+                tt_message.reply, _("You are not authorized to perform this action.")
+            )
             return
         await func(self, tt_message, translator, *args, **kwargs)
 
@@ -159,6 +130,36 @@ class PrivateMessageCommandHandlers:
         self.moderation_service = moderation_service
         self.uow = uow
 
+    async def _reply_to_tt_message(
+        self, reply_method: Callable[[str], None], text: str
+    ) -> None:
+        """Splits a long text message into parts for TeamTalk and sends them."""
+        if not text:
+            return
+
+        parts_to_send_list = await asyncio.to_thread(
+            _split_text_for_tt, text, TT_MAX_MESSAGE_BYTES
+        )
+
+        for part_idx, part_to_send_str in enumerate(parts_to_send_list):
+            if part_to_send_str.strip():
+                try:
+                    reply_method(part_to_send_str)
+                    encoded_len = len(part_to_send_str.encode("utf-8", errors="ignore"))
+                    logger.debug(
+                        "Sent part %s/%s of TT message, length %s bytes.",
+                        part_idx + 1,
+                        len(parts_to_send_list),
+                        encoded_len,
+                    )
+                    if part_idx < len(parts_to_send_list) - 1:
+                        await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
+                except pytalk.exceptions.TeamTalkException:
+                    logger.exception(
+                        "Error sending part %s of TT message.", part_idx + 1
+                    )
+                    break
+
     async def on_subscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
@@ -181,7 +182,7 @@ class PrivateMessageCommandHandlers:
             ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
             payload=ttstr(tt_message.user.username),
         )
-        tt_message.reply(reply_text)
+        await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     async def on_unsubscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
@@ -192,7 +193,7 @@ class PrivateMessageCommandHandlers:
             action=DeeplinkAction.UNSUBSCRIBE,
             ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
         )
-        tt_message.reply(reply_text)
+        await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     @_is_tt_admin
     async def on_add_admin(
@@ -274,4 +275,4 @@ class PrivateMessageCommandHandlers:
             error_messages=error_messages,
             translator=translator,
         )
-        tt_message.reply(response_message)
+        await self._reply_to_tt_message(tt_message.reply, response_message)

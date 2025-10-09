@@ -9,7 +9,9 @@ from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
-from bot.services.schemas import AccountManagementData
+from bot.services.schemas import AccountManagementData, UserSettingsWithDisplayInfo
+from bot.telegram_bot.api import get_display_name_for_id
+from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,19 @@ class UserSettingsService:
         """
         self._uow = uow
         self._cache = cache
+
+    async def get_user_settings_with_display_name(
+        self, telegram_id: int, default_lang: str, bot: EventBot
+    ) -> UserSettingsWithDisplayInfo | None:
+        """Retrieves user settings and their display name."""
+        user_settings = await self.get_or_create(telegram_id, default_lang)
+        if not user_settings:
+            return None
+
+        display_name = await get_display_name_for_id(bot, telegram_id)
+        return UserSettingsWithDisplayInfo(
+            user_settings=user_settings, display_name=display_name
+        )
 
     async def get_account_management_data(
         self, telegram_id: int

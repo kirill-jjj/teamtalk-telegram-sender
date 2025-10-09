@@ -28,8 +28,8 @@ from bot.telegram_bot.callback_data import (
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
-    _build_user_toggle_keyboard,
     _create_back_button_text,
+    create_toggle_mute_keyboard,
 )
 from bot.telegram_bot.ui_utils import (
     display_paginated_list,
@@ -78,7 +78,7 @@ async def _display_user_list(
         page=current_page_idx,
         title_text=title_text,
         empty_list_text=empty_list_text,
-        keyboard_factory=_build_user_toggle_keyboard,
+        keyboard_factory=create_toggle_mute_keyboard,
         keyboard_factory_kwargs=keyboard_factory_kwargs,
         page_size=USERS_PER_PAGE,
         server_host_for_display=server_host_for_display,

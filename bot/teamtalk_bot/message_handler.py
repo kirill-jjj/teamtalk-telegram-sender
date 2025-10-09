@@ -16,7 +16,6 @@ from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.command_handlers import (
     PrivateMessageCommandHandlers,
-    _send_long_tt_reply,
 )
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.teamtalk_bot.formatters import (
@@ -130,7 +129,7 @@ class MessageHandler:
         help_text = self._build_teamtalk_help_message(
             translator, is_admin=is_main_tt_admin
         )
-        await _send_long_tt_reply(tt_message.reply, help_text)
+        await self.command_handlers._reply_to_tt_message(tt_message.reply, help_text)
 
     async def _on_unknown(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
@@ -149,7 +148,7 @@ class MessageHandler:
         reply_text = _("Unknown command. Available commands: {commands}.").format(
             commands=available_commands
         )
-        tt_message.reply(reply_text)
+        await self.command_handlers._reply_to_tt_message(tt_message.reply, reply_text)
         if self.connection:
             logger.warning(
                 "Unknown TT command from %s on %s: %s",

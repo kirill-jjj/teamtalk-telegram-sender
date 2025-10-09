@@ -78,3 +78,10 @@ class AccountManagementData(BaseModel):
     """A DTO for data required for account management view."""
 
     current_tt_username: str | None
+
+
+class UserSettingsWithDisplayInfo(BaseModel):
+    """DTO for UserSettings along with the user's Telegram display name."""
+
+    user_settings: UserSettings
+    display_name: str
