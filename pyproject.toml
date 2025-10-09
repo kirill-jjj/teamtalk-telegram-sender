@@ -45,7 +45,7 @@ dependencies = [
     "cachetools~=6.1",
     "toml~=0.10", # For writing TOML files (e.g., in env-to-toml script)
     "types-toml", # For mypy toml type checking
-    "dishka[aiogram]~=1.6"
+    "dishka~=1.7.2"
 ]
 
 [project.urls]
@@ -152,7 +152,7 @@ dev = [
     "ruff",
     "types-toml",
     "pydantic", # Add pydantic to dev dependencies for mypy plugin
-    "dishka[aiogram]~=1.6"
+    "dishka~=1.7.2"
 ]
 
 [tool.mypy]
