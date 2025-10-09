@@ -18,11 +18,12 @@ from bot.commands import (
     ModerationResult,
 )
 from bot.config import Settings
-from bot.services.schemas import UserAccountInfo
+from bot.services.schemas import UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import (
     get_effective_server_name,
     get_tt_user_display_name,
+    get_user_display_channel_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,13 +38,7 @@ class TeamTalkCommandHandlers:
         translator_factory: Callable[[str], NullTranslations],
         settings: Settings,
     ) -> None:
-        """Initializes the TeamTalkCommandHandlers.
-
-        Args:
-            tt_connection: The TeamTalk connection instance.
-            translator_factory: The translator factory instance.
-            settings: The application settings.
-        """
+        """Initializes the TeamTalkCommandHandlers."""
         self._tt_connection = tt_connection
         self._translator_factory = translator_factory
         self._settings = settings
@@ -61,9 +56,22 @@ class TeamTalkCommandHandlers:
         server_name = get_effective_server_name(
             self._tt_connection.instance, translator, self._settings
         )
+
+        raw_users = list(self._tt_connection.cache_manager.online_users_cache.values())
+        user_dtos = [
+            UserDTO(
+                id=user.id,
+                nickname=get_tt_user_display_name(user, translator),
+                channel_name=get_user_display_channel_name(
+                    user, is_caller_admin=command.is_caller_admin, translator=translator
+                ),
+            )
+            for user in raw_users
+        ]
+
         return GetOnlineUsersResult(
             success=True,
-            users=list(self._tt_connection.cache_manager.online_users_cache.values()),
+            users=user_dtos,
             server_name=server_name,
         )
 

@@ -6,7 +6,6 @@ from typing import Any
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-import pytalk
 
 from bot.core.enums import (
     AdminCommand,
@@ -16,8 +15,7 @@ from bot.core.enums import (
 )
 from bot.core.languages import LanguageInfo
 from bot.models import MuteListMode, NotificationSetting
-from bot.services.schemas import SubscriberInfo, UserAccountInfo
-from bot.teamtalk_bot.formatters import get_tt_user_display_name
+from bot.services.schemas import SubscriberInfo, UserAccountInfo, UserDTO
 from bot.telegram_bot.callback_data import (
     AdminCallback,
     AdminSetSubscriberLanguageCallback,
@@ -129,21 +127,14 @@ async def create_subscriber_list_keyboard(
 
 
 async def create_user_selection_keyboard(
-    translator: NullTranslations,
-    users_to_display: list[pytalk.user.User],
+    users_to_display: list[UserDTO],
     command_type: AdminCommand,
 ) -> InlineKeyboardBuilder:
     """Creates a keyboard with buttons for each user in the provided list."""
     builder = InlineKeyboardBuilder()
     for user_obj in users_to_display:
-        if not user_obj:
-            continue
-        user_nickname = get_tt_user_display_name(user_obj, translator)
-        if not hasattr(user_obj, "id"):
-            continue
-        user_id = user_obj.id
-        callback_data = AdminCallback(action=command_type, user_id=user_id).pack()
-        builder.button(text=user_nickname, callback_data=callback_data)
+        callback_data = AdminCallback(action=command_type, user_id=user_obj.id).pack()
+        builder.button(text=user_obj.nickname, callback_data=callback_data)
     builder.adjust(2)
     return builder
 

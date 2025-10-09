@@ -8,7 +8,6 @@ from aiogram import Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
-import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError
@@ -16,7 +15,7 @@ from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.services.report_service import ReportService
-from bot.teamtalk_bot.formatters import get_tt_user_display_name
+from bot.services.schemas import UserDTO
 from bot.telegram_bot.filters.admin import IsAdmin
 from bot.telegram_bot.keyboards import create_user_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
@@ -34,7 +33,7 @@ async def show_user_buttons_from_list(
     message: Message,
     command_type: AdminCommand,
     translator: NullTranslations,
-    users: list[pytalk.user.User],
+    users: list[UserDTO],
     server_host: str,
 ) -> None:
     """Creates and sends a keyboard with a list of users for moderation."""
@@ -48,12 +47,8 @@ async def show_user_buttons_from_list(
         )
         return
 
-    sorted_users = sorted(
-        users, key=lambda u: get_tt_user_display_name(u, translator).lower()
-    )
-    builder = await create_user_selection_keyboard(
-        translator, sorted_users, command_type
-    )
+    sorted_users = sorted(users, key=lambda u: u.nickname.lower())
+    builder = await create_user_selection_keyboard(sorted_users, command_type)
 
     command_text_map = {
         AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(

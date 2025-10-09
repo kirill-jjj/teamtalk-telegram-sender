@@ -7,6 +7,14 @@ from pydantic import BaseModel, Field
 from bot.models import UserSettings
 
 
+class UserDTO(BaseModel):
+    """Data Transfer Object for a user, used for decoupling."""
+
+    id: int
+    nickname: str
+    channel_name: str
+
+
 class UserAccountInfo(BaseModel):
     """A simple DTO for TeamTalk user account information."""
 
