@@ -91,34 +91,26 @@ async def _display_internal_user_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
+    moderation_service: ModerationService,  # Add service dependency
     list_type: UserListAction,
     page: int = 0,
 ) -> None:
     _ = translator.gettext
 
-    items = [muted.muted_teamtalk_username for muted in user_settings.muted_users_list]
-
-    header_text_str, empty_list_text_str = "", ""
-    if user_settings.mute_list_mode == MuteListMode.blacklist:
-        header_text_str = _("Blacklisted Users (Block List)")
-        empty_list_text_str = _("Your blacklist is empty.")
-    elif user_settings.mute_list_mode == MuteListMode.whitelist:
-        header_text_str = _("Whitelisted Users (Allow List)")
-        empty_list_text_str = _("Your whitelist is empty.")
-    else:
-        logger.error("Unknown mute_list_mode '%s'", user_settings.mute_list_mode)
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
+    view_data = moderation_service.prepare_mute_list_view_data(
+        user_settings, translator
+    )
 
     await _display_user_list(
         callback_query=callback_query,
         translator=translator,
         user_settings=user_settings,
         page=page,
-        items=items,
+        items=view_data.items,
+        # Sorting is now done in service, but helper still needs it
         sort_key_extractor=lambda x: x.lower(),
-        title_text=header_text_str,
-        empty_list_text=empty_list_text_str,
+        title_text=view_data.title,
+        empty_list_text=view_data.empty_list_text,
         keyboard_factory_kwargs={
             "user_settings": user_settings,
             "list_type_for_callback": list_type,
@@ -225,6 +217,7 @@ async def _refresh_mute_related_ui(
     translator: NullTranslations,
     user_settings: UserSettings,
     command_bus: CommandBus,
+    moderation_service: ModerationService, # Add missing parameter
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -248,6 +241,7 @@ async def _refresh_mute_related_ui(
             callback_query,
             translator,
             user_settings,
+            moderation_service, # Pass the service
             list_type_user_was_on,
             current_page_for_refresh,
         )
@@ -354,6 +348,7 @@ async def display_internal_user_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
+    moderation_service: FromDishka[ModerationService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
@@ -361,6 +356,7 @@ async def display_internal_user_list(
         callback_query,
         translator,
         user_settings,
+        moderation_service,
         callback_data.list_type,
         callback_data.page,
     )
@@ -422,5 +418,6 @@ async def toggle_user_mute(
             translator,
             toggle_result.user_settings,
             command_bus,
+            moderation_service,
             callback_data,
         )

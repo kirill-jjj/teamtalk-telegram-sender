@@ -48,3 +48,11 @@ class BatchOperationResult(BaseModel):
 
     successful_ids: list[int] = Field(default_factory=list)
     failed_ids: list[int] = Field(default_factory=list)
+
+
+class MuteListViewData(BaseModel):
+    """A DTO for data required to render a mute list view."""
+
+    items: list[str]
+    title: str
+    empty_list_text: str

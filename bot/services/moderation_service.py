@@ -12,9 +12,13 @@ from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.models import Admin, MutedUser, UserSettings
+from bot.models import Admin, MutedUser, MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
-from bot.services.schemas import BatchOperationResult, OperationResult
+from bot.services.schemas import (
+    BatchOperationResult,
+    MuteListViewData,
+    OperationResult,
+)
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.telegram_bot.callback_data import ToggleMuteCallback
@@ -40,6 +44,27 @@ class ModerationService:
         self._subscription_service = subscription_service
         self._cache = cache
         self._event_bus = event_bus
+
+    def prepare_mute_list_view_data(
+        self, user_settings: UserSettings, translator: NullTranslations
+    ) -> MuteListViewData:
+        """Prepares all necessary data for rendering the mute list view."""
+        _ = translator.gettext
+        items = sorted(
+            [muted.muted_teamtalk_username for muted in user_settings.muted_users_list],
+            key=str.lower,
+        )
+
+        if user_settings.mute_list_mode == MuteListMode.blacklist:
+            title = _("Blacklisted Users (Block List)")
+            empty_list_text = _("Your blacklist is empty.")
+        else:  # Whitelist
+            title = _("Whitelisted Users (Allow List)")
+            empty_list_text = _("Your whitelist is empty.")
+
+        return MuteListViewData(
+            items=items, title=title, empty_list_text=empty_list_text
+        )
 
     async def add_admin(self, telegram_id: int) -> bool:
         """Adds a new admin, updating DB, cache, and publishing an event."""
