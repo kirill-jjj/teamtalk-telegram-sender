@@ -90,34 +90,6 @@ class ReportService:
             grouped_data=grouped_data,
         )
 
-    def get_help_text(self, translator: NullTranslations, *, is_admin: bool) -> str:
-        """Builds the help message for Telegram users."""
-        _ = translator.gettext
-        parts = [
-            _("<b>Available Commands:</b>"),
-            _(
-                "/who - Show online users.\n"
-                "/settings - Access the interactive settings menu "
-                "(language, notifications, mute lists, NOON feature).\n"
-                "/help - Show this help message.\n"
-                "(Note: `/start` is used to initiate the bot and process deeplinks.)"
-            ),
-        ]
-        if is_admin:
-            parts.extend(
-                [
-                    _("\n<b>Admin Commands:</b>"),
-                    _(
-                        "/kick - Kick a user from the server (via buttons).\n"
-                        "/ban - Ban a user from the server (via buttons).\n"
-                        "/unban - Unban a user from the server "
-                        "(shows a list of banned users).\n"
-                        "/subscribers - View and manage subscribed users."
-                    ),
-                ]
-            )
-        return "\n".join(parts)
-
     async def get_subscribers_info(self, page: int) -> PaginatedResult[SubscriberInfo]:
         """Fetches and prepares a paginated list of subscribers."""
         async with self._uow:
@@ -142,9 +114,9 @@ class ReportService:
                         display_name=display_names.get(
                             sub.telegram_id, str(sub.telegram_id)
                         ),
-                        teamtalk_username=settings.teamtalk_username
-                        if settings
-                        else None,
+                        teamtalk_username=(
+                            settings.teamtalk_username if settings else None
+                        ),
                     )
                 )
 

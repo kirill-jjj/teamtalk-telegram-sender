@@ -130,3 +130,32 @@ def format_who_report_to_html(
     content = as_list(header, as_list(*channel_parts, sep="\n"), sep="\n\n")
 
     return content.as_html()
+
+
+def format_help_text(translator: NullTranslations, *, is_admin: bool) -> str:
+    """Builds the help message for Telegram users."""
+    _ = translator.gettext
+    parts = [
+        _("<b>Available Commands:</b>"),
+        _(
+            "/who - Show online users.\n"
+            "/settings - Access the interactive settings menu "
+            "(language, notifications, mute lists, NOON feature).\n"
+            "/help - Show this help message.\n"
+            "(Note: `/start` is used to initiate the bot and process deeplinks.)"
+        ),
+    ]
+    if is_admin:
+        parts.extend(
+            [
+                _("\n<b>Admin Commands:</b>"),
+                _(
+                    "/kick - Kick a user from the server (via buttons).\n"
+                    "/ban - Ban a user from the server (via buttons).\n"
+                    "/unban - Unban a user from the server "
+                    "(shows a list of banned users).\n"
+                    "/subscribers - View and manage subscribed users."
+                ),
+            ]
+        )
+    return "\n".join(parts)

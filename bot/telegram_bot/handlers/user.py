@@ -21,7 +21,7 @@ from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.filters.subscription import IsSubscribed
-from bot.telegram_bot.formatters import format_who_report_to_html
+from bot.telegram_bot.formatters import format_help_text, format_who_report_to_html
 from bot.telegram_bot.keyboards import (
     create_main_menu_keyboard,
     create_main_settings_keyboard,
@@ -129,7 +129,7 @@ async def on_help_command(
         return
 
     is_admin = cache.is_admin(message.from_user.id)
-    help_text = report_service.get_help_text(translator, is_admin=is_admin)
+    help_text = format_help_text(translator, is_admin=is_admin)
     await message.reply(help_text, parse_mode="HTML")
 
 
