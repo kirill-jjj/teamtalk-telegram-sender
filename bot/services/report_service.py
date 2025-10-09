@@ -73,17 +73,13 @@ class ReportService:
 
         # Grouping logic is now part of the service
         channels_data: dict[str, list[str]] = {}
-        user_count = 0
         for user in result.users:
-            channel_name = get_user_display_channel_name(
-                user, is_caller_admin=is_admin, translator=translator
-            )
+            channel_name = user.channel_name
             if channel_name not in channels_data:
                 channels_data[channel_name] = []
-            channels_data[channel_name].append(
-                get_tt_user_display_name(user, translator)
-            )
-            user_count += 1
+            channels_data[channel_name].append(user.nickname)
+
+        user_count = len(result.users)
 
         grouped_data = [
             WhoChannelGroup(
