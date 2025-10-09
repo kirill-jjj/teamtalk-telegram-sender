@@ -187,57 +187,23 @@ class AppProvider(Provider):
 class RequestProvider(Provider):
     """Provides request-scoped dependencies."""
 
-
-
-
-
     scope = Scope.REQUEST
 
-
-
-
-
     @provide
-
-
     def get_report_service(
-
-
         self,
-
-
         settings: FromDishka[Settings],
-
-
         uow: FromDishka[IUnitOfWork],
-
-
         bot: FromDishka[EventBot],
-
-
     ) -> ReportService:
         """Provides a ReportService."""
         return ReportService(
-
-
             settings=settings,
-
-
             uow=uow,
-
-
             bot=bot,
-
-
         )
 
-
-
-
-
     @provide
-
-
     def get_command_router(self) -> CommandRouter:
         """Provides a CommandRouter instance."""
         return CommandRouter()
