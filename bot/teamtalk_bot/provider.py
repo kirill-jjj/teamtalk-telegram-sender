@@ -14,9 +14,7 @@ from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
+from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.services.report_service import ReportService
@@ -156,17 +154,13 @@ class TeamTalkProvider(Provider):
     def get_report_service(
         self,
         settings: FromDishka[Settings],
-        user_repo: FromDishka[UserRepository],
-        subscriber_repo: FromDishka[SubscriberRepository],
-        ban_repo: FromDishka[BanRepository],
+        uow: FromDishka[IUnitOfWork],
         bot: FromDishka[EventBot],
     ) -> ReportService:
         """Provides a ReportService."""
         return ReportService(
             settings=settings,
-            user_repo=user_repo,
-            subscriber_repo=subscriber_repo,
-            ban_repo=ban_repo,
+            uow=uow,
             bot=bot,
         )
 

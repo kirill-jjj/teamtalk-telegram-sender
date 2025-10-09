@@ -15,9 +15,6 @@ from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
-from bot.database.repositories.ban_repository import BanRepository
-from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.database.repositories.user_repository import UserRepository
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
@@ -163,24 +160,6 @@ class AppProvider(Provider):
         return NotificationRecipientService(session_factory, cache)
 
     @provide
-    def get_report_service(
-        self,
-        settings: FromDishka[Settings],
-        user_repo: FromDishka[UserRepository],
-        subscriber_repo: FromDishka[SubscriberRepository],
-        ban_repo: FromDishka[BanRepository],
-        bot: FromDishka[EventBot],
-    ) -> ReportService:
-        """Provides a ReportService."""
-        return ReportService(
-            settings=settings,
-            user_repo=user_repo,
-            subscriber_repo=subscriber_repo,
-            ban_repo=ban_repo,
-            bot=bot,
-        )
-
-    @provide
     def get_telegram_notification_handler(
         self,
         event_bot: FromDishka[EventBot],
@@ -204,34 +183,61 @@ class AppProvider(Provider):
             session_factory=session_factory,
         )
 
-    @provide
-    def get_user_repository(
-        self, session_factory: FromDishka[AsyncSessionFactoryType]
-    ) -> UserRepository:
-        """Provides a UserRepository instance."""
-        return UserRepository(session_factory())
-
-    @provide
-    def get_subscriber_repository(
-        self, session_factory: FromDishka[AsyncSessionFactoryType]
-    ) -> SubscriberRepository:
-        """Provides a SubscriberRepository instance."""
-        return SubscriberRepository(session_factory())
-
-    @provide
-    def get_ban_repository(
-        self, session_factory: FromDishka[AsyncSessionFactoryType]
-    ) -> BanRepository:
-        """Provides a BanRepository instance."""
-        return BanRepository(session_factory())
-
 
 class RequestProvider(Provider):
     """Provides request-scoped dependencies."""
 
+
+
+
+
     scope = Scope.REQUEST
 
+
+
+
+
     @provide
+
+
+    def get_report_service(
+
+
+        self,
+
+
+        settings: FromDishka[Settings],
+
+
+        uow: FromDishka[IUnitOfWork],
+
+
+        bot: FromDishka[EventBot],
+
+
+    ) -> ReportService:
+        """Provides a ReportService."""
+        return ReportService(
+
+
+            settings=settings,
+
+
+            uow=uow,
+
+
+            bot=bot,
+
+
+        )
+
+
+
+
+
+    @provide
+
+
     def get_command_router(self) -> CommandRouter:
         """Provides a CommandRouter instance."""
         return CommandRouter()
