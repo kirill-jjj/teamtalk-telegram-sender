@@ -9,6 +9,7 @@ from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
+from bot.services.schemas import AccountManagementData
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,18 @@ class UserSettingsService:
         """
         self._uow = uow
         self._cache = cache
+
+    async def get_account_management_data(
+        self, telegram_id: int
+    ) -> AccountManagementData:
+        """Fetches data needed for the account management view."""
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            return AccountManagementData(
+                current_tt_username=user_settings.teamtalk_username
+                if user_settings
+                else None
+            )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def get_or_create(self, telegram_id: int, default_lang: str) -> UserSettings:
@@ -219,21 +232,22 @@ class UserSettingsService:
         self,
         telegram_id: int,
         actor: Actor = Actor.ADMIN,
-        uow: IUnitOfWork | None = None,
     ) -> tuple[UserSettings | None, str | None]:
         """Unlinks a TeamTalk account from a user's settings."""
-        active_uow = uow or self._uow
-        user_settings = await active_uow.users.get_by_id(telegram_id)
-        if not user_settings:
-            return None, None
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                return None, None
 
-        original_username = user_settings.teamtalk_username
-        if not original_username:
-            return user_settings, None
+            original_username = user_settings.teamtalk_username
+            if not original_username:
+                return user_settings, None
 
-        log_context = f" by {actor.value}"
+            log_context = f" by {actor.value}"
 
-        updated_settings = await self._update_setting(
-            user_settings, "teamtalk_username", None, log_context, uow=active_uow
-        )
-        return updated_settings, original_username
+            updated_settings = await self._update_setting(
+                user_settings, "teamtalk_username", None, log_context, uow=self._uow
+            )
+            if updated_settings:
+                await self._uow.commit()
+            return updated_settings, original_username

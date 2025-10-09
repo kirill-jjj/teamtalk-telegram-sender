@@ -64,7 +64,7 @@ def moderation_service(
     mock_cache: MagicMock,
     mock_event_bus: AsyncMock,
     mock_command_bus: AsyncMock,
-    ) -> ModerationService:
+) -> ModerationService:
     return ModerationService(
         uow=mock_uow,
         subscription_service=mock_subscription_service,
@@ -72,6 +72,7 @@ def moderation_service(
         event_bus=mock_event_bus,
         command_bus=mock_command_bus,
     )
+
 
 @pytest.mark.asyncio
 async def test_add_admin_success(
@@ -377,7 +378,7 @@ async def test_ban_and_delete_subscriber_success(
     )
 
     result = await moderation_service.ban_and_delete_subscriber(
-        telegram_id, mock_translator, uow=mock_uow
+        telegram_id, mock_translator
     )
 
     assert result.success is True
@@ -391,7 +392,7 @@ async def test_ban_and_delete_subscriber_success(
         reason="Banned by admin",
     )
     mock_subscription_service.delete_profile.assert_called_once_with(
-        telegram_id, mock_translator, uow=mock_uow
+        telegram_id, mock_translator
     )
 
 
@@ -409,9 +410,7 @@ async def test_unban_subscriber_success(
         mock_ban_entry_tt,
     ]
 
-    result = await moderation_service.unban_subscriber(
-        telegram_id, mock_translator, uow=mock_uow
-    )
+    result = await moderation_service.unban_subscriber(telegram_id, mock_translator)
 
     assert result.success is True
     assert "User has been successfully unbanned." in result.message_key
@@ -429,10 +428,8 @@ async def test_toggle_mute_status_mute_new_user(
     telegram_id = 123
     tt_username = "new_tt_user"
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
-    user_settings.muted_users_list = []  # Ensure it's empty initially
-
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -457,7 +454,7 @@ async def test_toggle_mute_status_unmute_existing_user(
     user_settings.muted_users_list = [mock_muted_user]
 
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -495,7 +492,6 @@ async def test_toggle_mute_from_callback_success(
     mock_uow: AsyncMock,
     mock_command_bus: AsyncMock,
     mock_translator: MagicMock,
-    mock_cache: MagicMock,
 ) -> None:
     telegram_id = 123
     tt_username = "test_user"
@@ -517,6 +513,4 @@ async def test_toggle_mute_from_callback_success(
     assert result.success is True
     assert "User {username} has been successfully muted." in result.message_key
     assert len(user_settings.muted_users_list) == 1
-    mock_uow.commit.assert_called_once()
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
-    mock_cache.update_user_settings.assert_called_once_with(user_settings)

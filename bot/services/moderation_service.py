@@ -223,26 +223,23 @@ class ModerationService:
         self,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
-        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Bans a user and deletes their profile within a single transaction."""
         _ = translator.gettext
-        active_uow = uow or self._uow
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            tt_username = user_settings.teamtalk_username if user_settings else None
 
-        user_settings = await active_uow.users.get_by_id(telegram_id)
-        tt_username = user_settings.teamtalk_username if user_settings else None
+            # Create a single ban entry that links both identifiers
+            await self._uow.bans.add_ban(
+                telegram_id=telegram_id,
+                teamtalk_username=tt_username,  # Pass both telegram_id and tt_username
+                reason="Banned by admin",
+            )
 
-        # Create a single ban entry that links both identifiers
-        await active_uow.bans.add_ban(
-            telegram_id=telegram_id,
-            teamtalk_username=tt_username,  # Pass both telegram_id and tt_username
-            reason="Banned by admin",
-        )
-
-        # Delete profile within the same transaction
-        await self._subscription_service.delete_profile(
-            telegram_id, translator, uow=active_uow
-        )
+            # Delete profile within the same transaction
+            await self._subscription_service.delete_profile(telegram_id, translator)
+            await self._uow.commit()
 
         return OperationResult(
             success=True,
@@ -257,36 +254,36 @@ class ModerationService:
         self,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
-        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Unbans a subscriber.
 
         Finds all linked identifiers in the ban list and removes them.
         """
         _ = translator.gettext
-        active_uow = uow or self._uow
+        async with self._uow:
+            # 1. Find all ban entries for the given telegram_id.
+            bans_for_tg_id = await self._uow.bans.get_by_telegram_id(telegram_id)
 
-        # 1. Find all ban entries for the given telegram_id.
-        bans_for_tg_id = await active_uow.bans.get_by_telegram_id(telegram_id)
+            # 2. From these entries, collect all associated TeamTalk usernames.
+            #    Using a set for automatic deduplication.
+            associated_tt_usernames = {
+                ban.teamtalk_username for ban in bans_for_tg_id if ban.teamtalk_username
+            }
 
-        # 2. From these entries, collect all associated TeamTalk usernames.
-        #    Using a set for automatic deduplication.
-        associated_tt_usernames = {
-            ban.teamtalk_username for ban in bans_for_tg_id if ban.teamtalk_username
-        }
+            # 3. Remove all ban entries by telegram_id.
+            await self._uow.bans.remove_by_telegram_id(telegram_id)
+            logger.info("Removed all ban entries for Telegram ID: %s.", telegram_id)
 
-        # 3. Remove all ban entries by telegram_id.
-        await active_uow.bans.remove_by_telegram_id(telegram_id)
-        logger.info("Removed all ban entries for Telegram ID: %s.", telegram_id)
+            # 4. For each found associated TT username, also remove all their bans.
+            #    This is necessary in case the username was banned separately.
+            for tt_username in associated_tt_usernames:
+                await self._uow.bans.remove_by_teamtalk_username(tt_username)
+                logger.info(
+                    "Removed all ban entries for linked TeamTalk username: '%s'.",
+                    tt_username,
+                )
 
-        # 4. For each found associated TT username, also remove all their bans.
-        #    This is necessary in case the username was banned separately.
-        for tt_username in associated_tt_usernames:
-            await active_uow.bans.remove_by_teamtalk_username(tt_username)
-            logger.info(
-                "Removed all ban entries for linked TeamTalk username: '%s'.",
-                tt_username,
-            )
+            await self._uow.commit()
 
         logger.info(
             "Successfully unbanned user %s and all associated accounts.", telegram_id
@@ -306,32 +303,32 @@ class ModerationService:
         user_settings: UserSettings,
         tt_username_to_toggle: str,
         translator: NullTranslations,
-        uow: IUnitOfWork | None = None,
     ) -> OperationResult:
         """Toggles the mute status of a TeamTalk user for a given user."""
         _ = translator.gettext
-        active_uow = uow or self._uow
-        existing_entry = next(
-            (
-                entry
-                for entry in user_settings.muted_users_list
-                if entry.muted_teamtalk_username == tt_username_to_toggle
-            ),
-            None,
-        )
-
-        if existing_entry:
-            user_settings.muted_users_list.remove(existing_entry)
-            action = "unmuted"
-        else:
-            new_entry = MutedUser(
-                user_settings_telegram_id=user_settings.telegram_id,
-                muted_teamtalk_username=tt_username_to_toggle,
+        async with self._uow:
+            existing_entry = next(
+                (
+                    entry
+                    for entry in user_settings.muted_users_list
+                    if entry.muted_teamtalk_username == tt_username_to_toggle
+                ),
+                None,
             )
-            user_settings.muted_users_list.append(new_entry)
-            action = "muted"
 
-        await active_uow.users.save(user_settings)
+            if existing_entry:
+                user_settings.muted_users_list.remove(existing_entry)
+                action = "unmuted"
+            else:
+                new_entry = MutedUser(
+                    user_settings_telegram_id=user_settings.telegram_id,
+                    muted_teamtalk_username=tt_username_to_toggle,
+                )
+                user_settings.muted_users_list.append(new_entry)
+                action = "muted"
+
+            await self._uow.users.save(user_settings)
+            await self._uow.commit()
 
         self._cache.update_user_settings(user_settings)
 
@@ -401,32 +398,28 @@ class ModerationService:
     ) -> OperationResult:
         """Orchestrates the entire mute/unmute toggle process from a callback."""
         _ = translator.gettext
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                logger.warning(
-                    "Could not get user settings for user %s in "
-                    "toggle_mute_from_callback",
-                    telegram_id,
-                )
-                return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
+        user_settings = await self._uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            logger.warning(
+                "Could not get user settings for user %s in toggle_mute_from_callback",
+                telegram_id,
+            )
+            return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
 
-            username_to_toggle = await self.get_target_username_for_toggle(
-                callback_data, user_settings, command_bus, translator
+        username_to_toggle = await self.get_target_username_for_toggle(
+            callback_data, user_settings, command_bus, translator
+        )
+
+        if not username_to_toggle:
+            logger.warning(
+                "Could not determine username to toggle mute for user %s.",
+                telegram_id,
+            )
+            return OperationResult(
+                success=False,
+                message_key=_("Error determining user to mute/unmute. Try again."),
             )
 
-            if not username_to_toggle:
-                logger.warning(
-                    "Could not determine username to toggle mute for user %s.",
-                    telegram_id,
-                )
-                return OperationResult(
-                    success=False,
-                    message_key=_("Error determining user to mute/unmute. Try again."),
-                )
-
-            toggle_result = await self.toggle_mute_status(
-                user_settings, username_to_toggle, translator, uow=self._uow
-            )
-            await self._uow.commit()
-            return toggle_result
+        return await self.toggle_mute_status(
+            user_settings, username_to_toggle, translator
+        )

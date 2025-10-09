@@ -9,7 +9,6 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand, SubscriberListAction
-from bot.database.uow import IUnitOfWork
 from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
@@ -119,7 +118,6 @@ async def refresh_subscriber_list_view(
     callback_data: SubscriberCallback | SubscriberListCallback,
     translator: NullTranslations,
     bot: EventBot,
-    uow: IUnitOfWork,
     report_service: ReportService,
     **kwargs: object,
 ) -> None:
@@ -143,7 +141,6 @@ async def delete_subscriber_from_list(
     translator: FromDishka[NullTranslations],
     subscription_service: FromDishka[SubscriptionService],
     report_service: FromDishka[ReportService],
-    uow: FromDishka[IUnitOfWork],
     bot: FromDishka[EventBot],
 ) -> None:
     """Handles deleting a subscriber directly from the subscriber list."""
@@ -157,10 +154,7 @@ async def delete_subscriber_from_list(
 
     target_telegram_id = callback_data.telegram_id
 
-    async with uow:
-        result = await subscription_service.delete_profile(
-            target_telegram_id, translator, uow=uow
-        )
+    result = await subscription_service.delete_profile(target_telegram_id, translator)
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)
@@ -171,8 +165,7 @@ async def delete_subscriber_from_list(
             callback_data,
             translator,
             bot,
-            uow,
-            report_service,
+            report_service=report_service,
         )
 
 
@@ -187,23 +180,21 @@ async def on_ban_subscriber_confirm(
     moderation_service: FromDishka[ModerationService],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
-    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles banning and deleting a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    async with uow:
-        result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, uow=uow
+    result = await moderation_service.ban_and_delete_subscriber(
+        target_telegram_id, translator
+    )
+
+    if result.long_message:
+        logger.info(
+            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
         )
 
-        if result.long_message:
-            logger.info(
-                "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
-            )
-
-        short_message = _(result.message_key).format(**(result.message_args or {}))
+    short_message = _(result.message_key).format(**(result.message_args or {}))
 
     await query.answer(short_message, show_alert=True)
 
@@ -213,8 +204,7 @@ async def on_ban_subscriber_confirm(
             callback_data,
             translator,
             bot,
-            uow,
-            report_service,
+            report_service=report_service,
         )
 
 
@@ -229,17 +219,12 @@ async def delete_subscriber(
     subscription_service: FromDishka[SubscriptionService],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
-    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    # Pass uow to the service to avoid session conflicts
-    async with uow:
-        result = await subscription_service.delete_profile(
-            target_telegram_id, translator, uow=uow
-        )
+    result = await subscription_service.delete_profile(target_telegram_id, translator)
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)
@@ -250,8 +235,7 @@ async def delete_subscriber(
             callback_data,
             translator,
             bot,
-            uow,
-            report_service,
+            report_service=report_service,
         )
 
 

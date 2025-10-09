@@ -152,7 +152,7 @@ async def _refresh_mute_related_ui(
     translator: NullTranslations,
     user_settings: UserSettings,
     command_bus: CommandBus,
-    moderation_service: ModerationService, # Add missing parameter
+    moderation_service: ModerationService,  # Add missing parameter
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -168,15 +168,15 @@ async def _refresh_mute_related_ui(
             callback_query,
             translator,
             user_settings,
-            moderation_service, # This needs to be passed
-            callback_data, # Pass callback_data to get the page
+            moderation_service,  # This needs to be passed
+            callback_data,  # Pass callback_data to get the page
         )
     else:
         await _display_internal_user_list(
             callback_query,
             translator,
             user_settings,
-            moderation_service, # Pass the service
+            moderation_service,  # Pass the service
             list_type_user_was_on,
             current_page_for_refresh,
         )

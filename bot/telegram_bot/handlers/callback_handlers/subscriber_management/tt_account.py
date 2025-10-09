@@ -12,7 +12,6 @@ from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
-from bot.database.uow import IUnitOfWork
 from bot.services.schemas import UserAccountInfo
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
@@ -43,32 +42,30 @@ async def manage_tt_account(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    async with uow:
-        user_settings = await uow.users.get_by_id(target_telegram_id)
-        current_tt_username = user_settings.teamtalk_username if user_settings else None
+    data = await user_settings_service.get_account_management_data(target_telegram_id)
 
-        keyboard = await create_manage_tt_account_keyboard(
-            translator,
-            target_telegram_id=target_telegram_id,
-            current_tt_username=current_tt_username,
-            page=return_page,
-        )
-        message_text = _(
-            "Manage TeamTalk account link for subscriber {telegram_id}:"
-        ).format(telegram_id=target_telegram_id)
+    keyboard = await create_manage_tt_account_keyboard(
+        translator,
+        target_telegram_id=target_telegram_id,
+        current_tt_username=data.current_tt_username,
+        page=return_page,
+    )
+    message_text = _(
+        "Manage TeamTalk account link for subscriber {telegram_id}:"
+    ).format(telegram_id=target_telegram_id)
 
-        await safe_edit_text(
-            message_to_edit=cast(Message, query.message),
-            text=message_text,
-            reply_markup=keyboard,
-        )
+    await safe_edit_text(
+        message_to_edit=cast(Message, query.message),
+        text=message_text,
+        reply_markup=keyboard,
+    )
     await query.answer()
 
 
@@ -195,7 +192,6 @@ async def unlink_tt_account(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
-    uow: FromDishka[IUnitOfWork],
     user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handles unlinking a TeamTalk account from a subscriber."""
@@ -203,25 +199,22 @@ async def unlink_tt_account(
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    async with uow:
-        (
-            updated_settings,
-            original_username,
-        ) = await user_settings_service.unlink_tt_account(
-            target_telegram_id, actor=Actor.ADMIN, uow=uow
+    (
+        updated_settings,
+        original_username,
+    ) = await user_settings_service.unlink_tt_account(
+        target_telegram_id, actor=Actor.ADMIN
+    )
+
+    if not updated_settings:
+        await query.answer(
+            _("Failed to unlink account. Please try again."), show_alert=True
         )
+        return
 
-        if not updated_settings:
-            await query.answer(
-                _("Failed to unlink account. Please try again."), show_alert=True
-            )
-            return
-
-        if original_username is None:
-            await query.answer(_("Account was not linked."), show_alert=False)
-            return
-
-        await uow.commit()
+    if original_username is None:
+        await query.answer(_("Account was not linked."), show_alert=False)
+        return
 
     # Обновление интерфейса
     toast_message = _("Account {username} has been unlinked.").format(

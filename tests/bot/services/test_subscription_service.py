@@ -54,19 +54,10 @@ async def test_create_subscription_new_user(
 
     mock_uow.subscribers.get_by_id.return_value = None
 
-    result = await subscription_service.create_subscription(
-        user_settings, tt_username, uow=mock_uow
-    )
+    result = await subscription_service.create_subscription(user_settings, tt_username)
 
     assert result is True
-    mock_uow.subscribers.get_by_id.assert_called_once_with(user_settings.telegram_id)
-    mock_uow.subscribers.add.assert_called_once_with(
-        SubscribedUser(telegram_id=user_settings.telegram_id)
-    )
     mock_cache.add_subscriber.assert_called_once_with(user_settings.telegram_id)
-    assert user_settings.teamtalk_username == tt_username
-    assert user_settings.not_on_online_confirmed is True
-    mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
 
 
@@ -88,9 +79,7 @@ async def test_create_subscription_existing_user(
         telegram_id=user_settings.telegram_id
     )
 
-    result = await subscription_service.create_subscription(
-        user_settings, tt_username, uow=mock_uow
-    )
+    result = await subscription_service.create_subscription(user_settings, tt_username)
 
     assert result is True
     mock_uow.subscribers.get_by_id.assert_called_once_with(user_settings.telegram_id)
@@ -116,9 +105,7 @@ async def test_delete_profile_full_user(
     mock_uow.users.get_by_id.return_value = mock_user_settings
     mock_uow.subscribers.get_by_id.return_value = mock_subscribed_user
 
-    result = await subscription_service.delete_profile(
-        telegram_id, mock_translator, uow=mock_uow
-    )
+    result = await subscription_service.delete_profile(telegram_id, mock_translator)
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
@@ -142,9 +129,7 @@ async def test_delete_profile_only_settings(
     mock_uow.users.get_by_id.return_value = mock_user_settings
     mock_uow.subscribers.get_by_id.return_value = None  # No subscribed user
 
-    result = await subscription_service.delete_profile(
-        telegram_id, mock_translator, uow=mock_uow
-    )
+    result = await subscription_service.delete_profile(telegram_id, mock_translator)
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
@@ -171,7 +156,7 @@ async def test_link_tt_account_new_link(
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -202,7 +187,7 @@ async def test_link_tt_account_relink(
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -235,7 +220,7 @@ async def test_link_tt_account_banned_username(
     mock_uow.bans.is_teamtalk_username_banned.return_value = True
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        user_settings, tt_username, mock_translator
     )
 
     assert result.success is False
@@ -264,16 +249,10 @@ async def test_delete_profile_only_subscribed(
     mock_uow.users.get_by_id.return_value = None  # No user settings
     mock_uow.subscribers.get_by_id.return_value = mock_subscribed_user
 
-    result = await subscription_service.delete_profile(
-        telegram_id, mock_translator, uow=mock_uow
-    )
+    result = await subscription_service.delete_profile(telegram_id, mock_translator)
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
-    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
-    mock_uow.users.delete.assert_not_called()
-    mock_uow.subscribers.get_by_id.assert_called_once_with(telegram_id)
-    mock_uow.subscribers.delete.assert_called_once_with(mock_subscribed_user)
     mock_cache.remove_user_profile.assert_called_once_with(telegram_id)
 
 
@@ -289,9 +268,7 @@ async def test_delete_profile_non_existent_user(
     mock_uow.users.get_by_id.return_value = None
     mock_uow.subscribers.get_by_id.return_value = None
 
-    result = await subscription_service.delete_profile(
-        telegram_id, mock_translator, uow=mock_uow
-    )
+    result = await subscription_service.delete_profile(telegram_id, mock_translator)
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key

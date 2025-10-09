@@ -77,11 +77,10 @@ class DeeplinkService:
         translator: NullTranslations,
         payload: str | None,
         user_settings: UserSettings,
-        uow: IUnitOfWork,
     ) -> str:
         """Handles the logic for a subscribe deeplink."""
         _ = translator.gettext
-        if await uow.bans.is_telegram_id_banned(telegram_id):
+        if await self._uow.bans.is_telegram_id_banned(telegram_id):
             logger.warning(
                 "Subscription attempt by banned Telegram ID: %s", telegram_id
             )
@@ -91,7 +90,7 @@ class DeeplinkService:
             logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
             return _("Error: Missing required information for subscription.")
 
-        if await uow.bans.is_teamtalk_username_banned(payload):
+        if await self._uow.bans.is_teamtalk_username_banned(payload):
             logger.warning(
                 "Subscription attempt with banned TT username: %s by TG ID: %s",
                 payload,
@@ -102,24 +101,22 @@ class DeeplinkService:
             )
 
         success = await self._subscription_service.create_subscription(
-            user_settings, payload, uow=uow
+            user_settings, payload
         )
         if not success:
             return _(MSG_GENERAL_ERROR)
 
-        if await uow.admins.get_by_id(telegram_id):
+        if await self._uow.admins.get_by_id(telegram_id):
             self._cache.add_admin(telegram_id)
 
         return _("You have successfully subscribed to notifications.")
 
     async def _execute_unsubscribe(
-        self, telegram_id: int, translator: NullTranslations, uow: IUnitOfWork
+        self, telegram_id: int, translator: NullTranslations
     ) -> str:
         """Handles the logic for an unsubscribe deeplink."""
         _ = translator.gettext
-        if await self._subscription_service.delete_profile(
-            telegram_id, translator, uow=uow
-        ):
+        if await self._subscription_service.delete_profile(telegram_id, translator):
             return _("You have successfully unsubscribed from notifications.")
         return _("You were not subscribed to notifications.")
 
@@ -128,7 +125,6 @@ class DeeplinkService:
         deeplink: DeeplinkModel,
         user_settings: UserSettings,
         translator: NullTranslations,
-        uow: IUnitOfWork,
     ) -> str:
         """Selects and executes the correct deeplink processing function."""
         telegram_id = user_settings.telegram_id
@@ -136,10 +132,10 @@ class DeeplinkService:
 
         if action == DeeplinkAction.SUBSCRIBE:
             return await self._execute_subscribe(
-                telegram_id, translator, deeplink.payload, user_settings, uow
+                telegram_id, translator, deeplink.payload, user_settings
             )
         if action == DeeplinkAction.UNSUBSCRIBE:
-            return await self._execute_unsubscribe(telegram_id, translator, uow)
+            return await self._execute_unsubscribe(telegram_id, translator)
 
         logger.warning("No handler for deeplink action: %s", action)
         return translator.gettext("Invalid deeplink action.")
@@ -186,7 +182,7 @@ class DeeplinkService:
                 )
 
             reply_text = await self.execute_deeplink(
-                deeplink, user_settings, translator, self._uow
+                deeplink, user_settings, translator
             )
 
             # The token is now used, so we should delete it.

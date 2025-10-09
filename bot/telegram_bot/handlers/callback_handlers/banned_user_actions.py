@@ -9,7 +9,6 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
-from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import SubscriberCallback
@@ -56,18 +55,13 @@ async def unban_subscriber(
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
-    uow: FromDishka[IUnitOfWork],
     bot: Annotated[EventBot, FromDishka()],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
-    _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    async with uow:
-        result = await moderation_service.unban_subscriber(
-            target_telegram_id, translator, uow=uow
-        )
-        message = result.message_key.format(**(result.message_args or {}))
+    result = await moderation_service.unban_subscriber(target_telegram_id, translator)
+    message = result.message_key.format(**(result.message_args or {}))
     return result.success, message, None
 
 
@@ -100,21 +94,18 @@ async def ban_subscriber(
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
-    uow: FromDishka[IUnitOfWork],
 ) -> tuple[bool, str, None]:
     """Handles banning and deleting a subscriber."""
-    _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    async with uow:
-        result = await moderation_service.ban_and_delete_subscriber(
-            target_telegram_id, translator, uow=uow
+    result = await moderation_service.ban_and_delete_subscriber(
+        target_telegram_id, translator
+    )
+
+    if result.long_message:
+        logger.info(
+            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
         )
 
-        if result.long_message:
-            logger.info(
-                "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
-            )
-
-        short_message = result.message_key.format(**(result.message_args or {}))
+    short_message = result.message_key.format(**(result.message_args or {}))
     return result.success, short_message, None

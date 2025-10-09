@@ -72,3 +72,9 @@ class AllAccountsViewData(BaseModel):
     accounts: list[UserAccountInfo]
     title: str
     empty_list_text: str
+
+
+class AccountManagementData(BaseModel):
+    """A DTO for data required for account management view."""
+
+    current_tt_username: str | None

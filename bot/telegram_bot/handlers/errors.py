@@ -62,7 +62,7 @@ async def universal_error_handler(
                 "User %s blocked the bot or is deactivated. Deleting all user data...",
                 chat_id,
             )
-            await subscription_service.delete_profile(chat_id, translator, uow)
+            await subscription_service.delete_profile(chat_id, translator)
             return True
         if isinstance(event.exception, TelegramBadRequest) and "chat not found" in str(
             event.exception
@@ -72,7 +72,7 @@ async def universal_error_handler(
                 chat_id,
                 event.exception,
             )
-            await subscription_service.delete_profile(chat_id, translator, uow)
+            await subscription_service.delete_profile(chat_id, translator)
             return True
 
         try:
