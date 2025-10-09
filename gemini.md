@@ -15,7 +15,7 @@ This document is the single source of truth for any agent contributing to this c
 1.  [Project Overview](#1-project-overview)
 2.  [Core Architectural Principles](#2-core-architectural-principles)
     1.  [Dependency Injection (DI)](#21-dependency-injection-di)
-    2.  [Event-Driven Architecture](#22-event-driven-architecture)
+    2.  [Command and Event Buses](#22-command-and-event-buses)
     3.  [Separation of Concerns (SoC)](#23-separation-of-concerns-soc)
 3.  [Database and Migrations](#3-database-and-migrations)
 4.  [Internationalization (i18n)](#4-internationalization-i18n)
@@ -63,43 +63,67 @@ This is the central architectural pattern of the application. Dependencies are m
 *   **Use `dishka` Providers:** Handlers and services receive necessary dependencies (like database sessions, repositories, other services, or caches) via `dishka`'s injection mechanism.
 *   **Explicit is Better than Implicit:** Functions should receive their dependencies as explicit arguments, type-hinted with `FromDishka[...]`.
 
-### 2.2. Event-Driven Architecture
-To ensure loose coupling between the major components of the application (`telegram_bot` and `teamtalk_bot`), the system uses an event-driven pattern facilitated by an `EventBus`.
+### 2.2. Command and Event Buses
+The application uses two distinct messaging patterns to decouple components: the Command Bus for imperative actions and the Event Bus for reactive processes.
 
-*   **Publisher (`PytalkEventRouter`):** This is the primary publisher. It listens for raw events from the `pytalk` library and translates them into meaningful domain events for the rest of the application. It knows nothing about who is listening.
-*   **Events:** Events are simple Pydantic models defined in `bot/teamtalk_bot/events.py` that represent a specific business action (e.g., `UserJoinedEvent`, `ReplyToTeamTalkUserEvent`).
-*   **Subscribers (Handlers):** Components that need to react to events subscribe to specific event types on the `EventBus`. These handlers are typically located in `bot/event_handlers/` and contain the logic to perform actions based on the event data (e.g., sending a Telegram notification).
+#### Command Bus (1-to-1, Expects Result)
+The Command Bus decouples the *intent* to perform an action from its *execution*. It is used when a component needs a specific operation to be performed and requires a result.
 
-This pattern ensures that the `teamtalk_bot` can operate and be tested independently of the `telegram_bot`, and vice-versa.
+*   **Purpose:** To execute a specific action and get a result back.
+*   **Flow:** A caller dispatches a **Command** object. The bus finds the single, registered **Command Handler** for that command, executes it, and returns the handler's result to the original caller.
+*   **When to use:** Use a Command when you need to get data for a handler (e.g., `GetOnlineUsersCommand` to fetch users for the `/who` command) or to trigger an operation and know its outcome (e.g., `KickUserCommand`).
+*   **Key Characteristics:**
+    *   **Command:** An imperative instruction (e.g., `DoSomething`). Defined in `bot/commands.py`.
+    *   **Handler:** Exactly one handler per command. Located in `bot/command_handlers/`.
+    *   **Return Value:** The handler's result is returned to the caller.
+
+#### Event Bus (1-to-Many, Fire-and-Forget)
+The Event Bus decouples components by allowing them to react to things that have happened without being directly called. It is used for broadcasting information.
+
+*   **Purpose:** To announce that something has happened, allowing other parts of the system to react independently.
+*   **Flow:** A publisher emits an **Event** object. The bus notifies all subscribers for that event. The publisher does not know who is listening and does not receive any return value.
+*   **When to use:** Use an Event when one part of the system needs to notify other, unrelated parts about a state change (e.g., `UserJoinedEvent` from the TeamTalk bot triggers the `TelegramNotificationHandler` to send a message).
+*   **Key Characteristics:**
+    *   **Event:** A notification of a past occurrence (e.g., `SomethingHappened`). Defined in `bot/teamtalk_bot/events.py`.
+    *   **Subscribers:** Zero, one, or many subscribers per event. Located in `bot/event_handlers/`.
+    *   **Return Value:** None. The process is asynchronous and fire-and-forget.
 
 ### 2.3. Separation of Concerns (SoC)
-The codebase is organized into distinct layers and modules, each with a single, well-defined responsibility. Adhering to this separation is critical for maintainability.
+The codebase is organized into distinct layers, each with a single responsibility. This separation is critical. The typical flow of a user-initiated request is: **Handler -> Command Bus -> Service -> Repository -> Service -> Formatter -> Handler**.
 
 #### Target Architecture
-*   **Handlers (`bot/telegram_bot/handlers`, `bot/teamtalk_bot/command_handlers`)**
-    *   **Role:** Entry point for user interaction.
+*   **Handlers (`bot/telegram_bot/handlers`)**
+    *   **Role:** Entry point for user interaction (UI Layer).
     *   **Responsibilities:**
-        *   Parse incoming messages, commands, or callback queries.
-        *   Extract necessary data (e.g., user ID, arguments).
-        *   Call **one** appropriate method from a **Service** layer class.
-        *   Present the result from the service to the user (e.g., sending a message, editing a keyboard).
-    *   **Rule:** Handlers **must be thin**. They should **never** contain business logic, database queries, or complex state manipulation.
+        *   Parse incoming Telegram `Message` or `CallbackQuery`.
+        *   Dispatch a **Command** to the `CommandBus` to request data or an action.
+        *   Receive a data object (DTO) or result from the `CommandBus`.
+        *   Pass the data object to a **Formatter** to get a user-facing representation (e.g., an HTML string).
+        *   Send the formatted string and any keyboards back to the user.
+    *   **Rule:** Handlers **must be thin**. They do not contain business logic. Their job is to translate user input into commands and user output into UI.
 
 *   **Services (`bot/services`)**
-    *   **Role:** The core of the application's business logic.
+    *   **Role:** The core of the application's business logic (Business Logic Layer).
     *   **Responsibilities:**
-        *   Contain all business rules and use case logic (e.g., how to subscribe a user, what steps to take to ban someone).
+        *   Contain all business rules and use case logic (e.g., the steps to subscribe a user, the logic for what data to show in a report).
         *   Orchestrate operations between different components, primarily repositories.
         *   Interact with the database **only** through the `Unit of Work (UoW)` and its repositories.
         *   May call other services to compose more complex operations.
-    *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service.
+    *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service. Services are often invoked by Command Handlers.
+
+*   **Formatters (`bot/telegram_bot/formatters`, `bot/teamtalk_bot/formatters`)**
+    *   **Role:** Presentation Logic.
+    *   **Responsibilities:**
+        *   Take data objects (DTOs, service results) and format them into user-facing strings (e.g., HTML for Telegram).
+        *   Encapsulate all logic related to how data is displayed (e.g., text, emojis, layout).
+    *   **Rule:** Formatters **must not** contain business logic or fetch data. They only transform data into a presentational format.
 
 *   **Repositories (`bot/database/repositories`)**
     *   **Role:** Data Access Layer (DAL).
     *   **Responsibilities:**
         *   Provide a clean API for accessing database tables (e.g., `get_by_id`, `get_all`, custom queries).
         *   Abstract away the specifics of `SQLModel` or `SQLAlchemy` queries.
-    *   **Rule:** Repositories should **only** contain database query logic. They do not contain business rules and are always accessed via the `UoW` in the service layer.
+    *   **Rule:** Repositories **only** contain database query logic. They are always accessed via the `UoW` in the service layer.
 
 #### Working with Existing Code
 You may encounter business logic within handlers. This is a known area for future refactoring. When modifying an existing handler that contains business logic, you have two options:
