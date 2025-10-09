@@ -42,6 +42,11 @@ def mock_event_bus() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_command_bus() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
 def mock_translator() -> MagicMock:
     translator = MagicMock(spec=NullTranslations)
     translator.gettext.side_effect = lambda x: x  # Simple passthrough for testing
@@ -53,19 +58,15 @@ def mock_translator() -> MagicMock:
 
 
 @pytest.fixture
-def mock_command_bus() -> AsyncMock:
-    return AsyncMock()
-
-
-@pytest.fixture
 def moderation_service(
     mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_cache: MagicMock,
     mock_event_bus: AsyncMock,
+    mock_command_bus: AsyncMock,
 ) -> ModerationService:
     return ModerationService(
-        mock_uow, mock_subscription_service, mock_cache, mock_event_bus
+        mock_uow, mock_subscription_service, mock_cache, mock_event_bus, mock_command_bus
     )
 
 

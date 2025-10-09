@@ -370,22 +370,36 @@ async def display_internal_user_list(
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
-    command_bus: FromDishka[CommandBus],
+    user_settings: FromDishka[UserSettings],
+    moderation_service: FromDishka[ModerationService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
-    if not user_settings:
-        _ = translator.gettext
-        logger.warning(
-            "Cannot display all accounts list for event without a user, "
-            "user_settings is None."
-        )
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
+    view_data = await moderation_service.get_all_server_accounts_view_data(
+        lang_code=translator.info().get("language", "en"), translator=translator
+    )
 
-    await _display_all_server_accounts_list(
-        callback_query, translator, user_settings, command_bus, callback_data.page
+    await _display_user_list(
+        callback_query=callback_query,
+        translator=translator,
+        user_settings=user_settings,
+        page=callback_data.page,
+        items=view_data.accounts,
+        sort_key_extractor=lambda acc: acc.username.lower(),
+        title_text=view_data.title,
+        empty_list_text=view_data.empty_list_text,
+        keyboard_factory_kwargs={
+            "user_settings": user_settings,
+            "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
+            "item_username_extractor": lambda item: item.username,
+            "item_display_name_extractor": lambda item: item.username,
+            "back_button_callback_data": NotificationCallback(
+                action=NotificationControl.MANAGE_MUTED
+            ).pack(),
+            "back_button_text_key": _create_back_button_text(
+                translator, "Mute Management"
+            ),
+        },
     )
     await callback_query.answer()
 

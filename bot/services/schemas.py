@@ -64,3 +64,11 @@ class MuteListViewData(BaseModel):
     items: list[str]
     title: str
     empty_list_text: str
+
+
+class AllAccountsViewData(BaseModel):
+    """A DTO for data required to render the all server accounts list view."""
+
+    accounts: list[UserAccountInfo]
+    title: str
+    empty_list_text: str

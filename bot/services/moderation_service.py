@@ -15,6 +15,7 @@ from bot.event_bus.bus import EventBus
 from bot.models import Admin, MutedUser, MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
+    AllAccountsViewData,
     BatchOperationResult,
     MuteListViewData,
     OperationResult,
@@ -38,12 +39,38 @@ class ModerationService:
         subscription_service: SubscriptionService,
         cache: CacheService,
         event_bus: EventBus,
+        command_bus: CommandBus,
     ) -> None:
         """Initializes the moderation service."""
         self._uow = uow
         self._subscription_service = subscription_service
         self._cache = cache
         self._event_bus = event_bus
+        self._command_bus = command_bus
+
+    async def get_all_server_accounts_view_data(
+        self, lang_code: str, translator: NullTranslations
+    ) -> AllAccountsViewData:
+        """Fetches and prepares data for the all server accounts list view."""
+        _ = translator.gettext
+        result: GetAllTeamTalkAccountsResult = await self._command_bus.execute(
+            GetAllTeamTalkAccountsCommand(lang_code=lang_code)
+        )
+
+        title = _("All Server Accounts")
+        empty_text = _("No user accounts found on the server.")
+
+        if not result.success:
+            return AllAccountsViewData(
+                accounts=[],
+                title=title,
+                empty_list_text=result.error_message or empty_text,
+            )
+
+        sorted_accounts = sorted(result.accounts, key=lambda acc: acc.username.lower())
+        return AllAccountsViewData(
+            accounts=sorted_accounts, title=title, empty_list_text=empty_text
+        )
 
     def prepare_mute_list_view_data(
         self, user_settings: UserSettings, translator: NullTranslations

@@ -15,10 +15,6 @@ from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import PaginatedResult, SubscriberInfo
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.formatters import (
-    get_tt_user_display_name,
-    get_user_display_channel_name,
-)
 from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.models import WhoChannelGroup, WhoReport, WhoUser
 from bot.telegram_bot.types.bots import EventBot
