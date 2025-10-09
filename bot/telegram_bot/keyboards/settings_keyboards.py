@@ -63,6 +63,7 @@ async def create_language_selection_keyboard(
     available_languages: list[LanguageInfo],
 ) -> InlineKeyboardMarkup:
     """Creates the language selection keyboard using the generic helper."""
+    _ = translator.gettext
     options = get_language_options(available_languages)
 
     def lang_callback_factory(lang_code_value: str) -> LanguageCallback:
@@ -78,7 +79,7 @@ async def create_language_selection_keyboard(
         current_value=None,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="Settings",
+        back_button_text_key=_("Settings"),
         buttons_per_row=1,
     )
 
@@ -87,6 +88,7 @@ async def create_subscription_settings_keyboard(
     translator: NullTranslations, current_setting: NotificationSetting
 ) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
+    _ = translator.gettext
     options = get_notification_settings_options()
 
     def sub_callback_factory(setting_value_str: str) -> SubscriptionCallback:
@@ -102,7 +104,7 @@ async def create_subscription_settings_keyboard(
         current_value=current_setting.value,
         callback_data_factory=sub_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="Settings",
+        back_button_text_key=_("Settings"),
         buttons_per_row=1,
     )
 
@@ -133,7 +135,7 @@ async def create_notification_settings_keyboard(
     add_back_button(
         builder,
         translator,
-        "Settings",
+        _("Settings"),
         SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN),
     )
     builder.adjust(1)
@@ -193,7 +195,7 @@ async def create_manage_muted_users_keyboard(
     add_back_button(
         builder,
         translator,
-        "Notification Settings",
+        _("Notification Settings"),
         SettingsCallback(action=SettingsNavAction.NOTIFICATIONS),
     )
     builder.adjust(1)

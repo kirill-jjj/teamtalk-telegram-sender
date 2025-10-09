@@ -16,20 +16,22 @@ from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCall
 ttstr = pytalk.instance.sdk.ttstr
 
 
-def _create_back_button_text(translator: NullTranslations, destination_key: str) -> str:
+def _create_back_button_text(
+    translator: NullTranslations, translated_destination: str
+) -> str:
     """Creates a standardized 'Back to...' button text."""
     _ = translator.gettext
-    return f"⬅️ {_('Back to')} {_(destination_key)}"
+    return _("Back to {destination}").format(destination=translated_destination)
 
 
 def create_back_button(
     translator: NullTranslations,
-    destination_key: str,
+    translated_destination: str,
     callback_data: "PackableCallbackData",
 ) -> InlineKeyboardButton:
     """Creates a standardized 'Back' button."""
     return InlineKeyboardButton(
-        text=_create_back_button_text(translator, destination_key),
+        text=_create_back_button_text(translator, translated_destination),
         callback_data=callback_data.pack(),
     )
 
@@ -37,11 +39,11 @@ def create_back_button(
 def add_back_button(
     builder: InlineKeyboardBuilder,
     translator: NullTranslations,
-    destination_key: str,
+    translated_destination: str,
     callback_data: "PackableCallbackData",
 ) -> None:
     """Adds a standardized 'Back' button to the keyboard builder."""
-    builder.row(create_back_button(translator, destination_key, callback_data))
+    builder.row(create_back_button(translator, translated_destination, callback_data))
 
 
 class PackableCallbackData(Protocol):
@@ -251,7 +253,7 @@ async def _build_user_toggle_keyboard(
 
     builder.row(
         InlineKeyboardButton(
-            text=_(back_button_text_key), callback_data=back_button_callback_data
+            text=back_button_text_key, callback_data=back_button_callback_data
         )
     )
     return builder.as_markup()

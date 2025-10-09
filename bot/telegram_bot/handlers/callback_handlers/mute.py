@@ -118,7 +118,7 @@ async def _display_internal_user_list(
                 action=NotificationControl.MANAGE_MUTED
             ).pack(),
             "back_button_text_key": _create_back_button_text(
-                translator, "Mute Management"
+                translator, _("Mute Management")
             ),
         },
     )
@@ -313,6 +313,7 @@ async def display_all_accounts_list(
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
+    _ = translator.gettext
     view_data = await moderation_service.get_all_server_accounts_view_data(
         lang_code=translator.info().get("language", "en"), translator=translator
     )
@@ -335,7 +336,7 @@ async def display_all_accounts_list(
                 action=NotificationControl.MANAGE_MUTED
             ).pack(),
             "back_button_text_key": _create_back_button_text(
-                translator, "Mute Management"
+                translator, _("Mute Management")
             ),
         },
     )

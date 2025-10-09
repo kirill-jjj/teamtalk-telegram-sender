@@ -243,7 +243,7 @@ async def create_subscriber_action_menu_keyboard(
     add_back_button(
         builder,
         translator,
-        "Subscribers List",
+        _("Subscribers List"),
         SubscriberListCallback(action=SubscriberListAction.PAGE, page=page),
     )
     builder.adjust(1)
@@ -283,7 +283,7 @@ async def create_manage_tt_account_keyboard(
     add_back_button(
         builder,
         translator,
-        "User Actions",
+        _("User Actions"),
         ViewSubscriberCallback(telegram_id=target_telegram_id, page=page),
     )
     builder.adjust(1)
@@ -299,6 +299,7 @@ async def create_view_mute_list_keyboard(
     subscriber_context_page: int,
 ) -> InlineKeyboardMarkup:
     """Create the keyboard for viewing a paginated mute list for a subscriber."""
+    _ = translator.gettext
     builder = InlineKeyboardBuilder()
 
     if total_pages > 1:
@@ -322,7 +323,7 @@ async def create_view_mute_list_keyboard(
     add_back_button(
         builder,
         translator,
-        "User Actions",
+        _("User Actions"),
         ViewSubscriberCallback(
             telegram_id=target_telegram_id,
             page=subscriber_context_page,
@@ -378,6 +379,7 @@ async def create_linkable_tt_account_list_keyboard(
     subscriber_list_page: int,
 ) -> InlineKeyboardMarkup:
     """Creates keyboard for selecting a TeamTalk account to link to a subscriber."""
+    _ = translator.gettext
 
     def _create_tt_account_button(
         account_obj: UserAccountInfo,
@@ -396,7 +398,7 @@ async def create_linkable_tt_account_list_keyboard(
 
     back_button = create_back_button(
         translator,
-        "Manage Account",
+        _("Manage Account"),
         SubscriberCallback(
             action=SubscriberCommand.MANAGE_TT_ACCOUNT,
             target_telegram_id=target_telegram_id,
@@ -440,7 +442,7 @@ async def create_admin_subscriber_lang_keyboard(
         add_back_button(
             builder,
             translator,
-            "User Actions",
+            _("User Actions"),
             ViewSubscriberCallback(
                 telegram_id=target_telegram_id, page=subscriber_page_context
             ),
@@ -466,7 +468,7 @@ async def create_admin_subscriber_lang_keyboard(
         current_value=None,
         callback_data_factory=lang_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="User Actions",
+        back_button_text_key=_("User Actions"),
         buttons_per_row=1,
     )
 

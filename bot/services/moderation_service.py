@@ -303,32 +303,33 @@ class ModerationService:
         user_settings: UserSettings,
         tt_username_to_toggle: str,
         translator: NullTranslations,
+        uow: IUnitOfWork | None = None,  # <-- Принимаем uow
     ) -> OperationResult:
         """Toggles the mute status of a TeamTalk user for a given user."""
         _ = translator.gettext
-        async with self._uow:
-            existing_entry = next(
-                (
-                    entry
-                    for entry in user_settings.muted_users_list
-                    if entry.muted_teamtalk_username == tt_username_to_toggle
-                ),
-                None,
+        active_uow = uow or self._uow  # Используем переданный uow
+
+        existing_entry = next(
+            (
+                entry
+                for entry in user_settings.muted_users_list
+                if entry.muted_teamtalk_username == tt_username_to_toggle
+            ),
+            None,
+        )
+
+        if existing_entry:
+            user_settings.muted_users_list.remove(existing_entry)
+            action = "unmuted"
+        else:
+            new_entry = MutedUser(
+                user_settings_telegram_id=user_settings.telegram_id,
+                muted_teamtalk_username=tt_username_to_toggle,
             )
+            user_settings.muted_users_list.append(new_entry)
+            action = "muted"
 
-            if existing_entry:
-                user_settings.muted_users_list.remove(existing_entry)
-                action = "unmuted"
-            else:
-                new_entry = MutedUser(
-                    user_settings_telegram_id=user_settings.telegram_id,
-                    muted_teamtalk_username=tt_username_to_toggle,
-                )
-                user_settings.muted_users_list.append(new_entry)
-                action = "muted"
-
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+        await active_uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
 
@@ -398,28 +399,32 @@ class ModerationService:
     ) -> OperationResult:
         """Orchestrates the entire mute/unmute toggle process from a callback."""
         _ = translator.gettext
-        user_settings = await self._uow.users.get_by_id(telegram_id)
-        if not user_settings:
-            logger.warning(
-                "Could not get user settings for user %s in toggle_mute_from_callback",
-                telegram_id,
-            )
-            return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
 
-        username_to_toggle = await self.get_target_username_for_toggle(
-            callback_data, user_settings, command_bus, translator
-        )
+        async with self._uow:
+            user_settings = await self._uow.users.get_by_id(telegram_id)
+            if not user_settings:
+                logger.warning(
+                    "Could not get user settings for user %s in "
+                    "toggle_mute_from_callback",
+                    telegram_id,
+                )
+                return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
 
-        if not username_to_toggle:
-            logger.warning(
-                "Could not determine username to toggle mute for user %s.",
-                telegram_id,
-            )
-            return OperationResult(
-                success=False,
-                message_key=_("Error determining user to mute/unmute. Try again."),
+            username_to_toggle = await self.get_target_username_for_toggle(
+                callback_data, user_settings, command_bus, translator
             )
 
-        return await self.toggle_mute_status(
-            user_settings, username_to_toggle, translator
-        )
+            if not username_to_toggle:
+                logger.warning(
+                    "Could not determine username to toggle mute for user %s.",
+                    telegram_id,
+                )
+                return OperationResult(
+                    success=False,
+                    message_key=_("Error determining user to mute/unmute. Try again."),
+                )
+
+            # `async with` сам сделает commit или rollback
+            return await self.toggle_mute_status(
+                user_settings, username_to_toggle, translator, uow=self._uow
+            )
