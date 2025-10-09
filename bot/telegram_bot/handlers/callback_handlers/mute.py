@@ -10,7 +10,6 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
@@ -19,7 +18,6 @@ from bot.core.enums import (
 )
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
-from bot.services.schemas import UserAccountInfo
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
@@ -37,7 +35,7 @@ from bot.telegram_bot.ui_utils import (
     display_paginated_list,
     safe_edit_text,
 )
-from bot.utils.pagination import get_item_from_paginated_list, paginate_list
+from bot.utils.pagination import paginate_list
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
@@ -126,69 +124,6 @@ async def _display_internal_user_list(
     )
 
 
-async def _display_all_server_accounts_list(
-    callback_query: CallbackQuery,
-    translator: NullTranslations,
-    user_settings: UserSettings,
-    command_bus: CommandBus,
-    page: int = 0,
-) -> None:
-    _ = translator.gettext
-
-    result: GetAllTeamTalkAccountsResult = await command_bus.execute(
-        GetAllTeamTalkAccountsCommand(lang_code=translator.info().get("language", "en"))
-    )
-
-    if not result.success:
-        await callback_query.answer(result.error_message, show_alert=True)
-        return
-
-    items = result.accounts
-
-    def username_extractor(item: UserAccountInfo) -> str:
-        return item.username
-
-    await _display_user_list(
-        callback_query=callback_query,
-        translator=translator,
-        user_settings=user_settings,
-        page=page,
-        items=items,
-        sort_key_extractor=lambda acc: acc.username.lower(),
-        title_text=_("All Server Accounts"),
-        empty_list_text=_("No user accounts found on the server."),
-        keyboard_factory_kwargs={
-            "user_settings": user_settings,
-            "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
-            "item_username_extractor": username_extractor,
-            "item_display_name_extractor": username_extractor,
-            "back_button_callback_data": NotificationCallback(
-                action=NotificationControl.MANAGE_MUTED
-            ).pack(),
-            "back_button_text_key": _create_back_button_text(
-                translator, "Mute Management"
-            ),
-        },
-        server_host_for_display=None,  # Server host is now handled
-        # by the command result
-    )
-
-
-def _get_username_from_muted_list(
-    callback_data: ToggleMuteCallback,
-    user_settings: UserSettings,
-) -> str | None:
-    """Retrieves a username from the user's persisted mute list."""
-    return get_item_from_paginated_list(
-        items=[
-            muted.muted_teamtalk_username for muted in user_settings.muted_users_list
-        ],
-        sort_key_extractor=lambda x: x.lower(),
-        page=callback_data.current_page,
-        idx_on_page=callback_data.user_idx,
-    )
-
-
 def format_mute_toast(
     username_to_toggle: str,
     *,
@@ -229,12 +164,12 @@ async def _refresh_mute_related_ui(
     # No need to refresh it from the session.
 
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
-        await _display_all_server_accounts_list(
+        await display_all_accounts_list(
             callback_query,
             translator,
             user_settings,
-            command_bus,
-            current_page_for_refresh,
+            moderation_service, # This needs to be passed
+            callback_data, # Pass callback_data to get the page
         )
     else:
         await _display_internal_user_list(

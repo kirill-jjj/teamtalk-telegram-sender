@@ -64,11 +64,14 @@ def moderation_service(
     mock_cache: MagicMock,
     mock_event_bus: AsyncMock,
     mock_command_bus: AsyncMock,
-) -> ModerationService:
+    ) -> ModerationService:
     return ModerationService(
-        mock_uow, mock_subscription_service, mock_cache, mock_event_bus, mock_command_bus
+        uow=mock_uow,
+        subscription_service=mock_subscription_service,
+        cache=mock_cache,
+        event_bus=mock_event_bus,
+        command_bus=mock_command_bus,
     )
-
 
 @pytest.mark.asyncio
 async def test_add_admin_success(
