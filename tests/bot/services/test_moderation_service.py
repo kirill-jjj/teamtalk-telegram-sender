@@ -8,6 +8,13 @@ from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
 from bot.models import Admin, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
+from bot.config import (
+    Settings,
+    GeneralSettings,
+    TeamTalkSettings,
+    DatabaseSettings,
+    TelegramSettings,
+)  # Added imports
 
 
 @pytest.fixture
@@ -57,12 +64,36 @@ def mock_translator() -> MagicMock:
 
 
 @pytest.fixture
+def mock_settings() -> Settings:
+    """Mock Settings object for testing."""
+    return Settings(
+        general=GeneralSettings(admin_username="test_admin"),
+        database=DatabaseSettings(db_file="test.db"),  # Provided valid instance
+        telegram=TelegramSettings(
+            event_token="test_event_token",
+            message_token="test_message_token",
+            admin_chat_id=12345,
+        ),  # Provided valid instance
+        teamtalk=TeamTalkSettings(
+            host_name="test.com",
+            port=123,
+            user_name="bot",
+            password="pass",
+            channel="/root",
+            nick_name="bot",
+            client_name="client",
+        ),
+    )
+
+
+@pytest.fixture
 def moderation_service(
     mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_cache: MagicMock,
     mock_event_bus: AsyncMock,
     mock_command_bus: AsyncMock,
+    mock_settings: Settings,  # Added mock_settings
 ) -> ModerationService:
     return ModerationService(
         uow=mock_uow,
@@ -70,6 +101,7 @@ def moderation_service(
         cache=mock_cache,
         event_bus=mock_event_bus,
         command_bus=mock_command_bus,
+        settings=mock_settings,  # Passed mock_settings
     )
 
 
@@ -240,10 +272,13 @@ async def test_manage_admin_ids_add_success(
         remove_ids=remove_ids,
         is_add_action=True,
         error_messages=error_messages,
-        translator=mock_translator,
     )
 
-    assert "Successfully added 2 admins." in result
+    assert result.add_result.successful_ids == [101, 102]
+    assert not result.add_result.failed_ids
+    assert not result.remove_result.successful_ids
+    assert not result.remove_result.failed_ids
+    assert not result.error_messages
     expected_calls = 2
     assert mock_uow.admins.add.call_count == expected_calls
     assert mock_uow.commit.call_count == expected_calls
@@ -271,10 +306,13 @@ async def test_manage_admin_ids_remove_success(
         remove_ids=remove_ids,
         is_add_action=False,
         error_messages=error_messages,
-        translator=mock_translator,
     )
 
-    assert "Successfully removed 2 admins." in result
+    assert not result.add_result.successful_ids
+    assert not result.add_result.failed_ids
+    assert result.remove_result.successful_ids == [201, 202]
+    assert not result.remove_result.failed_ids
+    assert not result.error_messages
     expected_calls = 2
     assert mock_uow.admins.delete.call_count == expected_calls
     assert mock_uow.commit.call_count == expected_calls
@@ -303,11 +341,13 @@ async def test_manage_admin_ids_mixed_add_remove(
         remove_ids=remove_ids,
         is_add_action=True,
         error_messages=error_messages,
-        translator=mock_translator,
     )
 
-    assert "Successfully added 1 admins." in result
-    assert "Successfully removed 1 admins." in result
+    assert result.add_result.successful_ids == [101]
+    assert not result.add_result.failed_ids
+    assert result.remove_result.successful_ids == [201]
+    assert not result.remove_result.failed_ids
+    assert not result.error_messages
     assert mock_uow.admins.add.call_count == 1
     assert mock_uow.admins.delete.call_count == 1
     expected_commit_calls = 2
@@ -336,12 +376,16 @@ async def test_manage_admin_ids_invalid_args(
         remove_ids=remove_ids,
         is_add_action=True,
         error_messages=error_messages,
-        translator=mock_translator,
     )
 
-    assert "Invalid Telegram ID to add: abc" in result
-    assert "Invalid Telegram ID to remove: def" in result
-    assert "Successfully added 1 admins." in result
+    assert result.add_result.successful_ids == [123]
+    assert not result.add_result.failed_ids
+    assert not result.remove_result.successful_ids
+    assert not result.remove_result.failed_ids
+    assert result.error_messages == [
+        "Invalid Telegram ID to add: abc",
+        "Invalid Telegram ID to remove: def",
+    ]
     assert mock_uow.admins.add.call_count == 1
     assert mock_uow.commit.call_count == 1
 
@@ -355,9 +399,12 @@ async def test_manage_admin_ids_empty_args(
         remove_ids=[],
         is_add_action=True,
         error_messages=[],
-        translator=mock_translator,
     )
-    assert "No valid admin IDs provided for adding or removing." in result
+    assert not result.add_result.successful_ids
+    assert not result.add_result.failed_ids
+    assert not result.remove_result.successful_ids
+    assert not result.remove_result.failed_ids
+    assert not result.error_messages
 
 
 @pytest.mark.asyncio

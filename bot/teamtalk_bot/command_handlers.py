@@ -22,62 +22,14 @@ from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
+from bot.services.schemas import AdminManagementResult
+from bot.teamtalk_bot.formatters import _split_text_for_tt  # Added import
 
 if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
-
-
-def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
-    """Splits a long text message into parts suitable for TeamTalk."""
-    parts_to_send_list = []
-    remaining_text = text
-
-    while remaining_text:
-        if len(remaining_text.encode("utf-8", errors="ignore")) <= max_len_bytes:
-            parts_to_send_list.append(remaining_text)
-            break
-
-        current_chunk_str = ""
-        current_chunk_bytes_len = 0
-        last_safe_split_index_in_chunk = -1
-        last_safe_split_index_in_remaining = -1
-
-        for i, char_code in enumerate(remaining_text):
-            char_bytes = char_code.encode("utf-8", errors="ignore")
-            char_bytes_len = len(char_bytes)
-
-            if current_chunk_bytes_len + char_bytes_len > max_len_bytes:
-                if last_safe_split_index_in_chunk != -1:
-                    parts_to_send_list.append(
-                        current_chunk_str[:last_safe_split_index_in_chunk]
-                    )
-                    remaining_text = remaining_text[
-                        last_safe_split_index_in_remaining:
-                    ].lstrip()
-                else:
-                    parts_to_send_list.append(current_chunk_str)
-                    remaining_text = remaining_text[i:].lstrip()
-                break
-
-            current_chunk_str += char_code
-            current_chunk_bytes_len += char_bytes_len
-
-            if char_code in ("\n", " "):
-                last_safe_split_index_in_chunk = len(current_chunk_str)
-                last_safe_split_index_in_remaining = i + 1
-
-            if i == len(remaining_text) - 1:
-                parts_to_send_list.append(current_chunk_str)
-                remaining_text = ""
-                break
-        else:
-            if current_chunk_str and not remaining_text:
-                pass
-            remaining_text = ""
-    return parts_to_send_list
 
 
 def _is_tt_admin(
@@ -94,9 +46,8 @@ def _is_tt_admin(
         **kwargs: Any,
     ) -> None:
         _ = translator.gettext
-        if (
-            not self.settings.general.admin_username
-            or ttstr(tt_message.user.username) != self.settings.general.admin_username
+        if not self.moderation_service.is_main_teamtalk_admin(
+            ttstr(tt_message.user.username)
         ):
             logger.warning(
                 "Unauthorized admin command by TT user %s for %s.",
@@ -268,11 +219,43 @@ class PrivateMessageCommandHandlers:
             args_str, translator
         )
 
-        response_message = await self.moderation_service.manage_admin_ids(
+        result: AdminManagementResult = await self.moderation_service.manage_admin_ids(
             add_ids=add_ids,
             remove_ids=remove_ids,
             is_add_action=is_add_action,
             error_messages=error_messages,
-            translator=translator,
+        )
+
+        response_parts = result.error_messages[:]
+
+        if result.add_result.successful_ids:
+            response_parts.append(
+                _("Successfully added {} admins.").format(
+                    len(result.add_result.successful_ids)
+                )
+            )
+        if result.add_result.failed_ids:
+            response_parts.append(
+                _("Failed to add {} admins (already admins or invalid IDs).").format(
+                    len(result.add_result.failed_ids)
+                )
+            )
+        if result.remove_result.successful_ids:
+            response_parts.append(
+                _("Successfully removed {} admins.").format(
+                    len(result.remove_result.successful_ids)
+                )
+            )
+        if result.remove_result.failed_ids:
+            response_parts.append(
+                _("Failed to remove {} admins (not admins or invalid IDs).").format(
+                    len(result.remove_result.failed_ids)
+                )
+            )
+
+        response_message = (
+            "\n".join(response_parts)
+            if response_parts
+            else _("No valid admin IDs provided for adding or removing.")
         )
         await self._reply_to_tt_message(tt_message.reply, response_message)

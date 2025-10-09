@@ -5,15 +5,43 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
+from aiogram import html  # Added import
 from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
 if TYPE_CHECKING:
     from bot.telegram_bot.models import WhoReport
 
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.models import (
+    MuteListMode,
+    NotificationSetting,
+    UserSettings,
+)  # Added MuteListMode
 
 logger = logging.getLogger(__name__)
+
+
+def format_mute_toast(
+    username_to_toggle: str,
+    *,
+    was_added_to_list: bool,
+    current_mode: MuteListMode,
+    translator: NullTranslations,
+) -> str:
+    """Formats the toast message for a mute/unmute action."""
+    _ = translator.gettext
+    clean_username = username_to_toggle.strip("<>")
+    quoted_username = html.quote(clean_username)
+    action_key_map = {
+        (MuteListMode.blacklist, True): "added to blacklist",
+        (MuteListMode.blacklist, False): "removed from blacklist",
+        (MuteListMode.whitelist, True): "added to whitelist",
+        (MuteListMode.whitelist, False): "removed from whitelist",
+    }
+    action_text = _(action_key_map[(current_mode, was_added_to_list)])
+    return _("{username} has been {action}.").format(
+        username=quoted_username, action=action_text
+    )
 
 
 def format_telegram_user_display_name(chat: Chat | None) -> str:

@@ -58,6 +58,14 @@ class BatchOperationResult(BaseModel):
     failed_ids: list[int] = Field(default_factory=list)
 
 
+class AdminManagementResult(BaseModel):
+    """Represents the result of an admin management operation."""
+
+    add_result: BatchOperationResult
+    remove_result: BatchOperationResult
+    error_messages: list[str]
+
+
 class MuteListViewData(BaseModel):
     """A DTO for data required to render a mute list view."""
 

@@ -10,7 +10,7 @@ import pytalk
 
 from bot.core.enums import UserListAction
 from bot.models import UserSettings
-from bot.services.notification_service import is_username_effectively_muted
+from bot.services.notification_service import is_muted  # Updated import
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -221,7 +221,7 @@ async def create_toggle_mute_keyboard(
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-        effectively_muted = is_username_effectively_muted(
+        effectively_muted = is_muted(
             username_str, user_settings, muted_usernames_from_relationship
         )
         if effectively_muted:

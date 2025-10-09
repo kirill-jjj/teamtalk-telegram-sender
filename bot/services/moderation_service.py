@@ -8,6 +8,7 @@ from pydantic import ConfigDict, Field, validate_call
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
+from bot.config import Settings  # Added import
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
@@ -15,6 +16,7 @@ from bot.event_bus.bus import EventBus
 from bot.models import Admin, MutedUser, MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
+    AdminManagementResult,  # Added import
     AllAccountsViewData,
     BatchOperationResult,
     MuteListViewData,
@@ -40,6 +42,7 @@ class ModerationService:
         cache: CacheService,
         event_bus: EventBus,
         command_bus: CommandBus,
+        settings: Settings,  # Added settings
     ) -> None:
         """Initializes the moderation service."""
         self._uow = uow
@@ -47,6 +50,14 @@ class ModerationService:
         self._cache = cache
         self._event_bus = event_bus
         self._command_bus = command_bus
+        self._settings = settings
+
+    def is_main_teamtalk_admin(self, username: str) -> bool:
+        """Checks if a TeamTalk username matches the configured main admin."""
+        admin_username = self._settings.general.admin_username
+        if not admin_username:
+            return False
+        return username == admin_username
 
     async def get_all_server_accounts_view_data(
         self, lang_code: str, translator: NullTranslations
@@ -175,12 +186,8 @@ class ModerationService:
         *,
         is_add_action: bool,
         error_messages: list[str],
-        translator: NullTranslations,
-    ) -> str:
-        """Processes admin ID management commands and returns a report string."""
-        _ = translator.gettext
-        response_parts = error_messages[:]
-
+    ) -> AdminManagementResult:
+        """Processes admin ID management commands and returns a structured result."""
         if is_add_action:
             add_result = await self.add_admins_in_batch(add_ids)
             remove_result = await self.remove_admins_in_batch(remove_ids)
@@ -188,35 +195,11 @@ class ModerationService:
             add_result = BatchOperationResult()  # No additions
             remove_result = await self.remove_admins_in_batch(add_ids + remove_ids)
 
-        if add_result.successful_ids:
-            response_parts.append(
-                _("Successfully added {} admins.").format(
-                    len(add_result.successful_ids)
-                )
-            )
-        if add_result.failed_ids:
-            response_parts.append(
-                _("Failed to add {} admins (already admins or invalid IDs).").format(
-                    len(add_result.failed_ids)
-                )
-            )
-        if remove_result.successful_ids:
-            response_parts.append(
-                _("Successfully removed {} admins.").format(
-                    len(remove_result.successful_ids)
-                )
-            )
-        if remove_result.failed_ids:
-            response_parts.append(
-                _("Failed to remove {} admins (not admins or invalid IDs).").format(
-                    len(remove_result.failed_ids)
-                )
-            )
-
-        if not response_parts:
-            return _("No valid admin IDs provided for adding or removing.")
-
-        return "\n".join(response_parts)
+        return AdminManagementResult(
+            add_result=add_result,
+            remove_result=remove_result,
+            error_messages=error_messages,
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_subscriber(

@@ -19,6 +19,56 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
+def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
+    """Splits a long text message into parts suitable for TeamTalk."""
+    parts_to_send_list = []
+    remaining_text = text
+
+    while remaining_text:
+        if len(remaining_text.encode("utf-8", errors="ignore")) <= max_len_bytes:
+            parts_to_send_list.append(remaining_text)
+            break
+
+        current_chunk_str = ""
+        current_chunk_bytes_len = 0
+        last_safe_split_index_in_chunk = -1
+        last_safe_split_index_in_remaining = -1
+
+        for i, char_code in enumerate(remaining_text):
+            char_bytes = char_code.encode("utf-8", errors="ignore")
+            char_bytes_len = len(char_bytes)
+
+            if current_chunk_bytes_len + char_bytes_len > max_len_bytes:
+                if last_safe_split_index_in_chunk != -1:
+                    parts_to_send_list.append(
+                        current_chunk_str[:last_safe_split_index_in_chunk]
+                    )
+                    remaining_text = remaining_text[
+                        last_safe_split_index_in_remaining:
+                    ].lstrip()
+                else:
+                    parts_to_send_list.append(current_chunk_str)
+                    remaining_text = remaining_text[i:].lstrip()
+                break
+
+            current_chunk_str += char_code
+            current_chunk_bytes_len += char_bytes_len
+
+            if char_code in ("\n", " "):
+                last_safe_split_index_in_chunk = len(current_chunk_str)
+                last_safe_split_index_in_remaining = i + 1
+
+            if i == len(remaining_text) - 1:
+                parts_to_send_list.append(current_chunk_str)
+                remaining_text = ""
+                break
+        else:
+            if current_chunk_str and not remaining_text:
+                pass
+            remaining_text = ""
+    return parts_to_send_list
+
+
 def get_effective_server_name(
     tt_instance: TeamTalkInstance | None,
     translator: gettext.NullTranslations,

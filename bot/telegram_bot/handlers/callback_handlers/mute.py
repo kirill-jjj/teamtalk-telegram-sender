@@ -5,7 +5,7 @@ from gettext import NullTranslations
 import logging
 from typing import Any, TypeVar
 
-from aiogram import F, Router, html
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
@@ -25,6 +25,7 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
+from bot.telegram_bot.formatters import format_mute_toast  # Added import
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
@@ -121,29 +122,6 @@ async def _display_internal_user_list(
                 translator, _("Mute Management")
             ),
         },
-    )
-
-
-def format_mute_toast(
-    username_to_toggle: str,
-    *,
-    was_added_to_list: bool,
-    current_mode: MuteListMode,
-    translator: NullTranslations,
-) -> str:
-    """Formats the toast message for a mute/unmute action."""
-    _ = translator.gettext
-    clean_username = username_to_toggle.strip("<>")
-    quoted_username = html.quote(clean_username)
-    action_key_map = {
-        (MuteListMode.blacklist, True): "added to blacklist",
-        (MuteListMode.blacklist, False): "removed from blacklist",
-        (MuteListMode.whitelist, True): "added to whitelist",
-        (MuteListMode.whitelist, False): "removed from whitelist",
-    }
-    action_text = _(action_key_map[(current_mode, was_added_to_list)])
-    return _("{username} has been {action}.").format(
-        username=quoted_username, action=action_text
     )
 
 
@@ -360,8 +338,16 @@ async def toggle_user_mute(
         translator,
     )
 
-    toast_message = translator.gettext(toggle_result.message_key).format(
-        **(toggle_result.message_args or {})
+    toast_message = format_mute_toast(
+        username_to_toggle=toggle_result.message_args["username"]
+        if toggle_result.message_args
+        else "",
+        was_added_to_list=toggle_result.message_key
+        == translator.gettext("User {username} has been successfully muted."),
+        current_mode=toggle_result.user_settings.mute_list_mode
+        if toggle_result.user_settings
+        else MuteListMode.blacklist,  # Default to blacklist if None
+        translator=translator,
     )
     await callback_query.answer(toast_message, show_alert=not toggle_result.success)
 

@@ -42,7 +42,7 @@ async def is_linked_user_online(
     )
 
 
-def is_username_effectively_muted(
+def is_muted(
     username: str, user_settings: UserSettings, muted_usernames_set: set[str]
 ) -> bool:
     """Determines if a username is effectively muted based on user settings."""

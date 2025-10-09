@@ -262,8 +262,27 @@ class RequestProvider(Provider):
         DeeplinkService,
         UserSettingsService,
         SubscriptionService,
-        ModerationService,
     )
+
+    @provide
+    def get_moderation_service(
+        self,
+        uow: FromDishka[IUnitOfWork],
+        subscription_service: FromDishka[SubscriptionService],
+        cache: FromDishka[CacheService],
+        event_bus: FromDishka[EventBus],
+        command_bus: FromDishka[CommandBus],
+        settings: FromDishka[Settings],
+    ) -> ModerationService:
+        """Provides a ModerationService."""
+        return ModerationService(
+            uow=uow,
+            subscription_service=subscription_service,
+            cache=cache,
+            event_bus=event_bus,
+            command_bus=command_bus,
+            settings=settings,
+        )
 
     @provide
     def get_user_from_event(self, event: TelegramObject) -> User | None:
