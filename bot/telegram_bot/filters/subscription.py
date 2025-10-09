@@ -1,12 +1,14 @@
 """Custom filter to check if a user is a subscribed."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiogram.filters import Filter
 from aiogram.types import CallbackQuery, Message
-from dishka import AsyncContainer
 
 from bot.services.cache_service import CacheService
+
+if TYPE_CHECKING:
+    from dishka import AsyncContainer
 
 
 class IsSubscribed(Filter):

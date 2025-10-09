@@ -1,12 +1,8 @@
 """Manages in-memory caches for admin IDs, subscriber IDs, and user settings."""
 
 import logging
-from typing import TYPE_CHECKING
 
 from bot.models import UserSettings
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 

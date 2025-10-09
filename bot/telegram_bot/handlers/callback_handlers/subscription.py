@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
-from gettext import NullTranslations
 import logging
+from typing import TYPE_CHECKING
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
-from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
 from bot.models import NotificationSetting, UserSettings
-from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.ui_utils import safe_edit_text
+
+if TYPE_CHECKING:
+    from gettext import NullTranslations
+
+    from aiogram.types import CallbackQuery
+    from dishka.integrations.aiogram import FromDishka
+
+    from bot.services.user_settings_service import UserSettingsService
 
 logger = logging.getLogger(__name__)
 

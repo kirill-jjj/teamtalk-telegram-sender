@@ -19,6 +19,8 @@ down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+logger = logging.getLogger(__name__)
+
 
 # Helper function to check if a table exists
 def _table_exists(table_name: str, conn: sa.engine.Connection) -> bool:
@@ -172,9 +174,9 @@ def upgrade() -> None:  # noqa: PLR0912
             ["teamtalk_username"],
             unique=False,
         )
-        logging.info("Table 'ban_list' created.")
+        logger.info("Table 'ban_list' created.")
     else:
-        logging.info("Table 'ban_list' already exists.")
+        logger.info("Table 'ban_list' already exists.")
 
     # Data Migrations
     if _table_exists("user_settings", conn) and _column_exists(

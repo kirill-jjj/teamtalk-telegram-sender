@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated, cast
+from typing import TYPE_CHECKING, Annotated, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -13,7 +13,6 @@ from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsRe
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
-from bot.services.schemas import UserAccountInfo
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     ManageTTAccountCallback,
@@ -30,6 +29,9 @@ from bot.telegram_bot.ui_utils import (
     safe_edit_text,
 )
 from bot.utils.pagination import paginate_list
+
+if TYPE_CHECKING:
+    from bot.services.schemas import UserAccountInfo
 
 logger = logging.getLogger(__name__)
 tt_account_router = Router(name="subscriber_management.tt_account_router")
@@ -65,7 +67,7 @@ async def manage_tt_account(
         ).format(telegram_id=target_telegram_id)
 
         await safe_edit_text(
-            message_to_edit=cast(Message, query.message),
+            message_to_edit=cast("Message", query.message),
             text=message_text,
             reply_markup=keyboard,
         )

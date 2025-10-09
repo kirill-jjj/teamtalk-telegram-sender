@@ -2,9 +2,7 @@
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Self
-
-from sqlmodel.ext.asyncio.session import AsyncSession
+from typing import TYPE_CHECKING, Self
 
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.repositories.admin_repository import AdminRepository
@@ -12,6 +10,9 @@ from bot.database.repositories.ban_repository import BanRepository
 from bot.database.repositories.deeplink_repository import DeeplinkRepository
 from bot.database.repositories.subscriber_repository import SubscriberRepository
 from bot.database.repositories.user_repository import UserRepository
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class IUnitOfWork(ABC):

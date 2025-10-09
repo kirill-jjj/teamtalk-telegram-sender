@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-import pytalk
+from typing import TYPE_CHECKING
 
 from bot.event_bus.types import BaseEvent
+
+if TYPE_CHECKING:
+    import pytalk
 
 
 class UserJoinedEvent(BaseEvent):

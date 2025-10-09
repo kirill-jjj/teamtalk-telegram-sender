@@ -1,8 +1,7 @@
 """Keyboards for admin-facing functions."""
 
-from collections.abc import Callable
 from gettext import NullTranslations
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -44,6 +43,9 @@ from .shared import (
     create_back_button,
     create_paginated_keyboard,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 async def create_banned_user_list_keyboard(
