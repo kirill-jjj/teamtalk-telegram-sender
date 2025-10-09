@@ -13,8 +13,10 @@ from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsRe
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
 from bot.services.schemas import UserAccountInfo
+from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
+    LinkTTAccountChosenCallback,
     ManageTTAccountCallback,
     PaginateLinkableAccountsCallback,
     SubscriberCallback,
@@ -182,6 +184,59 @@ async def paginate_linkable_accounts(
         translator=translator,
     )
     await query.answer()
+
+
+@tt_account_router.callback_query(LinkTTAccountChosenCallback.filter())
+@ensure_message_context
+async def link_tt_account_chosen(
+    query: CallbackQuery,
+    callback_data: LinkTTAccountChosenCallback,
+    translator: FromDishka[NullTranslations],
+    user_settings_service: FromDishka[UserSettingsService],
+    subscription_service: FromDishka[SubscriptionService],
+) -> None:
+    """Handles the selection of a TeamTalk account to link to a subscriber."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+    tt_username = callback_data.tt_username
+    return_page = callback_data.page
+
+    user_settings = await user_settings_service.get_or_create(
+        target_telegram_id,
+        "en",  # Language doesn't matter for this operation
+    )
+    if not user_settings:
+        await query.answer(_("Subscriber settings not found."), show_alert=True)
+        return
+
+    result = await subscription_service.link_tt_account(
+        user_settings, tt_username, translator
+    )
+
+    toast_message = _(result.message_key).format(**(result.message_args or {}))
+    await query.answer(toast_message, show_alert=not result.success)
+
+    if result.success:
+        # Refresh the manage TT account view
+        keyboard = await create_manage_tt_account_keyboard(
+            translator,
+            target_telegram_id=target_telegram_id,
+            current_tt_username=tt_username,
+            page=return_page,
+        )
+        message_text = _(
+            "Manage TeamTalk account link for subscriber {telegram_id}:"
+        ).format(telegram_id=target_telegram_id)
+        if not query.message:
+            logger.error("CallbackQuery message is None in link_tt_account_chosen.")
+            await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+            return
+
+        await safe_edit_text(
+            message_to_edit=query.message,
+            text=message_text,
+            reply_markup=keyboard,
+        )
 
 
 @tt_account_router.callback_query(
