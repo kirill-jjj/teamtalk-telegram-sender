@@ -128,7 +128,12 @@ The codebase is organized into distinct layers, each with a single responsibilit
 #### Working with Existing Code
 You may encounter business logic within handlers. This is a known area for future refactoring. When modifying an existing handler that contains business logic, you have two options:
 
-*   **Option A (Preferred):** If the task is small, refactor the existing logic out of the handler and into a new or existing service, then add your new logic in the service. Propose this refactoring to the user as part of your plan.
+*   **Option A (Preferred):** If the task is small, refactor the existing logic out of the handler and into a new or existing service. This process includes:
+    1.  Moving the business logic to a service.
+    2.  Updating the handler to call the new service method.
+    3.  **Immediately deleting the old, now-unused code (dead code)** from the handler to avoid leaving artifacts.
+    4.  Adding your new logic in the service layer.
+    Propose this refactoring to the user as part of your plan.
 *   **Option B:** If the change is very minor (e.g., fixing a typo in a string), you can make the change directly in the handler. However, for any logic changes, prefer Option A.
 
 The goal is to leave the code better than you found it. Always strive to move business logic to the service layer when you touch a related part of the code.
