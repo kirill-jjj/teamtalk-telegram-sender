@@ -169,7 +169,10 @@ async def _refresh_mute_related_ui(
             translator,
             user_settings,
             moderation_service,  # This needs to be passed
-            callback_data,  # Pass callback_data to get the page
+            PaginateUsersCallback(
+                list_type=UserListAction.LIST_ALL_ACCOUNTS,
+                page=current_page_for_refresh,
+            ),
         )
     else:
         await _display_internal_user_list(
