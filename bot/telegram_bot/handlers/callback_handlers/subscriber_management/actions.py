@@ -181,18 +181,14 @@ async def on_ban_subscriber_confirm(
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
 ) -> None:
-    """Handles banning and deleting a subscriber after admin confirmation."""
+    """Handles banning a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(
-        target_telegram_id, translator
-    )
+    result = await moderation_service.ban_subscriber(target_telegram_id, translator)
 
     if result.long_message:
-        logger.info(
-            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
-        )
+        logger.info("Ban report for %s:\n%s", target_telegram_id, result.long_message)
 
     short_message = _(result.message_key).format(**(result.message_args or {}))
 

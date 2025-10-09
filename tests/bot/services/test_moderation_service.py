@@ -7,7 +7,6 @@ from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
 from bot.models import Admin, UserSettings
 from bot.services.moderation_service import ModerationService
-from bot.services.schemas import OperationResult
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
 
 
@@ -362,7 +361,7 @@ async def test_manage_admin_ids_empty_args(
 
 
 @pytest.mark.asyncio
-async def test_ban_and_delete_subscriber_success(
+async def test_ban_subscriber_success(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
@@ -373,27 +372,17 @@ async def test_ban_and_delete_subscriber_success(
         telegram_id=telegram_id, teamtalk_username="test_tt_user"
     )
     mock_uow.users.get_by_id.return_value = mock_user_settings
-    mock_subscription_service.delete_profile.return_value = OperationResult(
-        success=True, message_key="User deleted."
-    )
 
-    result = await moderation_service.ban_and_delete_subscriber(
-        telegram_id, mock_translator
-    )
+    result = await moderation_service.ban_subscriber(telegram_id, mock_translator)
 
     assert result.success is True
-    assert (
-        "User {telegram_id} was banned and their profile was deleted."
-        in result.message_key
-    )
+    assert "User {telegram_id} was banned." in result.message_key
     mock_uow.bans.add_ban.assert_called_once_with(
         telegram_id=telegram_id,
         teamtalk_username="test_tt_user",
         reason="Banned by admin",
     )
-    mock_subscription_service.delete_profile.assert_called_once_with(
-        telegram_id, mock_translator
-    )
+    mock_subscription_service.delete_profile.assert_not_called()
 
 
 @pytest.mark.asyncio

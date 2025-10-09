@@ -219,12 +219,12 @@ class ModerationService:
         return "\n".join(response_parts)
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    async def ban_and_delete_subscriber(
+    async def ban_subscriber(
         self,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
     ) -> OperationResult:
-        """Bans a user and deletes their profile within a single transaction."""
+        """Bans a user by adding them to the ban list."""
         _ = translator.gettext
         async with self._uow:
             user_settings = await self._uow.users.get_by_id(telegram_id)
@@ -236,16 +236,11 @@ class ModerationService:
                 teamtalk_username=tt_username,  # Pass both telegram_id and tt_username
                 reason="Banned by admin",
             )
-
-            # Delete profile within the same transaction
-            await self._subscription_service.delete_profile(telegram_id, translator)
             await self._uow.commit()
 
         return OperationResult(
             success=True,
-            message_key=_(
-                "User {telegram_id} was banned and their profile was deleted."
-            ),
+            message_key=_("User {telegram_id} was banned."),
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 

@@ -95,17 +95,13 @@ async def ban_subscriber(
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
 ) -> tuple[bool, str, None]:
-    """Handles banning and deleting a subscriber."""
+    """Handles banning a subscriber."""
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_and_delete_subscriber(
-        target_telegram_id, translator
-    )
+    result = await moderation_service.ban_subscriber(target_telegram_id, translator)
 
     if result.long_message:
-        logger.info(
-            "Ban/delete report for %s:\n%s", target_telegram_id, result.long_message
-        )
+        logger.info("Ban report for %s:\n%s", target_telegram_id, result.long_message)
 
     short_message = result.message_key.format(**(result.message_args or {}))
     return result.success, short_message, None
