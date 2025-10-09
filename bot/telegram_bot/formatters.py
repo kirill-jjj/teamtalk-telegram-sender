@@ -44,7 +44,8 @@ def format_subscriber_details(
     """Formats the detailed view of a subscriber's settings."""
     _ = translator.gettext
 
-    details_parts = [f"<b>{_('Subscriber')}: {display_name}</b>"]
+    translated_subscriber_line = _("Subscriber: {display_name}").format(display_name=display_name)
+    details_parts = [f"<b>{translated_subscriber_line}</b>"]
     details_parts.append(
         _("Linked TT Account: {tt_username}").format(
             tt_username=user_settings.teamtalk_username or _("None")
