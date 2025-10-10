@@ -48,7 +48,6 @@ T = TypeVar("T")
 async def _display_user_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: UserSettings,
     page: int,
     items: list[Any],
     sort_key_extractor: Callable[[Any], Any],
@@ -99,11 +98,13 @@ async def _display_internal_user_list(
     view_data = moderation_service.prepare_mute_list_view_data(
         user_settings, translator
     )
+    muted_usernames = {
+        user.muted_teamtalk_username for user in user_settings.muted_users_list
+    }
 
     await _display_user_list(
         callback_query=callback_query,
         translator=translator,
-        user_settings=user_settings,
         page=page,
         items=view_data.items,
         # Sorting is now done in service, but helper still needs it
@@ -111,7 +112,8 @@ async def _display_internal_user_list(
         title_text=view_data.title,
         empty_list_text=view_data.empty_list_text,
         keyboard_factory_kwargs={
-            "user_settings": user_settings,
+            "mute_list_mode": user_settings.mute_list_mode,
+            "muted_usernames": muted_usernames,
             "list_type_for_callback": list_type,
             "item_username_extractor": lambda item: item,
             "item_display_name_extractor": lambda item: item,
@@ -295,18 +297,21 @@ async def display_all_accounts_list(
     view_data = await moderation_service.get_all_server_accounts_view_data(
         lang_code=translator.info().get("language", "en"), translator=translator
     )
+    muted_usernames = {
+        user.muted_teamtalk_username for user in user_settings.muted_users_list
+    }
 
     await _display_user_list(
         callback_query=callback_query,
         translator=translator,
-        user_settings=user_settings,
         page=callback_data.page,
         items=view_data.accounts,
         sort_key_extractor=lambda acc: acc.username.lower(),
         title_text=view_data.title,
         empty_list_text=view_data.empty_list_text,
         keyboard_factory_kwargs={
-            "user_settings": user_settings,
+            "mute_list_mode": user_settings.mute_list_mode,
+            "muted_usernames": muted_usernames,
             "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
             "item_username_extractor": lambda item: item.username,
             "item_display_name_extractor": lambda item: item.username,

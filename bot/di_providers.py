@@ -18,12 +18,12 @@ from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
-from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
 from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
+from bot.services.schemas import SettingsViewDTO
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
@@ -293,29 +293,29 @@ class RequestProvider(Provider):
         """
         return getattr(event, "from_user", None)
 
-    @provide(provides=UserSettings | None)
+    @provide(provides=SettingsViewDTO | None)
     async def get_user_settings_optional(
         self,
         user: User | None,
         user_settings_service: UserSettingsService,
         settings: Settings,
-    ) -> UserSettings | None:
-        """Provides UserSettings if a user is present in the event."""
+    ) -> SettingsViewDTO | None:
+        """Provides SettingsViewDTO if a user is present in the event."""
         if not user:
             return None
-        return await user_settings_service.get_or_create(
+        return await user_settings_service.get_user_settings_view(
             user.id, settings.general.default_lang
         )
 
     @provide
     def get_user_settings_guaranteed(
         self,
-        user_settings: UserSettings | None,
-    ) -> UserSettings:
-        """Provides a guaranteed UserSettings object.
+        user_settings: SettingsViewDTO | None,
+    ) -> SettingsViewDTO:
+        """Provides a guaranteed SettingsViewDTO object.
 
         Raises:
-            ValueError: If UserSettings cannot be provided because no user
+            ValueError: If SettingsViewDTO cannot be provided because no user
                         is present in the event context.
         """
         if user_settings is None:
@@ -325,7 +325,7 @@ class RequestProvider(Provider):
     @provide(provides=NullTranslations)
     def get_translator(
         self,
-        user_settings: UserSettings | None,
+        user_settings: SettingsViewDTO | None,
         settings: Settings,
         translator_factory: Callable[[str | None], NullTranslations],
     ) -> NullTranslations:

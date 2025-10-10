@@ -9,7 +9,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
-from bot.models import UserSettings
+from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
@@ -29,7 +29,7 @@ notifications_router = Router(name="callback_handlers.notifications")
 async def show_notifications_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[SettingsViewDTO | None],
 ) -> None:
     """Shows the notification settings menu."""
     _ = translator.gettext

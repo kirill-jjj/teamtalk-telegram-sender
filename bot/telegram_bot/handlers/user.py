@@ -13,10 +13,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
-from bot.models import UserSettings
-from bot.services.cache_service import CacheService
-from bot.services.deeplink_service import DeeplinkService
-from bot.services.report_service import ReportService
+from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message
 from bot.telegram_bot.commands import update_user_bot_commands
@@ -62,7 +59,7 @@ async def on_start_command(
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    user_settings: Annotated["UserSettings", FromDishka()],
+    user_settings: Annotated[SettingsViewDTO, FromDishka()],
 ) -> None:
     """Handles the /start command without a deeplink."""
     _ = translator.gettext

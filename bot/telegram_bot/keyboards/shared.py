@@ -9,7 +9,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
 from bot.core.enums import UserListAction
-from bot.models import UserSettings
 from bot.services.notification_service import is_muted  # Updated import
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 
@@ -204,7 +203,8 @@ async def create_toggle_mute_keyboard(
     page_items: list[Any],
     current_page: int,
     total_pages: int,
-    user_settings: UserSettings,
+    mute_list_mode: MuteListMode,
+    muted_usernames: set[str],
     list_type_for_callback: UserListAction,
     item_username_extractor: "Callable[[Any], str]",
     item_display_name_extractor: "Callable[[Any], str]",
@@ -214,16 +214,11 @@ async def create_toggle_mute_keyboard(
     """Generic helper for a paginated list of users with mute/unmute toggle buttons."""
     _ = translator.gettext
     builder = InlineKeyboardBuilder()
-    muted_usernames_from_relationship = {
-        mu.muted_teamtalk_username for mu in user_settings.muted_users_list
-    }
 
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-        effectively_muted = is_muted(
-            username_str, user_settings, muted_usernames_from_relationship
-        )
+        effectively_muted = is_muted(username_str, mute_list_mode, muted_usernames)
         if effectively_muted:
             button_text = _("{item_display_name} (Status: Muted)").format(
                 item_display_name=display_name_on_button

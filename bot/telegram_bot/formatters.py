@@ -12,11 +12,8 @@ from aiogram.utils.formatting import Bold, Text, as_list
 if TYPE_CHECKING:
     from bot.telegram_bot.models import WhoReport
 
-from bot.models import (
-    MuteListMode,
-    NotificationSetting,
-    UserSettings,
-)  # Added MuteListMode
+from bot.models import MuteListMode, NotificationSetting
+from bot.services.schemas import SettingsViewDTO
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +64,9 @@ def format_telegram_user_display_name(chat: Chat | None) -> str:
 
 
 def format_subscriber_details(
-    user_settings: UserSettings, display_name: str, translator: gettext.NullTranslations
+    user_settings: SettingsViewDTO,
+    display_name: str,
+    translator: gettext.NullTranslations,
 ) -> str:
     """Formats the detailed view of a subscriber's settings."""
     _ = translator.gettext

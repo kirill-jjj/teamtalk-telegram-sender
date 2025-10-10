@@ -9,9 +9,9 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand, SubscriberListAction
-from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
+from bot.services.schemas import SettingsViewDTO
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_name_for_id
@@ -40,7 +40,7 @@ async def _display_subscriber_view(
     query: CallbackQuery,
     target_telegram_id: int,
     page_context: int,
-    user_settings: UserSettings,
+    user_settings: SettingsViewDTO,
     translator: NullTranslations,
     bot: "EventBot",
 ) -> None:
@@ -50,7 +50,7 @@ async def _display_subscriber_view(
     keyboard = await create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
-    display_name = await get_display_name_for_id(bot, user_settings.telegram_id)
+    display_name = await get_display_name_for_id(bot, target_telegram_id)
     text = format_subscriber_details(user_settings, display_name, translator)
 
     # This assumes query.message is a Message, which is guaranteed by
@@ -77,7 +77,9 @@ async def refresh_subscriber_view(
         callback_data, "subscriber_page_context", getattr(callback_data, "page", 0)
     )
 
-    user_settings: UserSettings | None = cast(UserSettings, kwargs.get("user_settings"))
+    user_settings: SettingsViewDTO | None = cast(
+        SettingsViewDTO, kwargs.get("user_settings")
+    )
     if not user_settings:
         logger.error(
             "refresh_subscriber_view called without 'user_settings' "
@@ -256,7 +258,7 @@ async def view_subscriber(
 ) -> None:
     """Handle viewing details and actions for a subscriber via the display helper."""
     _ = translator.gettext
-    user_settings = await user_settings_service.get_or_create(
+    user_settings = await user_settings_service.get_user_settings_view(
         callback_data.telegram_id,
         "en",  # lang doesn't matter here
     )

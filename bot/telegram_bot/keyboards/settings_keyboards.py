@@ -14,7 +14,7 @@ from bot.core.enums import (
     UserListAction,
 )
 from bot.core.languages import LanguageInfo
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.services.schemas import SettingsViewDTO
 from bot.telegram_bot.callback_data import (
     LanguageCallback,
     NotificationCallback,
@@ -110,7 +110,7 @@ async def create_subscription_settings_keyboard(
 
 
 async def create_notification_settings_keyboard(
-    translator: NullTranslations, user_settings: UserSettings
+    translator: NullTranslations, user_settings: SettingsViewDTO
 ) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
     _ = translator.gettext
@@ -143,7 +143,7 @@ async def create_notification_settings_keyboard(
 
 
 async def create_manage_muted_users_keyboard(
-    translator: NullTranslations, user_settings: UserSettings
+    translator: NullTranslations, user_settings: SettingsViewDTO
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
     _ = translator.gettext

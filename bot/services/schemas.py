@@ -4,7 +4,18 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
-from bot.models import UserSettings
+from bot.models import MuteListMode, NotificationSetting, UserSettings
+
+
+class SettingsViewDTO(BaseModel):
+    """DTO for displaying user settings in the UI."""
+
+    language_code: str
+    notification_settings: NotificationSetting
+    mute_list_mode: MuteListMode
+    not_on_online_enabled: bool
+    teamtalk_username: str | None
+    muted_users_count: int
 
 
 class UserDTO(BaseModel):
@@ -47,7 +58,7 @@ class OperationResult(BaseModel):
     success: bool
     message_key: str
     message_args: dict[str, Any] | None = Field(default=None)
-    user_settings: UserSettings | None = Field(default=None)
+    user_settings: SettingsViewDTO | None = Field(default=None)
     long_message: str | None = Field(default=None)
 
 

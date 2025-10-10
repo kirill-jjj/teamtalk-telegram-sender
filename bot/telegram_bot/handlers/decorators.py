@@ -9,7 +9,7 @@ from typing import Any, TypeAlias, TypeVar, cast
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
 
-from bot.models import UserSettings
+from bot.services.schemas import SettingsViewDTO
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
     AdminSetSubscriberMuteModeCallback,
@@ -67,7 +67,7 @@ def with_view_refresh(
                 await query.answer()
 
             # The rest of the logic for refreshing the view
-            if updated_object and isinstance(updated_object, UserSettings):
+            if updated_object and isinstance(updated_object, SettingsViewDTO):
                 kwargs["user_settings"] = updated_object
                 if "translator_factory" in kwargs:
                     translator_factory = kwargs["translator_factory"]

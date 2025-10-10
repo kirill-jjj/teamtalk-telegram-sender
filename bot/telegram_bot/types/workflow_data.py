@@ -7,7 +7,7 @@ from aiogram.types import User
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
-from bot.models import UserSettings
+from bot.services.schemas import SettingsViewDTO
 
 
 class WorkflowData(TypedDict, total=False):
@@ -20,7 +20,7 @@ class WorkflowData(TypedDict, total=False):
     """
 
     session: AsyncSession
-    user_settings: UserSettings
+    user_settings: SettingsViewDTO
     translator: NullTranslations
 
     event_from_user: User
