@@ -1,5 +1,7 @@
 """Manages the lifecycle of TeamTalk server connections."""
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import logging
@@ -137,76 +139,103 @@ class TeamTalkConnectionManager:
         """Joins the configured TeamTalk channel."""
         conn = self.connection
         if not conn or not conn.instance:
-            host = conn.server_info.host if conn else "Unknown"
-            logger.error(
-                "[%s] No instance to join channel.",
-                host,
-            )
-            await self.initiate_reconnect()
-            return
+            return await self._handle_no_instance(conn, None)
 
         instance = conn.instance
+        try:
+            await self._try_join_channel(conn, instance)
+        except pytalk.exceptions.PermissionError as e:
+            await self._handle_join_permission_error(conn, instance, e)
+        except Exception as e:
+            await self._handle_generic_join_error(conn, e)
+
+    async def _handle_no_instance(
+        self,
+        conn: "TeamTalkConnection" | None,
+        _instance: pytalk.TeamTalkInstance | None,
+    ) -> None:
+        """Handles the case where there is no connection or instance."""
+        host = conn.server_info.host if conn else "Unknown"
+        logger.error("[%s] No instance to join channel.", host)
+        await self.initiate_reconnect()
+
+    async def _try_join_channel(
+        self, conn: "TeamTalkConnection", instance: pytalk.TeamTalkInstance
+    ) -> None:
+        """Tries to join the configured channel."""
         final_chan_id, target_chan_name = await self.determine_target_channel()
         chan_pass = conn.settings.teamtalk.channel_password or ""
 
-        try:
-            if final_chan_id != INVALID_CHANNEL_ID:
-                logger.info(
-                    "[%s] Joining chan: '%s' (ID: %s).",
-                    conn.server_info.host,
-                    target_chan_name,
-                    final_chan_id,
-                )
-                instance.join_channel_by_id(final_chan_id, password=chan_pass)
-            else:
-                logger.warning(
-                    "[%s] No valid target channel found/configured. "
-                    "Staying in default channel.",
-                    conn.server_info.host,
-                )
-                # If not joining a specific channel, finalize with the current one.
-                curr_chan_id = instance.getMyCurrentChannelID()
-                ch_to_finalize = instance.get_channel(
-                    curr_chan_id if curr_chan_id is not None else 0
-                )
-                if ch_to_finalize:
-                    await self.pytalk_event_handlers.finalize_bot_login_sequence(
-                        ch_to_finalize, conn
-                    )
-                else:
-                    logger.warning(
-                        "[%s] Could not get current/root channel to finalize.",
-                        conn.server_info.host,
-                    )
-
-        except pytalk.exceptions.PermissionError:
-            logger.exception(
-                "[%s] PermissionError joining '%s'. Will try to finalize in "
-                "current/default channel.",
+        if final_chan_id != INVALID_CHANNEL_ID:
+            logger.info(
+                "[%s] Joining chan: '%s' (ID: %s).",
                 conn.server_info.host,
                 target_chan_name,
+                final_chan_id,
             )
-            # Attempt to finalize in the current channel if join failed
-            # due to permissions
-            curr_chan_id_after_fail = instance.getMyCurrentChannelID()
-            ch_id_to_get = (
-                curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
-            )
-            ch_to_finalize_after_fail = instance.get_channel(ch_id_to_get)
-            if ch_to_finalize_after_fail:
-                await self.pytalk_event_handlers.finalize_bot_login_sequence(
-                    ch_to_finalize_after_fail, conn
-                )
-            else:
-                logger.exception(  # In except block, so changed from error to exception
-                    "[%s] Could not get current channel (ID: %s) to finalize "
-                    "after permission error.",
-                    conn.server_info.host,
-                    ch_id_to_get,
-                )
+            instance.join_channel_by_id(final_chan_id, password=chan_pass)
+        else:
+            await self._handle_no_target_channel(conn, instance)
 
-        except Exception:
-            logger.exception(
-                "[%s] Error during channel join/finalization.", conn.server_info.host
+    async def _handle_no_target_channel(
+        self, conn: "TeamTalkConnection", instance: pytalk.TeamTalkInstance
+    ) -> None:
+        """Handles the case where no valid target channel is found."""
+        logger.warning(
+            "[%s] No valid target channel found/configured. "
+            "Staying in default channel.",
+            conn.server_info.host,
+        )
+        curr_chan_id = instance.getMyCurrentChannelID()
+        ch_to_finalize = instance.get_channel(
+            curr_chan_id if curr_chan_id is not None else 0
+        )
+        if ch_to_finalize:
+            await self.pytalk_event_handlers.finalize_bot_login_sequence(
+                ch_to_finalize, conn
             )
-            await self.initiate_reconnect()
+        else:
+            logger.warning(
+                "[%s] Could not get current/root channel to finalize.",
+                conn.server_info.host,
+            )
+
+    async def _handle_join_permission_error(
+        self,
+        conn: "TeamTalkConnection",
+        instance: pytalk.TeamTalkInstance,
+        _error: pytalk.exceptions.PermissionError,
+    ) -> None:
+        """Handles a permission error when joining a channel."""
+        _, target_chan_name = await self.determine_target_channel()
+        logger.exception(
+            "[%s] PermissionError joining '%s'. Will try to finalize in "
+            "current/default channel.",
+            conn.server_info.host,
+            target_chan_name,
+        )
+        curr_chan_id_after_fail = instance.getMyCurrentChannelID()
+        ch_id_to_get = (
+            curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
+        )
+        ch_to_finalize_after_fail = instance.get_channel(ch_id_to_get)
+        if ch_to_finalize_after_fail:
+            await self.pytalk_event_handlers.finalize_bot_login_sequence(
+                ch_to_finalize_after_fail, conn
+            )
+        else:
+            logger.exception(
+                "[%s] Could not get current channel (ID: %s) to finalize "
+                "after permission error.",
+                conn.server_info.host,
+                ch_id_to_get,
+            )
+
+    async def _handle_generic_join_error(
+        self, conn: "TeamTalkConnection", _error: Exception
+    ) -> None:
+        """Handles a generic error during channel join."""
+        logger.exception(
+            "[%s] Error during channel join/finalization.", conn.server_info.host
+        )
+        await self.initiate_reconnect()
