@@ -9,7 +9,7 @@ from pytalk.user import User as TeamTalkUser
 from sqlalchemy import and_, or_
 from sqlmodel import select
 
-from bot.constants import NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
+from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
@@ -63,7 +63,7 @@ class NotificationRecipientService:
         self.cache = cache
 
     async def find_recipients(
-        self, username_to_check: str, event_type: str
+        self, username_to_check: str, event_type: NotificationType
     ) -> list[tuple[int, str | None]]:
         """Finds all users who should receive a notification for a given event."""
         subscriber_ids = list(self.cache.get_all_subscriber_ids())
@@ -87,11 +87,11 @@ class NotificationRecipientService:
                 UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
                 UserSettings.notification_settings != NotificationSetting.NONE,
             ]
-            if event_type == NOTIFICATION_EVENT_JOIN:
+            if event_type == NotificationType.JOIN:
                 filters.append(
                     UserSettings.notification_settings != NotificationSetting.JOIN_OFF
                 )
-            elif event_type == NOTIFICATION_EVENT_LEAVE:
+            elif event_type == NotificationType.LEAVE:
                 filters.append(
                     UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
                 )

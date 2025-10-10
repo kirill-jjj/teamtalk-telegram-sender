@@ -8,7 +8,7 @@ import logging
 from aiogram.utils.formatting import Bold, Text
 
 from bot.config import Settings
-from bot.constants import NOTIFICATION_EVENT_JOIN, NOTIFICATION_EVENT_LEAVE
+from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
@@ -58,7 +58,7 @@ class TelegramNotificationHandler:
             return
 
         recipients = await self.recipient_service.find_recipients(
-            event.username, NOTIFICATION_EVENT_JOIN
+            event.username, NotificationType.JOIN
         )
         if not recipients:
             return
@@ -68,7 +68,7 @@ class TelegramNotificationHandler:
             recipients_with_lang=recipients,
             text_generator=lambda lang_code: self._generate_join_leave_text(
                 event,
-                NOTIFICATION_EVENT_JOIN,
+                NotificationType.JOIN,
                 lang_code or self.settings.general.default_lang,
             ),
             cache=self.cache,
@@ -84,7 +84,7 @@ class TelegramNotificationHandler:
             return
 
         recipients = await self.recipient_service.find_recipients(
-            event.username, NOTIFICATION_EVENT_LEAVE
+            event.username, NotificationType.LEAVE
         )
         if not recipients:
             return
@@ -94,7 +94,7 @@ class TelegramNotificationHandler:
             recipients_with_lang=recipients,
             text_generator=lambda lang_code: self._generate_join_leave_text(
                 event,
-                NOTIFICATION_EVENT_LEAVE,
+                NotificationType.LEAVE,
                 lang_code or self.settings.general.default_lang,
             ),
             cache=self.cache,
@@ -171,7 +171,7 @@ class TelegramNotificationHandler:
     def _generate_join_leave_text(
         self,
         event: UserJoinedEvent | UserLeftEvent,
-        event_type: str,
+        event_type: NotificationType,
         lang_code: str,
     ) -> str:
         """Generates the localized text for a join/leave notification."""
@@ -180,7 +180,7 @@ class TelegramNotificationHandler:
 
         template = (
             _("{user_nickname} joined server {server_name}")
-            if event_type == NOTIFICATION_EVENT_JOIN
+            if event_type == NotificationType.JOIN
             else _("{user_nickname} left server {server_name}")
         )
         return template.format(

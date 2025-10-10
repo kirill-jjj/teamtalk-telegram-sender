@@ -18,6 +18,7 @@ from bot.commands import (
     ModerationResult,
 )
 from bot.config import Settings
+from bot.core.enums import AdminCommand
 from bot.services.schemas import UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import (
@@ -115,7 +116,7 @@ class TeamTalkCommandHandlers:
         return await self._apply_moderation(
             user_id=command.user_id,
             admin_telegram_id=command.admin_telegram_id,
-            action="kick",
+            action=AdminCommand.KICK,
             translator=translator,
         )
 
@@ -128,7 +129,7 @@ class TeamTalkCommandHandlers:
         return await self._apply_moderation(
             user_id=command.user_id,
             admin_telegram_id=command.admin_telegram_id,
-            action="ban",
+            action=AdminCommand.BAN,
             translator=translator,
         )
 
@@ -136,7 +137,7 @@ class TeamTalkCommandHandlers:
         self,
         user_id: int,
         admin_telegram_id: int,
-        action: str,
+        action: AdminCommand,
         translator: NullTranslations,
     ) -> ModerationResult:
         """Generic method to apply kick or ban."""
@@ -158,7 +159,7 @@ class TeamTalkCommandHandlers:
         user_nickname = get_tt_user_display_name(user_to_act_on, translator)
 
         try:
-            if action == "kick":
+            if action == AdminCommand.KICK:
                 user_to_act_on.kick(from_server=True)
                 logger.info(
                     "Admin %s kicked TT user '%s' (ID: %s)",
@@ -170,7 +171,7 @@ class TeamTalkCommandHandlers:
                     "User {user_nickname} kicked from server {server_host}."
                 ).format(user_nickname=escape(user_nickname), server_host=server_host)
                 return ModerationResult(success=True, message=msg)
-            if action == "ban":
+            if action == AdminCommand.BAN:
                 user_to_act_on.ban(from_server=True)
                 user_to_act_on.kick(from_server=True)
                 logger.info(

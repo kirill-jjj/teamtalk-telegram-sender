@@ -369,7 +369,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
         current_value=current_mode.value,
         callback_data_factory=mute_mode_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="User Actions",
+        back_button_text_key=_("User Actions"),
         buttons_per_row=1,
     )
 
@@ -506,6 +506,6 @@ async def create_admin_subscriber_notification_pref_keyboard(
         current_value=current_setting.value,
         callback_data_factory=notif_pref_callback_factory,
         back_button_callback_data=back_button_cb_data,
-        back_button_text_key="User Actions",
+        back_button_text_key=_("User Actions"),
         buttons_per_row=1,
     )

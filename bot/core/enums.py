@@ -94,3 +94,10 @@ class Actor(str, Enum):
 
     USER = "user"
     ADMIN = "admin"
+
+
+class NotificationType(str, Enum):
+    """Represents the type of notification event (e.g., user joined, user left)."""
+
+    JOIN = "join"
+    LEAVE = "leave"
