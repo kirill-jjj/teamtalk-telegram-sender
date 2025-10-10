@@ -181,19 +181,12 @@ Suggestions for improvements and bug reports are welcome! Please create Issues o
 
 This project uses a gettext-based workflow for handling translations, orchestrated with the `uv run i18n` command and Babel. The localization files are located in the `locales` directory.
 
-1.  **Extract Translatable Strings**:
-    When you add or change any user-facing strings in the Python code that should be translatable (i.e., strings wrapped in `_()`), you need to update the message template file (`locales/messages.pot`).
-    ```bash
-    uv run i18n extract
-    ```
-    This command scans the codebase (as configured in `babel.cfg`) and updates `locales/messages.pot`.
-
-2.  **Update Language Catalogs (.po files)**:
-    After the `.pot` template is updated, update the language-specific `.po` files for each supported language. The `uv run i18n update` command (which calls `manage_locales.py`) dynamically detects languages by looking for subdirectories in `locales/`.
+1.  **Update Language Catalogs (.po files)**:
+    When you add or change any user-facing strings in the Python code that should be translatable (i.e., strings wrapped in `_()`), you need to update the message template file (`locales/messages.pot`) and the language-specific `.po` files for each supported language. The `uv run i18n update` command (which calls `manage_locales.py`) dynamically detects languages by looking for subdirectories in `locales/`.
     ```bash
     uv run i18n update
     ```
-    This merges new strings from `messages.pot` into each `<lang_code>/LC_MESSAGES/messages.po` file. New strings will be added, and changed strings will be marked as "fuzzy" for review. If you've created a new language directory (e.g., `locales/de/LC_MESSAGES/`), this command will also initialize its `messages.po` file based on the template.
+    This command first extracts translatable strings from the codebase (as configured in `babel.cfg`) into `locales/messages.pot`, and then merges new strings from `messages.pot` into each `<lang_code>/LC_MESSAGES/messages.po` file. New strings will be added, and changed strings will be marked as "fuzzy" for review. If you've created a new language directory (e.g., `locales/de/LC_MESSAGES/`), this command will also initialize its `messages.po` file based on the template.
 
 3.  **Translate**:
     Edit the `.po` files (e.g., `locales/ru/LC_MESSAGES/messages.po`) using your preferred PO editor (like Poedit, OmegaT) or a text editor. For each `msgid` (source string), provide the translation in the `msgstr` field. For entries marked `#, fuzzy`, review the translation against the new `msgid`, correct it if necessary, and then remove the `#, fuzzy` comment.
