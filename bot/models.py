@@ -9,6 +9,8 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from bot.core.enums import DeeplinkAction
 
+SQLModel.model_rebuild(force=True)
+
 
 class NotificationSetting(str, enum.Enum):
     """Enum for user notification preferences."""

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytalk
 
 from bot.constants import INVALID_CHANNEL_ID
+from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -18,9 +19,12 @@ logger = logging.getLogger(__name__)
 class TeamTalkConnectionManager:
     """Handles connection/disconnection logic for a TeamTalkConnection."""
 
-    def __init__(self, pytalk_bot: pytalk.TeamTalkBot) -> None:
+    def __init__(
+        self, pytalk_bot: pytalk.TeamTalkBot, pytalk_event_handlers: PytalkEventHandlers
+    ) -> None:
         """Initializes the TeamTalkConnectionManager."""
         self.pytalk_bot = pytalk_bot
+        self.pytalk_event_handlers = pytalk_event_handlers
         self.connection: TeamTalkConnection | None = None
 
     def set_connection(self, connection: "TeamTalkConnection") -> None:
@@ -166,7 +170,9 @@ class TeamTalkConnectionManager:
                     curr_chan_id if curr_chan_id is not None else 0
                 )
                 if ch_to_finalize:
-                    await conn.finalize_bot_login_sequence(ch_to_finalize)
+                    await self.pytalk_event_handlers.finalize_bot_login_sequence(
+                        ch_to_finalize, conn
+                    )
                 else:
                     logger.warning(
                         "[%s] Could not get current/root channel to finalize.",
@@ -188,7 +194,9 @@ class TeamTalkConnectionManager:
             )
             ch_to_finalize_after_fail = instance.get_channel(ch_id_to_get)
             if ch_to_finalize_after_fail:
-                await conn.finalize_bot_login_sequence(ch_to_finalize_after_fail)
+                await self.pytalk_event_handlers.finalize_bot_login_sequence(
+                    ch_to_finalize_after_fail, conn
+                )
             else:
                 logger.exception(  # In except block, so changed from error to exception
                     "[%s] Could not get current channel (ID: %s) to finalize "

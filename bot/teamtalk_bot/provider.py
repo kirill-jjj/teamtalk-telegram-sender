@@ -21,6 +21,7 @@ from bot.services.report_service import ReportService
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
+from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.types.bots import EventBot
 
@@ -54,6 +55,15 @@ class TeamTalkProvider(Provider):
 
     scope = Scope.APP
 
+    @provide
+    def get_pytalk_event_handlers(
+        self,
+        event_bus: FromDishka[EventBus],
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
+    ) -> PytalkEventHandlers:
+        """Provides the Pytalk event handlers."""
+        return PytalkEventHandlers(event_bus, translator_factory)
+
     @provide(provides=pytalk.TeamTalkBot)
     async def get_patched_pytalk_bot(
         self, settings: FromDishka[Settings]
@@ -77,7 +87,7 @@ class TeamTalkProvider(Provider):
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
         connections: FromDishka[dict[str, TeamTalkConnection]],
-        _router: FromDishka[PytalkEventRouter],  # Add _router dependency back
+        pytalk_event_handlers: FromDishka[PytalkEventHandlers],
     ) -> AsyncGenerator[TeamTalkConnection, None]:
         """Provider for TeamTalkConnection with managed lifecycle."""
         tt_config = settings.teamtalk
@@ -95,7 +105,7 @@ class TeamTalkProvider(Provider):
             join_channel_password=tt_config.channel_password or "",
         )
 
-        conn_manager = TeamTalkConnectionManager(pytalk_bot)
+        conn_manager = TeamTalkConnectionManager(pytalk_bot, pytalk_event_handlers)
         cache_manager = TeamTalkCache(settings)
 
         connection = TeamTalkConnection(
@@ -132,6 +142,7 @@ class TeamTalkProvider(Provider):
         connections: FromDishka[dict[str, TeamTalkConnection]],
         event_bus: FromDishka[EventBus],
         translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
+        pytalk_event_handlers: FromDishka[PytalkEventHandlers],
     ) -> "PytalkEventRouter":
         """Provides the Pytalk event router."""
         return PytalkEventRouter(
@@ -140,6 +151,7 @@ class TeamTalkProvider(Provider):
             connections=connections,
             event_bus=event_bus,
             translator_factory=translator_factory,
+            pytalk_event_handlers=pytalk_event_handlers,
         )
 
     @provide
