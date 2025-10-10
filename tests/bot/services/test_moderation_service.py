@@ -3,18 +3,18 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from bot.config import (
+    DatabaseSettings,
+    GeneralSettings,
+    Settings,
+    TeamTalkSettings,
+    TelegramSettings,
+)  # Added imports
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
 from bot.models import Admin, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
-from bot.config import (
-    Settings,
-    GeneralSettings,
-    TeamTalkSettings,
-    DatabaseSettings,
-    TelegramSettings,
-)  # Added imports
 
 
 @pytest.fixture
@@ -256,7 +256,6 @@ async def test_remove_admins_in_batch(
 async def test_manage_admin_ids_add_success(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
-    mock_translator: MagicMock,
 ) -> None:
     add_ids = [101, 102]
     remove_ids = []
@@ -288,7 +287,6 @@ async def test_manage_admin_ids_add_success(
 async def test_manage_admin_ids_remove_success(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
-    mock_translator: MagicMock,
 ) -> None:
     add_ids = []
     remove_ids = [201, 202]
@@ -322,7 +320,6 @@ async def test_manage_admin_ids_remove_success(
 async def test_manage_admin_ids_mixed_add_remove(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
-    mock_translator: MagicMock,
 ) -> None:
     add_ids = [101]
     remove_ids = [201]
@@ -358,7 +355,6 @@ async def test_manage_admin_ids_mixed_add_remove(
 async def test_manage_admin_ids_invalid_args(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
-    mock_translator: MagicMock,
 ) -> None:
     add_ids = [123]
     remove_ids = []
@@ -392,7 +388,7 @@ async def test_manage_admin_ids_invalid_args(
 
 @pytest.mark.asyncio
 async def test_manage_admin_ids_empty_args(
-    moderation_service: ModerationService, mock_translator: MagicMock
+    moderation_service: ModerationService,
 ) -> None:
     result = await moderation_service.manage_admin_ids(
         add_ids=[],
