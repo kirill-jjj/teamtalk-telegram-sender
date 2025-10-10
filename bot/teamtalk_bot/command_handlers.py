@@ -22,8 +22,10 @@ from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
-from bot.services.schemas import AdminManagementResult
-from bot.teamtalk_bot.formatters import _split_text_for_tt  # Added import
+from bot.teamtalk_bot.formatters import (
+    _split_text_for_tt,
+    format_admin_management_result,
+)
 
 if TYPE_CHECKING:
     pass
@@ -219,43 +221,12 @@ class PrivateMessageCommandHandlers:
             args_str, translator
         )
 
-        result: AdminManagementResult = await self.moderation_service.manage_admin_ids(
+        result = await self.moderation_service.manage_admin_ids(
             add_ids=add_ids,
             remove_ids=remove_ids,
             is_add_action=is_add_action,
             error_messages=error_messages,
         )
 
-        response_parts = result.error_messages[:]
-
-        if result.add_result.successful_ids:
-            response_parts.append(
-                _("Successfully added {} admins.").format(
-                    len(result.add_result.successful_ids)
-                )
-            )
-        if result.add_result.failed_ids:
-            response_parts.append(
-                _("Failed to add {} admins (already admins or invalid IDs).").format(
-                    len(result.add_result.failed_ids)
-                )
-            )
-        if result.remove_result.successful_ids:
-            response_parts.append(
-                _("Successfully removed {} admins.").format(
-                    len(result.remove_result.successful_ids)
-                )
-            )
-        if result.remove_result.failed_ids:
-            response_parts.append(
-                _("Failed to remove {} admins (not admins or invalid IDs).").format(
-                    len(result.remove_result.failed_ids)
-                )
-            )
-
-        response_message = (
-            "\n".join(response_parts)
-            if response_parts
-            else _("No valid admin IDs provided for adding or removing.")
-        )
+        response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)

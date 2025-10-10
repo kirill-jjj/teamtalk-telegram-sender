@@ -14,9 +14,49 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
+from bot.services.schemas import AdminManagementResult
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
+
+
+def format_admin_management_result(
+    result: AdminManagementResult, translator: NullTranslations
+) -> str:
+    """Formats the result of an admin management operation into a reply string."""
+    _ = translator.gettext
+    response_parts = result.error_messages[:]
+
+    if result.add_result.successful_ids:
+        response_parts.append(
+            _("Successfully added {} admins.").format(
+                len(result.add_result.successful_ids)
+            )
+        )
+    if result.add_result.failed_ids:
+        response_parts.append(
+            _("Failed to add {} admins (already admins or invalid IDs).").format(
+                len(result.add_result.failed_ids)
+            )
+        )
+    if result.remove_result.successful_ids:
+        response_parts.append(
+            _("Successfully removed {} admins.").format(
+                len(result.remove_result.successful_ids)
+            )
+        )
+    if result.remove_result.failed_ids:
+        response_parts.append(
+            _("Failed to remove {} admins (not admins or invalid IDs).").format(
+                len(result.remove_result.failed_ids)
+            )
+        )
+
+    return (
+        "\n".join(response_parts)
+        if response_parts
+        else _("No valid admin IDs provided for adding or removing.")
+    )
 
 
 def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
