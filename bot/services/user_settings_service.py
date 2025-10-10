@@ -98,7 +98,7 @@ class UserSettingsService:
         new_value: T,
         log_context: str,
         uow: IUnitOfWork | None = None,
-    ) -> SettingsViewDTO | None:
+    ) -> UserSettings | None:
         """A generic helper to update a field on the UserSettings model."""
         telegram_id = user_settings.telegram_id
         current_value = getattr(user_settings, field_name)
@@ -138,14 +138,7 @@ class UserSettingsService:
             setattr(user_settings, field_name, current_value)
             return None
         else:
-            return SettingsViewDTO(
-                language_code=user_settings.language_code,
-                notification_settings=user_settings.notification_settings,
-                mute_list_mode=user_settings.mute_list_mode,
-                not_on_online_enabled=user_settings.not_on_online_enabled,
-                teamtalk_username=user_settings.teamtalk_username,
-                muted_users_count=len(user_settings.muted_users_list),
-            )
+            return user_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_language(
@@ -153,7 +146,7 @@ class UserSettingsService:
         telegram_id: int,
         new_lang_code: str,
         actor: Actor = Actor.USER,
-    ) -> SettingsViewDTO | None:
+    ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
         async with self._uow:
@@ -180,7 +173,7 @@ class UserSettingsService:
         telegram_id: int,
         new_mode: MuteListMode,
         actor: Actor = Actor.USER,
-    ) -> SettingsViewDTO | None:
+    ) -> UserSettings | None:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
         async with self._uow:
@@ -202,7 +195,7 @@ class UserSettingsService:
         telegram_id: int,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
-    ) -> SettingsViewDTO | None:
+    ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
         async with self._uow:
@@ -227,7 +220,7 @@ class UserSettingsService:
         self,
         telegram_id: int,
         actor: Actor = Actor.USER,
-    ) -> SettingsViewDTO | None:
+    ) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         async with self._uow:
             user_settings = await self._uow.users.get_by_id(telegram_id)
@@ -273,7 +266,7 @@ class UserSettingsService:
         self,
         telegram_id: int,
         actor: Actor = Actor.ADMIN,
-    ) -> tuple[SettingsViewDTO | None, str | None]:
+    ) -> tuple[UserSettings | None, str | None]:
         """Unlinks a TeamTalk account from a user's settings."""
         async with self._uow:
             user_settings = await self._uow.users.get_by_id(telegram_id)
@@ -282,17 +275,7 @@ class UserSettingsService:
 
             original_username = user_settings.teamtalk_username
             if not original_username:
-                return (
-                    SettingsViewDTO(
-                        language_code=user_settings.language_code,
-                        notification_settings=user_settings.notification_settings,
-                        mute_list_mode=user_settings.mute_list_mode,
-                        not_on_online_enabled=user_settings.not_on_online_enabled,
-                        teamtalk_username=user_settings.teamtalk_username,
-                        muted_users_count=len(user_settings.muted_users_list),
-                    ),
-                    None,
-                )
+                return user_settings, None
 
             log_context = f" by {actor.value}"
 

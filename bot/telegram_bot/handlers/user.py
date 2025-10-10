@@ -13,6 +13,9 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
+from bot.services.cache_service import CacheService
+from bot.services.deeplink_service import DeeplinkService
+from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import safe_delete_message

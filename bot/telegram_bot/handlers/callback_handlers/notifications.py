@@ -81,4 +81,12 @@ async def toggle_noon_setting(
     )
     await query.answer(message)
 
-    await refresh_notification_settings_view(query, translator, updated_settings)
+    user_settings_dto = SettingsViewDTO(
+        language_code=updated_settings.language_code,
+        notification_settings=updated_settings.notification_settings,
+        mute_list_mode=updated_settings.mute_list_mode,
+        not_on_online_enabled=updated_settings.not_on_online_enabled,
+        teamtalk_username=updated_settings.teamtalk_username,
+        muted_users_count=len(updated_settings.muted_users_list),
+    )
+    await refresh_notification_settings_view(query, translator, user_settings_dto)

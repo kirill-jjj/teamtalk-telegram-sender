@@ -18,6 +18,7 @@ from bot.core.enums import (
 )
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
+from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
@@ -172,7 +173,7 @@ async def _refresh_mute_related_ui(
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[SettingsViewDTO | None],
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
@@ -212,10 +213,11 @@ async def show_manage_muted_menu(
 async def refresh_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: UserSettings,
+    user_settings: SettingsViewDTO,
     **kwargs: Any,
 ) -> None:
     """Refresher function for the manage muted menu."""
+    await show_manage_muted_menu(callback_query, translator, user_settings)
     await show_manage_muted_menu(callback_query, translator, user_settings)
 
 
@@ -253,7 +255,15 @@ async def set_mute_mode(
     )
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
     await callback_query.answer(success_toast_text)
-    await refresh_manage_muted_menu(callback_query, translator, updated_user_settings)
+    user_settings_dto = SettingsViewDTO(
+        language_code=updated_user_settings.language_code,
+        notification_settings=updated_user_settings.notification_settings,
+        mute_list_mode=updated_user_settings.mute_list_mode,
+        not_on_online_enabled=updated_user_settings.not_on_online_enabled,
+        teamtalk_username=updated_user_settings.teamtalk_username,
+        muted_users_count=len(updated_user_settings.muted_users_list),
+    )
+    await refresh_manage_muted_menu(callback_query, translator, user_settings_dto)
 
 
 @mute_router.callback_query(

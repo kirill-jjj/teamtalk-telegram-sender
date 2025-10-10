@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pytalk
 
 from bot.core.enums import UserListAction
+from bot.models import MuteListMode
 from bot.services.notification_service import is_muted  # Updated import
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 

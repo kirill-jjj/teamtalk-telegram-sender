@@ -14,6 +14,7 @@ from bot.core.enums import (
     UserListAction,
 )
 from bot.core.languages import LanguageInfo
+from bot.models import MuteListMode, NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 from bot.telegram_bot.callback_data import (
     LanguageCallback,

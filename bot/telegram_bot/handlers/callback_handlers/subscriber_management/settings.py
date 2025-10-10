@@ -18,7 +18,7 @@ from bot.models import (
     NotificationSetting,
     UserSettings,
 )
-from bot.services.schemas import UserSettingsWithDisplayInfo
+from bot.services.schemas import SettingsViewDTO, UserSettingsWithDisplayInfo
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -166,8 +166,16 @@ async def admin_toggle_noon(
             tg_id=target_telegram_id, status=status
         )
         await query.answer(msg)
+        user_settings_dto = SettingsViewDTO(
+            language_code=updated_settings.language_code,
+            notification_settings=updated_settings.notification_settings,
+            mute_list_mode=updated_settings.mute_list_mode,
+            not_on_online_enabled=updated_settings.not_on_online_enabled,
+            teamtalk_username=updated_settings.teamtalk_username,
+            muted_users_count=len(updated_settings.muted_users_list),
+        )
         await refresh_subscriber_view(
-            query, callback_data, translator, bot, user_settings=updated_settings
+            query, callback_data, translator, bot, user_settings=user_settings_dto
         )
     else:
         await query.answer(_("Failed to toggle NOON status."), show_alert=True)
@@ -371,8 +379,16 @@ async def admin_set_any_subscriber_setting(
 
     if updated_settings:
         await query.answer(success_msg)
+        user_settings_dto = SettingsViewDTO(
+            language_code=updated_settings.language_code,
+            notification_settings=updated_settings.notification_settings,
+            mute_list_mode=updated_settings.mute_list_mode,
+            not_on_online_enabled=updated_settings.not_on_online_enabled,
+            teamtalk_username=updated_settings.teamtalk_username,
+            muted_users_count=len(updated_settings.muted_users_list),
+        )
         await refresh_subscriber_view(
-            query, callback_data, translator, bot, user_settings=updated_settings
+            query, callback_data, translator, bot, user_settings=user_settings_dto
         )
     else:
         await query.answer(

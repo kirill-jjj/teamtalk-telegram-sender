@@ -58,7 +58,7 @@ class OperationResult(BaseModel):
     success: bool
     message_key: str
     message_args: dict[str, Any] | None = Field(default=None)
-    user_settings: SettingsViewDTO | None = Field(default=None)
+    user_settings: UserSettings | None = Field(default=None)
     long_message: str | None = Field(default=None)
 
 
