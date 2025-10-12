@@ -14,16 +14,13 @@ from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
-from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
-from bot.services.report_service import ReportService
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
 from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
-from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
 
@@ -161,20 +158,6 @@ class TeamTalkProvider(Provider):
     ) -> TeamTalkReplyHandler:
         """Provides the TeamTalk reply handler."""
         return TeamTalkReplyHandler(connections=connections)
-
-    @provide
-    def get_report_service(
-        self,
-        settings: FromDishka[Settings],
-        uow: FromDishka[IUnitOfWork],
-        bot: FromDishka[EventBot],
-    ) -> ReportService:
-        """Provides a ReportService."""
-        return ReportService(
-            settings=settings,
-            uow=uow,
-            bot=bot,
-        )
 
     @provide
     def get_teamtalk_command_handlers(

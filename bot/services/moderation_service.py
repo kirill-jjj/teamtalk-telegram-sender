@@ -13,13 +13,11 @@ from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.models import Admin, MutedUser, MuteListMode, UserSettings
+from bot.models import Admin, MutedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AdminManagementResult,  # Added import
-    AllAccountsViewData,
     BatchOperationResult,
-    MuteListViewData,
     OperationResult,
 )
 from bot.services.subscription_service import SubscriptionService
@@ -58,51 +56,6 @@ class ModerationService:
         if not admin_username:
             return False
         return username == admin_username
-
-    async def get_all_server_accounts_view_data(
-        self, lang_code: str, translator: NullTranslations
-    ) -> AllAccountsViewData:
-        """Fetches and prepares data for the all server accounts list view."""
-        _ = translator.gettext
-        result: GetAllTeamTalkAccountsResult = await self._command_bus.execute(
-            GetAllTeamTalkAccountsCommand(lang_code=lang_code)
-        )
-
-        title = _("All Server Accounts")
-        empty_text = _("No user accounts found on the server.")
-
-        if not result.success:
-            return AllAccountsViewData(
-                accounts=[],
-                title=title,
-                empty_list_text=result.error_message or empty_text,
-            )
-
-        sorted_accounts = sorted(result.accounts, key=lambda acc: acc.username.lower())
-        return AllAccountsViewData(
-            accounts=sorted_accounts, title=title, empty_list_text=empty_text
-        )
-
-    def prepare_mute_list_view_data(
-        self, user_settings: UserSettings, translator: NullTranslations
-    ) -> MuteListViewData:
-        """Prepares all necessary data for rendering the mute list view."""
-        _ = translator.gettext
-        items = sorted(
-            [muted.muted_teamtalk_username for muted in user_settings.muted_users_list],
-            key=str.lower,
-        )
-
-        if user_settings.mute_list_mode == MuteListMode.blacklist:
-            title = _("Blacklisted Users (Block List)")
-            empty_list_text = _("Your blacklist is empty.")
-        else:  # Whitelist
-            title = _("Whitelisted Users (Allow List)")
-            empty_list_text = _("Your whitelist is empty.")
-
-        return MuteListViewData(
-            items=items, title=title, empty_list_text=empty_list_text
-        )
 
     async def add_admin(self, telegram_id: int) -> bool:
         """Adds a new admin, updating DB, cache, and publishing an event."""

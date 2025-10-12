@@ -8,12 +8,24 @@ import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError
-from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
+from bot.commands import (
+    GetAllTeamTalkAccountsCommand,
+    GetAllTeamTalkAccountsResult,
+    GetOnlineUsersCommand,
+    GetOnlineUsersResult,
+)
 from bot.config import Settings
 from bot.constants import USERS_PER_PAGE
 from bot.database.uow import IUnitOfWork
+from bot.models import MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
-from bot.services.schemas import PaginatedResult, SubscriberInfo, UserDTO
+from bot.services.schemas import (
+    AllAccountsViewData,
+    MuteListViewData,
+    PaginatedResult,
+    SubscriberInfo,
+    UserDTO,
+)
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.models import WhoChannelGroup, WhoReport, WhoUser
@@ -34,11 +46,13 @@ class ReportService:
         settings: Settings,
         uow: IUnitOfWork,
         bot: EventBot,
+        command_bus: CommandBus,
     ) -> None:
         """Initializes the report service."""
         self._settings = settings
         self._uow = uow
         self._bot = bot
+        self._command_bus = command_bus
 
     async def get_who_report_data(
         self,
@@ -216,3 +230,48 @@ class ReportService:
 
         sorted_users = sorted(result.users, key=lambda u: u.nickname.lower())
         return sorted_users, None
+
+    async def get_all_server_accounts_view_data(
+        self, lang_code: str, translator: NullTranslations
+    ) -> AllAccountsViewData:
+        """Fetches and prepares data for the all server accounts list view."""
+        _ = translator.gettext
+        result: GetAllTeamTalkAccountsResult = await self._command_bus.execute(
+            GetAllTeamTalkAccountsCommand(lang_code=lang_code)
+        )
+
+        title = _("All Server Accounts")
+        empty_text = _("No user accounts found on the server.")
+
+        if not result.success:
+            return AllAccountsViewData(
+                accounts=[],
+                title=title,
+                empty_list_text=result.error_message or empty_text,
+            )
+
+        sorted_accounts = sorted(result.accounts, key=lambda acc: acc.username.lower())
+        return AllAccountsViewData(
+            accounts=sorted_accounts, title=title, empty_list_text=empty_text
+        )
+
+    def prepare_mute_list_view_data(
+        self, user_settings: UserSettings, translator: NullTranslations
+    ) -> MuteListViewData:
+        """Prepares all necessary data for rendering the mute list view."""
+        _ = translator.gettext
+        items = sorted(
+            [muted.muted_teamtalk_username for muted in user_settings.muted_users_list],
+            key=str.lower,
+        )
+
+        if user_settings.mute_list_mode == MuteListMode.blacklist:
+            title = _("Blacklisted Users (Block List)")
+            empty_list_text = _("Your blacklist is empty.")
+        else:  # Whitelist
+            title = _("Whitelisted Users (Allow List)")
+            empty_list_text = _("Your whitelist is empty.")
+
+        return MuteListViewData(
+            items=items, title=title, empty_list_text=empty_list_text
+        )

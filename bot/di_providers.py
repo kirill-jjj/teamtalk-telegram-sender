@@ -195,12 +195,14 @@ class RequestProvider(Provider):
         settings: FromDishka[Settings],
         uow: FromDishka[IUnitOfWork],
         bot: FromDishka[EventBot],
+        command_bus: FromDishka[CommandBus],
     ) -> ReportService:
         """Provides a ReportService."""
         return ReportService(
             settings=settings,
             uow=uow,
             bot=bot,
+            command_bus=command_bus,
         )
 
     @provide

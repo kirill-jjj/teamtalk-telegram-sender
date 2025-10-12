@@ -18,6 +18,7 @@ from bot.core.enums import (
 )
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
+from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
@@ -90,15 +91,13 @@ async def _display_internal_user_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    moderation_service: ModerationService,  # Add service dependency
+    report_service: ReportService,  # Add service dependency
     list_type: UserListAction,
     page: int = 0,
 ) -> None:
     _ = translator.gettext
 
-    view_data = moderation_service.prepare_mute_list_view_data(
-        user_settings, translator
-    )
+    view_data = report_service.prepare_mute_list_view_data(user_settings, translator)
     muted_usernames = {
         user.muted_teamtalk_username for user in user_settings.muted_users_list
     }
@@ -133,7 +132,8 @@ async def _refresh_mute_related_ui(
     translator: NullTranslations,
     user_settings: UserSettings,
     command_bus: CommandBus,
-    moderation_service: ModerationService,  # Add missing parameter
+    report_service: ReportService,  # Add missing parameter
+    moderation_service: ModerationService,
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
@@ -149,7 +149,7 @@ async def _refresh_mute_related_ui(
             callback_query,
             translator,
             user_settings,
-            moderation_service,  # This needs to be passed
+            report_service,  # This needs to be passed
             PaginateUsersCallback(
                 list_type=UserListAction.LIST_ALL_ACCOUNTS,
                 page=current_page_for_refresh,
@@ -160,7 +160,7 @@ async def _refresh_mute_related_ui(
             callback_query,
             translator,
             user_settings,
-            moderation_service,  # Pass the service
+            report_service,  # Pass the service
             list_type_user_was_on,
             current_page_for_refresh,
         )
@@ -276,7 +276,7 @@ async def display_internal_user_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
-    moderation_service: FromDishka[ModerationService],
+    report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
@@ -284,7 +284,7 @@ async def display_internal_user_list(
         callback_query,
         translator,
         user_settings,
-        moderation_service,
+        report_service,
         callback_data.list_type,
         callback_data.page,
     )
@@ -299,12 +299,12 @@ async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings: FromDishka[UserSettings],
-    moderation_service: FromDishka[ModerationService],
+    report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
     _ = translator.gettext
-    view_data = await moderation_service.get_all_server_accounts_view_data(
+    view_data = await report_service.get_all_server_accounts_view_data(
         lang_code=translator.info().get("language", "en"), translator=translator
     )
     muted_usernames = {
@@ -344,6 +344,7 @@ async def toggle_user_mute(
     command_bus: FromDishka[CommandBus],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
+    report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     toggle_result = await moderation_service.toggle_mute_from_callback(
@@ -372,6 +373,7 @@ async def toggle_user_mute(
             translator,
             toggle_result.user_settings,
             command_bus,
-            moderation_service,
+            report_service,  # Pass the report service
+            moderation_service,  # Pass the moderation service
             callback_data,
         )
