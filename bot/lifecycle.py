@@ -37,7 +37,6 @@ async def on_startup(
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
     command_bus: FromDishka[CommandBus],
-    admin_service: FromDishka[AdminService],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -67,6 +66,13 @@ async def on_startup(
         cache.load_all_user_settings(all_settings)
         logger.info("All caches have been loaded.")
 
+        # Manually create AdminService for this one-off startup task
+        admin_service = AdminService(
+            uow=uow,
+            cache=cache,
+            event_bus=event_bus,
+            settings=settings
+        )
         # Ensure the main admin from config exists and has up-to-date commands
         await admin_service.ensure_main_admin_exists(bot, translator_factory)
 
