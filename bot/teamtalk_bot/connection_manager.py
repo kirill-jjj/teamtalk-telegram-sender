@@ -29,7 +29,7 @@ class TeamTalkConnectionManager:
         self.pytalk_event_handlers = pytalk_event_handlers
         self.connection: TeamTalkConnection | None = None
 
-    def set_connection(self, connection: "TeamTalkConnection") -> None:
+    def set_connection(self, connection: TeamTalkConnection) -> None:
         """Sets the connection context after initialization to avoid circular deps."""
         self.connection = connection
 
@@ -151,7 +151,7 @@ class TeamTalkConnectionManager:
 
     async def _handle_no_instance(
         self,
-        conn: "TeamTalkConnection" | None,
+        conn: TeamTalkConnection | None,
         _instance: pytalk.TeamTalkInstance | None,
     ) -> None:
         """Handles the case where there is no connection or instance."""
@@ -160,7 +160,7 @@ class TeamTalkConnectionManager:
         await self.initiate_reconnect()
 
     async def _try_join_channel(
-        self, conn: "TeamTalkConnection", instance: pytalk.TeamTalkInstance
+        self, conn: TeamTalkConnection, instance: pytalk.TeamTalkInstance
     ) -> None:
         """Tries to join the configured channel."""
         final_chan_id, target_chan_name = await self.determine_target_channel()
@@ -178,7 +178,7 @@ class TeamTalkConnectionManager:
             await self._handle_no_target_channel(conn, instance)
 
     async def _handle_no_target_channel(
-        self, conn: "TeamTalkConnection", instance: pytalk.TeamTalkInstance
+        self, conn: TeamTalkConnection, instance: pytalk.TeamTalkInstance
     ) -> None:
         """Handles the case where no valid target channel is found."""
         logger.warning(
@@ -202,7 +202,7 @@ class TeamTalkConnectionManager:
 
     async def _handle_join_permission_error(
         self,
-        conn: "TeamTalkConnection",
+        conn: TeamTalkConnection,
         instance: pytalk.TeamTalkInstance,
         _error: pytalk.exceptions.PermissionError,
     ) -> None:
@@ -232,7 +232,7 @@ class TeamTalkConnectionManager:
             )
 
     async def _handle_generic_join_error(
-        self, conn: "TeamTalkConnection", _error: Exception
+        self, conn: TeamTalkConnection, _error: Exception
     ) -> None:
         """Handles a generic error during channel join."""
         logger.exception(

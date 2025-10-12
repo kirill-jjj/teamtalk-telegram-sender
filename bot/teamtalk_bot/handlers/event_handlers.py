@@ -141,8 +141,6 @@ class PytalkEventHandlers:
                     connection.server_info.host,
                     self.ttstr(channel.name),
                 )
-        else:
-            await self._publish_user_event(user, connection, UserJoinedEvent)
 
     async def on_user_login(
         self, user: PytalkUser, connection: TeamTalkConnection
