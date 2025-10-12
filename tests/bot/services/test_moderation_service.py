@@ -12,9 +12,8 @@ from bot.config import (
 )  # Added imports
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
-from bot.models import Admin, UserSettings
+from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
-from bot.teamtalk_bot.events import AdminStatusChangedEvent
 
 
 @pytest.fixture

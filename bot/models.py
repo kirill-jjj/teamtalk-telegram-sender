@@ -47,15 +47,13 @@ class UserSettings(SQLModel, table=True):
     language_code: str = Field(nullable=False)
     notification_settings: NotificationSetting = Field(
         default=NotificationSetting.ALL,
-        sa_column=sa.Column(
-            sa.Enum(
-                NotificationSetting,
-                values_callable=lambda x: [e.value for e in x],
-                name="notification_setting_enum",
-            ),
-            nullable=False,
+        sa_type=sa.Enum(
+            NotificationSetting,
+            values_callable=lambda x: [e.value for e in x],
+            name="notification_setting_enum",
         ),
-    )
+        nullable=False,
+    )  # type: ignore[call-overload]
     mute_list_mode: "MuteListMode" = Field(
         default=MuteListMode.blacklist, nullable=False
     )

@@ -1,6 +1,5 @@
 """Tests for the AdminService."""
 
-from gettext import NullTranslations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -168,6 +167,7 @@ async def test_remove_admin_not_exists(
     mock_uow.commit.assert_not_called()
     mock_event_bus.publish.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_add_admins_in_batch(
     admin_service: AdminService,
@@ -187,10 +187,11 @@ async def test_add_admins_in_batch(
 
     assert result.successful_ids == [101, 103]
     assert result.failed_ids == [102]
-    assert mock_uow.admins.add.call_count == 2
-    assert mock_cache.add_admin.call_count == 2
-    assert mock_uow.commit.call_count == 2
-    assert mock_event_bus.publish.call_count == 2
+    expected_calls = 2
+    assert mock_uow.admins.add.call_count == expected_calls
+    assert mock_cache.add_admin.call_count == expected_calls
+    assert mock_uow.commit.call_count == expected_calls
+    assert mock_event_bus.publish.call_count == expected_calls
 
 
 @pytest.mark.asyncio
@@ -214,10 +215,11 @@ async def test_remove_admins_in_batch(
 
     assert result.successful_ids == [201, 203]
     assert result.failed_ids == [202]
-    assert mock_uow.admins.delete.call_count == 2
-    assert mock_cache.remove_admin.call_count == 2
-    assert mock_uow.commit.call_count == 2
-    assert mock_event_bus.publish.call_count == 2
+    expected_calls = 2
+    assert mock_uow.admins.delete.call_count == expected_calls
+    assert mock_cache.remove_admin.call_count == expected_calls
+    assert mock_uow.commit.call_count == expected_calls
+    assert mock_event_bus.publish.call_count == expected_calls
 
 
 @pytest.mark.asyncio
@@ -246,8 +248,9 @@ async def test_manage_admin_ids_add_success(
     assert not result.remove_result.successful_ids
     assert not result.remove_result.failed_ids
     assert not result.error_messages
-    assert mock_uow.admins.add.call_count == 2
-    assert mock_uow.commit.call_count == 2
+    expected_calls = 2
+    assert mock_uow.admins.add.call_count == expected_calls
+    assert mock_uow.commit.call_count == expected_calls
 
 
 @pytest.mark.asyncio
@@ -278,8 +281,9 @@ async def test_manage_admin_ids_remove_success(
     assert result.remove_result.successful_ids == [201, 202]
     assert not result.remove_result.failed_ids
     assert not result.error_messages
-    assert mock_uow.admins.delete.call_count == 2
-    assert mock_uow.commit.call_count == 2
+    expected_calls = 2
+    assert mock_uow.admins.delete.call_count == expected_calls
+    assert mock_uow.commit.call_count == expected_calls
 
 
 @pytest.mark.asyncio
@@ -311,9 +315,12 @@ async def test_manage_admin_ids_mixed_add_remove(
     assert result.remove_result.successful_ids == [201]
     assert not result.remove_result.failed_ids
     assert not result.error_messages
-    assert mock_uow.admins.add.call_count == 1
-    assert mock_uow.admins.delete.call_count == 1
-    assert mock_uow.commit.call_count == 2
+    expected_add_calls = 1
+    expected_delete_calls = 1
+    expected_commit_calls = 2
+    assert mock_uow.admins.add.call_count == expected_add_calls
+    assert mock_uow.admins.delete.call_count == expected_delete_calls
+    assert mock_uow.commit.call_count == expected_commit_calls
 
 
 @pytest.mark.asyncio
