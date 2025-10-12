@@ -19,9 +19,9 @@ from bot.constants import (
 )
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
+from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
-from bot.services.moderation_service import ModerationService
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,
     format_admin_management_result,
@@ -48,7 +48,7 @@ def _is_tt_admin(
         **kwargs: Any,
     ) -> None:
         _ = translator.gettext
-        if not self.moderation_service.is_main_teamtalk_admin(
+        if not self.admin_service.is_main_teamtalk_admin(
             ttstr(tt_message.user.username)
         ):
             logger.warning(
@@ -73,14 +73,14 @@ class PrivateMessageCommandHandlers:
         settings: Settings,
         cache: CacheService,
         deeplink_service: DeeplinkService,
-        moderation_service: ModerationService,
+        admin_service: AdminService,
         uow: IUnitOfWork,
     ) -> None:
         """Initializes the command handlers with necessary dependencies."""
         self.settings = settings
         self.cache = cache
         self.deeplink_service = deeplink_service
-        self.moderation_service = moderation_service
+        self.admin_service = admin_service
         self.uow = uow
 
     async def _reply_to_tt_message(
@@ -221,7 +221,7 @@ class PrivateMessageCommandHandlers:
             args_str, translator
         )
 
-        result = await self.moderation_service.manage_admin_ids(
+        result = await self.admin_service.manage_admin_ids(
             add_ids=add_ids,
             remove_ids=remove_ids,
             is_add_action=is_add_action,

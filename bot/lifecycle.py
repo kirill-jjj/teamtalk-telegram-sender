@@ -15,14 +15,13 @@ from bot.core.languages import LanguageInfo
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.models import Admin
 from bot.registration import register_all_handlers
+from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
-from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot
 
 
@@ -38,6 +37,7 @@ async def on_startup(
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
     command_bus: FromDishka[CommandBus],
+    admin_service: FromDishka[AdminService],
     _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
@@ -67,30 +67,8 @@ async def on_startup(
         cache.load_all_user_settings(all_settings)
         logger.info("All caches have been loaded.")
 
-        tg_admin_chat_id = settings.telegram.admin_chat_id
-        if tg_admin_chat_id and not cache.is_admin(tg_admin_chat_id):
-            logger.info(
-                "Configured admin %s not found in cache, ensuring presence.",
-                tg_admin_chat_id,
-            )
-
-            if not await uow.admins.get_by_id(tg_admin_chat_id):
-                await uow.admins.add(Admin(telegram_id=tg_admin_chat_id))
-
-            user_settings = await uow.users.get_or_create(
-                tg_admin_chat_id,
-                defaults={"language_code": settings.general.default_lang},
-            )
-            cache.add_admin(tg_admin_chat_id)
-
-            translator = translator_factory(user_settings.language_code)
-            await update_user_bot_commands(
-                telegram_id=tg_admin_chat_id,
-                new_lang_code=user_settings.language_code,
-                cache=cache,
-                bot=bot,
-                translator=translator,
-            )
+        # Ensure the main admin from config exists and has up-to-date commands
+        await admin_service.ensure_main_admin_exists(bot, translator_factory)
 
     logger.info("Setting Telegram bot commands...")
     bot_info = await bot.get_me()

@@ -18,6 +18,7 @@ from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
+from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.moderation_service import ModerationService
@@ -238,7 +239,7 @@ class RequestProvider(Provider):
         settings: FromDishka[Settings],
         cache: FromDishka[CacheService],
         deeplink_service: FromDishka[DeeplinkService],
-        moderation_service: FromDishka[ModerationService],
+        admin_service: FromDishka[AdminService],
         uow: FromDishka[IUnitOfWork],
     ) -> PrivateMessageCommandHandlers:
         """Provides an instance of PrivateMessageCommandHandlers."""
@@ -246,7 +247,7 @@ class RequestProvider(Provider):
             settings=settings,
             cache=cache,
             deeplink_service=deeplink_service,
-            moderation_service=moderation_service,
+            admin_service=admin_service,
             uow=uow,
         )
 
@@ -258,6 +259,22 @@ class RequestProvider(Provider):
         """Provides the Unit of Work."""
         return SqlModelUnitOfWork(
             session_factory=factory,
+        )
+
+    @provide
+    def get_admin_service(
+        self,
+        uow: FromDishka[IUnitOfWork],
+        cache: FromDishka[CacheService],
+        event_bus: FromDishka[EventBus],
+        settings: FromDishka[Settings],
+    ) -> AdminService:
+        """Provides an AdminService."""
+        return AdminService(
+            uow=uow,
+            cache=cache,
+            event_bus=event_bus,
+            settings=settings,
         )
 
     services = provide_all(
@@ -272,7 +289,6 @@ class RequestProvider(Provider):
         uow: FromDishka[IUnitOfWork],
         subscription_service: FromDishka[SubscriptionService],
         cache: FromDishka[CacheService],
-        event_bus: FromDishka[EventBus],
         command_bus: FromDishka[CommandBus],
         settings: FromDishka[Settings],
     ) -> ModerationService:
@@ -281,7 +297,6 @@ class RequestProvider(Provider):
             uow=uow,
             subscription_service=subscription_service,
             cache=cache,
-            event_bus=event_bus,
             command_bus=command_bus,
             settings=settings,
         )

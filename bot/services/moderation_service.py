@@ -12,16 +12,12 @@ from bot.config import Settings  # Added import
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
-from bot.event_bus.bus import EventBus
-from bot.models import Admin, MutedUser, UserSettings
+from bot.models import MutedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
-    AdminManagementResult,  # Added import
-    BatchOperationResult,
     OperationResult,
 )
 from bot.services.subscription_service import SubscriptionService
-from bot.teamtalk_bot.events import AdminStatusChangedEvent
 from bot.telegram_bot.callback_data import ToggleMuteCallback
 from bot.utils.pagination import get_item_from_paginated_list
 
@@ -38,7 +34,6 @@ class ModerationService:
         uow: IUnitOfWork,
         subscription_service: SubscriptionService,
         cache: CacheService,
-        event_bus: EventBus,
         command_bus: CommandBus,
         settings: Settings,  # Added settings
     ) -> None:
@@ -46,113 +41,8 @@ class ModerationService:
         self._uow = uow
         self._subscription_service = subscription_service
         self._cache = cache
-        self._event_bus = event_bus
         self._command_bus = command_bus
         self._settings = settings
-
-    def is_main_teamtalk_admin(self, username: str) -> bool:
-        """Checks if a TeamTalk username matches the configured main admin."""
-        admin_username = self._settings.general.admin_username
-        if not admin_username:
-            return False
-        return username == admin_username
-
-    async def add_admin(self, telegram_id: int) -> bool:
-        """Adds a new admin, updating DB, cache, and publishing an event."""
-        async with self._uow:
-            if await self._uow.admins.get_by_id(telegram_id):
-                return False  # Already an admin
-
-            await self._uow.admins.add(Admin(telegram_id=telegram_id))
-            self._cache.add_admin(telegram_id)
-
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            await self._event_bus.publish(
-                AdminStatusChangedEvent(
-                    telegram_id=telegram_id,
-                    is_admin=True,
-                    lang_code=user_settings.language_code if user_settings else None,
-                )
-            )
-            await self._uow.commit()
-        return True
-
-    async def remove_admin(self, telegram_id: int) -> bool:
-        """Removes an admin, updating DB, cache, and publishing an event."""
-        async with self._uow:
-            admin = await self._uow.admins.get_by_id(telegram_id)
-            if not admin:
-                return False  # Not an admin
-
-            await self._uow.admins.delete(admin)
-            self._cache.remove_admin(telegram_id)
-
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            await self._event_bus.publish(
-                AdminStatusChangedEvent(
-                    telegram_id=telegram_id,
-                    is_admin=False,
-                    lang_code=user_settings.language_code if user_settings else None,
-                )
-            )
-            await self._uow.commit()
-        return True
-
-    async def add_admins_in_batch(
-        self,
-        telegram_ids: list[int],
-    ) -> BatchOperationResult:
-        """Adds multiple admins in a batch, returning successful and failed IDs."""
-        result = BatchOperationResult()
-        for telegram_id in telegram_ids:
-            try:
-                if await self.add_admin(telegram_id):
-                    result.successful_ids.append(telegram_id)
-                else:
-                    result.failed_ids.append(telegram_id)
-            except Exception:
-                logger.exception("Failed to add admin %s in batch", telegram_id)
-                result.failed_ids.append(telegram_id)
-        return result
-
-    async def remove_admins_in_batch(
-        self,
-        telegram_ids: list[int],
-    ) -> BatchOperationResult:
-        """Removes multiple admins in a batch, returning successful and failed IDs."""
-        result = BatchOperationResult()
-        for telegram_id in telegram_ids:
-            try:
-                if await self.remove_admin(telegram_id):
-                    result.successful_ids.append(telegram_id)
-                else:
-                    result.failed_ids.append(telegram_id)
-            except Exception:
-                logger.exception("Failed to remove admin %s in batch", telegram_id)
-                result.failed_ids.append(telegram_id)
-        return result
-
-    async def manage_admin_ids(
-        self,
-        add_ids: list[int],
-        remove_ids: list[int],
-        *,
-        is_add_action: bool,
-        error_messages: list[str],
-    ) -> AdminManagementResult:
-        """Processes admin ID management commands and returns a structured result."""
-        if is_add_action:
-            add_result = await self.add_admins_in_batch(add_ids)
-            remove_result = await self.remove_admins_in_batch(remove_ids)
-        else:
-            add_result = BatchOperationResult()  # No additions
-            remove_result = await self.remove_admins_in_batch(add_ids + remove_ids)
-
-        return AdminManagementResult(
-            add_result=add_result,
-            remove_result=remove_result,
-            error_messages=error_messages,
-        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_subscriber(
