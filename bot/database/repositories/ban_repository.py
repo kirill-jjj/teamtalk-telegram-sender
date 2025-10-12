@@ -49,9 +49,9 @@ class BanRepository(BaseRepository[BanList]):
         Returns:
             True if the ID is banned, False otherwise.
         """
-        statement = select(BanList).where(BanList.telegram_id == telegram_id)
+        statement = select(func.count()).where(BanList.telegram_id == telegram_id)
         result = await self._session.exec(statement)
-        return result.first() is not None
+        return result.one() > 0
 
     async def is_teamtalk_username_banned(self, teamtalk_username: str) -> bool:
         """Checks if a TeamTalk username is in the ban list.
@@ -62,11 +62,11 @@ class BanRepository(BaseRepository[BanList]):
         Returns:
             True if the username is banned, False otherwise.
         """
-        statement = select(BanList).where(
+        statement = select(func.count()).where(
             BanList.teamtalk_username == teamtalk_username
         )
         result = await self._session.exec(statement)
-        return result.first() is not None
+        return result.one() > 0
 
     async def get_by_telegram_id(self, telegram_id: int) -> list[BanList]:
         """Retrieves all ban entries for a given Telegram ID.

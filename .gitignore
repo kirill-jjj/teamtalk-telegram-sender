@@ -17,6 +17,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.mypy_cache/
 
 # Артефакты сборки и дистрибуции
 build/
