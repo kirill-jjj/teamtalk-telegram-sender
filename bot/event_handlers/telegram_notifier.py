@@ -1,18 +1,28 @@
 """Handles sending Telegram notifications in response to domain events."""
 
+import asyncio
 from collections.abc import Callable
 from gettext import NullTranslations
 from html import escape
 import logging
 
+from aiogram.exceptions import TelegramForbiddenError
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.formatting import Bold, Text
+from pytalk.user import User as TeamTalkUser
 
 from bot.config import Settings
+from bot.constants import DEFAULT_LANGUAGE
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
+from bot.database.uow import SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
-from bot.services.notification_service import NotificationRecipientService
+from bot.services.notification_service import (
+    NotificationRecipientService,
+    should_send_silently,
+)
+from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -20,7 +30,7 @@ from bot.teamtalk_bot.events import (
     UserJoinedEvent,
     UserLeftEvent,
 )
-from bot.telegram_bot.api import broadcast_to_users, send_telegram_message
+from bot.telegram_bot.api import send_telegram_message
 from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.types.bots import EventBot, MessageBot
 
@@ -63,18 +73,14 @@ class TelegramNotificationHandler:
         if not recipients:
             return
 
-        await broadcast_to_users(
-            bot_instance_to_use=self.event_bot,
+        await self.broadcast_to_users(
             recipients_with_lang=recipients,
             text_generator=lambda lang_code: self._generate_join_leave_text(
                 event,
                 NotificationType.JOIN,
                 lang_code or self.settings.general.default_lang,
             ),
-            cache=self.cache,
             online_users_cache_for_instance=event.online_users_cache,
-            session_factory=self.session_factory,
-            translator_factory=self.translator_factory,
         )
 
     async def handle_user_left(self, event: UserLeftEvent) -> None:
@@ -89,21 +95,20 @@ class TelegramNotificationHandler:
         if not recipients:
             return
 
-        await broadcast_to_users(
-            bot_instance_to_use=self.event_bot,
+        await self.broadcast_to_users(
             recipients_with_lang=recipients,
             text_generator=lambda lang_code: self._generate_join_leave_text(
                 event,
                 NotificationType.LEAVE,
                 lang_code or self.settings.general.default_lang,
             ),
-            cache=self.cache,
             online_users_cache_for_instance=event.online_users_cache,
-            session_factory=self.session_factory,
-            translator_factory=self.translator_factory,
         )
 
-    async def handle_admin_status_changed(self, event: AdminStatusChangedEvent) -> None:
+    async def handle_admin_status_changed(
+        self,
+        event: AdminStatusChangedEvent,
+    ) -> None:
         """Handles the AdminStatusChangedEvent and updates user commands."""
         lang_code = event.lang_code or self.settings.general.default_lang
         translator = self.translator_factory(lang_code)
@@ -115,7 +120,10 @@ class TelegramNotificationHandler:
             translator=translator,
         )
 
-    async def handle_private_message(self, event: PrivateMessageReceivedEvent) -> None:
+    async def handle_private_message(
+        self,
+        event: PrivateMessageReceivedEvent,
+    ) -> None:
         """Handles the PrivateMessageReceivedEvent and forwards it to the admin."""
         admin_chat_id = self.settings.telegram.admin_chat_id
         if not admin_chat_id:
@@ -140,7 +148,6 @@ class TelegramNotificationHandler:
         was_sent = await send_telegram_message(
             bot_instance=self.message_bot,
             chat_id=admin_chat_id,
-            cache=self.cache,
             **content.as_kwargs(),
         )
 
@@ -187,3 +194,80 @@ class TelegramNotificationHandler:
             user_nickname=escape(event.user_nickname),
             server_name=escape(event.server_name),
         )
+
+    async def broadcast_to_users(
+        self,
+        recipients_with_lang: list[tuple[int, str | None]],
+        text_generator: Callable[[str | None], str],
+        online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
+        reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
+        | None = None,
+    ) -> None:
+        """Sends localized messages to recipients and handles errors individually."""
+        if not self.event_bot:
+            logger.error("No Telegram bot instance provided to broadcast_to_users.")
+            return
+
+        tasks = []
+        for chat_id, lang_code in recipients_with_lang:
+            tasks.append(
+                asyncio.create_task(
+                    self._send_and_handle_broadcast_error(
+                        chat_id=chat_id,
+                        lang_code=lang_code,
+                        text_generator=text_generator,
+                        online_users_cache_for_instance=online_users_cache_for_instance,
+                        reply_markup_generator=reply_markup_generator,
+                    )
+                )
+            )
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+    async def _send_and_handle_broadcast_error(
+        self,
+        chat_id: int,
+        lang_code: str | None,
+        text_generator: Callable[[str | None], str],
+        online_users_cache_for_instance: dict[int, TeamTalkUser] | None,
+        reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
+        | None,
+    ) -> None:
+        """Helper coroutine to send a message and handle Forbidden error."""
+        try:
+            language_code = lang_code or DEFAULT_LANGUAGE
+            text = text_generator(language_code)
+            current_reply_markup = (
+                reply_markup_generator(language_code, chat_id)
+                if reply_markup_generator
+                else None
+            )
+
+            send_silently = await should_send_silently(
+                chat_id, self.cache, online_users_cache_for_instance
+            )
+
+            await send_telegram_message(
+                bot_instance=self.event_bot,
+                chat_id=chat_id,
+                reply_markup=current_reply_markup,
+                disable_notification=send_silently,
+                text=text,
+            )
+        except TelegramForbiddenError:
+            logger.warning(
+                "User %s blocked the bot or is deactivated. Deleting all user data...",
+                chat_id,
+            )
+            # Use a default translator for the deletion process logs/messages
+            default_translator = self.translator_factory(DEFAULT_LANGUAGE)
+            async with SqlModelUnitOfWork(self.session_factory) as uow:
+                subscription_service = SubscriptionService(uow, self.cache)
+                await subscription_service.delete_profile(chat_id, default_translator)
+                await uow.commit()
+        except Exception:
+            logger.critical(
+                "An unexpected error occurred during broadcast to chat_id %s.",
+                chat_id,
+            )

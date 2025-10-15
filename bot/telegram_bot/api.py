@@ -1,8 +1,6 @@
 """Functions for interacting with the Telegram Bot API."""
 
 import asyncio
-from collections.abc import Callable
-from gettext import NullTranslations
 import logging
 from typing import Any
 
@@ -12,16 +10,9 @@ from aiogram.exceptions import (
     TelegramBadRequest,
     TelegramForbiddenError,
 )
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.types import InaccessibleMessage, InlineKeyboardMarkup, Message
 import pytalk
-from pytalk.user import User as TeamTalkUser
 
-from bot.constants import DEFAULT_LANGUAGE
-from bot.database.engine import AsyncSessionFactoryType
-from bot.database.uow import SqlModelUnitOfWork
-from bot.services.cache_service import CacheService
-from bot.services.notification_service import should_send_silently
-from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.formatters import format_telegram_user_display_name
 
 ttstr = pytalk.instance.sdk.ttstr
@@ -106,96 +97,8 @@ async def get_display_name_for_id(bot: AiogramBot, user_id: int) -> str:
         return str(user_id)
 
 
-async def broadcast_to_users(
-    bot_instance_to_use: AiogramBot,
-    recipients_with_lang: list[tuple[int, str | None]],
-    text_generator: Callable[[str | None], str],
-    cache: CacheService,
-    session_factory: AsyncSessionFactoryType,
-    translator_factory: Callable[[str | None], NullTranslations],
-    online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
-    reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
-    | None = None,
-) -> None:
-    """Sends localized messages to recipients and handles errors individually."""
-    if not bot_instance_to_use:
-        logger.error("No Telegram bot instance provided to broadcast_to_users.")
-        return
-
-    tasks = []
-    for chat_id, lang_code in recipients_with_lang:
-        tasks.append(
-            asyncio.create_task(
-                _send_and_handle_broadcast_error(
-                    bot_instance_to_use=bot_instance_to_use,
-                    chat_id=chat_id,
-                    lang_code=lang_code,
-                    text_generator=text_generator,
-                    cache=cache,
-                    session_factory=session_factory,
-                    translator_factory=translator_factory,
-                    online_users_cache_for_instance=online_users_cache_for_instance,
-                    reply_markup_generator=reply_markup_generator,
-                )
-            )
-        )
-
-    if tasks:
-        await asyncio.gather(*tasks)
-
-
-async def _send_and_handle_broadcast_error(
-    bot_instance_to_use: AiogramBot,
-    chat_id: int,
-    lang_code: str | None,
-    text_generator: Callable[[str | None], str],
-    cache: CacheService,
-    session_factory: AsyncSessionFactoryType,
-    translator_factory: Callable[[str | None], NullTranslations],
-    online_users_cache_for_instance: dict[int, TeamTalkUser] | None,
-    reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
-    | None,
-) -> None:
-    """Helper coroutine to send a message and handle Forbidden error."""
-    try:
-        language_code = lang_code or DEFAULT_LANGUAGE
-        text = text_generator(language_code)
-        current_reply_markup = (
-            reply_markup_generator(language_code, chat_id)
-            if reply_markup_generator
-            else None
-        )
-
-        send_silently = await should_send_silently(
-            chat_id, cache, online_users_cache_for_instance
-        )
-
-        await send_telegram_message(
-            bot_instance=bot_instance_to_use,
-            chat_id=chat_id,
-            reply_markup=current_reply_markup,
-            disable_notification=send_silently,
-            text=text,
-        )
-    except TelegramForbiddenError:
-        logger.warning(
-            "User %s blocked the bot or is deactivated. Deleting all user data...",
-            chat_id,
-        )
-        # Use a default translator for the deletion process logs/messages
-        default_translator = translator_factory(DEFAULT_LANGUAGE)
-        async with SqlModelUnitOfWork(session_factory) as uow:
-            subscription_service = SubscriptionService(uow, cache)
-            await subscription_service.delete_profile(chat_id, default_translator)
-            await uow.commit()
-    except Exception:
-        logger.exception(
-            "An unexpected error occurred during broadcast to chat_id %s.", chat_id
-        )
-
-
 async def safe_delete_message(
-    message: Message, log_context_message: str = "message"
+    message: Message | InaccessibleMessage, log_context_message: str = "message"
 ) -> bool:
     """Safely deletes a message, catching TelegramAPIErrors and logging them.
 
@@ -205,6 +108,9 @@ async def safe_delete_message(
     :return: True if deletion was successful or if the message was already
         deleted/not found, False if another TelegramAPIError occurred.
     """
+    if not isinstance(message, Message):
+        return False
+
     try:
         await message.delete()
     except TelegramBadRequest as e:
