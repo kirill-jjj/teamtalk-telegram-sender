@@ -12,6 +12,7 @@ from aiogram.utils.formatting import Bold, Text, as_list
 if TYPE_CHECKING:
     from bot.telegram_bot.models import WhoReport
 
+from bot.core.enums import AdminCommand
 from bot.models import MuteListMode, NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 
@@ -189,3 +190,73 @@ def format_help_text(translator: NullTranslations, *, is_admin: bool) -> str:
             ]
         )
     return "\n".join(parts)
+
+
+def format_moderation_prompt(
+    command: "AdminCommand",
+    server_name: str,
+    translator: NullTranslations,
+) -> str:
+    """Formats the prompt for a moderation action (kick/ban)."""
+    _ = translator.gettext
+    command_text_map = {
+        "kick": _("Select a user to kick from {server_host}:").format(
+            server_host=server_name
+        ),
+        "ban": _("Select a user to ban from {server_host}:").format(
+            server_host=server_name
+        ),
+    }
+    return command_text_map.get(command.value, _("Select a user:"))
+
+
+def format_manage_muted_menu_text(
+    translator: NullTranslations,
+    mute_list_mode: MuteListMode,
+) -> str:
+    """Formats the text for the mute management menu."""
+    _ = translator.gettext
+    if mute_list_mode == MuteListMode.blacklist:
+        current_mode_text = _(
+            "Current mode is Blacklist. You receive notifications from everyone "
+            "except those on the list."
+        )
+    else:
+        current_mode_text = _(
+            "Current mode is Whitelist. You only receive notifications "
+            "from users on the list."
+        )
+    return _("Manage Mute List\n\n{current_mode_description}").format(
+        current_mode_description=current_mode_text
+    )
+
+
+def format_paginated_list_text(
+    translator: NullTranslations,
+    title_text: str,
+    total_items: int,
+    page: int,
+    page_size: int,
+    empty_list_text: str,
+    server_host_for_display: str | None = None,
+) -> str:
+    """Constructs the text part of a message for a paginated list."""
+    _ = translator.gettext
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    current_page_idx = max(0, min(page, total_pages - 1))
+
+    message_parts = [title_text]
+    if total_items == 0:
+        message_parts.append(empty_list_text)
+
+    page_indicator_text = _("Page {current_page}/{total_pages}").format(
+        current_page=current_page_idx + 1, total_pages=total_pages
+    )
+
+    if server_host_for_display and " on {server_host}" not in message_parts[0]:
+        message_parts[0] += _(" on {server_host}").format(
+            server_host=server_host_for_display
+        )
+
+    message_parts.append(f"\n{page_indicator_text}")
+    return "\n".join(message_parts)

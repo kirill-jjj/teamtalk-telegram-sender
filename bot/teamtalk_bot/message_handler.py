@@ -19,6 +19,7 @@ from bot.teamtalk_bot.command_handlers import (
 )
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.teamtalk_bot.formatters import (
+    format_teamtalk_help_message,
     get_effective_server_name,
     get_tt_user_display_name,
 )
@@ -88,35 +89,6 @@ class MessageHandler:
         else:
             await self._publish_private_message_event(tt_message, translator)
 
-    def _build_teamtalk_help_message(
-        self,
-        translator: NullTranslations,
-        *,
-        is_admin: bool,
-    ) -> str:
-        """Builds the help message for TeamTalk users."""
-        _ = translator.gettext
-        parts = [
-            _("Available commands:"),
-            _(
-                "/sub - Get a link to subscribe to notifications.\n"
-                "/unsub - Get a link to unsubscribe from notifications.\n"
-                "/help - Show help."
-            ),
-        ]
-        if is_admin:
-            parts.extend(
-                [
-                    _("\nAdmin commands (MAIN_ADMIN from config only):"),
-                    _(
-                        "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
-                        "/remove_admin <Telegram ID> [<Telegram ID>...] - "
-                        "Remove bot admin."
-                    ),
-                ]
-            )
-        return "\n".join(parts)
-
     async def _on_help(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
@@ -126,9 +98,7 @@ class MessageHandler:
             self.settings.general.admin_username
             and tt_username_str == self.settings.general.admin_username
         )
-        help_text = self._build_teamtalk_help_message(
-            translator, is_admin=is_main_tt_admin
-        )
+        help_text = format_teamtalk_help_message(translator, is_admin=is_main_tt_admin)
         await self.command_handlers._reply_to_tt_message(tt_message.reply, help_text)
 
     async def _on_unknown(

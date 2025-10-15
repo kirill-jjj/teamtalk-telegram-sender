@@ -200,3 +200,32 @@ def get_user_display_channel_name(
         return translator.gettext("in {channel_name}").format(channel_name=channel_name)
 
     return translator.gettext("under server")
+
+
+def format_teamtalk_help_message(
+    translator: NullTranslations,
+    *,
+    is_admin: bool,
+) -> str:
+    """Builds the help message for TeamTalk users."""
+    _ = translator.gettext
+    parts = [
+        _("Available commands:"),
+        _(
+            "/sub - Get a link to subscribe to notifications.\n"
+            "/unsub - Get a link to unsubscribe from notifications.\n"
+            "/help - Show help."
+        ),
+    ]
+    if is_admin:
+        parts.extend(
+            [
+                _("\nAdmin commands (MAIN_ADMIN from config only):"),
+                _(
+                    "/add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.\n"
+                    "/remove_admin <Telegram ID> [<Telegram ID>...] - "
+                    "Remove bot admin."
+                ),
+            ]
+        )
+    return "\n".join(parts)

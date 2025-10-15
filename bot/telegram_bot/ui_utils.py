@@ -15,6 +15,7 @@ from aiogram.types import (
 )
 
 from bot.constants import USERS_PER_PAGE
+from bot.telegram_bot.formatters import format_paginated_list_text
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
@@ -54,26 +55,19 @@ async def display_paginated_list(
         server_host_for_display: Optional server host string to append to the title.
     """
     _ = translator.gettext
-    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
-    current_page_idx = max(0, min(page, total_pages - 1))
 
-    message_parts = [title_text]
-    if total_items == 0:
-        message_parts.append(empty_list_text)
-
-    page_indicator_text = _("Page {current_page}/{total_pages}").format(
-        current_page=current_page_idx + 1, total_pages=total_pages
+    final_message_text = format_paginated_list_text(
+        translator=translator,
+        title_text=title_text,
+        total_items=total_items,
+        page=page,
+        page_size=page_size,
+        empty_list_text=empty_list_text,
+        server_host_for_display=server_host_for_display,
     )
 
-    if (
-        server_host_for_display and " on {server_host}" not in message_parts[0]
-    ):  # SIM102 fix applied here
-        message_parts[0] += _(" on {server_host}").format(
-            server_host=server_host_for_display
-        )
-
-    message_parts.append(f"\n{page_indicator_text}")
-    final_message_text = "\n".join(message_parts)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    current_page_idx = max(0, min(page, total_pages - 1))
 
     keyboard_markup = await keyboard_factory(
         translator,

@@ -27,7 +27,10 @@ from bot.telegram_bot.callback_data import (
     SetMuteModeCallback,
     ToggleMuteCallback,
 )
-from bot.telegram_bot.formatters import format_mute_toast  # Added import
+from bot.telegram_bot.formatters import (
+    format_manage_muted_menu_text,
+    format_mute_toast,
+)
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
@@ -188,19 +191,7 @@ async def show_manage_muted_menu(
     manage_muted_builder = await create_manage_muted_users_keyboard(
         translator, user_settings
     )
-    if user_settings.mute_list_mode == MuteListMode.blacklist:
-        current_mode_text = _(
-            "Current mode is Blacklist. You receive notifications from everyone "
-            "except those on the list."
-        )
-    else:
-        current_mode_text = _(
-            "Current mode is Whitelist. You only receive notifications "
-            "from users on the list."
-        )
-    full_text = _("Manage Mute List\n\n{current_mode_description}").format(
-        current_mode_description=current_mode_text
-    )
+    full_text = format_manage_muted_menu_text(translator, user_settings.mute_list_mode)
 
     await safe_edit_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]

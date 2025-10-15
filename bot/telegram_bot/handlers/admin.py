@@ -17,6 +17,7 @@ from bot.services.report_service import ReportService
 from bot.services.schemas import UserDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.filters.admin import IsAdmin
+from bot.telegram_bot.formatters import format_moderation_prompt
 from bot.telegram_bot.keyboards import (
     create_banned_user_list_keyboard,
     create_subscriber_list_keyboard,
@@ -50,15 +51,7 @@ async def show_user_buttons_from_list(
 
     builder = await create_user_selection_keyboard(users, command_type)
 
-    command_text_map = {
-        AdminCommand.KICK: _("Select a user to kick from {server_host}:").format(
-            server_host=server_host
-        ),
-        AdminCommand.BAN: _("Select a user to ban from {server_host}:").format(
-            server_host=server_host
-        ),
-    }
-    reply_text = command_text_map.get(command_type, _("Select a user:"))
+    reply_text = format_moderation_prompt(command_type, server_host, translator)
 
     await message.reply(reply_text, reply_markup=builder.as_markup())
 
