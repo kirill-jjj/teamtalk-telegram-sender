@@ -25,6 +25,28 @@ def is_user_subject_to_noon_check(user_settings: UserSettings | None) -> bool:
     return user_settings.not_on_online_enabled and user_settings.not_on_online_confirmed
 
 
+async def should_send_silently(
+    chat_id: int,
+    cache: CacheService,
+    online_users_cache: dict[int, TeamTalkUser] | None,
+) -> bool:
+    """Determmunes if a message to a chat_id should be sent silently based on NOON."""
+    recipient_settings = cache.get_user_settings(chat_id)
+    if not is_user_subject_to_noon_check(recipient_settings):
+        return False
+
+    if online_users_cache and await is_linked_user_online(
+        chat_id, cache, online_users_cache
+    ):
+        logger.debug(
+            "Message to %s will be silent: linked user is online and NOON is enabled.",
+            chat_id,
+        )
+        return True
+
+    return False
+
+
 async def is_linked_user_online(
     telegram_id: int,
     cache: CacheService,

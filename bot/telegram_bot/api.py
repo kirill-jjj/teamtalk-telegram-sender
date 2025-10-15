@@ -19,8 +19,8 @@ from pytalk.user import User as TeamTalkUser
 from bot.constants import DEFAULT_LANGUAGE
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import SqlModelUnitOfWork
-from bot.services import notification_service
 from bot.services.cache_service import CacheService
+from bot.services.notification_service import should_send_silently
 from bot.services.subscription_service import SubscriptionService
 from bot.telegram_bot.formatters import format_telegram_user_display_name
 
@@ -28,50 +28,26 @@ ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 
-def _should_send_silently(
-    chat_id: int, *, tt_user_is_online: bool, cache: CacheService
-) -> bool:
-    """Checks if a message to a given chat_id should be sent silently."""
-    recipient_settings = cache.get_user_settings(chat_id)
-
-    if (
-        notification_service.is_user_subject_to_noon_check(recipient_settings)
-        and tt_user_is_online
-    ):
-        logger.debug(
-            "Message to %s will be silent: linked user is online and NOON is "
-            "subject to check (via notification_service).",
-            chat_id,
-        )
-        return True
-
-    return False
-
-
 async def send_telegram_message(
     bot_instance: AiogramBot,
     chat_id: int,
-    cache: CacheService,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
-    tt_user_is_online: bool = False,
+    disable_notification: bool = False,
     **kwargs: Any,
 ) -> bool:
     """Sends a single Telegram message, logs errors, and returns success status."""
-    send_silently = _should_send_silently(
-        chat_id=chat_id, tt_user_is_online=tt_user_is_online, cache=cache
-    )
     try:
         await bot_instance.send_message(
             chat_id=chat_id,
             reply_markup=reply_markup,
-            disable_notification=send_silently,
+            disable_notification=disable_notification,
             **kwargs,
         )
         logger.debug(
             "Message sent to %s. Silent: %s, kwargs used: %s",
             chat_id,
-            send_silently,
+            disable_notification,
             kwargs,
         )
     except TelegramForbiddenError:
@@ -190,20 +166,15 @@ async def _send_and_handle_broadcast_error(
             else None
         )
 
-        individual_tt_user_is_online = False
-        if online_users_cache_for_instance:
-            individual_tt_user_is_online = (
-                await notification_service.is_linked_user_online(
-                    chat_id, cache, online_users_cache_for_instance
-                )
-            )
+        send_silently = await should_send_silently(
+            chat_id, cache, online_users_cache_for_instance
+        )
 
         await send_telegram_message(
             bot_instance=bot_instance_to_use,
             chat_id=chat_id,
             reply_markup=current_reply_markup,
-            tt_user_is_online=individual_tt_user_is_online,
-            cache=cache,
+            disable_notification=send_silently,
             text=text,
         )
     except TelegramForbiddenError:
