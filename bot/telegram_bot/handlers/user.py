@@ -99,7 +99,7 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        report_data = await report_service.get_who_report_data(
+        report_data, error_message = await report_service.get_who_report_data(
             telegram_user_id=message.from_user.id,
             translator=translator,
             cache_service=cache,
@@ -107,12 +107,13 @@ async def on_who_command(
             command_bus=command_bus,
         )
 
-        if isinstance(report_data, str):
-            # Service returned an error message string
-            report_text = report_data
-        else:
-            # Service returned a data object, pass it to the formatter
+        if error_message:
+            report_text = error_message
+        elif report_data:
             report_text = format_who_report_to_html(report_data, translator)
+        else:
+            # Fallback in case both are None
+            report_text = translator.gettext("An unexpected error occurred.")
 
         await message.reply(report_text)
 
