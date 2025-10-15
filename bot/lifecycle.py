@@ -6,14 +6,14 @@ from gettext import NullTranslations
 import logging
 
 from aiogram import Dispatcher
+from dishka import AsyncContainer
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
-from bot.database.engine import AsyncSessionFactoryType
-from bot.database.uow import SqlModelUnitOfWork
+from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.registration import register_all_handlers
 from bot.services.admin_service import AdminService
@@ -31,7 +31,6 @@ async def on_startup(
     bot: FromDishka[EventBot],
     tt_bot: FromDishka[pytalk.TeamTalkBot],
     cache: FromDishka[CacheService],
-    session_factory: FromDishka[AsyncSessionFactoryType],
     settings: FromDishka[Settings],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
@@ -55,24 +54,21 @@ async def on_startup(
         logger.info("Pytalk main event loop task is already running.")
 
     logger.info("Loading all caches from database...")
-    async with SqlModelUnitOfWork(session_factory) as uow:
-        db_admin_ids = await uow.admins.get_all_ids()
-        cache.load_admins_from_db(db_admin_ids)
+    container: AsyncContainer = dispatcher.workflow_data["dishka_container"]
+    async with container() as request_container:
+        uow = await request_container.get(IUnitOfWork)
+        async with uow:
+            db_admin_ids = await uow.admins.get_all_ids()
+            cache.load_admins_from_db(db_admin_ids)
 
-        db_subscriber_ids = await uow.subscribers.get_all_ids()
-        cache.load_subscribers_from_db(db_subscriber_ids)
+            db_subscriber_ids = await uow.subscribers.get_all_ids()
+            cache.load_subscribers_from_db(db_subscriber_ids)
 
-        all_settings = await uow.users.get_all()
-        cache.load_all_user_settings(all_settings)
-        logger.info("All caches have been loaded.")
+            all_settings = await uow.users.get_all()
+            cache.load_all_user_settings(all_settings)
+            logger.info("All caches have been loaded.")
 
-        # Manually create AdminService for this one-off startup task
-        admin_service = AdminService(
-            uow=uow,
-            cache=cache,
-            event_bus=event_bus,
-            settings=settings
-        )
+        admin_service = await request_container.get(AdminService)
         # Ensure the main admin from config exists and has up-to-date commands
         await admin_service.ensure_main_admin_exists(bot, translator_factory)
 
