@@ -131,40 +131,74 @@ async def _display_internal_user_list(
     )
 
 
+async def _show_all_accounts_list(
+    callback_query: CallbackQuery,
+    translator: NullTranslations,
+    user_settings: UserSettings,
+    report_service: ReportService,
+    page: int,
+) -> None:
+    """Displays a paginated list of all TeamTalk server accounts."""
+    _ = translator.gettext
+    view_data = await report_service.get_all_server_accounts_view_data(
+        lang_code=translator.info().get("language", "en"), translator=translator
+    )
+    muted_usernames = {
+        user.muted_teamtalk_username for user in user_settings.muted_users_list
+    }
+
+    await _display_user_list(
+        callback_query=callback_query,
+        translator=translator,
+        page=page,
+        items=view_data.accounts,
+        sort_key_extractor=lambda acc: acc.username.lower(),
+        title_text=view_data.title,
+        empty_list_text=view_data.empty_list_text,
+        keyboard_factory_kwargs={
+            "mute_list_mode": user_settings.mute_list_mode,
+            "muted_usernames": muted_usernames,
+            "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
+            "item_username_extractor": lambda item: item.username,
+            "item_display_name_extractor": lambda item: item.username,
+            "back_button_callback_data": NotificationCallback(
+                action=NotificationControl.MANAGE_MUTED
+            ).pack(),
+            "back_button_text_key": _create_back_button_text(
+                translator, _("Mute Management")
+            ),
+        },
+    )
+    await callback_query.answer()
+
+
 async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
     command_bus: CommandBus,
-    report_service: ReportService,  # Add missing parameter
+    report_service: ReportService,
     moderation_service: ModerationService,
     callback_data: ToggleMuteCallback,
 ) -> None:
     """Refreshes the mute list UI after an action."""
-    _ = translator.gettext
     list_type_user_was_on = callback_data.list_type
     current_page_for_refresh = callback_data.current_page
 
-    # The user_settings object passed in is already the updated one from the service.
-    # No need to refresh it from the session.
-
     if list_type_user_was_on == UserListAction.LIST_ALL_ACCOUNTS:
-        await display_all_accounts_list(
-            callback_query,
-            translator,
-            user_settings,
-            report_service,  # This needs to be passed
-            PaginateUsersCallback(
-                list_type=UserListAction.LIST_ALL_ACCOUNTS,
-                page=current_page_for_refresh,
-            ),
+        await _show_all_accounts_list(
+            callback_query=callback_query,
+            translator=translator,
+            user_settings=user_settings,
+            report_service=report_service,
+            page=current_page_for_refresh,
         )
     else:
         await _display_internal_user_list(
             callback_query,
             translator,
             user_settings,
-            report_service,  # Pass the service
+            report_service,
             list_type_user_was_on,
             current_page_for_refresh,
         )
@@ -300,40 +334,16 @@ async def display_all_accounts_list(
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
-    _ = translator.gettext
     user_settings = await user_settings_service.get_or_create(
         callback_query.from_user.id, settings.general.default_lang
     )
-    view_data = await report_service.get_all_server_accounts_view_data(
-        lang_code=translator.info().get("language", "en"), translator=translator
-    )
-    muted_usernames = {
-        user.muted_teamtalk_username for user in user_settings.muted_users_list
-    }
-
-    await _display_user_list(
+    await _show_all_accounts_list(
         callback_query=callback_query,
         translator=translator,
+        user_settings=user_settings,
+        report_service=report_service,
         page=callback_data.page,
-        items=view_data.accounts,
-        sort_key_extractor=lambda acc: acc.username.lower(),
-        title_text=view_data.title,
-        empty_list_text=view_data.empty_list_text,
-        keyboard_factory_kwargs={
-            "mute_list_mode": user_settings.mute_list_mode,
-            "muted_usernames": muted_usernames,
-            "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
-            "item_username_extractor": lambda item: item.username,
-            "item_display_name_extractor": lambda item: item.username,
-            "back_button_callback_data": NotificationCallback(
-                action=NotificationControl.MANAGE_MUTED
-            ).pack(),
-            "back_button_text_key": _create_back_button_text(
-                translator, _("Mute Management")
-            ),
-        },
     )
-    await callback_query.answer()
 
 
 @mute_router.callback_query(ToggleMuteCallback.filter())
