@@ -10,6 +10,7 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
+from bot.config import Settings
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
@@ -266,11 +267,15 @@ async def set_mute_mode(
 async def display_internal_user_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings_service: FromDishka[UserSettingsService],
+    settings: FromDishka[Settings],
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
+    user_settings = await user_settings_service.get_or_create(
+        callback_query.from_user.id, settings.general.default_lang
+    )
     await _display_internal_user_list(
         callback_query,
         translator,
@@ -289,12 +294,16 @@ async def display_internal_user_list(
 async def display_all_accounts_list(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings],
+    user_settings_service: FromDishka[UserSettingsService],
+    settings: FromDishka[Settings],
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
     _ = translator.gettext
+    user_settings = await user_settings_service.get_or_create(
+        callback_query.from_user.id, settings.general.default_lang
+    )
     view_data = await report_service.get_all_server_accounts_view_data(
         lang_code=translator.info().get("language", "en"), translator=translator
     )

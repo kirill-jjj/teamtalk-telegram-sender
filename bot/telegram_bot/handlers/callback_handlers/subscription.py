@@ -10,7 +10,8 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
-from bot.models import NotificationSetting, UserSettings
+from bot.models import NotificationSetting
+from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
@@ -30,7 +31,7 @@ subscription_router = Router(name="callback_handlers.subscription")
 async def show_subscriptions_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[UserSettings | None],
+    user_settings: FromDishka[SettingsViewDTO | None],
 ) -> None:
     """Shows the subscription settings menu to the user."""
     _ = translator.gettext
