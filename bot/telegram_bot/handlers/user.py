@@ -123,7 +123,6 @@ async def on_help_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
-    report_service: Annotated[ReportService, FromDishka()],
 ) -> None:
     """Handles the /help command, showing available commands."""
     if not message.from_user:
