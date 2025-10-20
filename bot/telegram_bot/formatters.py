@@ -107,20 +107,26 @@ def format_subscriber_details(
 
 
 def format_who_report_to_html(
-    report: "WhoReport",
+    report_dto: "WhoReport",
     translator: "NullTranslations",
 ) -> str:
-    """Formats the final /who message string from a WhoReport object."""
+    """Formats the final /who message string from a WhoReport DTO."""
     _ = translator.gettext
     ngettext = translator.ngettext
 
-    if report.total_users == 0:
+    if report_dto.error_message:
+        return report_dto.error_message
+
+    if not report_dto.payload or report_dto.payload.total_users == 0:
         return (
             _("No users found online on server {server_host}.")
-            if report.server_name
+            if report_dto.payload and report_dto.payload.server_name
             else _("No users found online.")
-        ).format(server_host=report.server_name)
+        ).format(
+            server_host=report_dto.payload.server_name if report_dto.payload else ""
+        )
 
+    report = report_dto.payload
     header_template = (
         ngettext(
             "There is {user_count} user on the server {server_host}:",

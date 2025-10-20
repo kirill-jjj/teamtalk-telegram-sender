@@ -16,9 +16,16 @@ class WhoChannelGroup(BaseModel):
     users: list[WhoUser]
 
 
-class WhoReport(BaseModel):
-    """Pydantic model for the structured /who command report."""
+class WhoReportPayload(BaseModel):
+    """Pydantic model for the structured /who command report payload."""
 
     server_name: str | None
     total_users: int
     grouped_data: list[WhoChannelGroup]
+
+
+class WhoReport(BaseModel):
+    """Pydantic model for the /who command result DTO."""
+
+    payload: WhoReportPayload | None = None
+    error_message: str | None = None

@@ -28,7 +28,12 @@ from bot.services.schemas import (
 )
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_names_for_ids
-from bot.telegram_bot.models import WhoChannelGroup, WhoReport, WhoUser
+from bot.telegram_bot.models import (
+    WhoChannelGroup,
+    WhoReport,
+    WhoReportPayload,
+    WhoUser,
+)
 from bot.telegram_bot.types.bots import EventBot
 
 if TYPE_CHECKING:
@@ -61,11 +66,8 @@ class ReportService:
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
         command_bus: CommandBus,
-    ) -> tuple[WhoReport | None, str | None]:
-        """Gathers online user data and returns a structured report.
-
-        Returns a tuple of (WhoReport | None, error_message | None).
-        """
+    ) -> WhoReport:
+        """Gathers online user data and returns a structured report DTO."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
             telegram_user_id, self._settings.general.default_lang
@@ -79,10 +81,14 @@ class ReportService:
             result: GetOnlineUsersResult = await command_bus.execute(command)
         except NoHandlerFoundError:
             logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            return None, _("This feature is temporarily unavailable.")
+            return WhoReport(
+                error_message=_("This feature is temporarily unavailable.")
+            )
 
         if not result.success or not result.users:
-            return None, result.error_message or _("No users found online.")
+            return WhoReport(
+                error_message=result.error_message or _("No users found online.")
+            )
 
         # Grouping logic is now part of the service
         channels_data: dict[str, list[str]] = {}
@@ -101,12 +107,12 @@ class ReportService:
             for name, nicks in channels_data.items()
         ]
 
-        report = WhoReport(
+        report_payload = WhoReportPayload(
             server_name=result.server_name,
             total_users=user_count,
             grouped_data=grouped_data,
         )
-        return report, None
+        return WhoReport(payload=report_payload)
 
     async def get_subscribers_info(self, page: int) -> PaginatedResult[SubscriberInfo]:
         """Fetches and prepares a paginated list of subscribers."""
