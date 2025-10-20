@@ -12,7 +12,7 @@ from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AccountManagementData,
     SettingsViewDTO,
-    UserSettingsWithDisplayInfo,
+    SubscriberViewData,
 )
 from bot.telegram_bot.api import get_display_name_for_id
 from bot.telegram_bot.types.bots import EventBot
@@ -50,16 +50,16 @@ class UserSettingsService:
             muted_users_count=len(user_settings_model.muted_users_list),
         )
 
-    async def get_user_settings_with_display_name(
+    async def get_subscriber_view_data(
         self, telegram_id: int, default_lang: str, bot: EventBot
-    ) -> UserSettingsWithDisplayInfo | None:
+    ) -> SubscriberViewData | None:
         """Retrieves user settings and their display name."""
         user_settings = await self.get_or_create(telegram_id, default_lang)
         if not user_settings:
             return None
 
         display_name = await get_display_name_for_id(bot, telegram_id)
-        return UserSettingsWithDisplayInfo(
+        return SubscriberViewData(
             user_settings=user_settings, display_name=display_name
         )
 

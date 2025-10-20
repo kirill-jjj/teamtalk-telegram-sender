@@ -18,7 +18,7 @@ from bot.models import (
     NotificationSetting,
     UserSettings,
 )
-from bot.services.schemas import SettingsViewDTO, UserSettingsWithDisplayInfo
+from bot.services.schemas import SubscriberViewData
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -166,16 +166,12 @@ async def admin_toggle_noon(
             tg_id=target_telegram_id, status=status
         )
         await query.answer(msg)
-        user_settings_dto = SettingsViewDTO(
-            language_code=updated_settings.language_code,
-            notification_settings=updated_settings.notification_settings,
-            mute_list_mode=updated_settings.mute_list_mode,
-            not_on_online_enabled=updated_settings.not_on_online_enabled,
-            teamtalk_username=updated_settings.teamtalk_username,
-            muted_users_count=len(updated_settings.muted_users_list),
-        )
         await refresh_subscriber_view(
-            query, callback_data, translator, bot, user_settings=user_settings_dto
+            query,
+            callback_data,
+            translator,
+            bot,
+            user_settings_service=user_settings_service,
         )
     else:
         await query.answer(_("Failed to toggle NOON status."), show_alert=True)
@@ -218,12 +214,10 @@ async def admin_view_mute_list(
     """Entry point for an admin to view a specific subscriber's mute list."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    user_settings_with_display_info = (
-        await user_settings_service.get_user_settings_with_display_name(
-            target_telegram_id, translator.info().get("language", "en"), bot
-        )
+    view_data = await user_settings_service.get_subscriber_view_data(
+        target_telegram_id, translator.info().get("language", "en"), bot
     )
-    if not user_settings_with_display_info:
+    if not view_data:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
 
@@ -232,7 +226,7 @@ async def admin_view_mute_list(
         translator=translator,
         bot=bot,
         uow=uow,
-        user_settings_with_display_info=user_settings_with_display_info,
+        view_data=view_data,
         subscriber_list_return_page=callback_data.page,
         mute_list_page_num=0,
     )
@@ -243,14 +237,14 @@ async def _display_subscriber_mute_list_page(
     translator: NullTranslations,
     bot: EventBot,
     uow: IUnitOfWork,
-    user_settings_with_display_info: UserSettingsWithDisplayInfo,
+    view_data: SubscriberViewData,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
 ) -> None:
     """Displays a paginated view of a subscriber's mute list."""
     _ = translator.gettext
-    user_settings = user_settings_with_display_info.user_settings
-    display_name = user_settings_with_display_info.display_name
+    user_settings = view_data.user_settings
+    display_name = view_data.display_name
     target_telegram_id = user_settings.telegram_id
 
     if not query.bot:
@@ -299,12 +293,10 @@ async def paginate_mute_list(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    user_settings_with_display_info = (
-        await user_settings_service.get_user_settings_with_display_name(
-            target_telegram_id, translator.info().get("language", "en"), bot
-        )
+    view_data = await user_settings_service.get_subscriber_view_data(
+        target_telegram_id, translator.info().get("language", "en"), bot
     )
-    if not user_settings_with_display_info:
+    if not view_data:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
 
@@ -314,7 +306,7 @@ async def paginate_mute_list(
             translator=translator,
             bot=bot,
             uow=uow,
-            user_settings_with_display_info=user_settings_with_display_info,
+            view_data=view_data,
             subscriber_list_return_page=callback_data.subscriber_context_page,
             mute_list_page_num=callback_data.mute_list_page,
         )
@@ -379,16 +371,12 @@ async def admin_set_any_subscriber_setting(
 
     if updated_settings:
         await query.answer(success_msg)
-        user_settings_dto = SettingsViewDTO(
-            language_code=updated_settings.language_code,
-            notification_settings=updated_settings.notification_settings,
-            mute_list_mode=updated_settings.mute_list_mode,
-            not_on_online_enabled=updated_settings.not_on_online_enabled,
-            teamtalk_username=updated_settings.teamtalk_username,
-            muted_users_count=len(updated_settings.muted_users_list),
-        )
         await refresh_subscriber_view(
-            query, callback_data, translator, bot, user_settings=user_settings_dto
+            query,
+            callback_data,
+            translator,
+            bot,
+            user_settings_service=user_settings_service,
         )
     else:
         await query.answer(
