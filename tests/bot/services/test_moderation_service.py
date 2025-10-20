@@ -220,7 +220,7 @@ async def test_get_target_username_for_toggle_all_accounts(
 
 
 @pytest.mark.asyncio
-async def test_toggle_mute_from_callback_success(
+async def test_toggle_mute_from_paginated_list_success(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
     mock_command_bus: AsyncMock,

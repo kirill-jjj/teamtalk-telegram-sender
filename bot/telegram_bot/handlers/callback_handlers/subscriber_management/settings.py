@@ -321,55 +321,97 @@ AnySettingCallback: TypeAlias = (
 
 
 @settings_router.callback_query(AdminSetSubscriberLanguageCallback.filter())
-@settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
-@settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
 @ensure_message_context
-async def admin_set_any_subscriber_setting(
+async def admin_set_language(
     query: CallbackQuery,
-    callback_data: AnySettingCallback,
+    callback_data: AdminSetSubscriberLanguageCallback,
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
-    translator_factory: FromDishka[Callable[[str], NullTranslations]],
 ) -> None:
-    """Handles an admin setting a specific subscriber's setting."""
+    """Handles an admin setting a subscriber's language."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    user_settings = await user_settings_service.get_or_create(target_telegram_id, "en")
-    if not user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
+    updated_settings = await user_settings_service.update_language(
+        target_telegram_id, callback_data.lang_code, Actor.ADMIN
+    )
 
-    updated_settings: UserSettings | None = None
-    success_msg = ""
-
-    if isinstance(callback_data, AdminSetSubscriberLanguageCallback):
-        updated_settings = await user_settings_service.update_language(
-            target_telegram_id,
-            callback_data.lang_code,
-            Actor.ADMIN,
-        )
+    if updated_settings:
         success_msg = _("Language for subscriber {tg_id} changed to {value}.").format(
             tg_id=target_telegram_id, value=callback_data.lang_code
         )
-    elif isinstance(callback_data, AdminSetSubscriberNotificationPrefCallback):
-        new_pref = NotificationSetting(callback_data.setting_value)
-        updated_settings = await user_settings_service.update_notification_preference(
-            target_telegram_id, new_pref, Actor.ADMIN
+        await query.answer(success_msg)
+        await refresh_subscriber_view(
+            query,
+            callback_data,
+            translator,
+            bot,
+            user_settings_service=user_settings_service,
         )
+    else:
+        await query.answer(
+            _("Failed to update setting. Please try again."), show_alert=True
+        )
+
+
+@settings_router.callback_query(AdminSetSubscriberNotificationPrefCallback.filter())
+@ensure_message_context
+async def admin_set_notification_pref(
+    query: CallbackQuery,
+    callback_data: AdminSetSubscriberNotificationPrefCallback,
+    translator: FromDishka[NullTranslations],
+    bot: FromDishka[EventBot],
+    user_settings_service: FromDishka[UserSettingsService],
+) -> None:
+    """Handles an admin setting a subscriber's notification preference."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+    new_pref = NotificationSetting(callback_data.setting_value)
+
+    updated_settings = await user_settings_service.update_notification_preference(
+        target_telegram_id, new_pref, Actor.ADMIN
+    )
+
+    if updated_settings:
         success_msg = _(
             "Notification preference for subscriber {tg_id} set to: {value}."
         ).format(tg_id=target_telegram_id, value=new_pref.value)
-    elif isinstance(callback_data, AdminSetSubscriberMuteModeCallback):
-        updated_settings = await user_settings_service.update_mute_mode(
-            target_telegram_id, callback_data.mode, Actor.ADMIN
+        await query.answer(success_msg)
+        await refresh_subscriber_view(
+            query,
+            callback_data,
+            translator,
+            bot,
+            user_settings_service=user_settings_service,
         )
+    else:
+        await query.answer(
+            _("Failed to update setting. Please try again."), show_alert=True
+        )
+
+
+@settings_router.callback_query(AdminSetSubscriberMuteModeCallback.filter())
+@ensure_message_context
+async def admin_set_mute_mode(
+    query: CallbackQuery,
+    callback_data: AdminSetSubscriberMuteModeCallback,
+    translator: FromDishka[NullTranslations],
+    bot: FromDishka[EventBot],
+    user_settings_service: FromDishka[UserSettingsService],
+) -> None:
+    """Handles an admin setting a subscriber's mute list mode."""
+    _ = translator.gettext
+    target_telegram_id = callback_data.target_telegram_id
+
+    updated_settings = await user_settings_service.update_mute_mode(
+        target_telegram_id, callback_data.mode, Actor.ADMIN
+    )
+
+    if updated_settings:
         success_msg = _(
             "Mute list mode for subscriber {tg_id} set to: {value}."
         ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
-
-    if updated_settings:
         await query.answer(success_msg)
         await refresh_subscriber_view(
             query,
