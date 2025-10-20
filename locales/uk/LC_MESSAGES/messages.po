@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: teamtalk-telegram-sender 0.1.0\n"
 "Report-Msgid-Bugs-To: kirillkolovi@gmail.com\n"
-"POT-Creation-Date: 2025-10-20 22:12+0500\n"
+"POT-Creation-Date: 2025-10-20 22:23+0500\n"
 "PO-Revision-Date: 2025-08-26 21:16+0500\n"
 "Last-Translator: \n"
 "Language: uk\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Generated-By: Babel 2.17.0\n"
 
 #: bot/command_handlers/teamtalk_handlers.py:89
-#: bot/command_handlers/teamtalk_handlers.py:147
+#: bot/command_handlers/teamtalk_handlers.py:143
 msgid "Error: No active TeamTalk connection."
 msgstr "Помилка: Немає активного підключення до TeamTalk."
 
@@ -26,30 +26,30 @@ msgstr ""
 "Облікові записи користувачів сервера для ще не завантажені. Будь ласка, "
 "спробуйте через мить."
 
-#: bot/command_handlers/teamtalk_handlers.py:156
+#: bot/command_handlers/teamtalk_handlers.py:152
 #, python-brace-format
 msgid "User not found on server {server_host} anymore."
 msgstr "Користувача більше не знайдено на сервері {server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:173
+#: bot/command_handlers/teamtalk_handlers.py:169
 #, python-brace-format
 msgid "User {user_nickname} kicked from server {server_host}."
 msgstr "Користувача {user_nickname} було виключено з сервера {server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:189
+#: bot/command_handlers/teamtalk_handlers.py:185
 #, python-brace-format
 msgid "User {user_nickname} banned and kicked from server {server_host}."
 msgstr ""
 "Користувача {user_nickname} було забанено та виключено з сервера \n"
 "{server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:199
+#: bot/command_handlers/teamtalk_handlers.py:195
 #: bot/telegram_bot/handlers/user.py:47
 msgid "An error occurred. Please try again later."
 msgstr "Сталася помилка. Будь ласка, спробуйте ще раз."
 
-#: bot/command_handlers/teamtalk_handlers.py:202
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:48
+#: bot/command_handlers/teamtalk_handlers.py:198
+#: bot/telegram_bot/handlers/callback_handlers/admin.py:53
 msgid "Unknown action."
 msgstr "Невідома дія."
 
@@ -90,18 +90,20 @@ msgstr "Не вдалося згенерувати посилання, ім'я �
 #: bot/services/deeplink_service.py:62
 #, python-brace-format
 msgid ""
-"Click this link to subscribe to notifications (link valid for 5 minutes):"
-"\n"
+"Click this link to subscribe to notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
+"Натисніть на це посилання, щоб підписатися на сповіщення (посилання дійсне 5 хвилин):\n"
+"{deeplink_url}"
 
 #: bot/services/deeplink_service.py:66
 #, python-brace-format
 msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 "
-"minutes):\n"
+"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
+"Натисніть на це посилання, щоб відписатися від сповіщень (посилання дійсне 5 хвилин):\n"
+"{deeplink_url}"
 
 #: bot/services/deeplink_service.py:87
 msgid "Your Telegram account is banned from using this service."
@@ -734,9 +736,9 @@ msgstr "Налаштування підписки оновлено до: {settin
 msgid "Error: No Telegram ID specified for deletion."
 msgstr "Помилка: не вказано Telegram ID для видалення."
 
+# | msgid "Subscriber settings not found."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:275
 #, fuzzy
-#| msgid "Subscriber settings not found."
 msgid "User not found."
 msgstr "Налаштування підписника не знайдено."
 

@@ -1,53 +1,53 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  \n"
+"Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-20 22:12+0500\n"
-"PO-Revision-Date: 2025-08-26 21:12+0500\n"
+"POT-Creation-Date: 2025-10-20 22:23+0500\n"
+"PO-Revision-Date: 2025-10-20 22:24+0500\n"
 "Last-Translator: \n"
-"Language: ru\n"
 "Language-Team: \n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 "
+"&& (n%100<12 || n%100>14) ? 1 : 2);\n"
 "Generated-By: Babel 2.17.0\n"
+"X-Generator: Poedit 3.8\n"
 
 #: bot/command_handlers/teamtalk_handlers.py:89
-#: bot/command_handlers/teamtalk_handlers.py:147
+#: bot/command_handlers/teamtalk_handlers.py:143
 msgid "Error: No active TeamTalk connection."
 msgstr "Ошибка: Нет активного подключения к TeamTalk."
 
 #: bot/command_handlers/teamtalk_handlers.py:97
 msgid "Server user accounts are not loaded yet. Please try again in a moment."
 msgstr ""
-"Список пользователей сервера еще не загружен. Пожалуйста, попробуйте "
-"через несколько секунд."
+"Список пользователей сервера еще не загружен. Пожалуйста, попробуйте через "
+"несколько секунд."
 
-#: bot/command_handlers/teamtalk_handlers.py:156
+#: bot/command_handlers/teamtalk_handlers.py:152
 #, python-brace-format
 msgid "User not found on server {server_host} anymore."
 msgstr "Пользователя больше нет на сервере {server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:173
+#: bot/command_handlers/teamtalk_handlers.py:169
 #, python-brace-format
 msgid "User {user_nickname} kicked from server {server_host}."
 msgstr "Пользователь {user_nickname} исключен с сервера {server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:189
+#: bot/command_handlers/teamtalk_handlers.py:185
 #, python-brace-format
 msgid "User {user_nickname} banned and kicked from server {server_host}."
 msgstr "Пользователь {user_nickname} забанен и исключен с сервера {server_host}."
 
-#: bot/command_handlers/teamtalk_handlers.py:199
+#: bot/command_handlers/teamtalk_handlers.py:195
 #: bot/telegram_bot/handlers/user.py:47
 msgid "An error occurred. Please try again later."
 msgstr "Произошла ошибка. Пожалуйста, попробуйте еще раз."
 
-#: bot/command_handlers/teamtalk_handlers.py:202
-#: bot/telegram_bot/handlers/callback_handlers/admin.py:48
+#: bot/command_handlers/teamtalk_handlers.py:198
+#: bot/telegram_bot/handlers/callback_handlers/admin.py:53
 msgid "Unknown action."
 msgstr "Неизвестное действие."
 
@@ -88,18 +88,20 @@ msgstr "Не удалось сгенерировать ссылку, имя по
 #: bot/services/deeplink_service.py:62
 #, python-brace-format
 msgid ""
-"Click this link to subscribe to notifications (link valid for 5 minutes):"
-"\n"
+"Click this link to subscribe to notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
+"Нажмите на эту ссылку, чтобы подписаться на уведомления (ссылка действительна 5 минут):\n"
+"{deeplink_url}"
 
 #: bot/services/deeplink_service.py:66
 #, python-brace-format
 msgid ""
-"Click this link to unsubscribe from notifications (link valid for 5 "
-"minutes):\n"
+"Click this link to unsubscribe from notifications (link valid for 5 minutes):\n"
 "{deeplink_url}"
 msgstr ""
+"Нажмите на эту ссылку, чтобы отписаться от уведомлений (ссылка действительна 5 минут):\n"
+"{deeplink_url}"
 
 #: bot/services/deeplink_service.py:87
 msgid "Your Telegram account is banned from using this service."
@@ -161,8 +163,8 @@ msgstr "Пользователь {username} был успешно разглуш
 #: bot/services/moderation_service.py:252
 msgid "Error determining user to mute/unmute. Try again."
 msgstr ""
-"Ошибка определения пользователя для добавления/удаления из списка "
-"игнорирования. Попробуйте еще раз."
+"Ошибка определения пользователя для добавления/удаления из списка игнорирования. "
+"Попробуйте еще раз."
 
 #: bot/services/report_service.py:85 bot/services/report_service.py:236
 msgid "This feature is temporarily unavailable."
@@ -253,8 +255,7 @@ msgstr "Успешно добавлено {} администраторов."
 #, python-brace-format
 msgid "Failed to add {} admins (already admins or invalid IDs)."
 msgstr ""
-"Не удалось добавить {} администраторов (уже администраторы или неверные "
-"ID)."
+"Не удалось добавить {} администраторов (уже администраторы или неверные ID)."
 
 #: bot/teamtalk_bot/formatters.py:44
 #, python-brace-format
@@ -477,17 +478,16 @@ msgstr "<b>Доступные команды:</b>"
 #: bot/telegram_bot/formatters.py:178
 msgid ""
 "/who - Show online users.\n"
-"/settings - Access the interactive settings menu (language, "
-"notifications, mute lists, NOON feature).\n"
+"/settings - Access the interactive settings menu (language, notifications, mute "
+"lists, NOON feature).\n"
 "/help - Show this help message.\n"
 "(Note: `/start` is used to initiate the bot and process deeplinks.)"
 msgstr ""
 "/who - Показать онлайн пользователей.\n"
-"/settings - Доступ к интерактивному меню настроек (язык, уведомления, "
-"списки мьютов, функция NOON).\n"
+"/settings - Доступ к интерактивному меню настроек (язык, уведомления, списки "
+"мьютов, функция NOON).\n"
 "/help - Показать это сообщение.\n"
-"(Примечание: `/start` используется для запуска бота и обработки "
-"deeplink-ссылок.)"
+"(Примечание: `/start` используется для запуска бота и обработки deeplink-ссылок.)"
 
 #: bot/telegram_bot/formatters.py:188
 msgid ""
@@ -525,19 +525,18 @@ msgstr "Выберите пользователя:"
 
 #: bot/telegram_bot/formatters.py:227
 msgid ""
-"Current mode is Blacklist. You receive notifications from everyone except"
-" those on the list."
+"Current mode is Blacklist. You receive notifications from everyone except those "
+"on the list."
 msgstr ""
-"Текущий режим: Черный список. Вы получаете уведомления от всех, кроме "
-"тех, кто в списке."
+"Текущий режим: Черный список. Вы получаете уведомления от всех, кроме тех, кто в "
+"списке."
 
 #: bot/telegram_bot/formatters.py:232
 msgid ""
-"Current mode is Whitelist. You only receive notifications from users on "
-"the list."
+"Current mode is Whitelist. You only receive notifications from users on the list."
 msgstr ""
-"Текущий режим: Белый список. Вы получаете уведомления только от "
-"пользователей в списке."
+"Текущий режим: Белый список. Вы получаете уведомления только от пользователей в "
+"списке."
 
 #: bot/telegram_bot/formatters.py:235
 #, python-brace-format
@@ -606,8 +605,8 @@ msgstr "Ошибка обработки команды."
 
 #: bot/telegram_bot/handlers/errors.py:54
 msgid ""
-"An unexpected error occurred. We are already working on fixing it. Please"
-" try again later."
+"An unexpected error occurred. We are already working on fixing it. Please try "
+"again later."
 msgstr ""
 "Произошла непредвиденная ошибка. Мы уже работаем над ее исправлением. "
 "Пожалуйста, попробуйте позже."
@@ -730,9 +729,9 @@ msgstr "Настройка подписки обновлена до: {setting_na
 msgid "Error: No Telegram ID specified for deletion."
 msgstr "Ошибка: Не указан Telegram ID для удаления."
 
+# | msgid "Subscriber settings not found."
 #: bot/telegram_bot/handlers/callback_handlers/subscriber_management/actions.py:275
 #, fuzzy
-#| msgid "Subscriber settings not found."
 msgid "User not found."
 msgstr "Настройки подписчика не найдены."
 
@@ -993,4 +992,3 @@ msgstr "{item_display_name} (Статус: не в списке игнориро
 
 #~ msgid "Subscriber"
 #~ msgstr "Подписчик"
-
