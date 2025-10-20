@@ -47,18 +47,15 @@ def subscription_service(
 async def test_create_subscription_new_user(
     subscription_service: SubscriptionService,
     mock_uow: AsyncMock,
-    mock_cache: MagicMock,
 ) -> None:
     user_settings = UserSettings(telegram_id=123, language_code="en")
     tt_username = "test_tt_user"
 
-    mock_uow.subscribers.get_by_id.return_value = None
-
-    result = await subscription_service.create_subscription(user_settings, tt_username)
+    result = await subscription_service.create_subscription(
+        mock_uow, user_settings, tt_username
+    )
 
     assert result is True
-    mock_cache.add_subscriber.assert_called_once_with(user_settings.telegram_id)
-    mock_cache.update_user_settings.assert_called_once_with(user_settings)
 
 
 @pytest.mark.asyncio
@@ -79,7 +76,9 @@ async def test_create_subscription_existing_user(
         telegram_id=user_settings.telegram_id
     )
 
-    result = await subscription_service.create_subscription(user_settings, tt_username)
+    result = await subscription_service.create_subscription(
+        mock_uow, user_settings, tt_username
+    )
 
     assert result is True
     mock_uow.subscribers.get_by_id.assert_called_once_with(user_settings.telegram_id)
@@ -88,7 +87,6 @@ async def test_create_subscription_existing_user(
     assert user_settings.teamtalk_username == tt_username
     assert user_settings.not_on_online_confirmed is True
     mock_uow.users.save.assert_called_once_with(user_settings)
-    mock_cache.update_user_settings.assert_called_once_with(user_settings)
 
 
 @pytest.mark.asyncio

@@ -156,9 +156,8 @@ async def test_execute_subscribe_success(
     mock_uow.bans.is_telegram_id_banned.assert_called_once_with(telegram_id)
     mock_uow.bans.is_teamtalk_username_banned.assert_called_once_with(payload)
     mock_subscription_service.create_subscription.assert_called_once_with(
-        user_settings, payload
+        mock_uow, user_settings, payload
     )
-    mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
     mock_cache.add_admin.assert_not_called()
     assert "You have successfully subscribed to notifications." in result
 
@@ -250,7 +249,7 @@ async def test_execute_subscribe_create_subscription_fails(
     )
 
     mock_subscription_service.create_subscription.assert_called_once_with(
-        user_settings, payload
+        mock_uow, user_settings, payload
     )
     assert MSG_GENERAL_ERROR in result
 

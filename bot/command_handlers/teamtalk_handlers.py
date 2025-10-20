@@ -148,11 +148,13 @@ class TeamTalkCommandHandlers:
             )
 
         user_to_act_on = self._tt_connection.instance.get_user(user_id)
-        server_host = self._tt_connection.server_info.host
+        server_name_for_display = get_effective_server_name(
+            self._tt_connection.instance, translator, self._settings
+        )
 
         if not user_to_act_on:
             msg = _("User not found on server {server_host} anymore.").format(
-                server_host=server_host
+                server_host=server_name_for_display
             )
             return ModerationResult(success=False, message=msg)
 
@@ -169,7 +171,10 @@ class TeamTalkCommandHandlers:
                 )
                 msg = _(
                     "User {user_nickname} kicked from server {server_host}."
-                ).format(user_nickname=escape(user_nickname), server_host=server_host)
+                ).format(
+                    user_nickname=escape(user_nickname),
+                    server_host=server_name_for_display,
+                )
                 return ModerationResult(success=True, message=msg)
             if action == AdminCommand.BAN:
                 user_to_act_on.ban(from_server=True)
@@ -182,7 +187,10 @@ class TeamTalkCommandHandlers:
                 )
                 msg = _(
                     "User {user_nickname} banned and kicked from server {server_host}."
-                ).format(user_nickname=escape(user_nickname), server_host=server_host)
+                ).format(
+                    user_nickname=escape(user_nickname),
+                    server_host=server_name_for_display,
+                )
                 return ModerationResult(success=True, message=msg)
         except (PytalkPermissionError, PytalkException):
             logger.exception("Error during '%s' on TT user ID %s", action, user_id)

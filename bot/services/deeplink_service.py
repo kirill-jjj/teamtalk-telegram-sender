@@ -106,6 +106,11 @@ class DeeplinkService:
         if not success:
             return _(MSG_GENERAL_ERROR)
 
+        # Cache update for user_settings is now handled here
+        # after successful subscription
+        self._cache.update_user_settings(user_settings)
+
+        # Check if the user is an admin and add them to the cache
         if await self._uow.admins.get_by_id(telegram_id):
             self._cache.add_admin(telegram_id)
 
