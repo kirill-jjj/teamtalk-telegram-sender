@@ -44,7 +44,10 @@ class UserRepository(BaseRepository[UserSettings]):
 
     async def save(self, user_settings: UserSettings) -> None:
         """Saves a UserSettings instance (creates or updates)."""
-        self._session.add(user_settings)
+        # If the object is new, it would have been added by get_or_create.
+        # If it's existing, it's already attached.
+        # So, direct add() here is often redundant and can cause issues.
+        # We rely on the session tracking changes to attached objects.
         await self._session.flush()
         await self._session.refresh(user_settings, attribute_names=["muted_users_list"])
 

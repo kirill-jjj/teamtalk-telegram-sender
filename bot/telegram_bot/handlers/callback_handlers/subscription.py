@@ -83,9 +83,6 @@ async def set_subscription_setting(
 
     # If the setting was not changed, updated_settings will be None, but we check above.
     # The old logic of checking if the setting is the same is now inside the service.
-    await (
-        callback_query.answer()
-    )  # Acknowledge the press, toast is shown by service now
 
     setting_to_text_map = {
         NotificationSetting.ALL: _("All (Join & Leave)"),

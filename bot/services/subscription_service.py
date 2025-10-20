@@ -30,25 +30,25 @@ class SubscriptionService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def create_subscription(
         self,
+        uow: IUnitOfWork,
         user_settings: UserSettings,
         tt_username: str,
     ) -> bool:
         """Handles all DB and cache operations for a new subscription."""
         telegram_id = user_settings.telegram_id
-        async with self._uow:
-            subscriber = await self._uow.subscribers.get_by_id(telegram_id)
-            if not subscriber:
-                new_subscriber = SubscribedUser(telegram_id=telegram_id)
-                await self._uow.subscribers.add(new_subscriber)
-                logger.info("User %s newly subscribed.", telegram_id)
-                self._cache.add_subscriber(telegram_id)
-            else:
-                logger.info("User %s re-confirmed subscription.", telegram_id)
 
-            user_settings.teamtalk_username = tt_username
-            user_settings.not_on_online_confirmed = True
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+        subscriber = await uow.subscribers.get_by_id(telegram_id)
+        if not subscriber:
+            new_subscriber = SubscribedUser(telegram_id=telegram_id)
+            await uow.subscribers.add(new_subscriber)
+            logger.info("User %s newly subscribed.", telegram_id)
+            self._cache.add_subscriber(telegram_id)
+        else:
+            logger.info("User %s re-confirmed subscription.", telegram_id)
+
+        user_settings.teamtalk_username = tt_username
+        user_settings.not_on_online_confirmed = True
+        await uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
         logger.info(

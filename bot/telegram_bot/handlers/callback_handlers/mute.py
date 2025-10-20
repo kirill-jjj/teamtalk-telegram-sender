@@ -1,6 +1,5 @@
 """Callback query handlers for mute list management and user muting/unmuting."""
 
-from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 from typing import Any, TypeVar
@@ -11,7 +10,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
-from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
+from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import (
     Actor,
     NotificationControl,
@@ -36,59 +35,17 @@ from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
 from bot.telegram_bot.keyboards.shared import (
     _create_back_button_text,
-    create_toggle_mute_keyboard,
 )
 from bot.telegram_bot.ui_utils import (
-    display_paginated_list,
+    _display_user_list,
     safe_edit_text,
 )
-from bot.utils.pagination import paginate_list
 
 logger = logging.getLogger(__name__)
 mute_router = Router(name="callback_handlers.mute")
 
 
 T = TypeVar("T")
-
-
-async def _display_user_list(
-    callback_query: CallbackQuery,
-    translator: NullTranslations,
-    page: int,
-    items: list[Any],
-    sort_key_extractor: Callable[[Any], Any],
-    title_text: str,
-    empty_list_text: str,
-    keyboard_factory_kwargs: dict[str, Any],
-    server_host_for_display: str | None = None,
-) -> None:
-    """A generic helper to display a paginated list of users."""
-    _ = translator.gettext
-    sorted_items = sorted(items, key=sort_key_extractor)
-
-    if callback_query.bot is None:
-        logger.error("Cannot display user list: bot is None.")
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
-        return
-
-    page_slice, _total_pages, current_page_idx = paginate_list(
-        sorted_items, page, USERS_PER_PAGE
-    )
-
-    await display_paginated_list(
-        target=callback_query,
-        bot=callback_query.bot,
-        translator=translator,
-        items_on_page=page_slice,
-        total_items=len(sorted_items),
-        page=current_page_idx,
-        title_text=title_text,
-        empty_list_text=empty_list_text,
-        keyboard_factory=create_toggle_mute_keyboard,
-        keyboard_factory_kwargs=keyboard_factory_kwargs,
-        page_size=USERS_PER_PAGE,
-        server_host_for_display=server_host_for_display,
-    )
 
 
 async def _display_internal_user_list(

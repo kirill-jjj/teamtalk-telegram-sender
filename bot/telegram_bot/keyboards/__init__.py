@@ -25,6 +25,7 @@ from .settings_keyboards import (
     create_notification_settings_keyboard,
     create_subscription_settings_keyboard,
 )
+from .shared import create_toggle_mute_keyboard
 
 __all__ = [
     "create_admin_subscriber_lang_keyboard",
@@ -41,6 +42,7 @@ __all__ = [
     "create_subscriber_action_menu_keyboard",
     "create_subscriber_list_keyboard",
     "create_subscription_settings_keyboard",
+    "create_toggle_mute_keyboard",
     "create_user_selection_keyboard",
     "create_view_mute_list_keyboard",
 ]

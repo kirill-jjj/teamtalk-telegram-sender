@@ -14,12 +14,16 @@ from aiogram.types import (
     Message,
 )
 
-from bot.constants import USERS_PER_PAGE
+from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.telegram_bot.formatters import (
     format_moderation_prompt,
     format_paginated_list_text,
 )
-from bot.telegram_bot.keyboards import create_user_selection_keyboard
+from bot.telegram_bot.keyboards import (
+    create_toggle_mute_keyboard,
+    create_user_selection_keyboard,
+)
+from bot.utils.pagination import paginate_list
 
 if TYPE_CHECKING:
     from bot.core.enums import AdminCommand
@@ -27,6 +31,46 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
+
+
+async def _display_user_list(
+    callback_query: CallbackQuery,
+    translator: NullTranslations,
+    page: int,
+    items: list[Any],
+    sort_key_extractor: Callable[[Any], Any],
+    title_text: str,
+    empty_list_text: str,
+    keyboard_factory_kwargs: dict[str, Any],
+    server_host_for_display: str | None = None,
+) -> None:
+    """A generic helper to display a paginated list of users."""
+    _ = translator.gettext
+    sorted_items = sorted(items, key=sort_key_extractor)
+
+    if callback_query.bot is None:
+        logger.error("Cannot display user list: bot is None.")
+        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        return
+
+    page_slice, _total_pages, current_page_idx = paginate_list(
+        sorted_items, page, USERS_PER_PAGE
+    )
+
+    await display_paginated_list(
+        target=callback_query,
+        bot=callback_query.bot,
+        translator=translator,
+        items_on_page=page_slice,
+        total_items=len(sorted_items),
+        page=current_page_idx,
+        title_text=title_text,
+        empty_list_text=empty_list_text,
+        keyboard_factory=create_toggle_mute_keyboard,
+        keyboard_factory_kwargs=keyboard_factory_kwargs,
+        page_size=USERS_PER_PAGE,
+        server_host_for_display=server_host_for_display,
+    )
 
 
 async def display_moderation_view(

@@ -101,7 +101,7 @@ class DeeplinkService:
             )
 
         success = await self._subscription_service.create_subscription(
-            user_settings, payload
+            self._uow, user_settings, payload
         )
         if not success:
             return _(MSG_GENERAL_ERROR)
