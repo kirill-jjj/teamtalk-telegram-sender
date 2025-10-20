@@ -357,11 +357,13 @@ async def toggle_user_mute(
     report_service: FromDishka[ReportService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
-    toggle_result = await moderation_service.toggle_mute_from_callback(
-        callback_data,
-        callback_query.from_user.id,
-        command_bus,
-        translator,
+    toggle_result = await moderation_service.toggle_mute_from_paginated_list(
+        telegram_id=callback_query.from_user.id,
+        list_type=callback_data.list_type,
+        page=callback_data.current_page,
+        index_on_page=callback_data.user_idx,
+        command_bus=command_bus,
+        translator=translator,
     )
 
     toast_message = format_mute_toast(

@@ -201,16 +201,18 @@ async def test_get_target_username_for_toggle_all_accounts(
     mock_command_bus: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
-    callback_data = MagicMock(
-        list_type=UserListAction.LIST_ALL_ACCOUNTS, current_page=0, user_idx=0
-    )
     user_settings = MagicMock()
     mock_command_bus.execute.return_value = MagicMock(
         success=True, accounts=[MagicMock(username="test_user")]
     )
 
     username = await moderation_service.get_target_username_for_toggle(
-        callback_data, user_settings, mock_command_bus, mock_translator
+        list_type=UserListAction.LIST_ALL_ACCOUNTS,
+        page=0,
+        index_on_page=0,
+        user_settings=user_settings,
+        command_bus=mock_command_bus,
+        translator=mock_translator,
     )
 
     assert username == "test_user"
@@ -226,9 +228,6 @@ async def test_toggle_mute_from_callback_success(
 ) -> None:
     telegram_id = 123
     tt_username = "test_user"
-    callback_data = MagicMock(
-        list_type=UserListAction.LIST_ALL_ACCOUNTS, current_page=0, user_idx=0
-    )
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
     user_settings.muted_users_list = []
 
@@ -237,8 +236,13 @@ async def test_toggle_mute_from_callback_success(
         success=True, accounts=[MagicMock(username=tt_username)]
     )
 
-    result = await moderation_service.toggle_mute_from_callback(
-        callback_data, telegram_id, mock_command_bus, mock_translator
+    result = await moderation_service.toggle_mute_from_paginated_list(
+        telegram_id=telegram_id,
+        list_type=UserListAction.LIST_ALL_ACCOUNTS,
+        page=0,
+        index_on_page=0,
+        command_bus=mock_command_bus,
+        translator=mock_translator,
     )
 
     assert result.success is True

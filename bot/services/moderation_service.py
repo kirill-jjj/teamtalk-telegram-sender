@@ -18,7 +18,6 @@ from bot.services.schemas import (
     OperationResult,
 )
 from bot.services.subscription_service import SubscriptionService
-from bot.telegram_bot.callback_data import ToggleMuteCallback
 from bot.utils.pagination import get_item_from_paginated_list
 
 T = TypeVar("T")
@@ -174,15 +173,16 @@ class ModerationService:
 
     async def get_target_username_for_toggle(
         self,
-        callback_data: ToggleMuteCallback,
+        list_type: UserListAction,
+        page: int,
+        index_on_page: int,
         user_settings: UserSettings,
         command_bus: CommandBus,
         translator: NullTranslations,
     ) -> str | None:
-        """Determines the username to toggle mute status for based on callback data."""
+        """Determines the username to toggle mute status for based on list context."""
         _ = translator.gettext
         username_to_toggle = None
-        list_type = callback_data.list_type
 
         if list_type == UserListAction.LIST_ALL_ACCOUNTS:
             result: GetAllTeamTalkAccountsResult = await command_bus.execute(
@@ -194,8 +194,8 @@ class ModerationService:
                 account = get_item_from_paginated_list(
                     items=result.accounts,
                     sort_key_extractor=lambda acc: acc.username.lower(),
-                    page=callback_data.current_page,
-                    idx_on_page=callback_data.user_idx,
+                    page=page,
+                    idx_on_page=index_on_page,
                 )
                 if account:
                     username_to_toggle = account.username
@@ -206,19 +206,21 @@ class ModerationService:
                     for muted in user_settings.muted_users_list
                 ],
                 sort_key_extractor=lambda x: x.lower(),
-                page=callback_data.current_page,
-                idx_on_page=callback_data.user_idx,
+                page=page,
+                idx_on_page=index_on_page,
             )
         return username_to_toggle
 
-    async def toggle_mute_from_callback(
+    async def toggle_mute_from_paginated_list(
         self,
-        callback_data: ToggleMuteCallback,
         telegram_id: int,
+        list_type: UserListAction,
+        page: int,
+        index_on_page: int,
         command_bus: CommandBus,
         translator: NullTranslations,
     ) -> OperationResult:
-        """Orchestrates the entire mute/unmute toggle process from a callback."""
+        """Orchestrates the mute/unmute toggle process from a list interaction."""
         _ = translator.gettext
 
         async with self._uow:
@@ -226,13 +228,18 @@ class ModerationService:
             if not user_settings:
                 logger.warning(
                     "Could not get user settings for user %s in "
-                    "toggle_mute_from_callback",
+                    "toggle_mute_from_paginated_list",
                     telegram_id,
                 )
                 return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
 
             username_to_toggle = await self.get_target_username_for_toggle(
-                callback_data, user_settings, command_bus, translator
+                list_type=list_type,
+                page=page,
+                index_on_page=index_on_page,
+                user_settings=user_settings,
+                command_bus=command_bus,
+                translator=translator,
             )
 
             if not username_to_toggle:
@@ -245,7 +252,7 @@ class ModerationService:
                     message_key=_("Error determining user to mute/unmute. Try again."),
                 )
 
-            # `async with` сам сделает commit или rollback
+            # `async with` will handle commit/rollback
             return await self.toggle_mute_status(
                 user_settings, username_to_toggle, translator, uow=self._uow
             )
