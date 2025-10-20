@@ -35,13 +35,18 @@ async def on_moderation_confirm(
     _ = translator.gettext
 
     command: KickUserCommand | BanUserCommand
+    lang_code = translator.info().get("language", "en")
     if callback_data.action == AdminCommand.KICK:
         command = KickUserCommand(
-            user_id=callback_data.user_id, admin_telegram_id=callback_query.from_user.id
+            user_id=callback_data.user_id,
+            admin_telegram_id=callback_query.from_user.id,
+            lang_code=lang_code,
         )
     elif callback_data.action == AdminCommand.BAN:
         command = BanUserCommand(
-            user_id=callback_data.user_id, admin_telegram_id=callback_query.from_user.id
+            user_id=callback_data.user_id,
+            admin_telegram_id=callback_query.from_user.id,
+            lang_code=lang_code,
         )
     else:
         # This case should not be reached if the filter is correct

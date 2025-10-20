@@ -109,9 +109,7 @@ class TeamTalkCommandHandlers:
 
     async def kick_user(self, command: KickUserCommand) -> ModerationResult:
         """Handles the command to kick a user."""
-        translator = self._translator_factory(
-            "en"
-        )  # Default to English for moderation messages
+        translator = self._translator_factory(command.lang_code)
         _ = translator.gettext
         return await self._apply_moderation(
             user_id=command.user_id,
@@ -122,9 +120,7 @@ class TeamTalkCommandHandlers:
 
     async def ban_user(self, command: BanUserCommand) -> ModerationResult:
         """Handles the command to ban a user."""
-        translator = self._translator_factory(
-            "en"
-        )  # Default to English for moderation messages
+        translator = self._translator_factory(command.lang_code)
         _ = translator.gettext
         return await self._apply_moderation(
             user_id=command.user_id,

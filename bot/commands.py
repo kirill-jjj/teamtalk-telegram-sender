@@ -36,6 +36,7 @@ class KickUserCommand(BaseCommand):
 
     user_id: int
     admin_telegram_id: int
+    lang_code: str
 
 
 class BanUserCommand(BaseCommand):
@@ -43,6 +44,7 @@ class BanUserCommand(BaseCommand):
 
     user_id: int
     admin_telegram_id: int
+    lang_code: str
 
 
 # --- GetAllTeamTalkAccounts Command ---
