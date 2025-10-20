@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
@@ -15,10 +15,39 @@ from aiogram.types import (
 )
 
 from bot.constants import USERS_PER_PAGE
-from bot.telegram_bot.formatters import format_paginated_list_text
+from bot.telegram_bot.formatters import (
+    format_moderation_prompt,
+    format_paginated_list_text,
+)
+from bot.telegram_bot.keyboards import create_user_selection_keyboard
+
+if TYPE_CHECKING:
+    from bot.core.enums import AdminCommand
+    from bot.services.schemas import ModerationViewData
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
+
+
+async def display_moderation_view(
+    message: Message,
+    translator: NullTranslations,
+    command_type: "AdminCommand",
+    view_data: "ModerationViewData",
+) -> None:
+    """Displays the moderation view: a list of users or an error message."""
+    _ = translator.gettext
+
+    if not view_data.users:
+        await message.reply(view_data.error_message or _("Failed to get user list."))
+        return
+
+    builder = await create_user_selection_keyboard(view_data.users, command_type)
+    reply_text = format_moderation_prompt(
+        command_type, view_data.server_name, translator
+    )
+
+    await message.reply(reply_text, reply_markup=builder.as_markup())
 
 
 async def display_paginated_list(

@@ -104,3 +104,11 @@ class UserSettingsWithDisplayInfo(BaseModel):
 
     user_settings: UserSettings
     display_name: str
+
+
+class ModerationViewData(BaseModel):
+    """A DTO for data required to render a moderation view."""
+
+    users: list[UserDTO]
+    server_name: str
+    error_message: str | None = None

@@ -9,8 +9,6 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.command_bus.exceptions import NoHandlerFoundError
-from bot.commands import GetOnlineUsersCommand, GetOnlineUsersResult
 from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.services.cache_service import CacheService
@@ -18,7 +16,6 @@ from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import MenuCallback
 from bot.telegram_bot.formatters import format_who_report_to_html
-from bot.telegram_bot.handlers.admin import show_user_buttons_from_list
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.handlers.user import (
     on_help_command,
@@ -29,7 +26,7 @@ from bot.telegram_bot.keyboards import (
     create_subscriber_list_keyboard,
 )
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import display_paginated_list
+from bot.telegram_bot.ui_utils import display_moderation_view, display_paginated_list
 
 logger = logging.getLogger(__name__)
 menu_callback_router = Router(name="menu_callback_router")
@@ -101,37 +98,29 @@ async def _handle_menu_moderation_command(
     query: CallbackQuery,
     command_type: AdminCommand,
     translator: NullTranslations,
+    report_service: ReportService,
+    cache_service: CacheService,
+    user_settings_service: UserSettingsService,
     command_bus: CommandBus,
-    settings: Settings,
 ) -> None:
     """Generic handler for menu-based moderation commands."""
-    _ = translator.gettext
-    if isinstance(query.message, Message):
-        try:
-            result: GetOnlineUsersResult = await command_bus.execute(
-                GetOnlineUsersCommand(
-                    is_caller_admin=True,
-                    lang_code=translator.info().get("language", "en"),
-                )
-            )
-        except NoHandlerFoundError:
-            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            await query.message.reply(_("This feature is temporarily unavailable."))
-            await query.answer()
-            return
+    if not query.from_user or not isinstance(query.message, Message):
+        return
 
-        if result.success and result.users:
-            await show_user_buttons_from_list(
-                query.message,
-                command_type,
-                translator,
-                result.users,
-                settings.teamtalk.host_name,
-            )
-        else:
-            await query.message.reply(
-                result.error_message or _("Failed to get user list.")
-            )
+    view_data = await report_service.get_sorted_online_users_for_moderation(
+        telegram_user_id=query.from_user.id,
+        translator=translator,
+        cache_service=cache_service,
+        user_settings_service=user_settings_service,
+        command_bus=command_bus,
+    )
+
+    await display_moderation_view(
+        message=query.message,
+        translator=translator,
+        command_type=command_type,
+        view_data=view_data,
+    )
     await query.answer()
 
 
@@ -140,12 +129,20 @@ async def _handle_menu_moderation_command(
 async def menu_kick_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
+    report_service: FromDishka[ReportService],
+    cache_service: FromDishka[CacheService],
+    user_settings_service: FromDishka[UserSettingsService],
     command_bus: FromDishka[CommandBus],
-    settings: FromDishka[Settings],
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
     await _handle_menu_moderation_command(
-        query, AdminCommand.KICK, translator, command_bus, settings
+        query,
+        AdminCommand.KICK,
+        translator,
+        report_service,
+        cache_service,
+        user_settings_service,
+        command_bus,
     )
 
 
@@ -154,12 +151,20 @@ async def menu_kick_handler(
 async def menu_ban_handler(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
+    report_service: FromDishka[ReportService],
+    cache_service: FromDishka[CacheService],
+    user_settings_service: FromDishka[UserSettingsService],
     command_bus: FromDishka[CommandBus],
-    settings: FromDishka[Settings],
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
     await _handle_menu_moderation_command(
-        query, AdminCommand.BAN, translator, command_bus, settings
+        query,
+        AdminCommand.BAN,
+        translator,
+        report_service,
+        cache_service,
+        user_settings_service,
+        command_bus,
     )
 
 

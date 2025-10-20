@@ -21,10 +21,10 @@ from bot.models import MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AllAccountsViewData,
+    ModerationViewData,
     MuteListViewData,
     PaginatedResult,
     SubscriberInfo,
-    UserDTO,
 )
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_names_for_ids
@@ -215,11 +215,8 @@ class ReportService:
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
         command_bus: CommandBus,
-    ) -> tuple[list[UserDTO], str | None]:
-        """Fetches and sorts online users for moderation purposes.
-
-        Returns a tuple of (sorted_users, error_message).
-        """
+    ) -> ModerationViewData:
+        """Fetches and sorts online users for moderation purposes."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
             telegram_user_id, self._settings.general.default_lang
@@ -233,13 +230,23 @@ class ReportService:
             result: GetOnlineUsersResult = await command_bus.execute(command)
         except NoHandlerFoundError:
             logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            return [], _("This feature is temporarily unavailable.")
+            return ModerationViewData(
+                users=[],
+                server_name=self._settings.teamtalk.host_name,
+                error_message=_("This feature is temporarily unavailable."),
+            )
 
         if not result.success or not result.users:
-            return [], result.error_message or _("No users found online.")
+            return ModerationViewData(
+                users=[],
+                server_name=self._settings.teamtalk.host_name,
+                error_message=result.error_message or _("No users found online."),
+            )
 
         sorted_users = sorted(result.users, key=lambda u: u.nickname.lower())
-        return sorted_users, None
+        return ModerationViewData(
+            users=sorted_users, server_name=self._settings.teamtalk.host_name
+        )
 
     async def get_all_server_accounts_view_data(
         self, lang_code: str, translator: NullTranslations
