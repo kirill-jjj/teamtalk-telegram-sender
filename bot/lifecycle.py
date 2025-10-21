@@ -70,7 +70,8 @@ async def on_startup(
 
         admin_service = await request_container.get(AdminService)
         # Ensure the main admin from config exists and has up-to-date commands
-        await admin_service.ensure_main_admin_exists(uow, bot, translator_factory)
+        async with uow:
+            await admin_service.ensure_main_admin_exists(uow, bot, translator_factory)
 
     logger.info("Setting Telegram bot commands...")
     bot_info = await bot.get_me()

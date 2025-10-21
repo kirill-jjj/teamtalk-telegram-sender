@@ -321,9 +321,10 @@ class RequestProvider(Provider):
         """Provides SettingsViewDTO if a user is present in the event."""
         if not user:
             return None
-        return await user_settings_service.get_user_settings_view(
-            uow, user.id, settings.general.default_lang
-        )
+        async with uow:
+            return await user_settings_service.get_user_settings_view(
+                uow, user.id, settings.general.default_lang
+            )
 
     @provide
     def get_user_settings_guaranteed(

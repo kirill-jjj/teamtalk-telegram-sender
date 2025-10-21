@@ -31,12 +31,12 @@ def format_mute_toast(
     clean_username = username_to_toggle.strip("<>")
     quoted_username = html.quote(clean_username)
     action_key_map = {
-        (MuteListMode.blacklist, True): "added to blacklist",
-        (MuteListMode.blacklist, False): "removed from blacklist",
-        (MuteListMode.whitelist, True): "added to whitelist",
-        (MuteListMode.whitelist, False): "removed from whitelist",
+        (MuteListMode.blacklist, True): _("added to blacklist"),
+        (MuteListMode.blacklist, False): _("removed from blacklist"),
+        (MuteListMode.whitelist, True): _("added to whitelist"),
+        (MuteListMode.whitelist, False): _("removed from whitelist"),
     }
-    action_text = _(action_key_map[(current_mode, was_added_to_list)])
+    action_text = action_key_map[(current_mode, was_added_to_list)]
     return _("{username} has been {action}.").format(
         username=quoted_username, action=action_text
     )
