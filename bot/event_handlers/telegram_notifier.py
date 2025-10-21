@@ -264,7 +264,9 @@ class TelegramNotificationHandler:
             default_translator = self.translator_factory(DEFAULT_LANGUAGE)
             async with SqlModelUnitOfWork(self.session_factory) as uow:
                 subscription_service = SubscriptionService(uow, self.cache)
-                await subscription_service.delete_profile(chat_id, default_translator)
+                await subscription_service.delete_profile(
+                    uow, chat_id, default_translator
+                )
                 await uow.commit()
         except Exception:
             logger.critical(

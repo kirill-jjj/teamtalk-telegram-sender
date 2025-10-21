@@ -60,6 +60,7 @@ class SubscriptionService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def delete_profile(
         self,
+        uow: IUnitOfWork,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
     ) -> OperationResult:
@@ -67,16 +68,15 @@ class SubscriptionService:
         _ = translator.gettext
         logger.info("Deleting full user profile for Telegram ID: %s", telegram_id)
 
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if user_settings:
-                await self._uow.users.delete(user_settings)
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if user_settings:
+            await uow.users.delete(user_settings)
 
-            subscriber = await self._uow.subscribers.get_by_id(telegram_id)
-            if subscriber:
-                await self._uow.subscribers.delete(subscriber)
+        subscriber = await uow.subscribers.get_by_id(telegram_id)
+        if subscriber:
+            await uow.subscribers.delete(subscriber)
 
-            await self._uow.commit()
+        # Commit is handled by the calling UoW context
 
         self._cache.remove_user_profile(telegram_id)
         logger.info(

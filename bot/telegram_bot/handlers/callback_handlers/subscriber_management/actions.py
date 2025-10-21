@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand, SubscriberListAction
+from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO, SubscriberViewData
@@ -162,6 +163,7 @@ async def delete_subscriber_from_list(
     subscription_service: FromDishka[SubscriptionService],
     report_service: FromDishka[ReportService],
     bot: FromDishka[EventBot],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles deleting a subscriber directly from the subscriber list."""
     _ = translator.gettext
@@ -170,11 +172,14 @@ async def delete_subscriber_from_list(
         await query.answer(
             _("Error: No Telegram ID specified for deletion."), show_alert=True
         )
-        return
-
     target_telegram_id = callback_data.telegram_id
+    assert target_telegram_id is not None, (
+        "Telegram ID should not be None at this point"
+    )
 
-    result = await subscription_service.delete_profile(target_telegram_id, translator)
+    result = await subscription_service.delete_profile(
+        uow, target_telegram_id, translator
+    )
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)
@@ -235,12 +240,15 @@ async def delete_subscriber(
     subscription_service: FromDishka[SubscriptionService],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles deleting a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await subscription_service.delete_profile(target_telegram_id, translator)
+    result = await subscription_service.delete_profile(
+        uow, target_telegram_id, translator
+    )
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)

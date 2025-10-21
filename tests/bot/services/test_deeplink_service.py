@@ -292,7 +292,7 @@ async def test_execute_unsubscribe_success(
     result = await deeplink_service._execute_unsubscribe(telegram_id, mock_translator)
 
     mock_subscription_service.delete_profile.assert_called_once_with(
-        telegram_id, mock_translator
+        deeplink_service._uow, telegram_id, mock_translator
     )
     assert "You have successfully unsubscribed from notifications." in result
 
@@ -309,7 +309,7 @@ async def test_execute_unsubscribe_not_subscribed(
     result = await deeplink_service._execute_unsubscribe(telegram_id, mock_translator)
 
     mock_subscription_service.delete_profile.assert_called_once_with(
-        telegram_id, mock_translator
+        deeplink_service._uow, telegram_id, mock_translator
     )
     assert "You were not subscribed to notifications." in result
 

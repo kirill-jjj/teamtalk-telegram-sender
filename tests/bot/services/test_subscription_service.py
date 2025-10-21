@@ -98,12 +98,14 @@ async def test_delete_profile_full_user(
 ) -> None:
     telegram_id = 123
     mock_user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
-    mock_subscribed_user = SubscribedUser(telegram_id=telegram_id)
 
     mock_uow.users.get_by_id.return_value = mock_user_settings
+    mock_subscribed_user = SubscribedUser(telegram_id=telegram_id)
     mock_uow.subscribers.get_by_id.return_value = mock_subscribed_user
 
-    result = await subscription_service.delete_profile(telegram_id, mock_translator)
+    result = await subscription_service.delete_profile(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
@@ -126,8 +128,9 @@ async def test_delete_profile_only_settings(
 
     mock_uow.users.get_by_id.return_value = mock_user_settings
     mock_uow.subscribers.get_by_id.return_value = None  # No subscribed user
-
-    result = await subscription_service.delete_profile(telegram_id, mock_translator)
+    result = await subscription_service.delete_profile(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
@@ -247,7 +250,9 @@ async def test_delete_profile_only_subscribed(
     mock_uow.users.get_by_id.return_value = None  # No user settings
     mock_uow.subscribers.get_by_id.return_value = mock_subscribed_user
 
-    result = await subscription_service.delete_profile(telegram_id, mock_translator)
+    result = await subscription_service.delete_profile(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
@@ -266,7 +271,9 @@ async def test_delete_profile_non_existent_user(
     mock_uow.users.get_by_id.return_value = None
     mock_uow.subscribers.get_by_id.return_value = None
 
-    result = await subscription_service.delete_profile(telegram_id, mock_translator)
+    result = await subscription_service.delete_profile(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "Subscriber {telegram_id} deleted successfully." in result.message_key
