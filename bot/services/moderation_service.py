@@ -8,7 +8,7 @@ from pydantic import ConfigDict, Field, validate_call
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.config import Settings  # Added import
+from bot.config import Settings
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
@@ -34,7 +34,7 @@ class ModerationService:
         subscription_service: SubscriptionService,
         cache: CacheService,
         command_bus: CommandBus,
-        settings: Settings,  # Added settings
+        settings: Settings,
     ) -> None:
         """Initializes the moderation service."""
         self._uow = uow
