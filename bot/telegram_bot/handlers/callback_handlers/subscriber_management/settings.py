@@ -304,14 +304,14 @@ async def paginate_mute_list(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    view_data = await user_settings_service.get_subscriber_view_data(
-        uow, target_telegram_id, translator.info().get("language", "en"), bot
-    )
-    if not view_data:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
-
     async with uow:
+        view_data = await user_settings_service.get_subscriber_view_data(
+            uow, target_telegram_id, translator.info().get("language", "en"), bot
+        )
+        if not view_data:
+            await query.answer(_("Subscriber settings not found."), show_alert=True)
+            return
+
         await _display_subscriber_mute_list_page(
             query=query,
             translator=translator,

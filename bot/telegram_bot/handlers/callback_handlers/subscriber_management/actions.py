@@ -87,12 +87,13 @@ async def refresh_subscriber_view(
     )
 
     # Fetch the full view data DTO from the service
-    view_data = await user_settings_service.get_subscriber_view_data(
-        uow,
-        target_telegram_id,
-        "en",  # lang doesn't matter here
-        bot,
-    )
+    async with uow:
+        view_data = await user_settings_service.get_subscriber_view_data(
+            uow,
+            target_telegram_id,
+            "en",  # lang doesn't matter here
+            bot,
+        )
     if not view_data:
         logger.error(
             "refresh_subscriber_view could not fetch view_data for TG ID %s",
@@ -177,9 +178,11 @@ async def delete_subscriber_from_list(
         return
     target_telegram_id = callback_data.telegram_id
 
-    result = await subscription_service.delete_profile(
-        uow, target_telegram_id, translator
-    )
+    async with uow:
+        result = await subscription_service.delete_profile(
+            uow, target_telegram_id, translator
+        )
+        await uow.commit()
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)
@@ -248,12 +251,12 @@ async def delete_subscriber(
     uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles deleting a subscriber."""
-    _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-
-    result = await subscription_service.delete_profile(
-        uow, target_telegram_id, translator
-    )
+    async with uow:
+        result = await subscription_service.delete_profile(
+            uow, target_telegram_id, translator
+        )
+        await uow.commit()
 
     message = result.message_key.format(**(result.message_args or {}))
     await query.answer(message, show_alert=True)
