@@ -5,7 +5,7 @@ from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
-from aiogram import html  # Added import
+from aiogram import html
 from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
