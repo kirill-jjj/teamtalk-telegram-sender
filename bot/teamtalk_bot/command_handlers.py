@@ -178,8 +178,6 @@ class PrivateMessageCommandHandlers:
             is_add_action=False,
         )
 
-
-
     async def _manage_admin_ids(
         self,
         tt_message: TeamTalkMessage,

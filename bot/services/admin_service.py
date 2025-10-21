@@ -166,7 +166,8 @@ class AdminService:
     async def process_admin_management_command(
         self,
         args_str: str | None,
-        *, is_add_action: bool,
+        *,
+        is_add_action: bool,
         translator: NullTranslations,
     ) -> AdminManagementResult:
         """Processes admin ID management commands from raw arguments.
