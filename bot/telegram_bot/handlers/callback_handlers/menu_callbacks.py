@@ -44,12 +44,14 @@ async def menu_who_handler(
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the 'Who is online?' menu button click."""
     if not query.from_user:
         return
 
     report_dto = await report_service.get_who_report_data(
+        uow,
         telegram_user_id=query.from_user.id,
         translator=translator,
         cache_service=cache,
@@ -102,12 +104,14 @@ async def _handle_menu_moderation_command(
     cache_service: CacheService,
     user_settings_service: UserSettingsService,
     command_bus: CommandBus,
+    uow: IUnitOfWork,
 ) -> None:
     """Generic handler for menu-based moderation commands."""
     if not query.from_user or not isinstance(query.message, Message):
         return
 
     view_data = await report_service.get_sorted_online_users_for_moderation(
+        uow,
         telegram_user_id=query.from_user.id,
         translator=translator,
         cache_service=cache_service,
@@ -133,6 +137,7 @@ async def menu_kick_handler(
     cache_service: FromDishka[CacheService],
     user_settings_service: FromDishka[UserSettingsService],
     command_bus: FromDishka[CommandBus],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
     await _handle_menu_moderation_command(
@@ -143,6 +148,7 @@ async def menu_kick_handler(
         cache_service,
         user_settings_service,
         command_bus,
+        uow,
     )
 
 
@@ -155,6 +161,7 @@ async def menu_ban_handler(
     cache_service: FromDishka[CacheService],
     user_settings_service: FromDishka[UserSettingsService],
     command_bus: FromDishka[CommandBus],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
     await _handle_menu_moderation_command(
@@ -165,6 +172,7 @@ async def menu_ban_handler(
         cache_service,
         user_settings_service,
         command_bus,
+        uow,
     )
 
 

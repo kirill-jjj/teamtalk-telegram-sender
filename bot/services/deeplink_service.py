@@ -30,6 +30,7 @@ class DeeplinkService:
 
     async def create_tt_deeplink_reply(
         self,
+        uow: IUnitOfWork,
         translator: NullTranslations,
         action: DeeplinkAction,
         ttl_seconds: int,
@@ -37,13 +38,11 @@ class DeeplinkService:
     ) -> str:
         """Creates a deeplink and returns the full localized reply text for TeamTalk."""
         _ = translator.gettext
-        async with self._uow:
-            deeplink = await self._uow.deeplinks.create(
-                action,
-                ttl_seconds,
-                payload=payload,
-            )
-            await self._uow.commit()
+        deeplink = await uow.deeplinks.create(
+            action,
+            ttl_seconds,
+            payload=payload,
+        )
 
         bot_username = self._cache.get_bot_username()
         if not bot_username:
@@ -73,6 +72,7 @@ class DeeplinkService:
 
     async def _execute_subscribe(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         translator: NullTranslations,
         payload: str | None,
@@ -80,7 +80,7 @@ class DeeplinkService:
     ) -> str:
         """Handles the logic for a subscribe deeplink."""
         _ = translator.gettext
-        if await self._uow.bans.is_telegram_id_banned(telegram_id):
+        if await uow.bans.is_telegram_id_banned(telegram_id):
             logger.warning(
                 "Subscription attempt by banned Telegram ID: %s", telegram_id
             )
@@ -90,7 +90,7 @@ class DeeplinkService:
             logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
             return _("Error: Missing required information for subscription.")
 
-        if await self._uow.bans.is_teamtalk_username_banned(payload):
+        if await uow.bans.is_teamtalk_username_banned(payload):
             logger.warning(
                 "Subscription attempt with banned TT username: %s by TG ID: %s",
                 payload,
@@ -101,7 +101,7 @@ class DeeplinkService:
             )
 
         success = await self._subscription_service.create_subscription(
-            self._uow, user_settings, payload
+            uow, user_settings, payload
         )
         if not success:
             return _(MSG_GENERAL_ERROR)
@@ -111,24 +111,25 @@ class DeeplinkService:
         self._cache.update_user_settings(user_settings)
 
         # Check if the user is an admin and add them to the cache
-        if await self._uow.admins.get_by_id(telegram_id):
+        if await uow.admins.get_by_id(telegram_id):
             self._cache.add_admin(telegram_id)
 
         return _("You have successfully subscribed to notifications.")
 
     async def _execute_unsubscribe(
-        self, telegram_id: int, translator: NullTranslations
+        self, uow: IUnitOfWork, telegram_id: int, translator: NullTranslations
     ) -> str:
         """Handles the logic for an unsubscribe deeplink."""
         _ = translator.gettext
         if await self._subscription_service.delete_profile(
-            self._uow, telegram_id, translator
+            uow, telegram_id, translator
         ):
             return _("You have successfully unsubscribed from notifications.")
         return _("You were not subscribed to notifications.")
 
     async def execute_deeplink(
         self,
+        uow: IUnitOfWork,
         deeplink: DeeplinkModel,
         user_settings: UserSettings,
         translator: NullTranslations,
@@ -139,16 +140,17 @@ class DeeplinkService:
 
         if action == DeeplinkAction.SUBSCRIBE:
             return await self._execute_subscribe(
-                telegram_id, translator, deeplink.payload, user_settings
+                uow, telegram_id, translator, deeplink.payload, user_settings
             )
         if action == DeeplinkAction.UNSUBSCRIBE:
-            return await self._execute_unsubscribe(telegram_id, translator)
+            return await self._execute_unsubscribe(uow, telegram_id, translator)
 
         logger.warning("No handler for deeplink action: %s", action)
         return translator.gettext("Invalid deeplink action.")
 
     async def process_telegram_deeplink(
         self,
+        uow: IUnitOfWork,
         token: str,
         translator: NullTranslations,
         telegram_id: int,
@@ -159,7 +161,7 @@ class DeeplinkService:
         Validates the token, executes the associated action, and replies to the user.
 
         Args:
-            message: The Aiogram Message object.
+            uow: The unit of work.
             token: The deeplink token from the command arguments.
             translator: The gettext translator object.
             telegram_id: The telegram id of the user.
@@ -167,32 +169,30 @@ class DeeplinkService:
         """
         _ = translator.gettext
 
-        async with self._uow:
-            user_settings = await self._uow.users.get_or_create(
-                telegram_id, defaults={"language_code": default_lang}
+        user_settings = await uow.users.get_or_create(
+            telegram_id, defaults={"language_code": default_lang}
+        )
+
+        deeplink = await uow.deeplinks.get_and_delete_if_expired(token)
+        if not deeplink:
+            return _("Invalid or expired deeplink."), False
+
+        if (
+            deeplink.expected_telegram_id
+            and deeplink.expected_telegram_id != telegram_id
+        ):
+            return (
+                _(
+                    "This confirmation link was intended for a different "
+                    "Telegram account."
+                ),
+                False,
             )
 
-            deeplink = await self._uow.deeplinks.get_and_delete_if_expired(token)
-            if not deeplink:
-                return _("Invalid or expired deeplink."), False
+        reply_text = await self.execute_deeplink(
+            uow, deeplink, user_settings, translator
+        )
 
-            if (
-                deeplink.expected_telegram_id
-                and deeplink.expected_telegram_id != telegram_id
-            ):
-                return (
-                    _(
-                        "This confirmation link was intended for a different "
-                        "Telegram account."
-                    ),
-                    False,
-                )
-
-            reply_text = await self.execute_deeplink(
-                deeplink, user_settings, translator
-            )
-
-            # The token is now used, so we should delete it.
-            await self._uow.deeplinks.delete(deeplink)
-            await self._uow.commit()
-            return reply_text, True
+        # The token is now used, so we should delete it.
+        await uow.deeplinks.delete(deeplink)
+        return reply_text, True

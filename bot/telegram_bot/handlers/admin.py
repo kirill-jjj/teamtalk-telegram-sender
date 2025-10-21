@@ -11,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.core.enums import AdminCommand
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService
@@ -35,12 +36,14 @@ async def show_moderation_user_list(
     cache_service: CacheService,
     user_settings_service: UserSettingsService,
     command_bus: CommandBus,
+    uow: IUnitOfWork,
 ) -> None:
     """Generic handler for moderation commands like kick and ban."""
     if not message.from_user:
         return
 
     view_data = await report_service.get_sorted_online_users_for_moderation(
+        uow,
         telegram_user_id=message.from_user.id,
         translator=translator,
         cache_service=cache_service,
@@ -64,6 +67,7 @@ async def on_kick_command(
     report_service: Annotated[ReportService, FromDishka()],
     cache_service: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /kick command for administrators."""
     await show_moderation_user_list(
@@ -74,6 +78,7 @@ async def on_kick_command(
         cache_service,
         user_settings_service,
         command_bus,
+        uow,
     )
 
 
@@ -85,6 +90,7 @@ async def on_ban_command(
     report_service: Annotated[ReportService, FromDishka()],
     cache_service: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /ban command for administrators."""
     await show_moderation_user_list(
@@ -95,6 +101,7 @@ async def on_ban_command(
         cache_service,
         user_settings_service,
         command_bus,
+        uow,
     )
 
 

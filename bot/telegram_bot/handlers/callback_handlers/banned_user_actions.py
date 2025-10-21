@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberCommand
+from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import SubscriberCallback
@@ -66,11 +67,16 @@ async def unban_subscriber(
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> tuple[bool, str, None]:
     """Handles unbanning a subscriber."""
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.unban_subscriber(target_telegram_id, translator)
+    async with uow:
+        result = await moderation_service.unban_subscriber(
+            uow, target_telegram_id, translator
+        )
+        await uow.commit()
     message = result.message_key.format(**(result.message_args or {}))
     return result.success, message, None
 
@@ -113,11 +119,16 @@ async def ban_subscriber(
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> tuple[bool, str, None]:
     """Handles banning a subscriber."""
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_subscriber(target_telegram_id, translator)
+    async with uow:
+        result = await moderation_service.ban_subscriber(
+            uow, target_telegram_id, translator
+        )
+        await uow.commit()
 
     if result.long_message:
         logger.info("Ban report for %s:\n%s", target_telegram_id, result.long_message)

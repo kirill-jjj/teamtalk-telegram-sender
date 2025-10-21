@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeVar
+from typing import Annotated, Any, TypeVar
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -16,6 +16,7 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
+from bot.database.uow import IUnitOfWork
 from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
@@ -211,21 +212,27 @@ async def set_mute_mode(
     translator: FromDishka[NullTranslations],
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
     new_mode = callback_data.mode
 
-    user_settings = await user_settings_service.get_or_create(
-        callback_query.from_user.id, "en"
-    )
-    if new_mode.value == user_settings.mute_list_mode:
-        await callback_query.answer()
-        return
+    async with uow:
+        user_settings = await user_settings_service.get_or_create(
+            uow, callback_query.from_user.id, "en"
+        )
+        if new_mode.value == user_settings.mute_list_mode:
+            await callback_query.answer()
+            return
 
-    updated_user_settings = await user_settings_service.update_mute_mode(
-        telegram_id=callback_query.from_user.id, new_mode=new_mode, actor=Actor.USER
-    )
+        updated_user_settings = await user_settings_service.update_mute_mode(
+            uow,
+            telegram_id=callback_query.from_user.id,
+            new_mode=new_mode,
+            actor=Actor.USER,
+        )
+        await uow.commit()
 
     if not updated_user_settings:
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
@@ -262,11 +269,13 @@ async def display_internal_user_list(
     settings: FromDishka[Settings],
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
-    user_settings = await user_settings_service.get_or_create(
-        callback_query.from_user.id, settings.general.default_lang
-    )
+    async with uow:
+        user_settings = await user_settings_service.get_or_create(
+            uow, callback_query.from_user.id, settings.general.default_lang
+        )
     await _display_internal_user_list(
         callback_query,
         translator,
@@ -289,11 +298,13 @@ async def display_all_accounts_list(
     settings: FromDishka[Settings],
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
-    user_settings = await user_settings_service.get_or_create(
-        callback_query.from_user.id, settings.general.default_lang
-    )
+    async with uow:
+        user_settings = await user_settings_service.get_or_create(
+            uow, callback_query.from_user.id, settings.general.default_lang
+        )
     await _show_all_accounts_list(
         callback_query=callback_query,
         translator=translator,
@@ -312,16 +323,20 @@ async def toggle_user_mute(
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
     report_service: FromDishka[ReportService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
-    toggle_result = await moderation_service.toggle_mute_from_paginated_list(
-        telegram_id=callback_query.from_user.id,
-        list_type=callback_data.list_type,
-        page=callback_data.current_page,
-        index_on_page=callback_data.user_idx,
-        command_bus=command_bus,
-        translator=translator,
-    )
+    async with uow:
+        toggle_result = await moderation_service.toggle_mute_from_paginated_list(
+            uow,
+            telegram_id=callback_query.from_user.id,
+            list_type=callback_data.list_type,
+            page=callback_data.current_page,
+            index_on_page=callback_data.user_idx,
+            command_bus=command_bus,
+            translator=translator,
+        )
+        await uow.commit()
 
     toast_message = format_mute_toast(
         username_to_toggle=toggle_result.message_args["username"]

@@ -60,6 +60,7 @@ async def set_language(
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     user_settings_service: FromDishka[UserSettingsService],
     cache: FromDishka[CacheService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Sets the user's language preference and refreshes the settings view."""
     _ = translator.gettext
@@ -77,11 +78,14 @@ async def set_language(
         await query.answer()
         return
 
-    updated_settings = await user_settings_service.update_language(
-        telegram_id=query.from_user.id,
-        new_lang_code=new_lang_code,
-        actor=Actor.USER,
-    )
+    async with uow:
+        updated_settings = await user_settings_service.update_language(
+            uow,
+            telegram_id=query.from_user.id,
+            new_lang_code=new_lang_code,
+            actor=Actor.USER,
+        )
+        await uow.commit()
 
     if updated_settings:
         new_translator = translator_factory(new_lang_code)

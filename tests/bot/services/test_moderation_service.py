@@ -115,7 +115,9 @@ async def test_ban_subscriber_success(
     )
     mock_uow.users.get_by_id.return_value = mock_user_settings
 
-    result = await moderation_service.ban_subscriber(telegram_id, mock_translator)
+    result = await moderation_service.ban_subscriber(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "User {telegram_id} was banned." in result.message_key
@@ -141,7 +143,9 @@ async def test_unban_subscriber_success(
         mock_ban_entry_tt,
     ]
 
-    result = await moderation_service.unban_subscriber(telegram_id, mock_translator)
+    result = await moderation_service.unban_subscriber(
+        mock_uow, telegram_id, mock_translator
+    )
 
     assert result.success is True
     assert "User has been successfully unbanned." in result.message_key
@@ -160,7 +164,7 @@ async def test_toggle_mute_status_mute_new_user(
     tt_username = "new_tt_user"
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator
+        user_settings, tt_username, mock_translator, uow=mock_uow
     )
 
     assert result.success is True
@@ -185,7 +189,7 @@ async def test_toggle_mute_status_unmute_existing_user(
     user_settings.muted_users_list = [mock_muted_user]
 
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator
+        user_settings, tt_username, mock_translator, uow=mock_uow
     )
 
     assert result.success is True
@@ -237,6 +241,7 @@ async def test_toggle_mute_from_paginated_list_success(
     )
 
     result = await moderation_service.toggle_mute_from_paginated_list(
+        mock_uow,
         telegram_id=telegram_id,
         list_type=UserListAction.LIST_ALL_ACCOUNTS,
         page=0,

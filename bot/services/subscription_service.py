@@ -92,6 +92,7 @@ class SubscriptionService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def link_tt_account(
         self,
+        uow: IUnitOfWork,
         user_settings: UserSettings,
         tt_username: str,
         translator: NullTranslations,
@@ -99,27 +100,24 @@ class SubscriptionService:
         """Links a TeamTalk account to a subscriber."""
         _ = translator.gettext
 
-        async with self._uow:
-            if await self._uow.bans.is_teamtalk_username_banned(tt_username):
-                logger.warning(
-                    "Attempt to link banned TT username '%s' to user %s.",
-                    tt_username,
-                    user_settings.telegram_id,
-                )
-                return OperationResult(
-                    success=False,
-                    message_key=_(
-                        "Cannot link TeamTalk account: "
-                        "username {tt_username} is banned."
-                    ),
-                    message_args={"tt_username": tt_username},
-                )
+        if await uow.bans.is_teamtalk_username_banned(tt_username):
+            logger.warning(
+                "Attempt to link banned TT username '%s' to user %s.",
+                tt_username,
+                user_settings.telegram_id,
+            )
+            return OperationResult(
+                success=False,
+                message_key=_(
+                    "Cannot link TeamTalk account: username {tt_username} is banned."
+                ),
+                message_args={"tt_username": tt_username},
+            )
 
-            original_tt_username = user_settings.teamtalk_username
-            user_settings.teamtalk_username = tt_username
-            user_settings.not_on_online_confirmed = True
-            await self._uow.users.save(user_settings)
-            await self._uow.commit()
+        original_tt_username = user_settings.teamtalk_username
+        user_settings.teamtalk_username = tt_username
+        user_settings.not_on_online_confirmed = True
+        await uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
         logger.info(

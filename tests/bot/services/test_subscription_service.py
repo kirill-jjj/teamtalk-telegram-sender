@@ -157,7 +157,7 @@ async def test_link_tt_account_new_link(
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator
+        mock_uow, user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -188,7 +188,7 @@ async def test_link_tt_account_relink(
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator
+        mock_uow, user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -221,7 +221,7 @@ async def test_link_tt_account_banned_username(
     mock_uow.bans.is_teamtalk_username_banned.return_value = True
 
     result = await subscription_service.link_tt_account(
-        user_settings, tt_username, mock_translator
+        mock_uow, user_settings, tt_username, mock_translator
     )
 
     assert result.success is False

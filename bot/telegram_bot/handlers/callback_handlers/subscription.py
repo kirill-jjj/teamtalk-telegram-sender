@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from gettext import NullTranslations
 import logging
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
+from bot.database.uow import IUnitOfWork
 from bot.models import NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
@@ -64,16 +66,20 @@ async def set_subscription_setting(
     translator: FromDishka[NullTranslations],
     callback_data: SubscriptionCallback,
     user_settings_service: FromDishka[UserSettingsService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Sets the user's subscription notification preference."""
     _ = translator.gettext
     new_setting_enum = NotificationSetting(callback_data.setting_value)
 
-    updated_settings = await user_settings_service.update_notification_preference(
-        telegram_id=callback_query.from_user.id,
-        new_pref=new_setting_enum,
-        actor=Actor.USER,
-    )
+    async with uow:
+        updated_settings = await user_settings_service.update_notification_preference(
+            uow,
+            telegram_id=callback_query.from_user.id,
+            new_pref=new_setting_enum,
+            actor=Actor.USER,
+        )
+        await uow.commit()
 
     if not updated_settings:
         await callback_query.answer(

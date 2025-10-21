@@ -12,6 +12,7 @@ from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
 from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
+from bot.database.uow import IUnitOfWork
 from bot.services.schemas import UserAccountInfo
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
@@ -45,13 +46,17 @@ async def manage_tt_account(
     callback_data: SubscriberCallback,
     translator: FromDishka[NullTranslations],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Shows the menu to manage a subscriber's linked TeamTalk account."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    data = await user_settings_service.get_account_management_data(target_telegram_id)
+    async with uow:
+        data = await user_settings_service.get_account_management_data(
+            uow, target_telegram_id
+        )
 
     keyboard = await create_manage_tt_account_keyboard(
         translator,
@@ -194,6 +199,7 @@ async def link_tt_account_chosen(
     translator: FromDishka[NullTranslations],
     user_settings_service: FromDishka[UserSettingsService],
     subscription_service: FromDishka[SubscriptionService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the selection of a TeamTalk account to link to a subscriber."""
     _ = translator.gettext
@@ -201,17 +207,20 @@ async def link_tt_account_chosen(
     tt_username = callback_data.tt_username
     return_page = callback_data.page
 
-    user_settings = await user_settings_service.get_or_create(
-        target_telegram_id,
-        "en",  # Language doesn't matter for this operation
-    )
-    if not user_settings:
-        await query.answer(_("Subscriber settings not found."), show_alert=True)
-        return
+    async with uow:
+        user_settings = await user_settings_service.get_or_create(
+            uow,
+            target_telegram_id,
+            "en",  # Language doesn't matter for this operation
+        )
+        if not user_settings:
+            await query.answer(_("Subscriber settings not found."), show_alert=True)
+            return
 
-    result = await subscription_service.link_tt_account(
-        user_settings, tt_username, translator
-    )
+        result = await subscription_service.link_tt_account(
+            uow, user_settings, tt_username, translator
+        )
+        await uow.commit()
 
     toast_message = _(result.message_key).format(**(result.message_args or {}))
     await query.answer(toast_message, show_alert=not result.success)
@@ -248,18 +257,21 @@ async def unlink_tt_account(
     callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles unlinking a TeamTalk account from a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     return_page = callback_data.page
 
-    (
-        updated_settings,
-        original_username,
-    ) = await user_settings_service.unlink_tt_account(
-        target_telegram_id, actor=Actor.ADMIN
-    )
+    async with uow:
+        (
+            updated_settings,
+            original_username,
+        ) = await user_settings_service.unlink_tt_account(
+            uow, target_telegram_id, actor=Actor.ADMIN
+        )
+        await uow.commit()
 
     if not updated_settings:
         await query.answer(

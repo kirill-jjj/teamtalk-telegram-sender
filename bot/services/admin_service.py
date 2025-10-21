@@ -40,56 +40,53 @@ class AdminService:
             return False
         return username == admin_username
 
-    async def add_admin(self, telegram_id: int) -> bool:
+    async def add_admin(self, uow: IUnitOfWork, telegram_id: int) -> bool:
         """Adds a new admin, updating DB, cache, and publishing an event."""
-        async with self._uow:
-            if await self._uow.admins.get_by_id(telegram_id):
-                return False  # Already an admin
+        if await uow.admins.get_by_id(telegram_id):
+            return False  # Already an admin
 
-            await self._uow.admins.add(Admin(telegram_id=telegram_id))
-            self._cache.add_admin(telegram_id)
+        await uow.admins.add(Admin(telegram_id=telegram_id))
+        self._cache.add_admin(telegram_id)
 
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            await self._event_bus.publish(
-                AdminStatusChangedEvent(
-                    telegram_id=telegram_id,
-                    is_admin=True,
-                    lang_code=user_settings.language_code if user_settings else None,
-                )
+        user_settings = await uow.users.get_by_id(telegram_id)
+        await self._event_bus.publish(
+            AdminStatusChangedEvent(
+                telegram_id=telegram_id,
+                is_admin=True,
+                lang_code=user_settings.language_code if user_settings else None,
             )
-            await self._uow.commit()
+        )
         return True
 
-    async def remove_admin(self, telegram_id: int) -> bool:
+    async def remove_admin(self, uow: IUnitOfWork, telegram_id: int) -> bool:
         """Removes an admin, updating DB, cache, and publishing an event."""
-        async with self._uow:
-            admin = await self._uow.admins.get_by_id(telegram_id)
-            if not admin:
-                return False  # Not an admin
+        admin = await uow.admins.get_by_id(telegram_id)
+        if not admin:
+            return False  # Not an admin
 
-            await self._uow.admins.delete(admin)
-            self._cache.remove_admin(telegram_id)
+        await uow.admins.delete(admin)
+        self._cache.remove_admin(telegram_id)
 
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            await self._event_bus.publish(
-                AdminStatusChangedEvent(
-                    telegram_id=telegram_id,
-                    is_admin=False,
-                    lang_code=user_settings.language_code if user_settings else None,
-                )
+        user_settings = await uow.users.get_by_id(telegram_id)
+        await self._event_bus.publish(
+            AdminStatusChangedEvent(
+                telegram_id=telegram_id,
+                is_admin=False,
+                lang_code=user_settings.language_code if user_settings else None,
             )
-            await self._uow.commit()
+        )
         return True
 
     async def add_admins_in_batch(
         self,
+        uow: IUnitOfWork,
         telegram_ids: list[int],
     ) -> BatchOperationResult:
         """Adds multiple admins in a batch, returning successful and failed IDs."""
         result = BatchOperationResult()
         for telegram_id in telegram_ids:
             try:
-                if await self.add_admin(telegram_id):
+                if await self.add_admin(uow, telegram_id):
                     result.successful_ids.append(telegram_id)
                 else:
                     result.failed_ids.append(telegram_id)
@@ -100,13 +97,14 @@ class AdminService:
 
     async def remove_admins_in_batch(
         self,
+        uow: IUnitOfWork,
         telegram_ids: list[int],
     ) -> BatchOperationResult:
         """Removes multiple admins in a batch, returning successful and failed IDs."""
         result = BatchOperationResult()
         for telegram_id in telegram_ids:
             try:
-                if await self.remove_admin(telegram_id):
+                if await self.remove_admin(uow, telegram_id):
                     result.successful_ids.append(telegram_id)
                 else:
                     result.failed_ids.append(telegram_id)
@@ -143,6 +141,7 @@ class AdminService:
 
     async def manage_admin_ids(
         self,
+        uow: IUnitOfWork,
         add_ids: list[int],
         remove_ids: list[int],
         *,
@@ -151,11 +150,11 @@ class AdminService:
     ) -> AdminManagementResult:
         """Processes admin ID management commands and returns a structured result."""
         if is_add_action:
-            add_result = await self.add_admins_in_batch(add_ids)
-            remove_result = await self.remove_admins_in_batch(remove_ids)
+            add_result = await self.add_admins_in_batch(uow, add_ids)
+            remove_result = await self.remove_admins_in_batch(uow, remove_ids)
         else:
             add_result = BatchOperationResult()  # No additions
-            remove_result = await self.remove_admins_in_batch(add_ids + remove_ids)
+            remove_result = await self.remove_admins_in_batch(uow, add_ids + remove_ids)
 
         return AdminManagementResult(
             add_result=add_result,
@@ -165,6 +164,7 @@ class AdminService:
 
     async def process_admin_management_command(
         self,
+        uow: IUnitOfWork,
         args_str: str | None,
         *,
         is_add_action: bool,
@@ -173,6 +173,7 @@ class AdminService:
         """Processes admin ID management commands from raw arguments.
 
         Args:
+            uow: The unit of work.
             args_str: The raw string of arguments from the command.
             is_add_action: True if the command is to add admins, False to remove.
             translator: The translator for localized error messages.
@@ -193,6 +194,7 @@ class AdminService:
         )
 
         return await self.manage_admin_ids(
+            uow,
             add_ids=add_ids,
             remove_ids=remove_ids,
             is_add_action=is_add_action,
@@ -201,6 +203,7 @@ class AdminService:
 
     async def ensure_main_admin_exists(
         self,
+        uow: IUnitOfWork,
         bot: EventBot,
         translator_factory: Callable[[str], NullTranslations],
     ) -> None:
@@ -209,21 +212,19 @@ class AdminService:
         if not tg_admin_chat_id:
             return
 
-        async with self._uow:
-            is_newly_created = False
-            if not await self._uow.admins.get_by_id(tg_admin_chat_id):
-                await self._uow.admins.add(Admin(telegram_id=tg_admin_chat_id))
-                is_newly_created = True
+        is_newly_created = False
+        if not await uow.admins.get_by_id(tg_admin_chat_id):
+            await uow.admins.add(Admin(telegram_id=tg_admin_chat_id))
+            is_newly_created = True
 
-            if is_newly_created or not self._cache.is_admin(tg_admin_chat_id):
-                self._cache.add_admin(tg_admin_chat_id)
-                logger.info("Main admin %s ensured in DB and cache.", tg_admin_chat_id)
+        if is_newly_created or not self._cache.is_admin(tg_admin_chat_id):
+            self._cache.add_admin(tg_admin_chat_id)
+            logger.info("Main admin %s ensured in DB and cache.", tg_admin_chat_id)
 
-            user_settings = await self._uow.users.get_or_create(
-                tg_admin_chat_id,
-                defaults={"language_code": self._settings.general.default_lang},
-            )
-            await self._uow.commit()
+        user_settings = await uow.users.get_or_create(
+            tg_admin_chat_id,
+            defaults={"language_code": self._settings.general.default_lang},
+        )
 
         # This part interacts with Telegram API, so it's outside the DB transaction
         translator = translator_factory(user_settings.language_code)

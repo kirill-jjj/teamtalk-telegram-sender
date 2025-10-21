@@ -70,13 +70,12 @@ async def test_create_tt_deeplink_reply_subscribe_success(
     mock_cache.get_bot_username.return_value = "my_bot"
 
     reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
+        mock_uow, mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
     )
 
     mock_uow.deeplinks.create.assert_called_once_with(
         DeeplinkAction.SUBSCRIBE, 300, payload="test_payload"
     )
-    mock_uow.commit.assert_called_once()
     assert "Click this link to subscribe to notifications" in reply_text
     assert f"https://t.me/my_bot?start={deeplink_token_value}" in reply_text
 
@@ -97,13 +96,12 @@ async def test_create_tt_deeplink_reply_unsubscribe_success(
     mock_cache.get_bot_username.return_value = "my_bot_unsub"
 
     reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_translator, DeeplinkAction.UNSUBSCRIBE, 300
+        mock_uow, mock_translator, DeeplinkAction.UNSUBSCRIBE, 300
     )
 
     mock_uow.deeplinks.create.assert_called_once_with(
         DeeplinkAction.UNSUBSCRIBE, 300, payload=None
     )
-    mock_uow.commit.assert_called_once()
     assert "Click this link to unsubscribe from notifications" in reply_text
     assert f"https://t.me/my_bot_unsub?start={deeplink_token_value}" in reply_text
 
@@ -124,11 +122,10 @@ async def test_create_tt_deeplink_reply_bot_username_not_configured(
     mock_cache.get_bot_username.return_value = None
 
     reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
+        mock_uow, mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
     )
 
     mock_uow.deeplinks.create.assert_called_once()
-    mock_uow.commit.assert_called_once()
     assert "Could not generate a link, bot username is not configured." in reply_text
 
 
@@ -148,9 +145,8 @@ async def test_execute_subscribe_success(
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
     mock_subscription_service.create_subscription.return_value = True
-    mock_uow.admins.get_by_id.return_value = None  # Ensure user is not an admin
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_uow.bans.is_telegram_id_banned.assert_called_once_with(telegram_id)
@@ -172,9 +168,9 @@ async def test_execute_subscribe_telegram_id_banned(
     telegram_id = 123
     payload = "test_tt_user"
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
-
+    mock_uow.bans.is_telegram_id_banned.return_value = True
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_uow.bans.is_telegram_id_banned.assert_called_once_with(telegram_id)
@@ -194,10 +190,8 @@ async def test_execute_subscribe_missing_payload(
     payload = None
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
 
-    mock_uow.bans.is_telegram_id_banned.return_value = False
-
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_uow.bans.is_telegram_id_banned.assert_called_once_with(telegram_id)
@@ -221,7 +215,7 @@ async def test_execute_subscribe_teamtalk_username_banned(
     mock_uow.bans.is_teamtalk_username_banned.return_value = True
 
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_uow.bans.is_telegram_id_banned.assert_called_once_with(telegram_id)
@@ -245,7 +239,7 @@ async def test_execute_subscribe_create_subscription_fails(
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
     mock_subscription_service.create_subscription.return_value = False
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_subscription_service.create_subscription.assert_called_once_with(
@@ -272,7 +266,7 @@ async def test_execute_subscribe_user_is_admin(
     mock_uow.admins.get_by_id.return_value = MagicMock()  # User is an admin
 
     result = await deeplink_service._execute_subscribe(
-        telegram_id, mock_translator, payload, user_settings
+        mock_uow, telegram_id, mock_translator, payload, user_settings
     )
 
     mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
@@ -287,9 +281,9 @@ async def test_execute_unsubscribe_success(
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
-    mock_subscription_service.delete_profile.return_value = True
-
-    result = await deeplink_service._execute_unsubscribe(telegram_id, mock_translator)
+    result = await deeplink_service._execute_unsubscribe(
+        mock_uow, telegram_id, mock_translator
+    )
 
     mock_subscription_service.delete_profile.assert_called_once_with(
         deeplink_service._uow, telegram_id, mock_translator
@@ -304,9 +298,9 @@ async def test_execute_unsubscribe_not_subscribed(
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
-    mock_subscription_service.delete_profile.return_value = False
-
-    result = await deeplink_service._execute_unsubscribe(telegram_id, mock_translator)
+    result = await deeplink_service._execute_unsubscribe(
+        mock_uow, telegram_id, mock_translator
+    )
 
     mock_subscription_service.delete_profile.assert_called_once_with(
         deeplink_service._uow, telegram_id, mock_translator
@@ -331,10 +325,8 @@ async def test_execute_deeplink_subscribe_action(
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
     mock_subscription_service.create_subscription.return_value = True
-    mock_uow.admins.get_by_id.return_value = None
-
     result = await deeplink_service.execute_deeplink(
-        deeplink, user_settings, mock_translator
+        mock_uow, deeplink, user_settings, mock_translator
     )
 
     assert "You have successfully subscribed to notifications." in result
@@ -351,9 +343,10 @@ async def test_execute_deeplink_unsubscribe_action(
         token=deeplink_token_value,
         expiry_time=datetime.now(UTC) + timedelta(minutes=5),
     )
-    user_settings = UserSettings(telegram_id=123, language_code="en")
+    telegram_id = 123
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
     result = await deeplink_service.execute_deeplink(
-        deeplink, user_settings, mock_translator
+        mock_uow, deeplink, user_settings, mock_translator
     )
 
     assert "You have successfully unsubscribed from notifications." in result
@@ -370,10 +363,11 @@ async def test_execute_deeplink_unknown_action(
         token=deeplink_token_value,
         expiry_time=datetime.now(UTC) + timedelta(minutes=5),
     )
-    user_settings = UserSettings(telegram_id=123, language_code="en")
+    telegram_id = 123
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
 
     result = await deeplink_service.execute_deeplink(
-        deeplink, user_settings, mock_translator
+        mock_uow, deeplink, user_settings, mock_translator
     )
 
     assert "Invalid deeplink action." in result
@@ -406,7 +400,7 @@ async def test_process_telegram_deeplink_success(
     mock_uow.admins.get_by_id.return_value = None
 
     reply_text, success = await deeplink_service.process_telegram_deeplink(
-        token, mock_translator, telegram_id, default_lang
+        mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
@@ -414,7 +408,6 @@ async def test_process_telegram_deeplink_success(
     )
     mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_called_once_with(deeplink)
-    mock_uow.commit.assert_called_once()
     assert "You have successfully subscribed to notifications." in reply_text
     assert success is True
 
@@ -434,7 +427,7 @@ async def test_process_telegram_deeplink_invalid_or_expired_deeplink(
     mock_uow.deeplinks.get_and_delete_if_expired.return_value = None
 
     reply_text, success = await deeplink_service.process_telegram_deeplink(
-        token, mock_translator, telegram_id, default_lang
+        mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
@@ -442,7 +435,6 @@ async def test_process_telegram_deeplink_invalid_or_expired_deeplink(
     )
     mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_not_called()
-    mock_uow.commit.assert_not_called()
     assert "Invalid or expired deeplink." in reply_text
     assert success is False
 
@@ -469,7 +461,7 @@ async def test_process_telegram_deeplink_intended_for_different_user(
     mock_uow.deeplinks.get_and_delete_if_expired.return_value = deeplink
 
     reply_text, success = await deeplink_service.process_telegram_deeplink(
-        token, mock_translator, telegram_id, default_lang
+        mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
@@ -477,7 +469,6 @@ async def test_process_telegram_deeplink_intended_for_different_user(
     )
     mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_not_called()
-    mock_uow.commit.assert_not_called()
     assert (
         "This confirmation link was intended for a different Telegram account."
         in reply_text

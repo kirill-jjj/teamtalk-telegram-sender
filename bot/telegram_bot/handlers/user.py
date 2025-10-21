@@ -13,6 +13,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
@@ -39,6 +40,7 @@ async def on_start_with_payload(
     translator: Annotated[NullTranslations, FromDishka()],
     deeplink_service: Annotated[DeeplinkService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
     _ = translator.gettext
@@ -47,12 +49,15 @@ async def on_start_with_payload(
         await message.reply(_("An error occurred. Please try again later."))
         return
 
-    reply_text, _ = await deeplink_service.process_telegram_deeplink(
-        token=token,
-        translator=translator,
-        telegram_id=message.from_user.id,
-        default_lang=settings.general.default_lang,
-    )
+    async with uow:
+        reply_text, _ = await deeplink_service.process_telegram_deeplink(
+            uow,
+            token=token,
+            translator=translator,
+            telegram_id=message.from_user.id,
+            default_lang=settings.general.default_lang,
+        )
+        await uow.commit()
     await message.reply(reply_text)
 
 
@@ -93,6 +98,7 @@ async def on_who_command(
     cache: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     command_bus: Annotated[CommandBus, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the report service and formatter."""
     if not message.from_user:
@@ -100,6 +106,7 @@ async def on_who_command(
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
         report_dto = await report_service.get_who_report_data(
+            uow,
             telegram_user_id=message.from_user.id,
             translator=translator,
             cache_service=cache,

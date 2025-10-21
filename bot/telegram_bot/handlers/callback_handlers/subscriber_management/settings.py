@@ -84,13 +84,18 @@ async def admin_set_setting_choice(
     translator: FromDishka[NullTranslations],
     user_settings_service: FromDishka[UserSettingsService],
     available_languages: FromDishka[list[LanguageInfo]],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles showing the choice menu for various subscriber settings to an admin."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     action = callback_data.action
 
-    user_settings = await user_settings_service.get_or_create(target_telegram_id, "en")
+    async with uow:
+        user_settings = await user_settings_service.get_or_create(
+            uow, target_telegram_id, "en"
+        )
+
     if not user_settings:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
@@ -149,14 +154,17 @@ async def admin_toggle_noon(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles an admin toggling NOON setting for a subscriber."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    updated_settings = await user_settings_service.toggle_noon_setting(
-        target_telegram_id, actor=Actor.ADMIN
-    )
+    async with uow:
+        updated_settings = await user_settings_service.toggle_noon_setting(
+            uow, target_telegram_id, actor=Actor.ADMIN
+        )
+        await uow.commit()
 
     if updated_settings:
         status = (
@@ -165,13 +173,13 @@ async def admin_toggle_noon(
         msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
             tg_id=target_telegram_id, status=status
         )
-        await query.answer(msg)
         await refresh_subscriber_view(
             query,
             callback_data,
             translator,
             bot,
             user_settings_service=user_settings_service,
+            uow=uow,
         )
     else:
         await query.answer(_("Failed to toggle NOON status."), show_alert=True)
@@ -214,9 +222,10 @@ async def admin_view_mute_list(
     """Entry point for an admin to view a specific subscriber's mute list."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
-    view_data = await user_settings_service.get_subscriber_view_data(
-        target_telegram_id, translator.info().get("language", "en"), bot
-    )
+    async with uow:
+        view_data = await user_settings_service.get_subscriber_view_data(
+            uow, target_telegram_id, translator.info().get("language", "en"), bot
+        )
     if not view_data:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
@@ -294,7 +303,7 @@ async def paginate_mute_list(
     target_telegram_id = callback_data.target_telegram_id
 
     view_data = await user_settings_service.get_subscriber_view_data(
-        target_telegram_id, translator.info().get("language", "en"), bot
+        uow, target_telegram_id, translator.info().get("language", "en"), bot
     )
     if not view_data:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
@@ -328,14 +337,17 @@ async def admin_set_language(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles an admin setting a subscriber's language."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    updated_settings = await user_settings_service.update_language(
-        target_telegram_id, callback_data.lang_code, Actor.ADMIN
-    )
+    async with uow:
+        updated_settings = await user_settings_service.update_language(
+            uow, target_telegram_id, callback_data.lang_code, Actor.ADMIN
+        )
+        await uow.commit()
 
     if updated_settings:
         success_msg = _("Language for subscriber {tg_id} changed to {value}.").format(
@@ -348,6 +360,7 @@ async def admin_set_language(
             translator,
             bot,
             user_settings_service=user_settings_service,
+            uow=uow,
         )
     else:
         await query.answer(
@@ -363,15 +376,18 @@ async def admin_set_notification_pref(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles an admin setting a subscriber's notification preference."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
     new_pref = NotificationSetting(callback_data.setting_value)
 
-    updated_settings = await user_settings_service.update_notification_preference(
-        target_telegram_id, new_pref, Actor.ADMIN
-    )
+    async with uow:
+        updated_settings = await user_settings_service.update_notification_preference(
+            uow, target_telegram_id, new_pref, Actor.ADMIN
+        )
+        await uow.commit()
 
     if updated_settings:
         success_msg = _(
@@ -384,6 +400,7 @@ async def admin_set_notification_pref(
             translator,
             bot,
             user_settings_service=user_settings_service,
+            uow=uow,
         )
     else:
         await query.answer(
@@ -399,14 +416,17 @@ async def admin_set_mute_mode(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles an admin setting a subscriber's mute list mode."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    updated_settings = await user_settings_service.update_mute_mode(
-        target_telegram_id, callback_data.mode, Actor.ADMIN
-    )
+    async with uow:
+        updated_settings = await user_settings_service.update_mute_mode(
+            uow, target_telegram_id, callback_data.mode, Actor.ADMIN
+        )
+        await uow.commit()
 
     if updated_settings:
         success_msg = _(
@@ -419,6 +439,7 @@ async def admin_set_mute_mode(
             translator,
             bot,
             user_settings_service=user_settings_service,
+            uow=uow,
         )
     else:
         await query.answer(

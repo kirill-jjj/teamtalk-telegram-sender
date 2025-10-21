@@ -77,6 +77,7 @@ async def refresh_subscriber_view(
     translator: NullTranslations,
     bot: "EventBot",
     user_settings_service: UserSettingsService,  # Add service
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the subscriber detail view."""
@@ -87,6 +88,7 @@ async def refresh_subscriber_view(
 
     # Fetch the full view data DTO from the service
     view_data = await user_settings_service.get_subscriber_view_data(
+        uow,
         target_telegram_id,
         "en",  # lang doesn't matter here
         bot,
@@ -203,12 +205,17 @@ async def on_ban_subscriber_confirm(
     moderation_service: FromDishka[ModerationService],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles banning a subscriber after admin confirmation."""
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
-    result = await moderation_service.ban_subscriber(target_telegram_id, translator)
+    async with uow:
+        result = await moderation_service.ban_subscriber(
+            uow, target_telegram_id, translator
+        )
+        await uow.commit()
 
     if result.long_message:
         logger.info("Ban report for %s:\n%s", target_telegram_id, result.long_message)
@@ -269,14 +276,17 @@ async def view_subscriber(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handle viewing details and actions for a subscriber via the display helper."""
     _ = translator.gettext
-    view_data = await user_settings_service.get_subscriber_view_data(
-        callback_data.telegram_id,
-        "en",  # lang doesn't matter here
-        bot,
-    )
+    async with uow:
+        view_data = await user_settings_service.get_subscriber_view_data(
+            uow,
+            callback_data.telegram_id,
+            "en",  # lang doesn't matter here
+            bot,
+        )
     if not view_data:
         await query.answer(_("User not found."), show_alert=True)
         return

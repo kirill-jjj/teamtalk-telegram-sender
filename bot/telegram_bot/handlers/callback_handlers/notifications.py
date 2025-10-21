@@ -2,6 +2,7 @@
 
 from gettext import NullTranslations
 import logging
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -9,6 +10,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
+from bot.database.uow import IUnitOfWork
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
@@ -60,12 +62,15 @@ async def toggle_noon_setting(
     query: CallbackQuery,
     translator: FromDishka[NullTranslations],
     user_settings_service: FromDishka[UserSettingsService],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles toggling the NOON (Not on Online) setting."""
     _ = translator.gettext
-    updated_settings = await user_settings_service.toggle_noon_setting(
-        telegram_id=query.from_user.id, actor=Actor.USER
-    )
+    async with uow:
+        updated_settings = await user_settings_service.toggle_noon_setting(
+            uow, telegram_id=query.from_user.id, actor=Actor.USER
+        )
+        await uow.commit()
 
     if not updated_settings:
         await query.answer(

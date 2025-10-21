@@ -129,23 +129,29 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        reply_text = await self.deeplink_service.create_tt_deeplink_reply(
-            translator=translator,
-            action=DeeplinkAction.SUBSCRIBE,
-            ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
-            payload=ttstr(tt_message.user.username),
-        )
+        async with self.uow:
+            reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+                self.uow,
+                translator=translator,
+                action=DeeplinkAction.SUBSCRIBE,
+                ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
+                payload=ttstr(tt_message.user.username),
+            )
+            await self.uow.commit()
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     async def on_unsubscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
         """Handles the unsubscribe command."""
-        reply_text = await self.deeplink_service.create_tt_deeplink_reply(
-            translator=translator,
-            action=DeeplinkAction.UNSUBSCRIBE,
-            ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
-        )
+        async with self.uow:
+            reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+                self.uow,
+                translator=translator,
+                action=DeeplinkAction.UNSUBSCRIBE,
+                ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
+            )
+            await self.uow.commit()
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     @_is_tt_admin
@@ -191,11 +197,14 @@ class PrivateMessageCommandHandlers:
             tt_message.reply(_("Please provide Telegram IDs."))
             return
 
-        result = await self.admin_service.process_admin_management_command(
-            args_str=args_str,
-            is_add_action=is_add_action,
-            translator=translator,
-        )
+        async with self.uow:
+            result = await self.admin_service.process_admin_management_command(
+                self.uow,
+                args_str=args_str,
+                is_add_action=is_add_action,
+                translator=translator,
+            )
+            await self.uow.commit()
 
         response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)

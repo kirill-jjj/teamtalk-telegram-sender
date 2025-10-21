@@ -316,12 +316,13 @@ class RequestProvider(Provider):
         user: User | None,
         user_settings_service: UserSettingsService,
         settings: Settings,
+        uow: FromDishka[IUnitOfWork],
     ) -> SettingsViewDTO | None:
         """Provides SettingsViewDTO if a user is present in the event."""
         if not user:
             return None
         return await user_settings_service.get_user_settings_view(
-            user.id, settings.general.default_lang
+            uow, user.id, settings.general.default_lang
         )
 
     @provide

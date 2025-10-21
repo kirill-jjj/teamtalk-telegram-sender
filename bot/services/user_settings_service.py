@@ -36,10 +36,13 @@ class UserSettingsService:
         self._cache = cache
 
     async def get_user_settings_view(
-        self, telegram_id: int, default_lang: str
+        self,
+        uow: IUnitOfWork,
+        telegram_id: int,
+        default_lang: str,
     ) -> SettingsViewDTO:
         """Gets user settings and maps them to a view DTO."""
-        user_settings_model = await self.get_or_create(telegram_id, default_lang)
+        user_settings_model = await self.get_or_create(uow, telegram_id, default_lang)
 
         return SettingsViewDTO(
             language_code=user_settings_model.language_code,
@@ -51,10 +54,14 @@ class UserSettingsService:
         )
 
     async def get_subscriber_view_data(
-        self, telegram_id: int, default_lang: str, bot: EventBot
+        self,
+        uow: IUnitOfWork,
+        telegram_id: int,
+        default_lang: str,
+        bot: EventBot,
     ) -> SubscriberViewData | None:
         """Retrieves user settings and their display name."""
-        user_settings = await self.get_or_create(telegram_id, default_lang)
+        user_settings = await self.get_or_create(uow, telegram_id, default_lang)
         if not user_settings:
             return None
 
@@ -64,29 +71,28 @@ class UserSettingsService:
         )
 
     async def get_account_management_data(
-        self, telegram_id: int
+        self, uow: IUnitOfWork, telegram_id: int
     ) -> AccountManagementData:
         """Fetches data needed for the account management view."""
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            return AccountManagementData(
-                current_tt_username=user_settings.teamtalk_username
-                if user_settings
-                else None
-            )
+        user_settings = await uow.users.get_by_id(telegram_id)
+        return AccountManagementData(
+            current_tt_username=user_settings.teamtalk_username
+            if user_settings
+            else None
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    async def get_or_create(self, telegram_id: int, default_lang: str) -> UserSettings:
+    async def get_or_create(
+        self, uow: IUnitOfWork, telegram_id: int, default_lang: str
+    ) -> UserSettings:
         """Gets user settings from cache or DB, or creates them if they don't exist."""
         user_settings = self._cache.get_user_settings(telegram_id)
         if user_settings:
             return user_settings
 
-        async with self._uow:
-            user_settings = await self._uow.users.get_or_create(
-                telegram_id, defaults={"language_code": default_lang}
-            )
-            await self._uow.commit()
+        user_settings = await uow.users.get_or_create(
+            telegram_id, defaults={"language_code": default_lang}
+        )
 
         self._cache.update_user_settings(user_settings)
         return user_settings
@@ -143,145 +149,131 @@ class UserSettingsService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_language(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         new_lang_code: str,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                logger.error("Could not find user_settings for user %s", telegram_id)
-                return None
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            logger.error("Could not find user_settings for user %s", telegram_id)
+            return None
 
-            updated_settings = await self._update_setting(
-                user_settings,
-                "language_code",
-                new_lang_code,
-                log_context,
-                uow=self._uow,
-            )
-            if updated_settings:
-                await self._uow.commit()
-
-        return updated_settings
+        return await self._update_setting(
+            user_settings,
+            "language_code",
+            new_lang_code,
+            log_context,
+            uow=uow,
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_mute_mode(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         new_mode: MuteListMode,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                logger.error("Could not find user_settings for user %s", telegram_id)
-                return None
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            logger.error("Could not find user_settings for user %s", telegram_id)
+            return None
 
-            updated_settings = await self._update_setting(
-                user_settings, "mute_list_mode", new_mode, log_context, uow=self._uow
-            )
-            if updated_settings:
-                await self._uow.commit()
-        return updated_settings
+        return await self._update_setting(
+            user_settings, "mute_list_mode", new_mode, log_context, uow=uow
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_notification_preference(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                logger.error("Could not find user_settings for user %s", telegram_id)
-                return None
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            logger.error("Could not find user_settings for user %s", telegram_id)
+            return None
 
-            updated_settings = await self._update_setting(
-                user_settings,
-                "notification_settings",
-                new_pref,
-                log_context,
-                uow=self._uow,
-            )
-            if updated_settings:
-                await self._uow.commit()
-        return updated_settings
+        return await self._update_setting(
+            user_settings,
+            "notification_settings",
+            new_pref,
+            log_context,
+            uow=uow,
+        )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_noon_setting(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         actor: Actor = Actor.USER,
     ) -> UserSettings | None:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                logger.error("Could not find user_settings for user %s", telegram_id)
-                return None
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            logger.error("Could not find user_settings for user %s", telegram_id)
+            return None
 
-            new_noon_value = not user_settings.not_on_online_enabled
-            log_context = f" by {actor.value} (toggle NOON)"
+        new_noon_value = not user_settings.not_on_online_enabled
+        log_context = f" by {actor.value} (toggle NOON)"
 
-            updated_settings = await self._update_setting(
-                user_settings,
-                "not_on_online_enabled",
-                new_noon_value,
-                log_context,
-                uow=self._uow,
+        updated_settings = await self._update_setting(
+            user_settings,
+            "not_on_online_enabled",
+            new_noon_value,
+            log_context,
+            uow=uow,
+        )
+
+        if not updated_settings:
+            return None
+
+        if (
+            updated_settings.not_on_online_enabled
+            and not user_settings.not_on_online_confirmed
+        ):
+            confirm_log_context = f" by {actor.value} (confirm NOON after toggle)"
+            return await self._update_setting(
+                user_settings=user_settings,
+                field_name="not_on_online_confirmed",
+                new_value=True,
+                log_context=confirm_log_context,
+                uow=uow,
             )
 
-            if not updated_settings:
-                return None
+            if confirmed_settings:
+                return confirmed_settings
 
-            if (
-                updated_settings.not_on_online_enabled
-                and not user_settings.not_on_online_confirmed
-            ):
-                confirm_log_context = f" by {actor.value} (confirm NOON after toggle)"
-                confirmed_settings = await self._update_setting(
-                    user_settings=user_settings,
-                    field_name="not_on_online_confirmed",
-                    new_value=True,
-                    log_context=confirm_log_context,
-                    uow=self._uow,
-                )
-                if confirmed_settings:
-                    await self._uow.commit()
-                    return confirmed_settings
-
-            await self._uow.commit()
-            return updated_settings
+        return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def unlink_tt_account(
         self,
+        uow: IUnitOfWork,
         telegram_id: int,
         actor: Actor = Actor.ADMIN,
     ) -> tuple[UserSettings | None, str | None]:
         """Unlinks a TeamTalk account from a user's settings."""
-        async with self._uow:
-            user_settings = await self._uow.users.get_by_id(telegram_id)
-            if not user_settings:
-                return None, None
+        user_settings = await uow.users.get_by_id(telegram_id)
+        if not user_settings:
+            return None, None
 
-            original_username = user_settings.teamtalk_username
-            if not original_username:
-                return user_settings, None
+        original_username = user_settings.teamtalk_username
+        if not original_username:
+            return user_settings, None
 
-            log_context = f" by {actor.value}"
+        log_context = f" by {actor.value}"
 
-            updated_settings = await self._update_setting(
-                user_settings, "teamtalk_username", None, log_context, uow=self._uow
-            )
-            if updated_settings:
-                await self._uow.commit()
-            return updated_settings, original_username
+        return await self._update_setting(
+            user_settings, "teamtalk_username", None, log_context, uow=uow
+        )

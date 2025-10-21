@@ -61,6 +61,7 @@ class ReportService:
 
     async def get_who_report_data(
         self,
+        uow: IUnitOfWork,
         telegram_user_id: int,
         translator: NullTranslations,
         cache_service: CacheService,
@@ -70,7 +71,7 @@ class ReportService:
         """Gathers online user data and returns a structured report DTO."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
-            telegram_user_id, self._settings.general.default_lang
+            uow, telegram_user_id, self._settings.general.default_lang
         )
         is_admin = cache_service.is_admin(telegram_user_id)
         command = GetOnlineUsersCommand(
@@ -210,6 +211,7 @@ class ReportService:
 
     async def get_sorted_online_users_for_moderation(
         self,
+        uow: IUnitOfWork,
         telegram_user_id: int,
         translator: NullTranslations,
         cache_service: CacheService,
@@ -219,7 +221,7 @@ class ReportService:
         """Fetches and sorts online users for moderation purposes."""
         _ = translator.gettext
         user_settings = await user_settings_service.get_or_create(
-            telegram_user_id, self._settings.general.default_lang
+            uow, telegram_user_id, self._settings.general.default_lang
         )
         is_admin = cache_service.is_admin(telegram_user_id)
         command = GetOnlineUsersCommand(
