@@ -197,14 +197,45 @@ class PrivateMessageCommandHandlers:
             tt_message.reply(_("Please provide Telegram IDs."))
             return
 
+        add_ids, remove_ids, error_messages = self._parse_admin_ids_args(
+            args_str, translator
+        )
+
         async with self.uow:
             result = await self.admin_service.process_admin_management_command(
                 self.uow,
-                args_str=args_str,
+                add_ids=add_ids,
+                remove_ids=remove_ids,
                 is_add_action=is_add_action,
-                translator=translator,
+                error_messages=error_messages,
             )
             await self.uow.commit()
 
         response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)
+
+    def _parse_admin_ids_args(
+        self, args_string: str, translator: NullTranslations
+    ) -> tuple[list[int], list[int], list[str]]:
+        _ = translator.gettext
+        add_ids = []
+        remove_ids = []
+        error_messages = []
+
+        args = args_string.split()
+        for arg in args:
+            if arg.startswith("-"):
+                try:
+                    remove_ids.append(int(arg[1:]))
+                except ValueError:
+                    error_messages.append(
+                        _("Invalid Telegram ID to remove: {}").format(arg[1:])
+                    )
+            else:
+                try:
+                    add_ids.append(int(arg))
+                except ValueError:
+                    error_messages.append(
+                        _("Invalid Telegram ID to add: {}").format(arg)
+                    )
+        return add_ids, remove_ids, error_messages

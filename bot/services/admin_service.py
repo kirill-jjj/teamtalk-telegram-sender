@@ -113,32 +113,6 @@ class AdminService:
                 result.failed_ids.append(telegram_id)
         return result
 
-    def _parse_admin_ids_args(
-        self, args_string: str, translator: NullTranslations
-    ) -> tuple[list[int], list[int], list[str]]:
-        _ = translator.gettext
-        add_ids = []
-        remove_ids = []
-        error_messages = []
-
-        args = args_string.split()
-        for arg in args:
-            if arg.startswith("-"):
-                try:
-                    remove_ids.append(int(arg[1:]))
-                except ValueError:
-                    error_messages.append(
-                        _("Invalid Telegram ID to remove: {}").format(arg[1:])
-                    )
-            else:
-                try:
-                    add_ids.append(int(arg))
-                except ValueError:
-                    error_messages.append(
-                        _("Invalid Telegram ID to add: {}").format(arg)
-                    )
-        return add_ids, remove_ids, error_messages
-
     async def manage_admin_ids(
         self,
         uow: IUnitOfWork,
@@ -165,34 +139,24 @@ class AdminService:
     async def process_admin_management_command(
         self,
         uow: IUnitOfWork,
-        args_str: str | None,
+        add_ids: list[int],
+        remove_ids: list[int],
         *,
         is_add_action: bool,
-        translator: NullTranslations,
+        error_messages: list[str],
     ) -> AdminManagementResult:
-        """Processes admin ID management commands from raw arguments.
+        """Processes admin ID management commands.
 
         Args:
             uow: The unit of work.
-            args_str: The raw string of arguments from the command.
+            add_ids: List of Telegram IDs to add as admins.
+            remove_ids: List of Telegram IDs to remove as admins.
             is_add_action: True if the command is to add admins, False to remove.
-            translator: The translator for localized error messages.
+            error_messages: List of error messages encountered during parsing.
 
         Returns:
             An AdminManagementResult containing the outcome of the operation.
         """
-        _ = translator.gettext
-        if not args_str:
-            return AdminManagementResult(
-                add_result=BatchOperationResult(),
-                remove_result=BatchOperationResult(),
-                error_messages=[_("Please provide Telegram IDs.")],
-            )
-
-        add_ids, remove_ids, error_messages = self._parse_admin_ids_args(
-            args_str, translator
-        )
-
         return await self.manage_admin_ids(
             uow,
             add_ids=add_ids,
