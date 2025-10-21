@@ -39,3 +39,13 @@ class MissingTranslatorError(DependencyError):
     ) -> None:
         """Initializes the exception with a default message."""
         super().__init__(message)
+
+
+class SessionNotAvailableError(BotError):
+    """Raised when a database session is accessed before the UoW is entered."""
+
+    def __init__(
+        self, message: str = "Session not available. The UoW must be entered first."
+    ) -> None:
+        """Initializes the exception with a default message."""
+        super().__init__(message)

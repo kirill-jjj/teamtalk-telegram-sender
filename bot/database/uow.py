@@ -6,6 +6,7 @@ from typing import Self
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.core.exceptions import SessionNotAvailableError
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.repositories.admin_repository import AdminRepository
 from bot.database.repositories.ban_repository import BanRepository
@@ -36,6 +37,12 @@ class IUnitOfWork(ABC):
         exc_tb: TracebackType | None,
     ) -> None:
         """Exit the context manager, committing or rolling back the transaction."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def session(self) -> AsyncSession:
+        """The raw database session."""
         raise NotImplementedError
 
     @abstractmethod
@@ -92,6 +99,13 @@ class SqlModelUnitOfWork(IUnitOfWork):
                 await self.commit()
             await self._session.close()
             self._session = None
+
+    @property
+    def session(self) -> AsyncSession:
+        """The raw database session."""
+        if self._session is None:
+            raise SessionNotAvailableError
+        return self._session
 
     async def commit(self) -> None:
         """Commit the changes."""

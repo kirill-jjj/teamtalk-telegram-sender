@@ -6,11 +6,11 @@ from typing import cast
 import pytalk  # Required for ttstr
 from pytalk.user import User as TeamTalkUser
 import sqlalchemy as sa
-from sqlalchemy import and_
 from sqlmodel import select
 
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
+from bot.database.uow import SqlModelUnitOfWork
 from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 
@@ -92,29 +92,32 @@ class NotificationRecipientService:
         if not subscriber_ids:
             return []
 
-        async with self.session_factory() as session:
-            stmt = select(
-                UserSettings.telegram_id,
-                UserSettings.language_code,
-            ).join(
-                MutedUser,
-                sa.and_(
-                    UserSettings.telegram_id == MutedUser.user_settings_telegram_id,  # type: ignore[arg-type]
-                    MutedUser.muted_teamtalk_username == username_to_check,  # type: ignore[arg-type]
-                ),
-                isouter=True,
+        async with SqlModelUnitOfWork(self.session_factory) as uow:
+            stmt = (
+                select(
+                    UserSettings.telegram_id,
+                    UserSettings.language_code,
+                )
+                .join(
+                    MutedUser,
+                    sa.and_(
+                        UserSettings.telegram_id == MutedUser.user_settings_telegram_id,  # type: ignore[arg-type]
+                        MutedUser.muted_teamtalk_username == username_to_check,  # type: ignore[arg-type]
+                    ),
+                    isouter=True,
+                )
+                .where(
+                    UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
+                    UserSettings.notification_settings != NotificationSetting.NONE,
+                )
             )
 
-            filters = [
-                UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
-                UserSettings.notification_settings != NotificationSetting.NONE,
-            ]
             if event_type == NotificationType.JOIN:
-                filters.append(
+                stmt = stmt.where(
                     UserSettings.notification_settings != NotificationSetting.JOIN_OFF
                 )
             elif event_type == NotificationType.LEAVE:
-                filters.append(
+                stmt = stmt.where(
                     UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
                 )
 
@@ -128,8 +131,7 @@ class NotificationRecipientService:
                     MutedUser.id.is_not(None),  # type: ignore[union-attr]
                 ),
             )
-            filters.append(mute_logic)
+            stmt = stmt.where(mute_logic)
 
-            stmt = stmt.where(and_(*filters))
-            result = await session.execute(stmt)
+            result = await uow.session.execute(stmt)
             return cast(list[tuple[int, str | None]], result.all())
