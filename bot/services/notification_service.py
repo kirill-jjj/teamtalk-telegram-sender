@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 """Service for advanced notification logic like NOON."""
 
 import logging
@@ -6,7 +5,8 @@ from typing import cast
 
 import pytalk  # Required for ttstr
 from pytalk.user import User as TeamTalkUser
-from sqlalchemy import and_, or_
+import sqlalchemy as sa
+from sqlalchemy import and_
 from sqlmodel import select
 
 from bot.core.enums import NotificationType
@@ -98,9 +98,9 @@ class NotificationRecipientService:
                 UserSettings.language_code,
             ).join(
                 MutedUser,
-                and_(
-                    UserSettings.telegram_id == MutedUser.user_settings_telegram_id,
-                    MutedUser.muted_teamtalk_username == username_to_check,
+                sa.and_(
+                    UserSettings.telegram_id == MutedUser.user_settings_telegram_id,  # type: ignore[arg-type]
+                    MutedUser.muted_teamtalk_username == username_to_check,  # type: ignore[arg-type]
                 ),
                 isouter=True,
             )
@@ -118,17 +118,17 @@ class NotificationRecipientService:
                     UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
                 )
 
-            mute_logic = or_(
-                and_(
-                    UserSettings.mute_list_mode == MuteListMode.blacklist.value,
-                    MutedUser.id.is_(None),
+            mute_logic = sa.or_(
+                sa.and_(
+                    UserSettings.mute_list_mode == MuteListMode.blacklist.value,  # type: ignore[arg-type]
+                    MutedUser.id.is_(None),  # type: ignore[union-attr]
                 ),
-                and_(
-                    UserSettings.mute_list_mode == MuteListMode.whitelist.value,
-                    MutedUser.id.is_not(None),
+                sa.and_(
+                    UserSettings.mute_list_mode == MuteListMode.whitelist.value,  # type: ignore[arg-type]
+                    MutedUser.id.is_not(None),  # type: ignore[union-attr]
                 ),
             )
-            filters.append(mute_logic)  # type: ignore[arg-type]
+            filters.append(mute_logic)
 
             stmt = stmt.where(and_(*filters))
             result = await session.execute(stmt)
