@@ -39,7 +39,7 @@ class UserRepository(BaseRepository[UserSettings]):
         user_settings = UserSettings(telegram_id=telegram_id, **defaults)
         self._session.add(user_settings)
         await self._session.flush()
-        await self._session.refresh(user_settings)
+        await self._session.refresh(user_settings, attribute_names=["muted_users_list"])
         return user_settings
 
     async def save(self, user_settings: UserSettings) -> None:

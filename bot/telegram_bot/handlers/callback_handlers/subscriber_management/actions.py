@@ -172,10 +172,8 @@ async def delete_subscriber_from_list(
         await query.answer(
             _("Error: No Telegram ID specified for deletion."), show_alert=True
         )
+        return
     target_telegram_id = callback_data.telegram_id
-    assert target_telegram_id is not None, (
-        "Telegram ID should not be None at this point"
-    )
 
     result = await subscription_service.delete_profile(
         uow, target_telegram_id, translator
