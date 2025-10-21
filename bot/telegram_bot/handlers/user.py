@@ -105,14 +105,15 @@ async def on_who_command(
         return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
-        report_dto = await report_service.get_who_report_data(
-            uow,
-            telegram_user_id=message.from_user.id,
-            translator=translator,
-            cache_service=cache,
-            user_settings_service=user_settings_service,
-            command_bus=command_bus,
-        )
+        async with uow:
+            report_dto = await report_service.get_who_report_data(
+                uow,
+                telegram_user_id=message.from_user.id,
+                translator=translator,
+                cache_service=cache,
+                user_settings_service=user_settings_service,
+                command_bus=command_bus,
+            )
         report_text = format_who_report_to_html(report_dto, translator)
         await message.reply(report_text)
 

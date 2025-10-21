@@ -51,14 +51,15 @@ async def menu_who_handler(
     if not query.from_user:
         return
 
-    report_dto = await report_service.get_who_report_data(
-        uow,
-        telegram_user_id=query.from_user.id,
-        translator=translator,
-        cache_service=cache,
-        user_settings_service=user_settings_service,
-        command_bus=command_bus,
-    )
+    async with uow:
+        report_dto = await report_service.get_who_report_data(
+            uow,
+            telegram_user_id=query.from_user.id,
+            translator=translator,
+            cache_service=cache,
+            user_settings_service=user_settings_service,
+            command_bus=command_bus,
+        )
 
     report_text = format_who_report_to_html(report_dto, translator)
 
@@ -111,14 +112,15 @@ async def _handle_menu_moderation_command(
     if not query.from_user or not isinstance(query.message, Message):
         return
 
-    view_data = await report_service.get_sorted_online_users_for_moderation(
-        uow,
-        telegram_user_id=query.from_user.id,
-        translator=translator,
-        cache_service=cache_service,
-        user_settings_service=user_settings_service,
-        command_bus=command_bus,
-    )
+    async with uow:
+        view_data = await report_service.get_sorted_online_users_for_moderation(
+            uow,
+            telegram_user_id=query.from_user.id,
+            translator=translator,
+            cache_service=cache_service,
+            user_settings_service=user_settings_service,
+            command_bus=command_bus,
+        )
 
     await display_moderation_view(
         message=query.message,

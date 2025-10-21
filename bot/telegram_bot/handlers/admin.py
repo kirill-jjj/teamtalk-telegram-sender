@@ -42,14 +42,15 @@ async def show_moderation_user_list(
     if not message.from_user:
         return
 
-    view_data = await report_service.get_sorted_online_users_for_moderation(
-        uow,
-        telegram_user_id=message.from_user.id,
-        translator=translator,
-        cache_service=cache_service,
-        user_settings_service=user_settings_service,
-        command_bus=command_bus,
-    )
+    async with uow:
+        view_data = await report_service.get_sorted_online_users_for_moderation(
+            uow,
+            telegram_user_id=message.from_user.id,
+            translator=translator,
+            cache_service=cache_service,
+            user_settings_service=user_settings_service,
+            command_bus=command_bus,
+        )
 
     await display_moderation_view(
         message=message,
