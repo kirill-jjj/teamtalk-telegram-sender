@@ -251,9 +251,6 @@ class UserSettingsService:
                 uow=uow,
             )
 
-            if confirmed_settings:
-                return confirmed_settings
-
         return updated_settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -274,6 +271,7 @@ class UserSettingsService:
 
         log_context = f" by {actor.value}"
 
-        return await self._update_setting(
+        updated_settings = await self._update_setting(
             user_settings, "teamtalk_username", None, log_context, uow=uow
         )
+        return updated_settings, original_username

@@ -145,6 +145,8 @@ async def test_execute_subscribe_success(
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
     mock_subscription_service.create_subscription.return_value = True
+    mock_uow.admins.get_by_id.return_value = None  # Ensure user is not an admin
+
     result = await deeplink_service._execute_subscribe(
         mock_uow, telegram_id, mock_translator, payload, user_settings
     )
@@ -189,6 +191,7 @@ async def test_execute_subscribe_missing_payload(
     telegram_id = 123
     payload = None
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+    mock_uow.bans.is_telegram_id_banned.return_value = False
 
     result = await deeplink_service._execute_subscribe(
         mock_uow, telegram_id, mock_translator, payload, user_settings
@@ -277,16 +280,18 @@ async def test_execute_subscribe_user_is_admin(
 @pytest.mark.asyncio
 async def test_execute_unsubscribe_success(
     deeplink_service: DeeplinkService,
+    mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
+    mock_subscription_service.delete_profile.return_value = True
     result = await deeplink_service._execute_unsubscribe(
         mock_uow, telegram_id, mock_translator
     )
 
     mock_subscription_service.delete_profile.assert_called_once_with(
-        deeplink_service._uow, telegram_id, mock_translator
+        mock_uow, telegram_id, mock_translator
     )
     assert "You have successfully unsubscribed from notifications." in result
 
@@ -294,16 +299,18 @@ async def test_execute_unsubscribe_success(
 @pytest.mark.asyncio
 async def test_execute_unsubscribe_not_subscribed(
     deeplink_service: DeeplinkService,
+    mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
+    mock_subscription_service.delete_profile.return_value = False
     result = await deeplink_service._execute_unsubscribe(
         mock_uow, telegram_id, mock_translator
     )
 
     mock_subscription_service.delete_profile.assert_called_once_with(
-        deeplink_service._uow, telegram_id, mock_translator
+        mock_uow, telegram_id, mock_translator
     )
     assert "You were not subscribed to notifications." in result
 

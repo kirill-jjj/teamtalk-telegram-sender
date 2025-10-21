@@ -11,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.enums import AdminCommand
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.report_service import ReportService
 from bot.services.user_settings_service import UserSettingsService

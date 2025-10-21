@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
+from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -10,6 +11,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, LanguageChoice, SettingsNavAction
 from bot.core.languages import LanguageInfo
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import LanguageCallback, SettingsCallback

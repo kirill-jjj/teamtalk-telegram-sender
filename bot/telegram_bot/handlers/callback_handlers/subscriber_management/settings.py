@@ -170,8 +170,10 @@ async def admin_toggle_noon(
         status = (
             _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
         )
-        msg = _("NOON for subscriber {tg_id} set to: {status}.").format(
-            tg_id=target_telegram_id, status=status
+        await query.answer(
+            _("NOON for subscriber {tg_id} set to: {status}.").format(
+                tg_id=target_telegram_id, status=status
+            )
         )
         await refresh_subscriber_view(
             query,

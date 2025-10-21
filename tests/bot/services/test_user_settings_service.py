@@ -40,7 +40,9 @@ async def test_get_or_create_from_cache(
     cached_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
     mock_cache.get_user_settings.return_value = cached_settings
 
-    result = await user_settings_service.get_or_create(telegram_id, default_lang)
+    result = await user_settings_service.get_or_create(
+        mock_uow, telegram_id, default_lang
+    )
 
     assert result == cached_settings
     mock_cache.get_user_settings.assert_called_once_with(telegram_id)
@@ -105,6 +107,9 @@ async def test_update_language_no_change(
 ) -> None:
     telegram_id = 123
     new_lang_code = "en"
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+    mock_uow.users.get_by_id.return_value = user_settings
+
     result = await user_settings_service.update_language(
         mock_uow, telegram_id, new_lang_code
     )
