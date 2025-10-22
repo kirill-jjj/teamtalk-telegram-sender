@@ -218,7 +218,7 @@ class ModerationService:
         command_bus: CommandBus,
         translator: NullTranslations,
     ) -> OperationResult:
-        """Orchestrates the mute/unmute toggle process from a list interaction."""
+        """Toggles a user's mute status based on an action from a paginated list."""
         _ = translator.gettext
 
         user_settings = await uow.users.get_by_id(telegram_id)

@@ -34,7 +34,7 @@ class SubscriptionService:
         user_settings: UserSettings,
         tt_username: str,
     ) -> bool:
-        """Handles all DB and cache operations for a new subscription."""
+        """Creates a new subscription, updating the database and cache."""
         telegram_id = user_settings.telegram_id
 
         subscriber = await uow.subscribers.get_by_id(telegram_id)
@@ -64,7 +64,7 @@ class SubscriptionService:
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
     ) -> OperationResult:
-        """Orchestrates the full deletion of a user's profile from DB and cache."""
+        """Deletes a user's profile from the database and cache."""
         _ = translator.gettext
         logger.info("Deleting full user profile for Telegram ID: %s", telegram_id)
 

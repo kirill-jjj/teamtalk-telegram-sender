@@ -266,7 +266,7 @@ def _process_specific_env_file(config_path: Path, output_path_arg: Path | None) 
 
 
 def main() -> None:
-    """Main function to handle CLI args and orchestrate .env to .toml conversion."""
+    """Parses CLI arguments and starts the .env to .toml conversion."""
     parser = argparse.ArgumentParser(
         description="Convert .env file(s) to structured TOML format.",
         formatter_class=argparse.RawTextHelpFormatter,

@@ -163,7 +163,7 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the add admin command."""
-        await self._manage_admin_ids(
+        await self._update_admins(
             tt_message=tt_message,
             args_str=args_str,
             translator=translator,
@@ -178,14 +178,14 @@ class PrivateMessageCommandHandlers:
         args_str: str | None,
     ) -> None:
         """Handles the remove admin command."""
-        await self._manage_admin_ids(
+        await self._update_admins(
             tt_message=tt_message,
             args_str=args_str,
             translator=translator,
             is_add_action=False,
         )
 
-    async def _manage_admin_ids(
+    async def _update_admins(
         self,
         tt_message: TeamTalkMessage,
         args_str: str | None,
@@ -203,7 +203,7 @@ class PrivateMessageCommandHandlers:
         )
 
         async with self.uow:
-            result = await self.admin_service.process_admin_management_command(
+            result = await self.admin_service.apply_admin_changes(
                 self.uow,
                 add_ids=add_ids,
                 remove_ids=remove_ids,

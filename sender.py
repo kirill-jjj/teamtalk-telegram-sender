@@ -65,7 +65,7 @@ async def on_shutdown(
 
 
 class Application:
-    """Main application class orchestrating the bot's lifecycle and components."""
+    """Main application class that manages the bot's lifecycle and components."""
 
     def __init__(self, app_config_instance: Settings, config_path: str) -> None:
         """Initializes the Application.

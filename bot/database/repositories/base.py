@@ -15,10 +15,9 @@ Model = TypeVar("Model", bound=SQLModel)
 class BaseRepository(Generic[Model]):
     """A base class for data repositories.
 
-    Provides a generic interface for performing common CRUD operations on a
-    SQLModel model. This class is designed to be subclassed by specific
-
-    repositories that handle individual models.
+    A generic repository for common CRUD operations on a SQLModel model.
+    This class is designed to be subclassed by specific repositories that handle
+    individual models.
     """
 
     def __init__(self, model: type[Model], session: AsyncSession) -> None:

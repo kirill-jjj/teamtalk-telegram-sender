@@ -115,7 +115,7 @@ class AdminService:
                 result.failed_ids.append(telegram_id)
         return result
 
-    async def manage_admin_ids(
+    async def update_admins(
         self,
         uow: IUnitOfWork,
         add_ids: list[int],
@@ -138,7 +138,7 @@ class AdminService:
             error_messages=error_messages,
         )
 
-    async def process_admin_management_command(
+    async def apply_admin_changes(
         self,
         uow: IUnitOfWork,
         add_ids: list[int],
@@ -159,7 +159,7 @@ class AdminService:
         Returns:
             An AdminManagementResult containing the outcome of the operation.
         """
-        return await self.manage_admin_ids(
+        return await self.update_admins(
             uow,
             add_ids=add_ids,
             remove_ids=remove_ids,

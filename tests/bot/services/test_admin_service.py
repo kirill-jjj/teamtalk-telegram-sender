@@ -217,7 +217,7 @@ async def test_remove_admins_in_batch(
 
 
 @pytest.mark.asyncio
-async def test_manage_admin_ids_add_success(
+async def test_update_admins_add_success(
     admin_service: AdminService,
     mock_uow: AsyncMock,
 ) -> None:
@@ -230,7 +230,7 @@ async def test_manage_admin_ids_add_success(
         UserSettings(telegram_id=102, language_code="en"),
     ]
 
-    result = await admin_service.manage_admin_ids(
+    result = await admin_service.update_admins(
         mock_uow,
         add_ids=add_ids,
         remove_ids=remove_ids,
@@ -248,7 +248,7 @@ async def test_manage_admin_ids_add_success(
 
 
 @pytest.mark.asyncio
-async def test_manage_admin_ids_remove_success(
+async def test_update_admins_remove_success(
     admin_service: AdminService,
     mock_uow: AsyncMock,
 ) -> None:
@@ -263,7 +263,7 @@ async def test_manage_admin_ids_remove_success(
         UserSettings(telegram_id=202, language_code="en"),
     ]
 
-    result = await admin_service.manage_admin_ids(
+    result = await admin_service.update_admins(
         mock_uow,
         add_ids=add_ids,
         remove_ids=remove_ids,
@@ -281,7 +281,7 @@ async def test_manage_admin_ids_remove_success(
 
 
 @pytest.mark.asyncio
-async def test_manage_admin_ids_mixed_add_remove(
+async def test_update_admins_mixed_add_remove(
     admin_service: AdminService,
     mock_uow: AsyncMock,
 ) -> None:
@@ -297,7 +297,7 @@ async def test_manage_admin_ids_mixed_add_remove(
         UserSettings(telegram_id=201, language_code="en"),
     ]
 
-    result = await admin_service.manage_admin_ids(
+    result = await admin_service.update_admins(
         mock_uow,
         add_ids=add_ids,
         remove_ids=remove_ids,
@@ -317,7 +317,7 @@ async def test_manage_admin_ids_mixed_add_remove(
 
 
 @pytest.mark.asyncio
-async def test_manage_admin_ids_invalid_args(
+async def test_update_admins_invalid_args(
     admin_service: AdminService,
     mock_uow: AsyncMock,
 ) -> None:
@@ -332,7 +332,7 @@ async def test_manage_admin_ids_invalid_args(
         telegram_id=123, language_code="en"
     )
 
-    result = await admin_service.manage_admin_ids(
+    result = await admin_service.update_admins(
         mock_uow,
         add_ids=add_ids,
         remove_ids=remove_ids,
@@ -352,10 +352,10 @@ async def test_manage_admin_ids_invalid_args(
 
 
 @pytest.mark.asyncio
-async def test_manage_admin_ids_empty_args(
+async def test_update_admins_empty_args(
     admin_service: AdminService,
 ) -> None:
-    result = await admin_service.manage_admin_ids(
+    result = await admin_service.update_admins(
         mock_uow,
         add_ids=[],
         remove_ids=[],
