@@ -168,8 +168,8 @@ dev = [
     "ruff",
     "types-toml",
     "pydantic", # Add pydantic to dev dependencies for mypy plugin
+    "types-cachetools",
 ]
-
 [tool.mypy]
 strict = true
 files = ["bot", "scripts", "sender.py"]

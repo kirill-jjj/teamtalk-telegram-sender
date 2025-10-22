@@ -90,6 +90,9 @@ class OperationalParameters(BaseSettings):
     online_users_cache_sync_interval_seconds: int = Field(
         300, description="Sync interval for online TeamTalk users cache."
     )
+    user_settings_cache_max_size: int = Field(
+        1000, description="Maximum number of user settings to keep in cache."
+    )
 
 
 class Settings(BaseSettings):

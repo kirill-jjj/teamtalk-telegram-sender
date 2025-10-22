@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from cachetools import LRUCache
+
 from bot.models import UserSettings
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ class CacheService:
 
     def __init__(
         self,
-        user_settings_cache: dict[int, UserSettings],
+        user_settings_cache: LRUCache[int, UserSettings],
         admin_ids_cache: set[int],
         subscribed_users_cache: set[int],
     ) -> None:

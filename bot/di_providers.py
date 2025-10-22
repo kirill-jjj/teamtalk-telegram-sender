@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
+from cachetools import LRUCache
 from dishka import FromDishka, Provider, Scope, provide, provide_all
 
 from bot.command_bus.bus import CommandBus
@@ -156,10 +157,14 @@ class AppProvider(Provider):
 
     @provide
     @staticmethod
-    def get_cache_service() -> CacheService:
+    def get_cache_service(settings: FromDishka[Settings]) -> CacheService:
         """Provides the application-wide cache service."""
         return CacheService(
-            user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
+            user_settings_cache=LRUCache(
+                maxsize=settings.operational_parameters.user_settings_cache_max_size
+            ),
+            admin_ids_cache=set(),
+            subscribed_users_cache=set(),
         )
 
     @provide
