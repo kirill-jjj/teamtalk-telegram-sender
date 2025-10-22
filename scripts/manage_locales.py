@@ -1,6 +1,6 @@
 """Manage localization files using pybabel for extraction, updates, and compilation."""
 
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 from pathlib import Path
 import subprocess
 import sys

@@ -58,7 +58,7 @@ async def manage_tt_account(
             uow, target_telegram_id
         )
 
-    keyboard = await create_manage_tt_account_keyboard(
+    keyboard = create_manage_tt_account_keyboard(
         translator,
         target_telegram_id=target_telegram_id,
         current_tt_username=data.current_tt_username,
@@ -227,7 +227,7 @@ async def link_tt_account_chosen(
 
     if result.success:
         # Refresh the manage TT account view
-        keyboard = await create_manage_tt_account_keyboard(
+        keyboard = create_manage_tt_account_keyboard(
             translator,
             target_telegram_id=target_telegram_id,
             current_tt_username=tt_username,
@@ -289,7 +289,7 @@ async def unlink_tt_account(
     )
     await query.answer(toast_message, show_alert=True)
 
-    keyboard = await create_manage_tt_account_keyboard(
+    keyboard = create_manage_tt_account_keyboard(
         translator,
         target_telegram_id=target_telegram_id,
         current_tt_username=None,  # Теперь аккаунт отвязан

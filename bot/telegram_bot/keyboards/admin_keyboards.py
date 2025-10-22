@@ -44,7 +44,7 @@ from .shared import (
 )
 
 
-async def create_banned_user_list_keyboard(
+def create_banned_user_list_keyboard(
     translator: NullTranslations,
     page_items: list[SubscriberInfo],
     current_page: int,
@@ -81,7 +81,7 @@ async def create_banned_user_list_keyboard(
 
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
-    return await create_paginated_keyboard(
+    return create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -92,7 +92,7 @@ async def create_banned_user_list_keyboard(
     )
 
 
-async def create_subscriber_list_keyboard(
+def create_subscriber_list_keyboard(
     translator: NullTranslations,
     page_items: list[SubscriberInfo],
     current_page: int,
@@ -119,7 +119,7 @@ async def create_subscriber_list_keyboard(
 
     pagination_kwargs = {"action": SubscriberListAction.PAGE}
 
-    return await create_paginated_keyboard(
+    return create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -130,7 +130,7 @@ async def create_subscriber_list_keyboard(
     )
 
 
-async def create_user_selection_keyboard(
+def create_user_selection_keyboard(
     users_to_display: list[UserDTO],
     command_type: AdminCommand,
 ) -> InlineKeyboardBuilder:
@@ -143,7 +143,7 @@ async def create_user_selection_keyboard(
     return builder
 
 
-async def create_main_menu_keyboard(
+def create_main_menu_keyboard(
     translator: NullTranslations, *, is_admin: bool
 ) -> InlineKeyboardBuilder:
     """Creates the main menu keyboard with commands."""
@@ -174,7 +174,7 @@ async def create_main_menu_keyboard(
     return builder
 
 
-async def create_subscriber_action_menu_keyboard(
+def create_subscriber_action_menu_keyboard(
     translator: NullTranslations, target_telegram_id: int, page: int
 ) -> InlineKeyboardMarkup:
     """Creates the action menu for a specific subscriber."""
@@ -254,7 +254,7 @@ async def create_subscriber_action_menu_keyboard(
     return builder.as_markup()
 
 
-async def create_manage_tt_account_keyboard(
+def create_manage_tt_account_keyboard(
     translator: NullTranslations,
     target_telegram_id: int,
     current_tt_username: str | None,
@@ -294,7 +294,7 @@ async def create_manage_tt_account_keyboard(
     return builder.as_markup()
 
 
-async def create_view_mute_list_keyboard(
+def create_view_mute_list_keyboard(
     translator: NullTranslations,
     page_items: list[Any],  # noqa: ARG001
     current_page: int,
@@ -336,7 +336,7 @@ async def create_view_mute_list_keyboard(
     return builder.as_markup()
 
 
-async def create_admin_subscriber_mute_mode_keyboard(
+def create_admin_subscriber_mute_mode_keyboard(
     translator: NullTranslations,
     current_mode: MuteListMode,
     target_telegram_id: int,
@@ -363,7 +363,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
         telegram_id=target_telegram_id, page=subscriber_page_context
     )
 
-    return await _create_option_selection_keyboard(
+    return _create_option_selection_keyboard(
         translator=translator,
         options=options,
         current_value=current_mode.value,
@@ -374,7 +374,7 @@ async def create_admin_subscriber_mute_mode_keyboard(
     )
 
 
-async def create_linkable_tt_account_list_keyboard(
+def create_linkable_tt_account_list_keyboard(
     translator: NullTranslations,
     page_items: list[UserAccountInfo],
     current_page: int,
@@ -416,7 +416,7 @@ async def create_linkable_tt_account_list_keyboard(
         "target_telegram_id": target_telegram_id,
     }
 
-    return await create_paginated_keyboard(
+    return create_paginated_keyboard(
         translator=translator,
         page_items=page_items,
         current_page=current_page,
@@ -428,7 +428,7 @@ async def create_linkable_tt_account_list_keyboard(
     )
 
 
-async def create_admin_subscriber_lang_keyboard(
+def create_admin_subscriber_lang_keyboard(
     translator: NullTranslations,
     available_languages: list[LanguageInfo],
     target_telegram_id: int,
@@ -466,7 +466,7 @@ async def create_admin_subscriber_lang_keyboard(
         telegram_id=target_telegram_id, page=subscriber_page_context
     )
 
-    return await _create_option_selection_keyboard(
+    return _create_option_selection_keyboard(
         translator=translator,
         options=options,
         current_value=None,
@@ -477,7 +477,7 @@ async def create_admin_subscriber_lang_keyboard(
     )
 
 
-async def create_admin_subscriber_notification_pref_keyboard(
+def create_admin_subscriber_notification_pref_keyboard(
     translator: NullTranslations,
     current_setting: NotificationSetting,
     target_telegram_id: int,
@@ -500,7 +500,7 @@ async def create_admin_subscriber_notification_pref_keyboard(
         telegram_id=target_telegram_id, page=subscriber_page_context
     )
 
-    return await _create_option_selection_keyboard(
+    return _create_option_selection_keyboard(
         translator=translator,
         options=options,
         current_value=current_setting.value,

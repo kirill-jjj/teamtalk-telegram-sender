@@ -118,11 +118,11 @@ class TeamTalkCache:
         """Updates internal caches based on TeamTalk user or account events."""
         user_id = getattr(data, "id", None)
 
-        if event_type in [
+        if event_type in {
             PytalkEvent.USER_LOGIN,
             PytalkEvent.USER_JOIN,
             PytalkEvent.USER_UPDATE,
-        ]:
+        }:
             user_data: PytalkUser = data
             if user_id is not None:
                 self.online_users_cache[user_id] = user_data

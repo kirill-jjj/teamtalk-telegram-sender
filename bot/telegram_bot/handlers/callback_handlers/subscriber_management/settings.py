@@ -45,7 +45,7 @@ class SettingChoiceConfig(TypedDict):
     """A type hint for the setting choice configuration dictionary."""
 
     message_text: str
-    keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]"
+    keyboard_factory: "Callable[..., InlineKeyboardMarkup]"
     keyboard_factory_kwargs: dict[str, object]
 
 
@@ -56,12 +56,12 @@ settings_router = Router(name="subscriber_management.settings_router")
 async def _present_subscriber_setting_choice(
     query: CallbackQuery,
     message_text: str,
-    keyboard_factory: "Callable[..., Awaitable[InlineKeyboardMarkup]]",
+    keyboard_factory: "Callable[..., InlineKeyboardMarkup]",
     keyboard_factory_kwargs: dict[str, object],
 ) -> None:
     """A generic helper to present a settings choice menu to an admin."""
     if isinstance(query.message, Message):
-        keyboard = await keyboard_factory(**keyboard_factory_kwargs)
+        keyboard = keyboard_factory(**keyboard_factory_kwargs)
         await query.message.edit_text(message_text, reply_markup=keyboard)
         await query.answer()
 

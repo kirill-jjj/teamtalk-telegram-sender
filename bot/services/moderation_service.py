@@ -196,7 +196,7 @@ class ModerationService:
                 )
                 if account:
                     username_to_toggle = account.username
-        elif list_type in [UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED]:
+        elif list_type in {UserListAction.LIST_MUTED, UserListAction.LIST_ALLOWED}:
             username_to_toggle = get_item_from_paginated_list(
                 items=[
                     muted.muted_teamtalk_username

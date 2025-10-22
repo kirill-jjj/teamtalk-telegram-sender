@@ -27,7 +27,7 @@ async def back_to_main_settings_menu(
 ) -> None:
     """Handles navigating back to the main settings menu."""
     _ = translator.gettext
-    main_settings_builder = await create_main_settings_keyboard(translator)
+    main_settings_builder = create_main_settings_keyboard(translator)
     main_settings_text = _("Settings")
 
     await safe_edit_text(

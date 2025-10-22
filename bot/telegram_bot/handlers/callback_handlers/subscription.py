@@ -45,7 +45,7 @@ async def show_subscriptions_menu(
         return
 
     current_notification_setting = user_settings.notification_settings
-    subscription_settings_markup = await create_subscription_settings_keyboard(
+    subscription_settings_markup = create_subscription_settings_keyboard(
         translator, current_notification_setting
     )
 
@@ -104,7 +104,7 @@ async def set_subscription_setting(
     )
     await callback_query.answer(toast_text)
 
-    keyboard_markup = await create_subscription_settings_keyboard(
+    keyboard_markup = create_subscription_settings_keyboard(
         translator, updated_settings.notification_settings
     )
     await safe_edit_text(

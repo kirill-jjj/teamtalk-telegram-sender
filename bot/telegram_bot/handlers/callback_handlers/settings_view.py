@@ -27,7 +27,7 @@ async def refresh_main_settings_view(
         await query.answer(_("An error occurred. Please try again."), show_alert=True)
         return
 
-    main_settings_builder = await create_main_settings_keyboard(translator)
+    main_settings_builder = create_main_settings_keyboard(translator)
     await safe_edit_text(
         message_to_edit=cast(Message, query.message),
         text=_("Settings"),
@@ -48,7 +48,7 @@ async def refresh_notification_settings_view(
         return
 
     menu_text = _("Notification Settings")
-    updated_keyboard_markup = await create_notification_settings_keyboard(
+    updated_keyboard_markup = create_notification_settings_keyboard(
         translator, user_settings
     )
 

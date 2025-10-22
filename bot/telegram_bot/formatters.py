@@ -36,7 +36,7 @@ def format_mute_toast(
         (MuteListMode.whitelist, True): _("added to whitelist"),
         (MuteListMode.whitelist, False): _("removed from whitelist"),
     }
-    action_text = action_key_map[(current_mode, was_added_to_list)]
+    action_text = action_key_map[current_mode, was_added_to_list]
     return _("{username} has been {action}.").format(
         username=quoted_username, action=action_text
     )

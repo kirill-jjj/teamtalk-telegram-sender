@@ -181,9 +181,7 @@ async def show_manage_muted_menu(
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    manage_muted_builder = await create_manage_muted_users_keyboard(
-        translator, user_settings
-    )
+    manage_muted_builder = create_manage_muted_users_keyboard(translator, user_settings)
     full_text = format_manage_muted_menu_text(translator, user_settings.mute_list_mode)
 
     await safe_edit_text(

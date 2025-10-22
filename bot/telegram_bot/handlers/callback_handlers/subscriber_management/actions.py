@@ -44,7 +44,7 @@ async def _display_subscriber_view(
     translator: NullTranslations,
 ) -> None:
     """Helper function to display the subscriber details view."""
-    keyboard = await create_subscriber_action_menu_keyboard(
+    keyboard = create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
     # The user_settings object is now nested inside the view_data DTO

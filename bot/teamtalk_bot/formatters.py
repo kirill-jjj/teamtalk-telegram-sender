@@ -94,7 +94,7 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
             current_chunk_str += char_code
             current_chunk_bytes_len += char_bytes_len
 
-            if char_code in ("\n", " "):
+            if char_code in {"\n", " "}:
                 last_safe_split_index_in_chunk = len(current_chunk_str)
                 last_safe_split_index_in_remaining = i + 1
 

@@ -54,7 +54,7 @@ class PackableCallbackData(Protocol):
         ...
 
 
-async def _create_option_selection_keyboard(
+def _create_option_selection_keyboard(
     translator: NullTranslations,
     options: list[tuple[str, str]],
     current_value: str | None,
@@ -119,7 +119,7 @@ def _add_pagination_controls_generic(
         builder.row(*pagination_buttons)
 
 
-async def create_paginated_keyboard(
+def create_paginated_keyboard(
     translator: NullTranslations,
     page_items: list[Any],
     current_page: int,
@@ -166,7 +166,7 @@ async def create_paginated_keyboard(
     return builder.as_markup()
 
 
-async def _add_pagination_controls(
+def _add_pagination_controls(
     builder: InlineKeyboardBuilder,
     translator: NullTranslations,
     current_page: int,
@@ -199,7 +199,7 @@ async def _add_pagination_controls(
         builder.row(*pagination_buttons)
 
 
-async def create_toggle_mute_keyboard(
+def create_toggle_mute_keyboard(
     translator: NullTranslations,
     page_items: list[Any],
     current_page: int,
@@ -238,7 +238,7 @@ async def create_toggle_mute_keyboard(
     if page_items:
         builder.adjust(1)
 
-    await _add_pagination_controls(
+    _add_pagination_controls(
         builder,
         translator,
         current_page,

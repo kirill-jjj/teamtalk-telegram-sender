@@ -144,7 +144,7 @@ async def on_settings_command(
         return
 
     await safe_delete_message(message, log_context_message="user settings command")
-    settings_builder = await create_main_settings_keyboard(translator)
+    settings_builder = create_main_settings_keyboard(translator)
     try:
         await message.answer(
             text=_("Settings"), reply_markup=settings_builder.as_markup()
@@ -166,7 +166,7 @@ async def on_menu_command(
 
     await safe_delete_message(message, log_context_message="user menu command")
     is_admin = cache.is_admin(message.from_user.id)
-    menu_builder = await create_main_menu_keyboard(translator, is_admin=is_admin)
+    menu_builder = create_main_menu_keyboard(translator, is_admin=is_admin)
     try:
         await message.answer(
             text=_("Main Menu:"), reply_markup=menu_builder.as_markup()

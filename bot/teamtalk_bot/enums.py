@@ -1,9 +1,9 @@
 """Enums for TeamTalk bot specific types."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class PytalkEvent(str, Enum):
+class PytalkEvent(StrEnum):
     """Enumeration for pytalk event types used in caching."""
 
     USER_LOGIN = "user_login"

@@ -38,7 +38,7 @@ async def show_language_menu(
 ) -> None:
     """Shows the language selection menu."""
     _ = translator.gettext
-    language_markup = await create_language_selection_keyboard(
+    language_markup = create_language_selection_keyboard(
         translator, available_languages=available_languages
     )
 

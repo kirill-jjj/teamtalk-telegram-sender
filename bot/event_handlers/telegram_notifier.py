@@ -244,7 +244,7 @@ class TelegramNotificationHandler:
                 else None
             )
 
-            send_silently = await should_send_silently(
+            send_silently = should_send_silently(
                 chat_id, self.cache, online_users_cache_for_instance
             )
 

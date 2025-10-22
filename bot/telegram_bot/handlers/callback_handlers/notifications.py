@@ -43,7 +43,7 @@ async def show_notifications_menu(
         await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    notification_settings_builder = await create_notification_settings_keyboard(
+    notification_settings_builder = create_notification_settings_keyboard(
         translator, user_settings
     )
     await safe_edit_text(

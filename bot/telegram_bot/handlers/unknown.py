@@ -32,5 +32,3 @@ async def on_unknown_message(
 
     if message.text.startswith("/"):
         await message.reply(_("Unknown command. Use /help to see available commands."))
-    else:
-        pass

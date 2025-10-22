@@ -37,7 +37,7 @@ from .shared import (
 ttstr = pytalk.instance.sdk.ttstr
 
 
-async def create_main_settings_keyboard(
+def create_main_settings_keyboard(
     translator: NullTranslations,
 ) -> InlineKeyboardBuilder:
     """Creates the main settings menu keyboard."""
@@ -59,7 +59,7 @@ async def create_main_settings_keyboard(
     return builder
 
 
-async def create_language_selection_keyboard(
+def create_language_selection_keyboard(
     translator: NullTranslations,
     available_languages: list[LanguageInfo],
 ) -> InlineKeyboardMarkup:
@@ -74,7 +74,7 @@ async def create_language_selection_keyboard(
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
-    return await _create_option_selection_keyboard(
+    return _create_option_selection_keyboard(
         translator=translator,
         options=options,
         current_value=None,
@@ -85,7 +85,7 @@ async def create_language_selection_keyboard(
     )
 
 
-async def create_subscription_settings_keyboard(
+def create_subscription_settings_keyboard(
     translator: NullTranslations, current_setting: NotificationSetting
 ) -> InlineKeyboardMarkup:
     """Creates the subscription settings keyboard using the generic helper."""
@@ -99,7 +99,7 @@ async def create_subscription_settings_keyboard(
 
     back_button_cb_data = SettingsCallback(action=SettingsNavAction.BACK_TO_MAIN)
 
-    return await _create_option_selection_keyboard(
+    return _create_option_selection_keyboard(
         translator=translator,
         options=options,
         current_value=current_setting.value,
@@ -110,7 +110,7 @@ async def create_subscription_settings_keyboard(
     )
 
 
-async def create_notification_settings_keyboard(
+def create_notification_settings_keyboard(
     translator: NullTranslations, user_settings: SettingsViewDTO
 ) -> InlineKeyboardBuilder:
     """Creates the notification settings keyboard."""
@@ -143,7 +143,7 @@ async def create_notification_settings_keyboard(
     return builder
 
 
-async def create_manage_muted_users_keyboard(
+def create_manage_muted_users_keyboard(
     translator: NullTranslations, user_settings: SettingsViewDTO
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""

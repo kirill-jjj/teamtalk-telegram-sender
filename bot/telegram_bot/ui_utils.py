@@ -1,6 +1,6 @@
 """Utility functions for creating and managing UI elements like paginated lists."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -86,7 +86,7 @@ async def display_moderation_view(
         await message.reply(view_data.error_message or _("Failed to get user list."))
         return
 
-    builder = await create_user_selection_keyboard(view_data.users, command_type)
+    builder = create_user_selection_keyboard(view_data.users, command_type)
     reply_text = format_moderation_prompt(
         command_type, view_data.server_name, translator
     )
@@ -103,7 +103,7 @@ async def display_paginated_list(
     page: int,
     title_text: str,
     empty_list_text: str,
-    keyboard_factory: Callable[..., Awaitable[InlineKeyboardMarkup]],
+    keyboard_factory: Callable[..., InlineKeyboardMarkup],
     keyboard_factory_kwargs: dict[str, Any],
     page_size: int = USERS_PER_PAGE,
     server_host_for_display: str | None = None,
@@ -142,7 +142,7 @@ async def display_paginated_list(
     total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
     current_page_idx = max(0, min(page, total_pages - 1))
 
-    keyboard_markup = await keyboard_factory(
+    keyboard_markup = keyboard_factory(
         translator,
         page_items=items_on_page,
         current_page=current_page_idx,
