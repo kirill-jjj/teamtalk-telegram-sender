@@ -1,6 +1,6 @@
 """SQLModel definitions for database tables."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 import sqlalchemy as sa
@@ -135,7 +135,10 @@ class BanList(SQLModel, table=True):
     # specific rules are needed.
 
     ban_reason: str | None = Field(default=None)
-    banned_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    banned_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
     # Constraint to ensure at least one identifier is present
     __table_args__ = (
