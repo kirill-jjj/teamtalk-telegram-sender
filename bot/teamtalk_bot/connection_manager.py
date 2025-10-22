@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 from typing import TYPE_CHECKING
@@ -95,11 +94,6 @@ class TeamTalkConnectionManager:
         conn.mark_finalized(status=False)
         conn.login_complete_time = None
 
-    async def initiate_reconnect(self) -> None:
-        """Initiates a reconnection sequence for this connection."""
-        await self.disconnect_instance()
-        await asyncio.to_thread(self.connect)
-
     async def determine_target_channel(self) -> tuple[int, str]:
         """Determines the target channel ID and name from config."""
         conn = self.connection
@@ -149,15 +143,12 @@ class TeamTalkConnectionManager:
         except Exception as e:
             await self._handle_generic_join_error(conn, e)
 
+    @staticmethod
     async def _handle_no_instance(
-        self,
         conn: TeamTalkConnection | None,
         _instance: pytalk.TeamTalkInstance | None,
     ) -> None:
         """Handles the case where there is no connection or instance."""
-        host = conn.server_info.host if conn else "Unknown"
-        logger.error("[%s] No instance to join channel.", host)
-        await self.initiate_reconnect()
 
     async def _try_join_channel(
         self, conn: TeamTalkConnection, instance: pytalk.TeamTalkInstance
@@ -231,11 +222,11 @@ class TeamTalkConnectionManager:
                 ch_id_to_get,
             )
 
+    @staticmethod
     async def _handle_generic_join_error(
-        self, conn: TeamTalkConnection, _error: Exception
+        conn: TeamTalkConnection, _error: Exception
     ) -> None:
         """Handles a generic error during channel join."""
         logger.exception(
             "[%s] Error during channel join/finalization.", conn.server_info.host
         )
-        await self.initiate_reconnect()

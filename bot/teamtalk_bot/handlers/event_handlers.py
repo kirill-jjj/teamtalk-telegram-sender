@@ -102,7 +102,7 @@ class PytalkEventHandlers:
                 "[%s] No instance available at start of on_my_login.",
                 connection.server_info.host,
             )
-            await connection.connection_manager.initiate_reconnect()
+
             return
 
         logger.info(
@@ -167,7 +167,6 @@ class PytalkEventHandlers:
         connection.mark_finalized(status=False)
         connection.login_complete_time = None
         await connection.cache_manager.stop_background_tasks()
-        await connection.connection_manager.initiate_reconnect()
 
     async def on_my_kicked_from_channel(
         self, channel_obj: PytalkChannel, connection: TeamTalkConnection
@@ -186,7 +185,6 @@ class PytalkEventHandlers:
         connection.mark_finalized(status=False)
         connection.login_complete_time = None
         await connection.cache_manager.stop_background_tasks()
-        await connection.connection_manager.initiate_reconnect()
 
     @staticmethod
     async def on_user_update(user: PytalkUser, connection: TeamTalkConnection) -> None:
