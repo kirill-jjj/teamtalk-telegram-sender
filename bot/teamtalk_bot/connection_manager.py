@@ -199,7 +199,7 @@ class TeamTalkConnectionManager:
     ) -> None:
         """Handles a permission error when joining a channel."""
         _, target_chan_name = await self.determine_target_channel()
-        logger.exception(
+        logger.error(
             "[%s] PermissionError joining '%s'. Will try to finalize in "
             "current/default channel.",
             conn.server_info.host,
@@ -215,7 +215,7 @@ class TeamTalkConnectionManager:
                 ch_to_finalize_after_fail, conn
             )
         else:
-            logger.exception(
+            logger.error(
                 "[%s] Could not get current channel (ID: %s) to finalize "
                 "after permission error.",
                 conn.server_info.host,
@@ -227,6 +227,6 @@ class TeamTalkConnectionManager:
         conn: TeamTalkConnection, _error: Exception
     ) -> None:
         """Handles a generic error during channel join."""
-        logger.exception(
+        logger.error(
             "[%s] Error during channel join/finalization.", conn.server_info.host
         )

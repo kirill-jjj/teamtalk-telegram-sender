@@ -87,6 +87,15 @@ select = [
     "TID",
     "PERF",
     "BLE",
+    "T10", # flake8-debugger
+    "LOG", # flake8-logging
+    "EM",  # flake8-errmsg
+    "INT", # flake8-gettext
+    "FA",  # flake8-future-annotations
+    "PGH", # pygrep-hooks
+    "FIX", # flake8-fixme
+    "FURB",# refurb
+    "Q",   # flake8-quotes
 ]
 ignore = [
     "D203",

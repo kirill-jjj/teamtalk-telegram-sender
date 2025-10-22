@@ -13,6 +13,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import column, table
 
+logger = logging.getLogger(__name__)
+
 # revision identifiers, used by Alembic.
 revision: str = "8677509804ef"
 down_revision: str | Sequence[str] | None = None
@@ -172,9 +174,9 @@ def upgrade() -> None:  # noqa: PLR0912
             ["teamtalk_username"],
             unique=False,
         )
-        logging.info("Table 'ban_list' created.")
+        logger.info("Table 'ban_list' created.")
     else:
-        logging.info("Table 'ban_list' already exists.")
+        logger.info("Table 'ban_list' already exists.")
 
     # Data Migrations
     if _table_exists("user_settings", conn) and _column_exists(

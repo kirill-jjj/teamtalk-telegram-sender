@@ -38,7 +38,7 @@ async def universal_error_handler(
     translator = translator_factory(settings.general.default_lang)
     _ = translator.gettext
 
-    logger.exception(
+    logger.exception(  # noqa: LOG004
         "An error occurred while processing an update: %s",
         event.exception,
         exc_info=event.exception,

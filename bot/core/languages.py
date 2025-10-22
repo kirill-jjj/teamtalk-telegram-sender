@@ -2,6 +2,7 @@
 
 import gettext
 import logging
+from operator import itemgetter
 from pathlib import Path
 from typing import TypedDict
 
@@ -74,6 +75,6 @@ def discover_languages(locales_path: Path = LOCALE_DIR) -> list[LanguageInfo]:
             discovered_codes.add(lang_code)
 
     # 3. Sort the final list for nice display in menus.
-    discovered.sort(key=lambda x: x["native_name"])
+    discovered.sort(key=itemgetter("native_name"))
 
     return discovered

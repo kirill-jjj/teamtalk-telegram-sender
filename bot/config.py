@@ -126,10 +126,12 @@ class Settings(BaseSettings):
         except FileNotFoundError as e:
             # Try to construct a more informative path based on common execution patterns
             # Consider defining a custom exception for more structured error reporting
-            raise FileNotFoundError("Config not found") from e  # noqa: TRY003
+            error_msg = "Config not found"
+            raise FileNotFoundError(error_msg) from e
         except tomllib.TOMLDecodeError as e:
             # Consider defining a custom exception
-            raise ValueError("TOML decode error") from e  # noqa: TRY003
+            error_msg = "TOML decode error"
+            raise ValueError(error_msg) from e
 
         instance = cls(**data)
         instance._config_dir = path.parent.resolve()
