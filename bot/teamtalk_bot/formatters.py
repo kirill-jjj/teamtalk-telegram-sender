@@ -109,12 +109,12 @@ def _split_text_for_tt(text: str, max_len_bytes: int) -> list[str]:
     return parts_to_send_list
 
 
-def get_effective_server_name(
+def get_server_display_name(
     tt_instance: TeamTalkInstance | None,
     translator: gettext.NullTranslations,
     app_cfg: Settings,
 ) -> str:
-    """Determines the effective server name to display.
+    """Determines the server name to display.
 
     It prioritizes the server name from `app_cfg.teamtalk.server_name`.
     If not set, it attempts to fetch it from the TeamTalk instance.

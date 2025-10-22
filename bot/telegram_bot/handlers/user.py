@@ -50,7 +50,7 @@ async def on_start_with_payload(
         return
 
     async with uow:
-        reply_text, _ = await deeplink_service.process_telegram_deeplink(
+        reply_text, _ = await deeplink_service.execute_telegram_deeplink(
             uow,
             token=token,
             translator=translator,

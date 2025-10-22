@@ -381,7 +381,7 @@ async def test_execute_deeplink_unknown_action(
 
 
 @pytest.mark.asyncio
-async def test_process_telegram_deeplink_success(
+async def test_execute_telegram_deeplink_success(
     deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
@@ -400,27 +400,27 @@ async def test_process_telegram_deeplink_success(
     )
 
     mock_uow.users.get_or_create.return_value = user_settings
-    mock_uow.deeplinks.get_and_delete_if_expired.return_value = deeplink
+    mock_uow.deeplinks.resolve_token.return_value = deeplink
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
     mock_subscription_service.create_subscription.return_value = True
     mock_uow.admins.get_by_id.return_value = None
 
-    reply_text, success = await deeplink_service.process_telegram_deeplink(
+    reply_text, success = await deeplink_service.execute_telegram_deeplink(
         mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
         telegram_id, defaults={"language_code": default_lang}
     )
-    mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
+    mock_uow.deeplinks.resolve_token.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_called_once_with(deeplink)
     assert "You have successfully subscribed to notifications." in reply_text
     assert success is True
 
 
 @pytest.mark.asyncio
-async def test_process_telegram_deeplink_invalid_or_expired_deeplink(
+async def test_execute_telegram_deeplink_invalid_or_expired_deeplink(
     deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,
     mock_translator: MagicMock,
@@ -431,23 +431,23 @@ async def test_process_telegram_deeplink_invalid_or_expired_deeplink(
     user_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
 
     mock_uow.users.get_or_create.return_value = user_settings
-    mock_uow.deeplinks.get_and_delete_if_expired.return_value = None
+    mock_uow.deeplinks.resolve_token.return_value = None
 
-    reply_text, success = await deeplink_service.process_telegram_deeplink(
+    reply_text, success = await deeplink_service.execute_telegram_deeplink(
         mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
         telegram_id, defaults={"language_code": default_lang}
     )
-    mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
+    mock_uow.deeplinks.resolve_token.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_not_called()
     assert "Invalid or expired deeplink." in reply_text
     assert success is False
 
 
 @pytest.mark.asyncio
-async def test_process_telegram_deeplink_intended_for_different_user(
+async def test_execute_telegram_deeplink_intended_for_different_user(
     deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,
     mock_translator: MagicMock,
@@ -465,16 +465,16 @@ async def test_process_telegram_deeplink_intended_for_different_user(
     )
 
     mock_uow.users.get_or_create.return_value = user_settings
-    mock_uow.deeplinks.get_and_delete_if_expired.return_value = deeplink
+    mock_uow.deeplinks.resolve_token.return_value = deeplink
 
-    reply_text, success = await deeplink_service.process_telegram_deeplink(
+    reply_text, success = await deeplink_service.execute_telegram_deeplink(
         mock_uow, token, mock_translator, telegram_id, default_lang
     )
 
     mock_uow.users.get_or_create.assert_called_once_with(
         telegram_id, defaults={"language_code": default_lang}
     )
-    mock_uow.deeplinks.get_and_delete_if_expired.assert_called_once_with(token)
+    mock_uow.deeplinks.resolve_token.assert_called_once_with(token)
     mock_uow.deeplinks.delete.assert_not_called()
     assert (
         "This confirmation link was intended for a different Telegram account."

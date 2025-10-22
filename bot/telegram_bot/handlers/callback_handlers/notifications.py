@@ -16,7 +16,7 @@ from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import NotificationCallback, SettingsCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_notification_settings_keyboard
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 from .settings_view import refresh_notification_settings_view
 
@@ -46,7 +46,7 @@ async def show_notifications_menu(
     notification_settings_builder = create_notification_settings_keyboard(
         translator, user_settings
     )
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),

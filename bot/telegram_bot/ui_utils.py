@@ -151,7 +151,7 @@ async def display_paginated_list(
     )
 
     if isinstance(target, CallbackQuery) and isinstance(target.message, Message):
-        await safe_edit_text(
+        await edit_message_text(
             message_to_edit=target.message,
             text=final_message_text,
             reply_markup=keyboard_markup,
@@ -189,7 +189,7 @@ async def display_paginated_list(
                 )
 
 
-async def safe_edit_text(
+async def edit_message_text(
     message_to_edit: Message | InaccessibleMessage,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,

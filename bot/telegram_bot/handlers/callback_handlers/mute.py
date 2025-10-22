@@ -39,7 +39,7 @@ from bot.telegram_bot.keyboards.shared import (
 )
 from bot.telegram_bot.ui_utils import (
     _display_user_list,
-    safe_edit_text,
+    edit_message_text,
 )
 
 logger = logging.getLogger(__name__)
@@ -184,7 +184,7 @@ async def show_manage_muted_menu(
     manage_muted_builder = create_manage_muted_users_keyboard(translator, user_settings)
     full_text = format_manage_muted_menu_text(translator, user_settings.mute_list_mode)
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),

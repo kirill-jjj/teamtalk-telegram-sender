@@ -99,7 +99,7 @@ class AccountManagementData(BaseModel):
     current_tt_username: str | None
 
 
-class SubscriberViewData(BaseModel):
+class SubscriberView(BaseModel):
     """DTO for subscriber data including settings and display name."""
 
     user_settings: UserSettings

@@ -29,7 +29,7 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.ui_utils import (
     display_paginated_list,
-    safe_edit_text,
+    edit_message_text,
 )
 from bot.utils.pagination import paginate_list
 
@@ -68,7 +68,7 @@ async def manage_tt_account(
         "Manage TeamTalk account link for subscriber {telegram_id}:"
     ).format(telegram_id=target_telegram_id)
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=cast(Message, query.message),
         text=message_text,
         reply_markup=keyboard,
@@ -241,7 +241,7 @@ async def link_tt_account_chosen(
             await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
             return
 
-        await safe_edit_text(
+        await edit_message_text(
             message_to_edit=query.message,
             text=message_text,
             reply_markup=keyboard,
@@ -303,7 +303,7 @@ async def unlink_tt_account(
         await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
         return
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=query.message,
         text=message_text,
         reply_markup=keyboard,

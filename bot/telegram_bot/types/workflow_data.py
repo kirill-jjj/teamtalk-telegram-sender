@@ -10,7 +10,7 @@ from bot.config import Settings
 from bot.services.schemas import SettingsViewDTO
 
 
-class WorkflowData(TypedDict, total=False):
+class WorkflowContext(TypedDict, total=False):
     """A dictionary to hold all data passed between middlewares and handlers.
 
     `total=False` is used because not all middlewares run for all events,

@@ -65,7 +65,7 @@ def is_linked_user_online(
 def is_muted(
     username: str, mute_list_mode: MuteListMode, muted_usernames_set: set[str]
 ) -> bool:
-    """Determines if a username is effectively muted based on user settings."""
+    """Determines if a username is muted based on user settings."""
     is_in_set = username in muted_usernames_set
     if mute_list_mode == MuteListMode.whitelist:
         return not is_in_set  # In whitelist, not in set -> muted

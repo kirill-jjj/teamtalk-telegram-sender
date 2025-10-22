@@ -49,7 +49,7 @@ class DeeplinkRepository(BaseRepository[Deeplink]):
         await self.add(deeplink)
         return deeplink
 
-    async def get_and_delete_if_expired(self, token: str) -> Deeplink | None:
+    async def resolve_token(self, token: str) -> Deeplink | None:
         """Retrieves a deeplink by its token, deleting it if it has expired.
 
         Args:

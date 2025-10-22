@@ -19,7 +19,7 @@ from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_language_selection_keyboard
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 from .settings_view import refresh_main_settings_view
 
@@ -42,7 +42,7 @@ async def show_language_menu(
         translator, available_languages=available_languages
     )
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Please choose your language:"),
         reply_markup=language_markup,

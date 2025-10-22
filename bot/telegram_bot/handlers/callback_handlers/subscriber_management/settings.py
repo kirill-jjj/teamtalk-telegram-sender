@@ -18,7 +18,7 @@ from bot.models import (
     NotificationSetting,
     UserSettings,
 )
-from bot.services.schemas import SubscriberViewData
+from bot.services.schemas import SubscriberView
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     AdminSetSubscriberLanguageCallback,
@@ -248,7 +248,7 @@ async def _display_subscriber_mute_list_page(
     translator: NullTranslations,
     bot: EventBot,
     uow: IUnitOfWork,
-    view_data: SubscriberViewData,
+    view_data: SubscriberView,
     subscriber_list_return_page: int,
     mute_list_page_num: int,
 ) -> None:

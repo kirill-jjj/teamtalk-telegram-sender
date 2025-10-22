@@ -20,7 +20,7 @@ from bot.teamtalk_bot.command_handlers import (
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.teamtalk_bot.formatters import (
     format_teamtalk_help_message,
-    get_effective_server_name,
+    get_server_display_name,
     get_tt_user_display_name,
 )
 
@@ -145,7 +145,7 @@ class MessageHandler:
             tt_message.content[:50],
         )
 
-        server_name = get_effective_server_name(
+        server_name = get_server_display_name(
             self.connection.instance, translator, self.settings
         )
         server_key = (

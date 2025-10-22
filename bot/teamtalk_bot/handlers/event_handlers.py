@@ -23,7 +23,7 @@ from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.enums import PytalkEvent
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.formatters import (
-    get_effective_server_name,
+    get_server_display_name,
     get_tt_user_display_name,
 )
 
@@ -65,7 +65,7 @@ class PytalkEventHandlers:
             return
 
         translator = self.translator_factory(connection.settings.general.default_lang)
-        server_name = get_effective_server_name(
+        server_name = get_server_display_name(
             connection.instance, translator, connection.settings
         )
         user_display_name = get_tt_user_display_name(user, translator)

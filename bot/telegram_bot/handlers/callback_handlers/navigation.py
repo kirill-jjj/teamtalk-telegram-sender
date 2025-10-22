@@ -11,7 +11,7 @@ from bot.core.enums import SettingsNavAction
 from bot.telegram_bot.callback_data import SettingsCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_main_settings_keyboard
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 logger = logging.getLogger(__name__)
 navigation_router = Router(name="callback_handlers.navigation")
@@ -30,7 +30,7 @@ async def back_to_main_settings_menu(
     main_settings_builder = create_main_settings_keyboard(translator)
     main_settings_text = _("Settings")
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=main_settings_text,
         reply_markup=main_settings_builder.as_markup(),

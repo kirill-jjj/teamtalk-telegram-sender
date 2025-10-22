@@ -12,7 +12,7 @@ from bot.core.enums import SubscriberCommand, SubscriberListAction
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
-from bot.services.schemas import SettingsViewDTO, SubscriberViewData
+from bot.services.schemas import SettingsViewDTO, SubscriberView
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
@@ -40,7 +40,7 @@ async def _display_subscriber_view(
     query: CallbackQuery,
     target_telegram_id: int,
     page_context: int,
-    view_data: SubscriberViewData,
+    view_data: SubscriberView,
     translator: NullTranslations,
 ) -> None:
     """Helper function to display the subscriber details view."""

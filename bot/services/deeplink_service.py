@@ -148,7 +148,7 @@ class DeeplinkService:
         logger.warning("No handler for deeplink action: %s", action)
         return translator.gettext("Invalid deeplink action.")
 
-    async def process_telegram_deeplink(
+    async def execute_telegram_deeplink(
         self,
         uow: IUnitOfWork,
         token: str,
@@ -173,7 +173,7 @@ class DeeplinkService:
             telegram_id, defaults={"language_code": default_lang}
         )
 
-        deeplink = await uow.deeplinks.get_and_delete_if_expired(token)
+        deeplink = await uow.deeplinks.resolve_token(token)
         if not deeplink:
             return _("Invalid or expired deeplink."), False
 

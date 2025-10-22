@@ -22,7 +22,7 @@ from bot.core.enums import AdminCommand
 from bot.services.schemas import UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import (
-    get_effective_server_name,
+    get_server_display_name,
     get_tt_user_display_name,
     get_user_display_channel_name,
 )
@@ -54,7 +54,7 @@ class TeamTalkCommandHandlers:
             )
 
         translator = self._translator_factory(command.lang_code)
-        server_name = get_effective_server_name(
+        server_name = get_server_display_name(
             self._tt_connection.instance, translator, self._settings
         )
 
@@ -144,7 +144,7 @@ class TeamTalkCommandHandlers:
             )
 
         user_to_act_on = self._tt_connection.instance.get_user(user_id)
-        server_name_for_display = get_effective_server_name(
+        server_name_for_display = get_server_display_name(
             self._tt_connection.instance, translator, self._settings
         )
 

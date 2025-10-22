@@ -50,7 +50,7 @@ async def register_all_handlers(
     logger.info("Command handlers registered.")
 
     # Register event handlers (subscribers)
-    event_bus.subscribe(UserJoinedEvent, telegram_handler.handle_user_joined)
+    event_bus.subscribe(UserJoinedEvent, telegram_handler.on_user_joined)
     event_bus.subscribe(UserLeftEvent, telegram_handler.handle_user_left)
     event_bus.subscribe(
         PrivateMessageReceivedEvent, telegram_handler.handle_private_message

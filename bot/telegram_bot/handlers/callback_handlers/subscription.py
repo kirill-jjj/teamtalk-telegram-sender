@@ -18,7 +18,7 @@ from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ async def show_subscriptions_menu(
         translator, current_notification_setting
     )
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_markup,
@@ -107,7 +107,7 @@ async def set_subscription_setting(
     keyboard_markup = create_subscription_settings_keyboard(
         translator, updated_settings.notification_settings
     )
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
         text=_("Subscription Settings"),
         reply_markup=keyboard_markup,

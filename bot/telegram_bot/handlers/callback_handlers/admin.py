@@ -15,7 +15,7 @@ from bot.telegram_bot.callback_data import AdminCallback
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
 )
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 logger = logging.getLogger(__name__)
 admin_actions_router = Router(name="callback_handlers.admin")
@@ -58,7 +58,7 @@ async def on_moderation_confirm(
     await callback_query.answer(text=result.message, show_alert=not result.success)
 
     if result.success and callback_query.message:
-        await safe_edit_text(
+        await edit_message_text(
             message_to_edit=callback_query.message,
             text=result.message,
             reply_markup=None,

@@ -11,7 +11,7 @@ from bot.telegram_bot.keyboards import (
     create_main_settings_keyboard,
     create_notification_settings_keyboard,
 )
-from bot.telegram_bot.ui_utils import safe_edit_text
+from bot.telegram_bot.ui_utils import edit_message_text
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def refresh_main_settings_view(
         return
 
     main_settings_builder = create_main_settings_keyboard(translator)
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=cast(Message, query.message),
         text=_("Settings"),
         reply_markup=main_settings_builder.as_markup(),
@@ -52,7 +52,7 @@ async def refresh_notification_settings_view(
         translator, user_settings
     )
 
-    await safe_edit_text(
+    await edit_message_text(
         message_to_edit=cast(Message, query.message),
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),

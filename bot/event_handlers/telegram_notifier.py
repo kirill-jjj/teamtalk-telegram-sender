@@ -66,7 +66,7 @@ class TelegramNotificationHandler:
         self.recipient_service = recipient_service
         self.session_factory = session_factory
 
-    async def handle_user_joined(self, event: UserJoinedEvent) -> None:
+    async def on_user_joined(self, event: UserJoinedEvent) -> None:
         """Handles the UserJoinedEvent and sends notifications."""
         if event.username in self.settings.teamtalk.global_ignore_usernames:
             logger.debug("User %s is globally ignored. Skipping.", event.username)
@@ -80,7 +80,7 @@ class TelegramNotificationHandler:
 
         await self.broadcast_to_users(
             recipients_with_lang=recipients,
-            text_generator=lambda lang_code: self._generate_join_leave_text(
+            text_generator=lambda lang_code: self.format_join_leave_notification(
                 event,
                 NotificationType.JOIN,
                 lang_code or self.settings.general.default_lang,
@@ -102,7 +102,7 @@ class TelegramNotificationHandler:
 
         await self.broadcast_to_users(
             recipients_with_lang=recipients,
-            text_generator=lambda lang_code: self._generate_join_leave_text(
+            text_generator=lambda lang_code: self.format_join_leave_notification(
                 event,
                 NotificationType.LEAVE,
                 lang_code or self.settings.general.default_lang,
@@ -180,7 +180,7 @@ class TelegramNotificationHandler:
                 lang_code = admin_settings.language_code
         return self.translator_factory(lang_code)
 
-    def _generate_join_leave_text(
+    def format_join_leave_notification(
         self,
         event: UserJoinedEvent | UserLeftEvent,
         event_type: NotificationType,
