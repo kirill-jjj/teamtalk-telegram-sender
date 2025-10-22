@@ -79,9 +79,8 @@ class PytalkEventHandlers:
         )
         await self.event_bus.publish(event)
 
-    async def on_my_login(
-        self, server: PytalkServer, connection: TeamTalkConnection
-    ) -> None:
+    @staticmethod
+    async def on_my_login(server: PytalkServer, connection: TeamTalkConnection) -> None:
         """Handles the bot's own login event for a connection."""
         logger.info("[%s] on_my_login event received.", connection.server_info.host)
         _ = server  # Mark as unused
@@ -156,8 +155,9 @@ class PytalkEventHandlers:
         await self._publish_user_event(user, connection, UserLeftEvent)
         connection.cache_manager.update_caches_on_event(PytalkEvent.USER_LOGOUT, user)
 
+    @staticmethod
     async def on_my_connection_lost(
-        self, server: PytalkServer, connection: TeamTalkConnection
+        server: PytalkServer, connection: TeamTalkConnection
     ) -> None:
         """Handles disconnection from the server for this connection."""
         _ = server  # Mark as unused
@@ -188,22 +188,23 @@ class PytalkEventHandlers:
         await connection.cache_manager.stop_background_tasks()
         await connection.connection_manager.initiate_reconnect()
 
-    async def on_user_update(
-        self, user: PytalkUser, connection: TeamTalkConnection
-    ) -> None:
+    @staticmethod
+    async def on_user_update(user: PytalkUser, connection: TeamTalkConnection) -> None:
         """Handles updates to a user's information on this server connection."""
         connection.cache_manager.update_caches_on_event(PytalkEvent.USER_UPDATE, user)
 
+    @staticmethod
     async def on_user_account_new(
-        self, account: pytalk.UserAccount, connection: TeamTalkConnection
+        account: pytalk.UserAccount, connection: TeamTalkConnection
     ) -> None:
         """Handles a new user account being created on this server."""
         connection.cache_manager.update_caches_on_event(
             PytalkEvent.USER_ACCOUNT_NEW, account
         )
 
+    @staticmethod
     async def on_user_account_remove(
-        self, account: pytalk.UserAccount, connection: TeamTalkConnection
+        account: pytalk.UserAccount, connection: TeamTalkConnection
     ) -> None:
         """Handles a user account being removed from this server."""
         connection.cache_manager.update_caches_on_event(

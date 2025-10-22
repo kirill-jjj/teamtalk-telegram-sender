@@ -1,6 +1,6 @@
 """Enumerations for various actions and states within the bot."""
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class AdminCommand(Enum):
@@ -68,7 +68,7 @@ class DeeplinkAction(Enum):
     UNSUBSCRIBE = "unsubscribe"
 
 
-class SubscriberCommand(str, Enum):
+class SubscriberCommand(StrEnum):
     """Actions on a subscriber from their details menu."""
 
     DELETE = "delete"
@@ -82,21 +82,21 @@ class SubscriberCommand(str, Enum):
     ADMIN_VIEW_MUTE_LIST = "admin_view_mute_list"
 
 
-class ManageTTAccountAction(str, Enum):
+class ManageTTAccountAction(StrEnum):
     """Actions for managing a subscriber's linked TeamTalk account."""
 
     UNLINK = "unlink"
     LINK_NEW = "link_new"
 
 
-class Actor(str, Enum):
+class Actor(StrEnum):
     """Represents the actor performing an action, for logging and context."""
 
     USER = "user"
     ADMIN = "admin"
 
 
-class NotificationType(str, Enum):
+class NotificationType(StrEnum):
     """Represents the type of notification event (e.g., user joined, user left)."""
 
     JOIN = "join"

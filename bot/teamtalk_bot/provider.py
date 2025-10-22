@@ -53,8 +53,8 @@ class TeamTalkProvider(Provider):
     scope = Scope.APP
 
     @provide
+    @staticmethod
     def get_pytalk_event_handlers(
-        self,
         event_bus: FromDishka[EventBus],
         translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
     ) -> PytalkEventHandlers:
@@ -62,8 +62,9 @@ class TeamTalkProvider(Provider):
         return PytalkEventHandlers(event_bus, translator_factory)
 
     @provide(provides=pytalk.TeamTalkBot)
+    @staticmethod
     async def get_patched_pytalk_bot(
-        self, settings: FromDishka[Settings]
+        settings: FromDishka[Settings],
     ) -> pytalk.TeamTalkBot:
         """Creates, configures, and patches the TeamTalkBot instance."""
         bot = pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
@@ -73,13 +74,14 @@ class TeamTalkProvider(Provider):
         return bot
 
     @provide
-    def get_connections_dict(self) -> dict[str, TeamTalkConnection]:
+    @staticmethod
+    def get_connections_dict() -> dict[str, TeamTalkConnection]:
         """Provides a dictionary for active TeamTalk connections."""
         return {}
 
     @provide(provides=TeamTalkConnection)
+    @staticmethod
     async def get_tt_connection(
-        self,
         settings: FromDishka[Settings],
         pytalk_bot: FromDishka[pytalk.TeamTalkBot],
         event_bus: FromDishka[EventBus],
@@ -132,8 +134,8 @@ class TeamTalkProvider(Provider):
                 await connection.disconnect_instance()
 
     @provide
+    @staticmethod
     def get_pytalk_event_router(
-        self,
         app_container: FromDishka[AsyncContainer],
         tt_bot: FromDishka[pytalk.TeamTalkBot],
         connections: FromDishka[dict[str, TeamTalkConnection]],
@@ -152,16 +154,16 @@ class TeamTalkProvider(Provider):
         )
 
     @provide
+    @staticmethod
     def get_teamtalk_reply_handler(
-        self,
         connections: FromDishka[dict[str, TeamTalkConnection]],
     ) -> TeamTalkReplyHandler:
         """Provides the TeamTalk reply handler."""
         return TeamTalkReplyHandler(connections=connections)
 
     @provide
+    @staticmethod
     def get_teamtalk_command_handlers(
-        self,
         tt_connection: FromDishka[TeamTalkConnection],
         translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
         settings: FromDishka[Settings],

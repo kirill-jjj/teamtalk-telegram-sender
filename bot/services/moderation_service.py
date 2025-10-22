@@ -44,7 +44,7 @@ class ModerationService:
         self._settings = settings
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    async def ban_subscriber(
+    async def ban_subscriber(  # noqa: PLR6301
         self,
         uow: IUnitOfWork,
         telegram_id: Annotated[int, Field(gt=0)],
@@ -69,7 +69,7 @@ class ModerationService:
         )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    async def unban_subscriber(
+    async def unban_subscriber(  # noqa: PLR6301
         self,
         uow: IUnitOfWork,
         telegram_id: Annotated[int, Field(gt=0)],
@@ -168,7 +168,7 @@ class ModerationService:
             user_settings=user_settings,
         )
 
-    async def get_target_username_for_toggle(
+    async def get_target_username_for_toggle(  # noqa: PLR6301
         self,
         list_type: UserListAction,
         page: int,

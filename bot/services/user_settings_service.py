@@ -70,8 +70,9 @@ class UserSettingsService:
             user_settings=user_settings, display_name=display_name
         )
 
+    @staticmethod
     async def get_account_management_data(
-        self, uow: IUnitOfWork, telegram_id: int
+        uow: IUnitOfWork, telegram_id: int
     ) -> AccountManagementData:
         """Fetches data needed for the account management view."""
         user_settings = await uow.users.get_by_id(telegram_id)

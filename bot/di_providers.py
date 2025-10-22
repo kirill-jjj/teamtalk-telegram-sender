@@ -85,47 +85,55 @@ class AppProvider(Provider):
         return self._settings
 
     @provide
-    def get_session_factory(self, settings: Settings) -> AsyncSessionFactoryType:
+    @staticmethod
+    def get_session_factory(settings: Settings) -> AsyncSessionFactoryType:
         """Provides the database session factory."""
         return create_session_factory(settings)
 
     @provide(provides=EventBot)
-    def get_bot_event(self, settings: Settings) -> EventBot:
+    @staticmethod
+    def get_bot_event(settings: Settings) -> EventBot:
         """Provides the event-handling Bot instance."""
         bot = _create_bot(token=settings.telegram.event_token)
         return cast(EventBot, bot)
 
     @provide(provides=MessageBot)
-    def get_bot_message(self, settings: Settings) -> MessageBot:
+    @staticmethod
+    def get_bot_message(settings: Settings) -> MessageBot:
         """Provides the message-sending Bot instance."""
         bot = _create_bot(token=settings.telegram.message_token)
         return cast(MessageBot, bot)
 
     @provide
-    def get_dispatcher(self) -> Dispatcher:
+    @staticmethod
+    def get_dispatcher() -> Dispatcher:
         """Provides the aiogram Dispatcher."""
         return Dispatcher()
 
     @provide
-    def get_translator_cache(self) -> dict[str, NullTranslations]:
+    @staticmethod
+    def get_translator_cache() -> dict[str, NullTranslations]:
         """Provides a cache for translator objects."""
         return {}
 
     @provide
-    def get_available_languages(self) -> list[LanguageInfo]:
+    @staticmethod
+    def get_available_languages() -> list[LanguageInfo]:
         """Provides a list of available languages."""
         return discover_languages()
 
     @provide
+    @staticmethod
     def get_translator_factory(
-        self, translator_cache: dict[str, NullTranslations]
+        translator_cache: dict[str, NullTranslations],
     ) -> Callable[[str | None], NullTranslations]:
         """Provides a factory for creating translators."""
         return create_translator_factory(translator_cache)
 
     @provide(provides=Callable[[str], NullTranslations])
+    @staticmethod
     def get_str_translator_factory(
-        self, translator_factory: FromDishka[Callable[[str | None], NullTranslations]]
+        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
     ) -> Callable[[str], NullTranslations]:
         """Provides a factory for creating translators that only accepts strings."""
 
@@ -135,25 +143,28 @@ class AppProvider(Provider):
         return factory
 
     @provide
-    def get_event_bus(self) -> EventBus:
+    @staticmethod
+    def get_event_bus() -> EventBus:
         """Provides the application-wide event bus."""
         return EventBus()
 
     @provide
-    def get_command_bus(self) -> CommandBus:
+    @staticmethod
+    def get_command_bus() -> CommandBus:
         """Provides the application-wide command bus."""
         return CommandBus()
 
     @provide
-    def get_cache_service(self) -> CacheService:
+    @staticmethod
+    def get_cache_service() -> CacheService:
         """Provides the application-wide cache service."""
         return CacheService(
             user_settings_cache={}, admin_ids_cache=set(), subscribed_users_cache=set()
         )
 
     @provide
+    @staticmethod
     def get_notification_recipient_service(
-        self,
         session_factory: FromDishka[AsyncSessionFactoryType],
         cache: FromDishka[CacheService],
     ) -> NotificationRecipientService:
@@ -161,8 +172,8 @@ class AppProvider(Provider):
         return NotificationRecipientService(session_factory, cache)
 
     @provide
-    def get_telegram_notification_handler(
-        self,
+    @staticmethod
+    def get_telegram_notification_handler(  # noqa: PLR0917
         event_bot: FromDishka[EventBot],
         message_bot: FromDishka[MessageBot],
         cache: FromDishka[CacheService],
@@ -191,8 +202,8 @@ class RequestProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
+    @staticmethod
     def get_report_service(
-        self,
         settings: FromDishka[Settings],
         uow: FromDishka[IUnitOfWork],
         bot: FromDishka[EventBot],
@@ -207,13 +218,14 @@ class RequestProvider(Provider):
         )
 
     @provide
-    def get_command_router(self) -> CommandRouter:
+    @staticmethod
+    def get_command_router() -> CommandRouter:
         """Provides a CommandRouter instance."""
         return CommandRouter()
 
     @provide
-    def get_message_handler(
-        self,
+    @staticmethod
+    def get_message_handler(  # noqa: PLR0917
         command_router: FromDishka[CommandRouter],
         event_bus: FromDishka[EventBus],
         settings: FromDishka[Settings],
@@ -234,8 +246,8 @@ class RequestProvider(Provider):
         )
 
     @provide
+    @staticmethod
     def get_tt_pm_handlers(
-        self,
         settings: FromDishka[Settings],
         cache: FromDishka[CacheService],
         deeplink_service: FromDishka[DeeplinkService],
@@ -252,8 +264,8 @@ class RequestProvider(Provider):
         )
 
     @provide
+    @staticmethod
     def get_uow(
-        self,
         factory: AsyncSessionFactoryType,
     ) -> IUnitOfWork:
         """Provides the Unit of Work."""
@@ -262,8 +274,8 @@ class RequestProvider(Provider):
         )
 
     @provide
+    @staticmethod
     def get_admin_service(
-        self,
         uow: FromDishka[IUnitOfWork],
         cache: FromDishka[CacheService],
         event_bus: FromDishka[EventBus],
@@ -284,8 +296,8 @@ class RequestProvider(Provider):
     )
 
     @provide
+    @staticmethod
     def get_moderation_service(
-        self,
         uow: FromDishka[IUnitOfWork],
         subscription_service: FromDishka[SubscriptionService],
         cache: FromDishka[CacheService],
@@ -302,7 +314,8 @@ class RequestProvider(Provider):
         )
 
     @provide
-    def get_user_from_event(self, event: TelegramObject) -> User | None:
+    @staticmethod
+    def get_user_from_event(event: TelegramObject) -> User | None:
         """Extracts the User object from the incoming event, if it exists.
 
         AiogramProvider provides the `event: TelegramObject`.
@@ -311,8 +324,8 @@ class RequestProvider(Provider):
         return getattr(event, "from_user", None)
 
     @provide(provides=SettingsViewDTO | None)
+    @staticmethod
     async def get_user_settings_optional(
-        self,
         user: User | None,
         user_settings_service: UserSettingsService,
         settings: Settings,
@@ -327,8 +340,8 @@ class RequestProvider(Provider):
             )
 
     @provide
+    @staticmethod
     def get_user_settings_guaranteed(
-        self,
         user_settings: SettingsViewDTO | None,
     ) -> SettingsViewDTO:
         """Provides a guaranteed SettingsViewDTO object.
@@ -342,8 +355,8 @@ class RequestProvider(Provider):
         return user_settings
 
     @provide(provides=NullTranslations)
+    @staticmethod
     def get_translator(
-        self,
         user_settings: SettingsViewDTO | None,
         settings: Settings,
         translator_factory: Callable[[str | None], NullTranslations],

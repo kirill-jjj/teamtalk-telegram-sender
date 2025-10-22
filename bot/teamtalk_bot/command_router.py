@@ -23,8 +23,8 @@ class CommandRouter:
     def __init__(self) -> None:
         """Initializes the command router."""
 
+    @staticmethod
     async def route(
-        self,
         cmd: str,
         args: str | None,
         handlers: PrivateMessageCommandHandlers,

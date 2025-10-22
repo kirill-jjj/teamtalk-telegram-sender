@@ -274,7 +274,7 @@ class ReportService:
             accounts=sorted_accounts, title=title, empty_list_text=empty_text
         )
 
-    def prepare_mute_list_view_data(
+    def prepare_mute_list_view_data(  # noqa: PLR6301
         self, user_settings: UserSettings, translator: NullTranslations
     ) -> MuteListViewData:
         """Prepares all necessary data for rendering the mute list view."""

@@ -83,8 +83,9 @@ class PrivateMessageCommandHandlers:
         self.admin_service = admin_service
         self.uow = uow
 
+    @staticmethod
     async def _reply_to_tt_message(
-        self, reply_method: Callable[[str], None], text: str
+        reply_method: Callable[[str], None], text: str
     ) -> None:
         """Splits a long text message into parts for TeamTalk and sends them."""
         if not text:
@@ -214,8 +215,9 @@ class PrivateMessageCommandHandlers:
         response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)
 
+    @staticmethod
     def _parse_admin_ids_args(
-        self, args_string: str, translator: NullTranslations
+        args_string: str, translator: NullTranslations
     ) -> tuple[list[int], list[int], list[str]]:
         _ = translator.gettext
         add_ids = []

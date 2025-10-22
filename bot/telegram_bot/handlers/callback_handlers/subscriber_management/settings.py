@@ -1,6 +1,6 @@
 """Callback query handlers for an admin managing a subscriber's settings."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 from typing import TypeAlias, TypedDict
