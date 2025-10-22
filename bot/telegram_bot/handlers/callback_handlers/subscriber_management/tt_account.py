@@ -126,7 +126,7 @@ async def _display_linkable_tt_accounts_page(
 
     try:
         all_server_accounts.sort(key=lambda acc: acc.username.lower())
-    except Exception:
+    except TypeError:
         logger.exception(
             "Error sorting server accounts for user %s. Proceeding with unsorted list.",
             query.from_user.id,

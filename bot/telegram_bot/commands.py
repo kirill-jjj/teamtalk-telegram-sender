@@ -127,7 +127,7 @@ async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:
         logger.info("Successfully cleared commands for chat_id %s.", chat_id)
     except TelegramAPIError:
         logger.exception("Failed to clear commands for chat_id %s.", chat_id)
-    except Exception:
+    except (RuntimeError, TypeError):
         logger.exception(
             "An unexpected error occurred while clearing commands for chat_id %s.",
             chat_id,

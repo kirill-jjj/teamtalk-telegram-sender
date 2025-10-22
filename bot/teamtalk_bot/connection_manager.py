@@ -66,7 +66,7 @@ class TeamTalkConnectionManager:
         except pytalk.exceptions.TeamTalkException as e:
             logger.critical("Failed to connect or login to TeamTalk server: %s", e)
             return False
-        except Exception:
+        except OSError:
             logger.exception(
                 "An unexpected error occurred while connecting to the server."
             )
@@ -140,7 +140,7 @@ class TeamTalkConnectionManager:
             await self._try_join_channel(conn, instance)
         except pytalk.exceptions.PermissionError as e:
             await self._handle_join_permission_error(conn, instance, e)
-        except Exception as e:
+        except (pytalk.exceptions.TeamTalkException, ValueError, OSError) as e:
             await self._handle_generic_join_error(conn, e)
 
     @staticmethod

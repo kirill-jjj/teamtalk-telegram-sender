@@ -43,7 +43,7 @@ def _thread_safe_dispatch(
         )
     except AttributeError:
         pass  # Ignore events without handlers
-    except Exception:
+    except RuntimeError:
         logger.exception("Error in thread-safe dispatch.")
 
 

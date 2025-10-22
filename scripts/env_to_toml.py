@@ -194,7 +194,7 @@ def process_single_env_file(input_env_path: Path, output_toml_path: Path) -> boo
     except OSError as e:
         print(f"Error writing TOML file '{output_toml_path}': {e}", file=sys.stderr)
         return False
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         print(
             f"Error during TOML generation for '{output_toml_path}': {e}",
             file=sys.stderr,

@@ -91,7 +91,10 @@ class PytalkEventHandlers:
             try:
                 if connection.instance.server.get_properties():
                     pass  # Properties fetched, but not used for now
-            except Exception as e:
+            except (
+                pytalk.exceptions.PermissionError,
+                pytalk.exceptions.TeamTalkException,
+            ) as e:
                 logger.warning(
                     "[%s] Error getting server props: %s",
                     connection.server_info.host,
@@ -257,7 +260,7 @@ class PytalkEventHandlers:
                 connection.server_info.host,
                 connection.login_complete_time,
             )
-        except Exception:
+        except (pytalk.exceptions.PermissionError, pytalk.exceptions.TeamTalkException):
             logger.exception(
                 "[%s] Error finalizing login (status/time).",
                 connection.server_info.host,

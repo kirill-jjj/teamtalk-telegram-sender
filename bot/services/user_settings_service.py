@@ -4,6 +4,7 @@ import logging
 from typing import TypeVar
 
 from pydantic import ConfigDict, validate_call
+from sqlalchemy.exc import SQLAlchemyError
 
 from bot.core.enums import Actor
 from bot.database.uow import IUnitOfWork
@@ -133,7 +134,7 @@ class UserSettingsService:
                 new_value,
                 log_context,
             )
-        except Exception:
+        except SQLAlchemyError:
             logger.exception(
                 "Failed to update %s for user %s to '%s'%s.",
                 field_name,

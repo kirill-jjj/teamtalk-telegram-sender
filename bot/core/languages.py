@@ -67,7 +67,7 @@ def discover_languages(locales_path: Path = LOCALE_DIR) -> list[LanguageInfo]:
                         "as name.",
                         lang_code,
                     )
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.warning("Could not load native name for %s: %s", lang_code, e)
 
             discovered.append({"code": lang_code, "native_name": native_name})

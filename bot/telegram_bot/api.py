@@ -141,7 +141,7 @@ async def safe_delete_message(
             "Could not delete %s due to TelegramAPIError: %s", log_context_message, e
         )
         return False
-    except Exception:
+    except (RuntimeError, TypeError):
         # Catch any other unexpected error
         logger.exception(
             "Unexpected error when trying to delete %s.", log_context_message

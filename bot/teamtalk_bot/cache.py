@@ -71,7 +71,11 @@ class TeamTalkCache:
                 else:
                     await asyncio.sleep(reconnect_check_interval)
                     continue
-            except Exception:
+            except (
+                pytalk.exceptions.PermissionError,
+                pytalk.exceptions.TeamTalkException,
+                OSError,
+            ):
                 await asyncio.sleep(sync_interval)
             await asyncio.sleep(sync_interval)
 

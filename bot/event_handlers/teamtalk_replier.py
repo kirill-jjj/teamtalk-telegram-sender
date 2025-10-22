@@ -45,7 +45,11 @@ class TeamTalkReplyHandler:
                     event.user_id,
                     event.connection_id,
                 )
-            except Exception:
+            except (
+                pytalk.exceptions.PermissionError,
+                pytalk.exceptions.TeamTalkException,
+                UnicodeEncodeError,
+            ):
                 logger.exception(
                     "Failed to send reply to TT user %d on connection %s.",
                     event.user_id,

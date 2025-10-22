@@ -6,10 +6,15 @@ from gettext import NullTranslations
 from html import escape
 import logging
 
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramForbiddenError,
+    TelegramNetworkError,
+)
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.formatting import Bold, Text
 from pytalk.user import User as TeamTalkUser
+from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
 from bot.constants import DEFAULT_LANGUAGE
@@ -268,7 +273,13 @@ class TelegramNotificationHandler:
                     uow, chat_id, default_translator
                 )
                 await uow.commit()
-        except Exception:
+        except (
+            TelegramAPIError,
+            TelegramNetworkError,
+            ValueError,
+            TypeError,
+            SQLAlchemyError,
+        ):
             logger.critical(
                 "An unexpected error occurred during broadcast to chat_id %s.",
                 chat_id,

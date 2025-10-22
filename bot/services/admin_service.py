@@ -4,6 +4,8 @@ from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from bot.config import Settings
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
@@ -90,7 +92,7 @@ class AdminService:
                     result.successful_ids.append(telegram_id)
                 else:
                     result.failed_ids.append(telegram_id)
-            except Exception:
+            except SQLAlchemyError:
                 logger.exception("Failed to add admin %s in batch", telegram_id)
                 result.failed_ids.append(telegram_id)
         return result
@@ -108,7 +110,7 @@ class AdminService:
                     result.successful_ids.append(telegram_id)
                 else:
                     result.failed_ids.append(telegram_id)
-            except Exception:
+            except SQLAlchemyError:
                 logger.exception("Failed to remove admin %s in batch", telegram_id)
                 result.failed_ids.append(telegram_id)
         return result

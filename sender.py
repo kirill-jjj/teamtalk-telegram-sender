@@ -7,6 +7,7 @@ import traceback
 from types import ModuleType
 
 from aiogram import Dispatcher
+from aiogram.exceptions import TelegramAPIError, TelegramNetworkError
 from dishka import make_async_container
 from dishka.integrations.aiogram import (
     AiogramProvider,
@@ -14,6 +15,8 @@ from dishka.integrations.aiogram import (
     inject,
     setup_dishka,
 )
+from pydantic import ValidationError
+from toml import TomlDecodeError
 
 from bot.config import Settings
 from bot.di_providers import AppProvider, RequestProvider
@@ -139,7 +142,14 @@ def main_cli() -> None:
     except (ValueError, KeyError) as config_error:
         print(f"CRITICAL: Configuration Error: {config_error}.")
         traceback.print_exc()
-    except Exception as e:
+    except (
+        FileNotFoundError,
+        TomlDecodeError,
+        ValidationError,
+        RuntimeError,
+        TelegramAPIError,
+        TelegramNetworkError,
+    ) as e:
         print(f"CRITICAL: An unexpected critical error occurred: {e}")
         traceback.print_exc()
 

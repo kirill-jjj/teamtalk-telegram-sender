@@ -86,6 +86,7 @@ select = [
     "C90",
     "TID",
     "PERF",
+    "BLE",
 ]
 ignore = [
     "D203",
