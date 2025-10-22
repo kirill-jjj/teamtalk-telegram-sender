@@ -88,7 +88,7 @@ async def get_display_names_for_ids(bot: AiogramBot, ids: list[int]) -> dict[int
 
 
 async def get_display_name_for_id(bot: AiogramBot, user_id: int) -> str:
-    """Safely fetches the display name for a single user ID."""
+    """Fetches the display name for a single user ID."""
     try:
         chat_info = await bot.get_chat(user_id)
         return format_telegram_user_display_name(chat_info)
@@ -97,10 +97,10 @@ async def get_display_name_for_id(bot: AiogramBot, user_id: int) -> str:
         return str(user_id)
 
 
-async def safe_delete_message(
+async def delete_message(
     message: Message | InaccessibleMessage, log_context_message: str = "message"
 ) -> bool:
-    """Safely deletes a message, catching TelegramAPIErrors and logging them.
+    """Deletes a message, catching TelegramAPIErrors and logging them.
 
     :param message: The aiogram.types.Message object to delete.
     :param log_context_message: A string to include in the log message for context

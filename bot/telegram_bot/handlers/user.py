@@ -19,7 +19,7 @@ from bot.services.deeplink_service import DeeplinkService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService
-from bot.telegram_bot.api import safe_delete_message
+from bot.telegram_bot.api import delete_message
 from bot.telegram_bot.commands import update_user_bot_commands
 from bot.telegram_bot.filters.subscription import IsSubscribed
 from bot.telegram_bot.formatters import format_help_text, format_who_report_to_html
@@ -143,7 +143,7 @@ async def on_settings_command(
     if not message.from_user:
         return
 
-    await safe_delete_message(message, log_context_message="user settings command")
+    await delete_message(message, log_context_message="user settings command")
     settings_builder = create_main_settings_keyboard(translator)
     try:
         await message.answer(
@@ -164,7 +164,7 @@ async def on_menu_command(
     if not message.from_user:
         return
 
-    await safe_delete_message(message, log_context_message="user menu command")
+    await delete_message(message, log_context_message="user menu command")
     is_admin = cache.is_admin(message.from_user.id)
     menu_builder = create_main_menu_keyboard(translator, is_admin=is_admin)
     try:
