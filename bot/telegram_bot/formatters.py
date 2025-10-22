@@ -77,13 +77,15 @@ def format_subscriber_details(
     )
     noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
     details_parts = [f"<b>{translated_subscriber_line}</b>"]
-    details_parts.extend([
-        _("Linked TT Account: {tt_username}").format(
-            tt_username=user_settings.teamtalk_username or _("None")
-        ),
-        _("Language: {lang}").format(lang=user_settings.language_code),
-        _("NOON (Not on Online): {status}").format(status=noon_status),
-    ])
+    details_parts.extend(
+        [
+            _("Linked TT Account: {tt_username}").format(
+                tt_username=user_settings.teamtalk_username or _("None")
+            ),
+            _("Language: {lang}").format(lang=user_settings.language_code),
+            _("NOON (Not on Online): {status}").format(status=noon_status),
+        ]
+    )
     notif_setting_map = {
         NotificationSetting.ALL.value: _("All (Join & Leave)"),
         NotificationSetting.LEAVE_OFF.value: _("Join Only"),

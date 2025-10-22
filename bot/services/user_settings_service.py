@@ -67,9 +67,7 @@ class UserSettingsService:
             return None
 
         display_name = await get_display_name_for_id(bot, telegram_id)
-        return SubscriberView(
-            user_settings=user_settings, display_name=display_name
-        )
+        return SubscriberView(user_settings=user_settings, display_name=display_name)
 
     @staticmethod
     async def get_account_management_data(
@@ -127,10 +125,10 @@ class UserSettingsService:
             await active_uow.users.save(user_settings)
 
             self._cache.update_user_settings(user_settings)
-            logger.info(
-                "Successfully updated %s for user %s to '%s'%s.",
-                field_name,
+            logger.debug(
+                "User %s setting '%s' updated to '%s' by %s.",
                 telegram_id,
+                field_name,
                 new_value,
                 log_context,
             )
@@ -160,7 +158,10 @@ class UserSettingsService:
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
-            logger.error("Could not find user_settings for user %s", telegram_id)
+            logger.error(
+                "Failed to update language for user %s: UserSettings not found.",
+                telegram_id,
+            )
             return None
 
         return await self._update_setting(
@@ -183,7 +184,10 @@ class UserSettingsService:
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
-            logger.error("Could not find user_settings for user %s", telegram_id)
+            logger.error(
+                "Failed to update mute mode for user %s: UserSettings not found.",
+                telegram_id,
+            )
             return None
 
         return await self._update_setting(
@@ -202,7 +206,11 @@ class UserSettingsService:
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
-            logger.error("Could not find user_settings for user %s", telegram_id)
+            logger.error(
+                "Failed to update notification preference for user %s: "
+                "UserSettings not found.",
+                telegram_id,
+            )
             return None
 
         return await self._update_setting(
@@ -223,7 +231,10 @@ class UserSettingsService:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
-            logger.error("Could not find user_settings for user %s", telegram_id)
+            logger.error(
+                "Failed to toggle NOON setting for user %s: UserSettings not found.",
+                telegram_id,
+            )
             return None
 
         new_noon_value = not user_settings.not_on_online_enabled

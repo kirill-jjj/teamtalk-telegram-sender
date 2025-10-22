@@ -50,7 +50,7 @@ class SubscriptionService:
         user_settings.not_on_online_confirmed = True
         await uow.users.save(user_settings)
 
-        logger.info(
+        logger.debug(
             "Linked TT username '%s' and confirmed NOON for user %s.",
             tt_username,
             telegram_id,
@@ -120,7 +120,7 @@ class SubscriptionService:
         await uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
-        logger.info(
+        logger.debug(
             "Admin linked TT username '%s' for user %s.",
             tt_username,
             user_settings.telegram_id,

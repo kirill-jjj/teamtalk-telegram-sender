@@ -150,11 +150,11 @@ class ModerationService:
 
         self._cache.update_user_settings(user_settings)
 
-        logger.info(
-            "Successfully %s TT user '%s' for TG user %s.",
+        logger.debug(
+            "User %s %s TT user '%s'.",
+            user_settings.telegram_id,
             action,
             tt_username_to_toggle,
-            user_settings.telegram_id,
         )
         message_text = (
             _("User {username} has been successfully muted.")
