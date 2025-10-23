@@ -76,9 +76,10 @@ async def test_uow_aexit_rolls_back_on_exception(
     uow: SqlModelUnitOfWork, mock_session: AsyncMock
 ) -> None:
     """Test that __aexit__ rolls back the session if an exception occurs."""
-    with pytest.raises(ValueError):
+    test_exception_message = "Test exception"
+    with pytest.raises(ValueError, match=test_exception_message):
         async with uow:
-            raise ValueError("Test exception")
+            raise ValueError(test_exception_message)
 
     mock_session.commit.assert_not_called()
     mock_session.rollback.assert_called_once()
@@ -127,8 +128,7 @@ async def test_uow_session_property_access(
         assert session is mock_session
 
 
-@pytest.mark.asyncio
-async def test_uow_session_property_not_available_outside_context(
+def test_uow_session_property_not_available_outside_context(
     uow: SqlModelUnitOfWork,
 ) -> None:
     """Test that accessing session outside context raises SessionNotAvailableError."""
@@ -157,15 +157,13 @@ async def test_uow_aexit_handles_sqlalchemy_error_during_rollback(
     uow: SqlModelUnitOfWork, mock_session: AsyncMock
 ) -> None:
     """Test that __aexit__ handles SQLAlchemyError during rollback."""
-    mock_session.rollback.side_effect = SQLAlchemyError("Rollback failed")
+    rollback_failed_message = "Rollback failed"
+    test_exception_message = "Test exception to trigger rollback"
+    mock_session.rollback.side_effect = SQLAlchemyError(rollback_failed_message)
 
-    try:
+    with pytest.raises(SQLAlchemyError, match=rollback_failed_message):
         async with uow:
-            raise ValueError("Test exception to trigger rollback")
-    except SQLAlchemyError as e:
-        assert str(e) == "Rollback failed"
-    except Exception as e:
-        pytest.fail(f"Expected SQLAlchemyError, but got {type(e).__name__}: {e}")
+            raise ValueError(test_exception_message)
 
     mock_session.rollback.assert_called_once()
     mock_session.close.assert_called_once()
