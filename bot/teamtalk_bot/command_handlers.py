@@ -150,9 +150,7 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        reply_text = format_deeplink_reply(
-            deeplink_model, bot_username, translator
-        )
+        reply_text = format_deeplink_reply(deeplink_model, bot_username, translator)
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     async def on_unsubscribe(
@@ -177,9 +175,7 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        reply_text = format_deeplink_reply(
-            deeplink_model, bot_username, translator
-        )
+        reply_text = format_deeplink_reply(deeplink_model, bot_username, translator)
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     @_is_tt_admin

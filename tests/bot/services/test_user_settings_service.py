@@ -287,3 +287,75 @@ async def test_unlink_tt_account_no_account_linked(
     assert result_username is None
     mock_uow.users.save.assert_not_called()
     mock_cache.update_user_settings.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_user_settings_view(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    default_lang = "en"
+    user_settings = UserSettings(
+        telegram_id=telegram_id,
+        language_code=default_lang,
+        notification_settings=NotificationSetting.ALL,
+        mute_list_mode=MuteListMode.blacklist,
+        not_on_online_enabled=True,
+        teamtalk_username="test_user",
+        muted_users_list=[],
+    )
+    mock_cache.get_user_settings.return_value = user_settings
+
+    result = await user_settings_service.get_user_settings_view(
+        mock_uow, telegram_id, default_lang
+    )
+
+    assert result.language_code == default_lang
+    assert result.notification_settings == NotificationSetting.ALL
+    assert result.mute_list_mode == MuteListMode.blacklist
+    assert result.not_on_online_enabled is True
+    assert result.teamtalk_username == "test_user"
+    assert result.muted_users_count == 0
+
+
+@pytest.mark.asyncio
+async def test_get_subscriber_view_data(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telegram_id = 123
+    default_lang = "en"
+    user_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
+    mock_cache.get_user_settings.return_value = user_settings
+    mock_bot = AsyncMock()
+    monkeypatch.setattr(
+        "bot.services.user_settings_service.get_display_name_for_id",
+        AsyncMock(return_value="John Doe"),
+    )
+
+    result = await user_settings_service.get_subscriber_view_data(
+        mock_uow, telegram_id, default_lang, mock_bot
+    )
+
+    assert result is not None
+    assert result.user_settings == user_settings
+    assert result.display_name == "John Doe"
+
+
+@pytest.mark.asyncio
+async def test_get_account_management_data(
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    user_settings = UserSettings(telegram_id=telegram_id, teamtalk_username="test_user")
+    mock_uow.users.get_by_id.return_value = user_settings
+
+    result = await UserSettingsService.get_account_management_data(
+        mock_uow, telegram_id
+    )
+
+    assert result.current_tt_username == "test_user"
