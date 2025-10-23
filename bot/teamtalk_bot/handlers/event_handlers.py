@@ -255,7 +255,7 @@ class PytalkEventHandlers:
             connection.instance.change_status(status_val, status_text)
             connection.login_complete_time = datetime.now(dt.UTC)
             connection.mark_finalized(status=True)
-            logger.info(
+            logger.debug(
                 "[%s] Login finalized at %s.",
                 connection.server_info.host,
                 connection.login_complete_time,

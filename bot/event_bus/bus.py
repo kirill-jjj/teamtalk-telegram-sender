@@ -53,7 +53,7 @@ class EventBus:
             logger.debug("No handlers for event %s", event_type.__name__)
             return
 
-        logger.info(
+        logger.debug(
             "Publishing event %s to %d handler(s)",
             event_type.__name__,
             len(handlers),

@@ -185,7 +185,9 @@ class AdminService:
 
         if is_newly_created or not self._cache.is_admin(tg_admin_chat_id):
             self._cache.add_admin(tg_admin_chat_id)
-            logger.info("Main admin %s ensured in DB and cache.", tg_admin_chat_id)
+            logger.info(
+                "Main admin %s found or created in DB and cache.", tg_admin_chat_id
+            )
 
         user_settings = await uow.users.get_or_create(
             tg_admin_chat_id,

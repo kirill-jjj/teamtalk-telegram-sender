@@ -66,7 +66,7 @@ async def on_startup(
 
             all_settings = await uow.users.get_all()
             cache.load_all_user_settings(all_settings)
-            logger.info("All caches have been loaded.")
+            logger.debug("All caches have been loaded.")
 
         admin_service = await request_container.get(AdminService)
         # Ensure the main admin from config exists and has up-to-date commands
@@ -81,11 +81,11 @@ async def on_startup(
     await set_telegram_commands_for_bot(
         bot, cache, translator_factory, available_languages, settings
     )
-    logger.info("Telegram bot commands set.")
+    logger.debug("Telegram bot commands set.")
 
     # Get container from dispatcher to pass to registration function
     container = dispatcher.workflow_data["dishka_container"]
     await register_all_handlers(command_bus, event_bus, container)
 
     logger.info("Final admin count after startup: %s", cache.get_admin_count())
-    logger.info("Application startup sequence complete.")
+    logger.debug("Application startup sequence complete.")

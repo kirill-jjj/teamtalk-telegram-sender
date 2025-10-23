@@ -73,7 +73,7 @@ class CommandBus:
             raise NoHandlerFoundError
 
         logger.debug(
-            "Executing command %s with handler %s",
+            "Running command %s with handler %s",
             command_type.__name__,
             getattr(handler, "__name__", "..."),
         )
