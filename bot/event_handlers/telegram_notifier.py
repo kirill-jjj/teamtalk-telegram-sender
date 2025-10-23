@@ -88,7 +88,7 @@ class TelegramNotificationHandler:
             online_users_cache_for_instance=event.online_users_cache,
         )
 
-    async def handle_user_left(self, event: UserLeftEvent) -> None:
+    async def on_user_left(self, event: UserLeftEvent) -> None:
         """Handles the UserLeftEvent and sends notifications."""
         if event.username in self.settings.teamtalk.global_ignore_usernames:
             logger.debug("User %s is globally ignored. Skipping.", event.username)
@@ -110,7 +110,7 @@ class TelegramNotificationHandler:
             online_users_cache_for_instance=event.online_users_cache,
         )
 
-    async def handle_admin_status_changed(
+    async def on_admin_status_changed(
         self,
         event: AdminStatusChangedEvent,
     ) -> None:
@@ -125,7 +125,7 @@ class TelegramNotificationHandler:
             translator=translator,
         )
 
-    async def handle_private_message(
+    async def on_private_message(
         self,
         event: PrivateMessageReceivedEvent,
     ) -> None:

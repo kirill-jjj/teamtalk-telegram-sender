@@ -18,7 +18,7 @@ class TeamTalkReplyHandler:
         """Initializes the TeamTalkReplyHandler."""
         self.connections = connections
 
-    async def handle_reply_event(self, event: ReplyToTeamTalkUserEvent) -> None:
+    async def on_reply_event(self, event: ReplyToTeamTalkUserEvent) -> None:
         """Handles the ReplyToTeamTalkUserEvent and sends a message."""
         connection = self.connections.get(event.connection_id)
         if not connection or not connection.is_ready:

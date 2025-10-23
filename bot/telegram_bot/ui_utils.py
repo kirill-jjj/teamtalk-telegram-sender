@@ -197,7 +197,7 @@ async def edit_message_text(
     *,
     disable_web_page_preview: bool | None = None,
 ) -> bool:
-    """Safely edits a message text, handling common Telegram API errors."""
+    """Edits a message text, handling common Telegram API errors."""
     if not isinstance(message_to_edit, Message):
         return False
 

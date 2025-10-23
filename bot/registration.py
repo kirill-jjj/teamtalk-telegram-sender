@@ -51,12 +51,12 @@ async def register_all_handlers(
 
     # Register event handlers (subscribers)
     event_bus.subscribe(UserJoinedEvent, telegram_handler.on_user_joined)
-    event_bus.subscribe(UserLeftEvent, telegram_handler.handle_user_left)
+    event_bus.subscribe(UserLeftEvent, telegram_handler.on_user_left)
     event_bus.subscribe(
-        PrivateMessageReceivedEvent, telegram_handler.handle_private_message
+        PrivateMessageReceivedEvent, telegram_handler.on_private_message
     )
     event_bus.subscribe(
-        AdminStatusChangedEvent, telegram_handler.handle_admin_status_changed
+        AdminStatusChangedEvent, telegram_handler.on_admin_status_changed
     )
-    event_bus.subscribe(ReplyToTeamTalkUserEvent, teamtalk_replier.handle_reply_event)
+    event_bus.subscribe(ReplyToTeamTalkUserEvent, teamtalk_replier.on_reply_event)
     logger.info("Event handlers subscribed.")
