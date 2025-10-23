@@ -25,6 +25,7 @@ from bot.services.deeplink_service import DeeplinkService
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,
     format_admin_management_result,
+    format_deeplink_reply,
 )
 
 if TYPE_CHECKING:
@@ -125,34 +126,60 @@ class PrivateMessageCommandHandlers:
                 "TT User ID: %s",
                 tt_message.user.id if tt_message.user else "N/A",
             )
-            tt_message.reply(
-                _("Your TeamTalk account must have a username to subscribe.")
+            await self._reply_to_tt_message(
+                tt_message.reply,
+                _("Your TeamTalk account must have a username to subscribe."),
             )
             return
 
         async with self.uow:
-            reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+            deeplink_model = await self.deeplink_service.create_deeplink(
                 self.uow,
-                translator=translator,
                 action=DeeplinkAction.SUBSCRIBE,
                 ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
                 payload=ttstr(tt_message.user.username),
             )
             await self.uow.commit()
+
+        bot_username = self.cache.get_bot_username()
+        if not bot_username:
+            logger.error("Bot username not found in cache. Cannot create deeplink.")
+            await self._reply_to_tt_message(
+                tt_message.reply,
+                _("Could not generate a link, bot username is not configured."),
+            )
+            return
+
+        reply_text = format_deeplink_reply(
+            deeplink_model, bot_username, translator
+        )
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     async def on_unsubscribe(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
         """Handles the unsubscribe command."""
+        _ = translator.gettext
         async with self.uow:
-            reply_text = await self.deeplink_service.create_tt_deeplink_reply(
+            deeplink_model = await self.deeplink_service.create_deeplink(
                 self.uow,
-                translator=translator,
                 action=DeeplinkAction.UNSUBSCRIBE,
                 ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
             )
             await self.uow.commit()
+
+        bot_username = self.cache.get_bot_username()
+        if not bot_username:
+            logger.error("Bot username not found in cache. Cannot create deeplink.")
+            await self._reply_to_tt_message(
+                tt_message.reply,
+                _("Could not generate a link, bot username is not configured."),
+            )
+            return
+
+        reply_text = format_deeplink_reply(
+            deeplink_model, bot_username, translator
+        )
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     @_is_tt_admin

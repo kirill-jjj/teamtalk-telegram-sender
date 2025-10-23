@@ -14,7 +14,36 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT,
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
+from bot.core.enums import DeeplinkAction
+from bot.models import Deeplink as DeeplinkModel
 from bot.services.schemas import AdminManagementResult
+
+logger = logging.getLogger(__name__)
+ttstr = pytalk.instance.sdk.ttstr
+
+
+def format_deeplink_reply(
+    deeplink: DeeplinkModel,
+    bot_username: str,
+    translator: NullTranslations,
+) -> str:
+    """Formats the reply text with the deeplink URL."""
+    _ = translator.gettext
+    deeplink_url = f"https://t.me/{bot_username}?start={deeplink.token}"
+
+    reply_text_map = {
+        DeeplinkAction.SUBSCRIBE: _(
+            "Click this link to subscribe to notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
+        ),
+        DeeplinkAction.UNSUBSCRIBE: _(
+            "Click this link to unsubscribe from notifications "
+            "(link valid for 5 minutes):\n{deeplink_url}"
+        ),
+    }
+    template = reply_text_map.get(deeplink.action, "Invalid action for deeplink.")
+    return template.format(deeplink_url=deeplink_url)
+
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr

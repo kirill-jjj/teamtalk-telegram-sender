@@ -55,78 +55,28 @@ def deeplink_service(
 
 
 @pytest.mark.asyncio
-async def test_create_tt_deeplink_reply_subscribe_success(
+async def test_create_deeplink_success(
     deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,
-    mock_translator: MagicMock,
-    mock_cache: MagicMock,
 ) -> None:
-    deeplink_token_value = "test_token"
+    """Tests that the create_deeplink static method correctly calls the UoW."""
     mock_uow.deeplinks.create.return_value = DeeplinkModel(
-        token=deeplink_token_value,
+        token="test_token",
         action=DeeplinkAction.SUBSCRIBE,
+        payload="test_payload",
         expiry_time=datetime.now(UTC) + timedelta(minutes=5),
     )
-    mock_cache.get_bot_username.return_value = "my_bot"
 
-    reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_uow, mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
+    result = await deeplink_service.create_deeplink(
+        mock_uow, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
     )
 
     mock_uow.deeplinks.create.assert_called_once_with(
         DeeplinkAction.SUBSCRIBE, 300, payload="test_payload"
     )
-    assert "Click this link to subscribe to notifications" in reply_text
-    assert f"https://t.me/my_bot?start={deeplink_token_value}" in reply_text
-
-
-@pytest.mark.asyncio
-async def test_create_tt_deeplink_reply_unsubscribe_success(
-    deeplink_service: DeeplinkService,
-    mock_uow: AsyncMock,
-    mock_translator: MagicMock,
-    mock_cache: MagicMock,
-) -> None:
-    deeplink_token_value = "test_token_unsub"
-    mock_uow.deeplinks.create.return_value = DeeplinkModel(
-        token=deeplink_token_value,
-        action=DeeplinkAction.UNSUBSCRIBE,
-        expiry_time=datetime.now(UTC) + timedelta(minutes=5),
-    )
-    mock_cache.get_bot_username.return_value = "my_bot_unsub"
-
-    reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_uow, mock_translator, DeeplinkAction.UNSUBSCRIBE, 300
-    )
-
-    mock_uow.deeplinks.create.assert_called_once_with(
-        DeeplinkAction.UNSUBSCRIBE, 300, payload=None
-    )
-    assert "Click this link to unsubscribe from notifications" in reply_text
-    assert f"https://t.me/my_bot_unsub?start={deeplink_token_value}" in reply_text
-
-
-@pytest.mark.asyncio
-async def test_create_tt_deeplink_reply_bot_username_not_configured(
-    deeplink_service: DeeplinkService,
-    mock_uow: AsyncMock,
-    mock_translator: MagicMock,
-    mock_cache: MagicMock,
-) -> None:
-    deeplink_token_value = "test_token"
-    mock_uow.deeplinks.create.return_value = DeeplinkModel(
-        token=deeplink_token_value,
-        action=DeeplinkAction.SUBSCRIBE,
-        expiry_time=datetime.now(UTC) + timedelta(minutes=5),
-    )
-    mock_cache.get_bot_username.return_value = None
-
-    reply_text = await deeplink_service.create_tt_deeplink_reply(
-        mock_uow, mock_translator, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
-    )
-
-    mock_uow.deeplinks.create.assert_called_once()
-    assert "Could not generate a link, bot username is not configured." in reply_text
+    assert isinstance(result, DeeplinkModel)
+    assert result.action == DeeplinkAction.SUBSCRIBE
+    assert result.payload == "test_payload"
 
 
 @pytest.mark.asyncio

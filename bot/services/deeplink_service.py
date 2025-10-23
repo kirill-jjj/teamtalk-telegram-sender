@@ -28,47 +28,25 @@ class DeeplinkService:
         self._subscription_service = subscription_service
         self._cache = cache
 
-    async def create_tt_deeplink_reply(
-        self,
+    @staticmethod
+    async def create_deeplink(
         uow: IUnitOfWork,
-        translator: NullTranslations,
         action: DeeplinkAction,
         ttl_seconds: int,
         payload: str | None = None,
-    ) -> str:
-        """Creates a deeplink and returns the full localized reply text for TeamTalk."""
-        _ = translator.gettext
+    ) -> DeeplinkModel:
+        """Creates and saves a deeplink, returning the model."""
         deeplink = await uow.deeplinks.create(
             action,
             ttl_seconds,
             payload=payload,
         )
-
-        bot_username = self._cache.get_bot_username()
-        if not bot_username:
-            logger.error("Bot username not found in cache. Cannot create deeplink.")
-            return _("Could not generate a link, bot username is not configured.")
-
-        deeplink_url = f"https://t.me/{bot_username}?start={deeplink.token}"
         logger.info(
             "Generated deeplink %s for TT user %s",
             deeplink.token,
             payload or "(no payload)",
         )
-
-        reply_text_map = {
-            DeeplinkAction.SUBSCRIBE: _(
-                "Click this link to subscribe to notifications "
-                "(link valid for 5 minutes):\n{deeplink_url}"
-            ),
-            DeeplinkAction.UNSUBSCRIBE: _(
-                "Click this link to unsubscribe from notifications "
-                "(link valid for 5 minutes):\n{deeplink_url}"
-            ),
-        }
-        reply_text_source = reply_text_map.get(action, "Invalid action for deeplink.")
-
-        return reply_text_source.format(deeplink_url=deeplink_url)
+        return deeplink
 
     async def _execute_subscribe(
         self,
