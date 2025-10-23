@@ -93,12 +93,14 @@ class SqlModelUnitOfWork(IUnitOfWork):
     ) -> None:
         """Exit the context manager, committing or rolling back."""
         if self._session:
-            if exc_type:
-                await self.rollback()
-            else:
-                await self.commit()
-            await self._session.close()
-            self._session = None
+            try:
+                if exc_type:
+                    await self._session.rollback()
+                else:
+                    await self._session.commit()
+            finally:
+                await self._session.close()
+                self._session = None
 
     @property
     def session(self) -> AsyncSession:
