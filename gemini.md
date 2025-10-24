@@ -106,7 +106,7 @@ The codebase is organized into distinct layers, each with a single responsibilit
     *   **Responsibilities:**
         *   Contain all business rules and use case logic (e.g., the steps to subscribe a user, the logic for what data to show in a report).
         *   Orchestrate operations between different components, primarily repositories.
-        *   Interact with the database **only** through the `Unit of Work (UoW)` and its repositories.
+        *   Interact with the database **only** through a `Unit of Work (UoW)` instance. The `UoW` is provided on a per-request basis by the DI container, ensuring that all database operations within a single handler's execution (even across multiple service calls) are atomic and part of the same transaction.
         *   May call other services to compose more complex operations.
     *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service. Services are often invoked by Command Handlers.
 
