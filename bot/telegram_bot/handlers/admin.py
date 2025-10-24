@@ -112,11 +112,13 @@ async def on_subscribers_command(
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /subscribers command for administrators."""
     _ = translator.gettext
 
-    result = await report_service.get_subscribers_info(page=0)
+    async with uow:
+        result = await report_service.get_subscribers_info(uow, page=0)
 
     await display_paginated_list(
         target=message,
@@ -138,11 +140,13 @@ async def on_unban_command(
     translator: Annotated[NullTranslations, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /unban command for administrators."""
     _ = translator.gettext
 
-    result = await report_service.get_banned_users_info(page=0)
+    async with uow:
+        result = await report_service.get_banned_users_info(uow, page=0)
 
     await display_paginated_list(
         target=message,

@@ -118,7 +118,7 @@ async def test_get_subscribers_info(
         AsyncMock(return_value={123: "John Doe"}),
     )
 
-    result = await report_service.get_subscribers_info(page=0)
+    result = await report_service.get_subscribers_info(mock_uow, page=0)
 
     assert result.total_items == 1
     assert len(result.items) == 1
@@ -145,7 +145,7 @@ async def test_get_banned_users_info(
         AsyncMock(return_value={123: "Banned User"}),
     )
 
-    result = await report_service.get_banned_users_info(page=0)
+    result = await report_service.get_banned_users_info(mock_uow, page=0)
 
     assert result.total_items == 1
     assert len(result.items) == 1

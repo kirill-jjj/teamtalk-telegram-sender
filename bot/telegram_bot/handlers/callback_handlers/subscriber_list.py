@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import SubscriberListAction
+from bot.database.uow import IUnitOfWork
 from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import SubscriberListCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
@@ -30,11 +31,15 @@ async def on_subscriber_list_page(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles pagination for the subscriber list."""
     _ = translator.gettext
 
-    result = await report_service.get_subscribers_info(page=callback_data.page or 0)
+    async with uow:
+        result = await report_service.get_subscribers_info(
+            uow, page=callback_data.page or 0
+        )
 
     await display_paginated_list(
         target=query,

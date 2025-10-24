@@ -188,11 +188,13 @@ async def menu_subscribers_handler(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles the 'Subscribers' admin menu button click."""
     _ = translator.gettext
 
-    result = await report_service.get_subscribers_info(page=0)
+    async with uow:
+        result = await report_service.get_subscribers_info(uow, page=0)
 
     await display_paginated_list(
         target=cast(Message, query.message),
@@ -216,11 +218,13 @@ async def menu_unban_handler(
     translator: FromDishka[NullTranslations],
     bot: FromDishka[EventBot],
     report_service: FromDishka[ReportService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles the 'Unban User' admin menu button click."""
     _ = translator.gettext
 
-    result = await report_service.get_banned_users_info(page=0)
+    async with uow:
+        result = await report_service.get_banned_users_info(uow, page=0)
 
     await display_paginated_list(
         target=cast(Message, query.message),

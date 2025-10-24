@@ -34,12 +34,13 @@ async def refresh_banned_list_view(
     translator: NullTranslations,
     bot: EventBot,
     report_service: ReportService,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the banned user list view."""
     _ = translator.gettext
 
-    result = await report_service.get_banned_users_info(page=callback_data.page)
+    result = await report_service.get_banned_users_info(uow, page=callback_data.page)
 
     await display_paginated_list(
         target=query,
@@ -87,12 +88,13 @@ async def refresh_subscriber_list_view(
     translator: NullTranslations,
     bot: EventBot,
     report_service: ReportService,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
     _ = translator.gettext
 
-    result = await report_service.get_subscribers_info(page=callback_data.page)
+    result = await report_service.get_subscribers_info(uow, page=callback_data.page)
 
     await display_paginated_list(
         target=query,

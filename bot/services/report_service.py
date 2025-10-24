@@ -115,99 +115,99 @@ class ReportService:
         )
         return WhoReport(payload=report_payload)
 
-    async def get_subscribers_info(self, page: int) -> PaginatedResult[SubscriberInfo]:
+    async def get_subscribers_info(
+        self, uow: IUnitOfWork, page: int
+    ) -> PaginatedResult[SubscriberInfo]:
         """Fetches and prepares a paginated list of subscribers."""
-        async with self._uow:
-            offset = page * USERS_PER_PAGE
-            total_items = await self._uow.subscribers.count_all()
-            subscribers = await self._uow.subscribers.get_paginated(
-                offset, USERS_PER_PAGE
-            )
+        offset = page * USERS_PER_PAGE
+        total_items = await uow.subscribers.count_all()
+        subscribers = await uow.subscribers.get_paginated(offset, USERS_PER_PAGE)
 
-            subscriber_ids = [sub.telegram_id for sub in subscribers]
-            user_settings_list = await self._uow.users.get_by_ids(subscriber_ids)
-            display_names = await get_display_names_for_ids(self._bot, subscriber_ids)
+        subscriber_ids = [sub.telegram_id for sub in subscribers]
+        user_settings_list = await uow.users.get_by_ids(subscriber_ids)
+        display_names = await get_display_names_for_ids(self._bot, subscriber_ids)
 
-            user_settings_map = {us.telegram_id: us for us in user_settings_list}
+        user_settings_map = {us.telegram_id: us for us in user_settings_list}
 
-            subscriber_infos = []
-            for sub in subscribers:
-                settings = user_settings_map.get(sub.telegram_id)
-                subscriber_infos.append(
-                    SubscriberInfo(
-                        telegram_id=sub.telegram_id,
-                        display_name=display_names.get(
-                            sub.telegram_id, str(sub.telegram_id)
-                        ),
-                        teamtalk_username=(
-                            settings.teamtalk_username if settings else None
-                        ),
-                    )
+        subscriber_infos = []
+        for sub in subscribers:
+            settings = user_settings_map.get(sub.telegram_id)
+            subscriber_infos.append(
+                SubscriberInfo(
+                    telegram_id=sub.telegram_id,
+                    display_name=display_names.get(
+                        sub.telegram_id, str(sub.telegram_id)
+                    ),
+                    teamtalk_username=(
+                        settings.teamtalk_username if settings else None
+                    ),
                 )
-
-            subscriber_infos.sort(key=lambda user: user.display_name.lower())
-
-            total_pages = (
-                (total_items + USERS_PER_PAGE - 1) // USERS_PER_PAGE
-                if total_items > 0
-                else 1
             )
 
-            return PaginatedResult(
-                items=subscriber_infos,
-                total_items=total_items,
-                total_pages=total_pages,
-                current_page=page,
-            )
+        subscriber_infos.sort(key=lambda user: user.display_name.lower())
 
-    async def get_banned_users_info(self, page: int) -> PaginatedResult[SubscriberInfo]:
+        total_pages = (
+            (total_items + USERS_PER_PAGE - 1) // USERS_PER_PAGE
+            if total_items > 0
+            else 1
+        )
+
+        return PaginatedResult(
+            items=subscriber_infos,
+            total_items=total_items,
+            total_pages=total_pages,
+            current_page=page,
+        )
+
+    async def get_banned_users_info(
+        self, uow: IUnitOfWork, page: int
+    ) -> PaginatedResult[SubscriberInfo]:
         """Fetches and prepares a paginated list of banned users."""
-        async with self._uow:
-            offset = page * USERS_PER_PAGE
-            total_items = await self._uow.bans.count_with_telegram_id()
-            banned_entries = await self._uow.bans.get_paginated_with_telegram_id(
-                offset, USERS_PER_PAGE
-            )
+        offset = page * USERS_PER_PAGE
+        total_items = await uow.bans.count_with_telegram_id()
+        banned_entries = await uow.bans.get_paginated_with_telegram_id(
+            offset, USERS_PER_PAGE
+        )
 
-            banned_ids = [
-                entry.telegram_id for entry in banned_entries if entry.telegram_id
-            ]
-            user_settings_list = await self._uow.users.get_by_ids(banned_ids)
-            display_names = await get_display_names_for_ids(self._bot, banned_ids)
+        banned_ids = [
+            entry.telegram_id for entry in banned_entries if entry.telegram_id
+        ]
+        user_settings_list = await uow.users.get_by_ids(banned_ids)
+        display_names = await get_display_names_for_ids(self._bot, banned_ids)
 
-            user_settings_map = {us.telegram_id: us for us in user_settings_list}
+        user_settings_map = {us.telegram_id: us for us in user_settings_list}
 
-            banned_infos = []
-            for entry in banned_entries:
-                if entry.telegram_id is None:
-                    continue
-                settings = user_settings_map.get(entry.telegram_id)
-                banned_infos.append(
-                    SubscriberInfo(
-                        telegram_id=entry.telegram_id,
-                        display_name=display_names.get(
-                            entry.telegram_id, str(entry.telegram_id)
-                        ),
-                        teamtalk_username=(
-                            settings.teamtalk_username if settings else None
-                        ),
-                    )
+        banned_infos = []
+        for entry in banned_entries:
+            if entry.telegram_id is None:
+                continue
+            settings = user_settings_map.get(entry.telegram_id)
+            banned_infos.append(
+                SubscriberInfo(
+                    telegram_id=entry.telegram_id,
+                    display_name=display_names.get(
+                        entry.telegram_id, str(entry.telegram_id)
+                    ),
+                    teamtalk_username=(
+                        settings.teamtalk_username if settings else None
+                    ),
                 )
-
-            banned_infos.sort(key=lambda user: user.display_name.lower())
-
-            total_pages = (
-                (total_items + USERS_PER_PAGE - 1) // USERS_PER_PAGE
-                if total_items > 0
-                else 1
             )
 
-            return PaginatedResult(
-                items=banned_infos,
-                total_items=total_items,
-                total_pages=total_pages,
-                current_page=page,
-            )
+        banned_infos.sort(key=lambda user: user.display_name.lower())
+
+        total_pages = (
+            (total_items + USERS_PER_PAGE - 1) // USERS_PER_PAGE
+            if total_items > 0
+            else 1
+        )
+
+        return PaginatedResult(
+            items=banned_infos,
+            total_items=total_items,
+            total_pages=total_pages,
+            current_page=page,
+        )
 
     async def get_sorted_online_users_for_moderation(
         self,

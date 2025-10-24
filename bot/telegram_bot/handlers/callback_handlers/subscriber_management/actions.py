@@ -117,11 +117,12 @@ async def _refresh_and_display_subscriber_list(
     bot: EventBot,
     return_page: int,
     translator: NullTranslations,
+    uow: IUnitOfWork,
 ) -> None:
     """Refresh and display paginated subscribers list via the central display func."""
     _ = translator.gettext
 
-    result = await report_service.get_subscribers_info(page=return_page)
+    result = await report_service.get_subscribers_info(uow, page=return_page)
 
     await display_paginated_list(
         target=query,
@@ -143,6 +144,7 @@ async def refresh_subscriber_list_view(
     translator: NullTranslations,
     bot: EventBot,
     report_service: ReportService,
+    uow: IUnitOfWork,
     **kwargs: object,
 ) -> None:
     """Refresher function for the main subscriber list view."""
@@ -152,6 +154,7 @@ async def refresh_subscriber_list_view(
         bot=bot,
         return_page=callback_data.page or 0,
         translator=translator,
+        uow=uow,
     )
 
 
@@ -194,6 +197,7 @@ async def delete_subscriber_from_list(
             translator,
             bot,
             report_service=report_service,
+            uow=uow,
         )
 
 
@@ -234,6 +238,7 @@ async def on_ban_subscriber_confirm(
             translator,
             bot,
             report_service=report_service,
+            uow=uow,
         )
 
 
@@ -268,6 +273,7 @@ async def delete_subscriber(
             translator,
             bot,
             report_service=report_service,
+            uow=uow,
         )
 
 
