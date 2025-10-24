@@ -12,20 +12,15 @@ from typing import TYPE_CHECKING, Any
 import pytalk
 from pytalk.message import Message as TeamTalkMessage
 
-from bot.config import Settings
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )
-from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
-from bot.services.admin_service import AdminService
-from bot.services.cache_service import CacheService
-from bot.services.deeplink_service import DeeplinkService
+from bot.services.teamtalk_command_service import TeamTalkCommandService
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,
     format_admin_management_result,
-    format_deeplink_reply,
 )
 
 if TYPE_CHECKING:
@@ -43,13 +38,14 @@ def _is_tt_admin(
     @functools.wraps(func)
     async def wrapper(
         self: PrivateMessageCommandHandlers,
+        uow: IUnitOfWork,
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         _ = translator.gettext
-        if not self.admin_service.is_main_teamtalk_admin(
+        if not self.tt_command_service.admin_service.is_main_teamtalk_admin(
             ttstr(tt_message.user.username)
         ):
             logger.warning(
@@ -61,7 +57,7 @@ def _is_tt_admin(
                 tt_message.reply, _("You are not authorized to perform this action.")
             )
             return
-        await func(self, tt_message, translator, *args, **kwargs)
+        await func(self, uow, tt_message, translator, *args, **kwargs)
 
     return wrapper
 
@@ -69,20 +65,9 @@ def _is_tt_admin(
 class PrivateMessageCommandHandlers:
     """Contains handlers for commands received via TeamTalk private messages."""
 
-    def __init__(
-        self,
-        settings: Settings,
-        cache: CacheService,
-        deeplink_service: DeeplinkService,
-        admin_service: AdminService,
-        uow: IUnitOfWork,
-    ) -> None:
+    def __init__(self, tt_command_service: TeamTalkCommandService) -> None:
         """Initializes the command handlers with necessary dependencies."""
-        self.settings = settings
-        self.cache = cache
-        self.deeplink_service = deeplink_service
-        self.admin_service = admin_service
-        self.uow = uow
+        self.tt_command_service = tt_command_service
 
     @staticmethod
     async def _reply_to_tt_message(
@@ -116,7 +101,10 @@ class PrivateMessageCommandHandlers:
                     break
 
     async def on_subscribe(
-        self, tt_message: TeamTalkMessage, translator: NullTranslations
+        self,
+        uow: IUnitOfWork,
+        tt_message: TeamTalkMessage,
+        translator: NullTranslations,
     ) -> None:
         """Handles the subscribe command."""
         _ = translator.gettext
@@ -132,61 +120,32 @@ class PrivateMessageCommandHandlers:
             )
             return
 
-        async with self.uow:
-            deeplink_model = await self.deeplink_service.create_deeplink(
-                self.uow,
-                action=DeeplinkAction.SUBSCRIBE,
-                ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
-                payload=ttstr(tt_message.user.username),
-            )
-            await self.uow.commit()
-
-        bot_username = self.cache.get_bot_username()
-        if not bot_username:
-            logger.error("Bot username not found in cache. Cannot create deeplink.")
-            await self._reply_to_tt_message(
-                tt_message.reply,
-                _("Could not generate a link, bot username is not configured."),
-            )
-            return
-
-        reply_text = format_deeplink_reply(deeplink_model, bot_username, translator)
+        reply_text = await self.tt_command_service.handle_subscribe(
+            uow, ttstr(tt_message.user.username), translator
+        )
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     async def on_unsubscribe(
-        self, tt_message: TeamTalkMessage, translator: NullTranslations
+        self,
+        uow: IUnitOfWork,
+        tt_message: TeamTalkMessage,
+        translator: NullTranslations,
     ) -> None:
         """Handles the unsubscribe command."""
-        _ = translator.gettext
-        async with self.uow:
-            deeplink_model = await self.deeplink_service.create_deeplink(
-                self.uow,
-                action=DeeplinkAction.UNSUBSCRIBE,
-                ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
-            )
-            await self.uow.commit()
-
-        bot_username = self.cache.get_bot_username()
-        if not bot_username:
-            logger.error("Bot username not found in cache. Cannot create deeplink.")
-            await self._reply_to_tt_message(
-                tt_message.reply,
-                _("Could not generate a link, bot username is not configured."),
-            )
-            return
-
-        reply_text = format_deeplink_reply(deeplink_model, bot_username, translator)
+        reply_text = await self.tt_command_service.handle_unsubscribe(uow, translator)
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 
     @_is_tt_admin
     async def on_add_admin(
         self,
+        uow: IUnitOfWork,
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
         args_str: str | None,
     ) -> None:
         """Handles the add admin command."""
         await self._update_admins(
+            uow=uow,
             tt_message=tt_message,
             args_str=args_str,
             translator=translator,
@@ -196,12 +155,14 @@ class PrivateMessageCommandHandlers:
     @_is_tt_admin
     async def on_remove_admin(
         self,
+        uow: IUnitOfWork,
         tt_message: TeamTalkMessage,
         translator: NullTranslations,
         args_str: str | None,
     ) -> None:
         """Handles the remove admin command."""
         await self._update_admins(
+            uow=uow,
             tt_message=tt_message,
             args_str=args_str,
             translator=translator,
@@ -210,57 +171,19 @@ class PrivateMessageCommandHandlers:
 
     async def _update_admins(
         self,
+        uow: IUnitOfWork,
         tt_message: TeamTalkMessage,
         args_str: str | None,
         translator: NullTranslations,
         *,
         is_add_action: bool,
     ) -> None:
-        _ = translator.gettext
-        if not args_str:
-            tt_message.reply(_("Please provide Telegram IDs."))
-            return
-
-        add_ids, remove_ids, error_messages = self._parse_admin_ids_args(
-            args_str, translator
+        result = await self.tt_command_service.handle_admin_update(
+            uow,
+            args_str=args_str,
+            translator=translator,
+            is_add_action=is_add_action,
         )
-
-        async with self.uow:
-            result = await self.admin_service.apply_admin_changes(
-                self.uow,
-                add_ids=add_ids,
-                remove_ids=remove_ids,
-                is_add_action=is_add_action,
-                error_messages=error_messages,
-            )
-            await self.uow.commit()
 
         response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)
-
-    @staticmethod
-    def _parse_admin_ids_args(
-        args_string: str, translator: NullTranslations
-    ) -> tuple[list[int], list[int], list[str]]:
-        _ = translator.gettext
-        add_ids = []
-        remove_ids = []
-        error_messages = []
-
-        args = args_string.split()
-        for arg in args:
-            if arg.startswith("-"):
-                try:
-                    remove_ids.append(int(arg[1:]))
-                except ValueError:
-                    error_messages.append(
-                        _("Invalid Telegram ID to remove: {}").format(arg[1:])
-                    )
-            else:
-                try:
-                    add_ids.append(int(arg))
-                except ValueError:
-                    error_messages.append(
-                        _("Invalid Telegram ID to add: {}").format(arg)
-                    )
-        return add_ids, remove_ids, error_messages

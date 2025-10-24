@@ -27,6 +27,7 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO
 from bot.services.subscription_service import SubscriptionService
+from bot.services.teamtalk_command_service import TeamTalkCommandService
 from bot.services.user_settings_service import UserSettingsService
 from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
 from bot.teamtalk_bot.command_router import CommandRouter
@@ -238,6 +239,7 @@ class RequestProvider(Provider):
         translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
         command_handlers: FromDishka[PrivateMessageCommandHandlers],
         connection: FromDishka[TeamTalkConnection],
+        uow: FromDishka[IUnitOfWork],
     ) -> MessageHandler:
         """Provides a MessageHandler instance for a request."""
         return MessageHandler(
@@ -248,24 +250,33 @@ class RequestProvider(Provider):
             translator_factory=translator_factory,
             command_handlers=command_handlers,
             connection=connection,
+            uow=uow,
+        )
+
+    @provide
+    @staticmethod
+    def get_tt_command_service(
+        settings: FromDishka[Settings],
+        cache: FromDishka[CacheService],
+        deeplink_service: FromDishka[DeeplinkService],
+        admin_service: FromDishka[AdminService],
+    ) -> TeamTalkCommandService:
+        """Provides the TeamTalkCommandService."""
+        return TeamTalkCommandService(
+            settings=settings,
+            cache=cache,
+            deeplink_service=deeplink_service,
+            admin_service=admin_service,
         )
 
     @provide
     @staticmethod
     def get_tt_pm_handlers(
-        settings: FromDishka[Settings],
-        cache: FromDishka[CacheService],
-        deeplink_service: FromDishka[DeeplinkService],
-        admin_service: FromDishka[AdminService],
-        uow: FromDishka[IUnitOfWork],
+        tt_command_service: FromDishka[TeamTalkCommandService],
     ) -> PrivateMessageCommandHandlers:
         """Provides an instance of PrivateMessageCommandHandlers."""
         return PrivateMessageCommandHandlers(
-            settings=settings,
-            cache=cache,
-            deeplink_service=deeplink_service,
-            admin_service=admin_service,
-            uow=uow,
+            tt_command_service=tt_command_service,
         )
 
     @provide

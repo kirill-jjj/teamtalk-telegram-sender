@@ -11,6 +11,7 @@ import pytalk
 
 from bot.config import Settings
 from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
+from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
@@ -48,6 +49,7 @@ class MessageHandler:
         translator_factory: Callable[[str], NullTranslations],
         command_handlers: PrivateMessageCommandHandlers,
         connection: TeamTalkConnection,
+        uow: IUnitOfWork,
     ) -> None:
         """Initializes the message handler with injected dependencies."""
         self.command_router = command_router
@@ -57,6 +59,7 @@ class MessageHandler:
         self.translator_factory = translator_factory
         self.command_handlers = command_handlers
         self.connection = connection
+        self.uow = uow
 
     async def route_message(self, tt_message: TeamTalkMessage) -> None:
         """Public method to handle an incoming TeamTalk message."""
@@ -78,14 +81,21 @@ class MessageHandler:
                 tt_cmds.TT_CMD_REMOVE_ADMIN,
             ]
 
-            if cmd == tt_cmds.TT_CMD_HELP:
-                await self._on_help(tt_message, translator)
-            elif cmd in known_commands:
-                await self.command_router.route(
-                    cmd, args, self.command_handlers, tt_message, translator
-                )
-            else:
-                await self._on_unknown(tt_message, translator)
+            async with self.uow:
+                if cmd == tt_cmds.TT_CMD_HELP:
+                    await self._on_help(tt_message, translator)
+                elif cmd in known_commands:
+                    await self.command_router.route(
+                        cmd,
+                        args,
+                        self.command_handlers,
+                        tt_message,
+                        translator,
+                        self.uow,
+                    )
+                else:
+                    await self._on_unknown(tt_message, translator)
+                await self.uow.commit()
         else:
             await self._publish_private_message_event(tt_message, translator)
 
