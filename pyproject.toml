@@ -22,7 +22,6 @@ classifiers = [
     "Natural Language :: English",
     "Natural Language :: Russian",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Communications :: Chat",
@@ -177,7 +176,6 @@ dev = [
     "mypy",
     "ruff",
     "types-toml",
-    "pydantic", # Add pydantic to dev dependencies for mypy plugin
     "types-cachetools",
 ]
 [tool.mypy]
