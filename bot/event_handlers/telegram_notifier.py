@@ -213,22 +213,22 @@ class TelegramNotificationHandler:
             logger.error("No Telegram bot instance provided to broadcast_to_users.")
             return
 
-        tasks = []
+        coroutines = []
         for chat_id, lang_code in recipients_with_lang:
-            tasks.append(
-                asyncio.create_task(
-                    self._send_and_handle_broadcast_error(
-                        chat_id=chat_id,
-                        lang_code=lang_code,
-                        text_generator=text_generator,
-                        online_users_cache_for_instance=online_users_cache_for_instance,
-                        reply_markup_generator=reply_markup_generator,
-                    )
+            coroutines.append(
+                self._send_and_handle_broadcast_error(
+                    chat_id=chat_id,
+                    lang_code=lang_code,
+                    text_generator=text_generator,
+                    online_users_cache_for_instance=online_users_cache_for_instance,
+                    reply_markup_generator=reply_markup_generator,
                 )
             )
 
-        if tasks:
-            await asyncio.gather(*tasks)
+        if coroutines:
+            async with asyncio.TaskGroup() as tg:
+                for coro in coroutines:
+                    tg.create_task(coro)
 
     async def _send_and_handle_broadcast_error(
         self,
