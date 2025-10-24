@@ -164,7 +164,7 @@ async def test_toggle_mute_status_mute_new_user(
     tt_username = "new_tt_user"
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        mock_uow, user_settings, tt_username, mock_translator
     )
 
     assert result.success is True
@@ -189,7 +189,7 @@ async def test_toggle_mute_status_unmute_existing_user(
     user_settings.muted_users_list = [mock_muted_user]
 
     result = await moderation_service.toggle_mute_status(
-        user_settings, tt_username, mock_translator, uow=mock_uow
+        mock_uow, user_settings, tt_username, mock_translator
     )
 
     assert result.success is True

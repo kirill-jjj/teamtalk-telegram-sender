@@ -103,7 +103,7 @@ class UserSettingsService:
         field_name: str,
         new_value: T,
         log_context: str,
-        uow: IUnitOfWork | None = None,
+        uow: IUnitOfWork,
     ) -> UserSettings | None:
         """A generic helper to update a field on the UserSettings model."""
         telegram_id = user_settings.telegram_id
@@ -120,9 +120,8 @@ class UserSettingsService:
             return None
 
         setattr(user_settings, field_name, new_value)
-        active_uow = uow or self._uow
         try:
-            await active_uow.users.save(user_settings)
+            await uow.users.save(user_settings)
 
             self._cache.update_user_settings(user_settings)
             logger.debug(

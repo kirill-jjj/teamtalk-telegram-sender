@@ -116,14 +116,13 @@ class ModerationService:
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_mute_status(
         self,
+        uow: IUnitOfWork,
         user_settings: UserSettings,
         tt_username_to_toggle: str,
         translator: NullTranslations,
-        uow: IUnitOfWork | None = None,  # <-- Принимаем uow
     ) -> OperationResult:
         """Toggles the mute status of a TeamTalk user for a given user."""
         _ = translator.gettext
-        active_uow = uow or self._uow  # Используем переданный uow
 
         existing_entry = next(
             (
@@ -145,7 +144,7 @@ class ModerationService:
             user_settings.muted_users_list.append(new_entry)
             action = "muted"
 
-        await active_uow.users.save(user_settings)
+        await uow.users.save(user_settings)
 
         self._cache.update_user_settings(user_settings)
 
@@ -252,5 +251,8 @@ class ModerationService:
             )
 
         return await self.toggle_mute_status(
-            user_settings, username_to_toggle, translator, uow=uow
+            uow,
+            user_settings,
+            username_to_toggle,
+            translator,
         )
