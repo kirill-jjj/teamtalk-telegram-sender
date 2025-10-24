@@ -113,6 +113,4 @@ async def test_publish_with_no_subscribers_logs_debug(event_bus: EventBus) -> No
         event = MyEvent(data="no_subscribers")
         await event_bus.publish(event)
         await asyncio.sleep(0.1)  # Allow tasks to run
-        mock_logger.debug.assert_called_once_with(
-            "No handlers for event %s", "MyEvent"
-        )
+        mock_logger.debug.assert_called_once_with("No handlers for event %s", "MyEvent")
