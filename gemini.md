@@ -250,6 +250,7 @@ Follow this workflow for every task.
 5.  **Commit:** After successfully implementing and validating a task (including the runtime verification), you **must** always proactively offer to create a commit for the changes.
 
     *   **Tooling & Process:**
+        0.  **Review with `git diff`:** Before drafting the commit message, always run `git diff HEAD` to review all changes. This helps ensure the commit message accurately reflects the final state of the changes and avoids mentioning transient issues encountered during development.
         1.  **Compose the Message:** For any non-trivial change, compose the full, multi-line commit message in a temporary file named `commit_message.txt` using the `write_file` tool. Always use an absolute path for `commit_message.txt` to avoid issues. This is the **required workflow** because the `-m` flag is not suitable for the detailed, multi-line messages expected in this project.
         2.  **Commit from File:** Run the commit command using the file: `git commit -F commit_message.txt`. This ensures the message is formatted correctly.
         3.  **Clean Up:** Delete the temporary file after the commit is successful.
@@ -279,6 +280,7 @@ Follow this workflow for every task.
         *   **Scope (optional):** A noun describing the section of the codebase affected (e.g., `auth`, `db`, `telegram_handlers`).
         *   **Subject:** A concise description of the change in the imperative mood (e.g., "Add `replace` tool guide", not "Added..."). No capitalization, no period at the end.
         *   **Body (optional):** A more detailed explanation of the changes. Explain the *why* behind the change, not the *how*.
+            - **Avoid transient details:** Do not include details about errors encountered and fixed *during* the development process if those errors were not present in the codebase *before* the task began. Focus the commit message on the *final state* of the code and the problem it solves or feature it adds.
         *   **Footer (optional):** Contains "BREAKING CHANGE:" for breaking changes or references to issues (e.g., "Closes #123").
 
     *   **Gitmoji Quick Reference:**
