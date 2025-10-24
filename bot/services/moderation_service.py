@@ -9,7 +9,6 @@ from pydantic import ConfigDict, Field, validate_call
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.config import Settings
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import UserListAction
 from bot.database.uow import IUnitOfWork
 from bot.models import MutedUser, UserSettings
@@ -228,7 +227,10 @@ class ModerationService:
                 "toggle_mute_from_paginated_list",
                 telegram_id,
             )
-            return OperationResult(success=False, message_key=MSG_GENERAL_ERROR)
+            return OperationResult(
+                success=False,
+                message_key=_("An error occurred. Please try again later."),
+            )
 
         username_to_toggle = await self.get_target_username_for_toggle(
             list_type=list_type,

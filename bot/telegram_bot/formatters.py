@@ -175,7 +175,7 @@ def format_help_text(translator: NullTranslations, *, is_admin: bool) -> str:
     """Builds the help message for Telegram users."""
     _ = translator.gettext
     parts = [
-        _("<b>Available Commands:</b>"),
+        Bold(_("Available Commands:")),
         _(
             "/who - Show online users.\n"
             "/settings - Access the interactive settings menu "
@@ -187,7 +187,7 @@ def format_help_text(translator: NullTranslations, *, is_admin: bool) -> str:
     if is_admin:
         parts.extend(
             [
-                _("\n<b>Admin Commands:</b>"),
+                Text("\n", Bold(_("Admin Commands:"))),
                 _(
                     "/kick - Kick a user from the server (via buttons).\n"
                     "/ban - Ban a user from the server (via buttons).\n"
@@ -197,7 +197,7 @@ def format_help_text(translator: NullTranslations, *, is_admin: bool) -> str:
                 ),
             ]
         )
-    return "\n".join(parts)
+    return Text(*parts, sep="\n").as_html()
 
 
 def format_moderation_prompt(

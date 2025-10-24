@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
 from bot.models import Deeplink as DeeplinkModel
@@ -198,7 +197,7 @@ async def test_execute_subscribe_create_subscription_fails(
     mock_subscription_service.create_subscription.assert_called_once_with(
         mock_uow, user_settings, payload
     )
-    assert MSG_GENERAL_ERROR in result
+    assert "An error occurred. Please try again later." in result
 
 
 @pytest.mark.asyncio

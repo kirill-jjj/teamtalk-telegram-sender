@@ -102,5 +102,5 @@ async def set_language(
         await refresh_main_settings_view(query, new_translator)
     else:
         await query.answer(
-            _("Failed to change language. Please try again."), show_alert=True
+            _("An error occurred. Please try again later."), show_alert=True
         )

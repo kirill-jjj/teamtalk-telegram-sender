@@ -366,7 +366,7 @@ async def admin_set_language(
         )
     else:
         await query.answer(
-            _("Failed to update setting. Please try again."), show_alert=True
+            _("An error occurred. Please try again later."), show_alert=True
         )
 
 
@@ -406,7 +406,7 @@ async def admin_set_notification_pref(
         )
     else:
         await query.answer(
-            _("Failed to update setting. Please try again."), show_alert=True
+            _("An error occurred. Please try again later."), show_alert=True
         )
 
 
@@ -445,5 +445,5 @@ async def admin_set_mute_mode(
         )
     else:
         await query.answer(
-            _("Failed to update setting. Please try again."), show_alert=True
+            _("An error occurred. Please try again later."), show_alert=True
         )

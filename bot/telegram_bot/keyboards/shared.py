@@ -209,8 +209,8 @@ def create_toggle_mute_keyboard(
     list_type_for_callback: UserListAction,
     item_username_extractor: "Callable[[Any], str]",
     item_display_name_extractor: "Callable[[Any], str]",
-    back_button_callback_data: str,
-    back_button_text_key: str,
+    back_button_callback_data: "PackableCallbackData",
+    back_button_destination: str,
 ) -> InlineKeyboardMarkup:
     """Generic helper for a paginated list of users with mute/unmute toggle buttons."""
     _ = translator.gettext
@@ -247,9 +247,7 @@ def create_toggle_mute_keyboard(
         PaginateUsersCallback,
     )
 
-    builder.row(
-        InlineKeyboardButton(
-            text=back_button_text_key, callback_data=back_button_callback_data
-        )
+    add_back_button(
+        builder, translator, back_button_destination, back_button_callback_data
     )
     return builder.as_markup()

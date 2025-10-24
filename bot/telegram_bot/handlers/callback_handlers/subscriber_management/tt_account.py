@@ -10,7 +10,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
+from bot.constants import USERS_PER_PAGE
 from bot.core.enums import Actor, ManageTTAccountAction, SubscriberCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.schemas import UserAccountInfo
@@ -145,7 +145,9 @@ async def _display_linkable_tt_accounts_page(
             "_display_linkable_tt_accounts_page: query.bot is None. "
             "Cannot display list."
         )
-        await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     page_slice, _, current_page_idx = paginate_list(
@@ -238,7 +240,9 @@ async def link_tt_account_chosen(
         ).format(telegram_id=target_telegram_id)
         if not query.message:
             logger.error("CallbackQuery message is None in link_tt_account_chosen.")
-            await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+            await query.answer(
+                _("An error occurred. Please try again later."), show_alert=True
+            )
             return
 
         await edit_message_text(
@@ -300,9 +304,10 @@ async def unlink_tt_account(
     ).format(telegram_id=target_telegram_id)
     if not query.message:
         logger.error("CallbackQuery message is None in unlink_tt_account.")
-        await query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
-
     await edit_message_text(
         message_to_edit=query.message,
         text=message_text,

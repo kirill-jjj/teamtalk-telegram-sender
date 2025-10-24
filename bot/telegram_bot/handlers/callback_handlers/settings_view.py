@@ -24,7 +24,9 @@ async def refresh_main_settings_view(
     """Refreshes the main settings view."""
     _ = translator.gettext
     if not query.message:
-        await query.answer(_("An error occurred. Please try again."), show_alert=True)
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     main_settings_builder = create_main_settings_keyboard(translator)
@@ -44,7 +46,9 @@ async def refresh_notification_settings_view(
     """Refreshes the notification settings view."""
     _ = translator.gettext
     if not query.message:
-        await query.answer(_("An error occurred. Please try again."), show_alert=True)
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     menu_text = _("Notification Settings")

@@ -3,7 +3,6 @@
 from gettext import NullTranslations
 import logging
 
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import DeeplinkAction
 from bot.database.uow import IUnitOfWork
 from bot.models import Deeplink as DeeplinkModel
@@ -82,7 +81,7 @@ class DeeplinkService:
             uow, user_settings, payload
         )
         if not success:
-            return _(MSG_GENERAL_ERROR)
+            return _("An error occurred. Please try again later.")
 
         # Cache update for user_settings is now handled here
         # after successful subscription

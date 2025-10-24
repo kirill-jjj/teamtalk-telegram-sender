@@ -14,7 +14,7 @@ from aiogram.types import (
     Message,
 )
 
-from bot.constants import MSG_GENERAL_ERROR, USERS_PER_PAGE
+from bot.constants import USERS_PER_PAGE
 from bot.telegram_bot.formatters import (
     format_moderation_prompt,
     format_paginated_list_text,
@@ -50,7 +50,9 @@ async def _display_user_list(
 
     if callback_query.bot is None:
         logger.error("Cannot display user list: bot is None.")
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     page_slice, _total_pages, current_page_idx = paginate_list(

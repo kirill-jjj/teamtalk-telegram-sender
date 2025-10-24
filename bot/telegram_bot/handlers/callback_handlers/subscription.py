@@ -81,11 +81,12 @@ async def set_subscription_setting(
         )
         await uow.commit()
 
-    if not updated_settings:
-        await callback_query.answer(
-            _("Failed to update setting. Please try again."), show_alert=True
-        )
-        return
+        if not updated_settings:
+            await callback_query.answer(
+                _("An error occurred. Please try again later."), show_alert=True
+            )
+
+            return
 
     # If the setting was not changed, updated_settings will be None, but we check above.
     # The old logic of checking if the setting is the same is now inside the service.

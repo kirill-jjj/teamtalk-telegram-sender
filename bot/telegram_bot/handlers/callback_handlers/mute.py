@@ -10,7 +10,6 @@ from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import (
     Actor,
     NotificationControl,
@@ -34,9 +33,6 @@ from bot.telegram_bot.formatters import (
 )
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
-from bot.telegram_bot.keyboards.shared import (
-    _create_back_button_text,
-)
 from bot.telegram_bot.ui_utils import (
     _display_user_list,
     edit_message_text,
@@ -81,10 +77,8 @@ async def _display_internal_user_list(
             "item_display_name_extractor": lambda item: item,
             "back_button_callback_data": NotificationCallback(
                 action=NotificationControl.MANAGE_MUTED
-            ).pack(),
-            "back_button_text_key": _create_back_button_text(
-                translator, _("Mute Management")
             ),
+            "back_button_destination": _("Mute Management"),
         },
     )
 
@@ -121,10 +115,8 @@ async def _show_all_accounts_list(
             "item_display_name_extractor": lambda item: item.username,
             "back_button_callback_data": NotificationCallback(
                 action=NotificationControl.MANAGE_MUTED
-            ).pack(),
-            "back_button_text_key": _create_back_button_text(
-                translator, _("Mute Management")
             ),
+            "back_button_destination": _("Mute Management"),
         },
     )
     await callback_query.answer()
@@ -178,7 +170,9 @@ async def show_manage_muted_menu(
             "Cannot show manage muted menu for event without a user, "
             "user_settings is None."
         )
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     manage_muted_builder = create_manage_muted_users_keyboard(translator, user_settings)
@@ -233,7 +227,9 @@ async def set_mute_mode(
         await uow.commit()
 
     if not updated_user_settings:
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     mode_text = (

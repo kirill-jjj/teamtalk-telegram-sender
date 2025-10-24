@@ -8,7 +8,6 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
-from bot.constants import MSG_GENERAL_ERROR
 from bot.core.enums import Actor, NotificationControl, SettingsNavAction
 from bot.database.uow import IUnitOfWork
 from bot.services.schemas import SettingsViewDTO
@@ -40,7 +39,9 @@ async def show_notifications_menu(
             "Cannot show notifications menu for event without a user, "
             "user_settings is None."
         )
-        await callback_query.answer(_(MSG_GENERAL_ERROR), show_alert=True)
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
         return
 
     notification_settings_builder = create_notification_settings_keyboard(
