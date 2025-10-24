@@ -27,10 +27,11 @@ from bot.telegram_bot.formatters import format_subscriber_details
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import (
     create_subscriber_action_menu_keyboard,
-    create_subscriber_list_keyboard,
 )
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import display_paginated_list
+from bot.telegram_bot.ui_utils import (
+    refresh_subscriber_list_view,
+)
 
 logger = logging.getLogger(__name__)
 actions_router = Router(name="subscriber_management.actions_router")
@@ -108,53 +109,6 @@ async def refresh_subscriber_view(
         page_context=page_context,
         view_data=view_data,
         translator=translator,
-    )
-
-
-async def _refresh_and_display_subscriber_list(
-    query: CallbackQuery,
-    report_service: ReportService,
-    bot: EventBot,
-    return_page: int,
-    translator: NullTranslations,
-    uow: IUnitOfWork,
-) -> None:
-    """Refresh and display paginated subscribers list via the central display func."""
-    _ = translator.gettext
-
-    result = await report_service.get_subscribers_info(uow, page=return_page)
-
-    await display_paginated_list(
-        target=query,
-        bot=bot,
-        translator=translator,
-        items_on_page=result.items,
-        total_items=result.total_items,
-        page=result.current_page,
-        title_text=_("Here is the list of subscribers."),
-        empty_list_text=_("No subscribers found."),
-        keyboard_factory=create_subscriber_list_keyboard,
-        keyboard_factory_kwargs={},
-    )
-
-
-async def refresh_subscriber_list_view(
-    query: CallbackQuery,
-    callback_data: SubscriberCallback | SubscriberListCallback,
-    translator: NullTranslations,
-    bot: EventBot,
-    report_service: ReportService,
-    uow: IUnitOfWork,
-    **kwargs: object,
-) -> None:
-    """Refresher function for the main subscriber list view."""
-    await _refresh_and_display_subscriber_list(
-        query=query,
-        report_service=report_service,
-        bot=bot,
-        return_page=callback_data.page or 0,
-        translator=translator,
-        uow=uow,
     )
 
 

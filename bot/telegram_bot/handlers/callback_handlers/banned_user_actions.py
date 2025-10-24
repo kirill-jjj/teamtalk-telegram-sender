@@ -18,10 +18,12 @@ from bot.telegram_bot.handlers.decorators import (
 )
 from bot.telegram_bot.keyboards import (
     create_banned_user_list_keyboard,
-    create_subscriber_list_keyboard,
 )
 from bot.telegram_bot.types.bots import EventBot
-from bot.telegram_bot.ui_utils import display_paginated_list
+from bot.telegram_bot.ui_utils import (
+    display_paginated_list,
+    refresh_subscriber_list_view,
+)
 
 logger = logging.getLogger(__name__)
 banned_user_actions_router = Router(name="banned_user_actions_router")
@@ -89,34 +91,6 @@ async def unban_subscriber(
             report_service=report_service,
             uow=uow,
         )
-
-
-async def refresh_subscriber_list_view(
-    query: CallbackQuery,
-    callback_data: SubscriberCallback,
-    translator: NullTranslations,
-    bot: EventBot,
-    report_service: ReportService,
-    uow: IUnitOfWork,
-    **kwargs: object,
-) -> None:
-    """Refresher function for the main subscriber list view."""
-    _ = translator.gettext
-
-    result = await report_service.get_subscribers_info(uow, page=callback_data.page)
-
-    await display_paginated_list(
-        target=query,
-        bot=bot,
-        translator=translator,
-        items_on_page=result.items,
-        total_items=result.total_items,
-        page=result.current_page,
-        title_text=_("Here is the list of subscribers."),
-        empty_list_text=_("No subscribers found."),
-        keyboard_factory=create_subscriber_list_keyboard,
-        keyboard_factory_kwargs={},
-    )
 
 
 @banned_user_actions_router.callback_query(

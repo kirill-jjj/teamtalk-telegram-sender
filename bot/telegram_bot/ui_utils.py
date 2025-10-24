@@ -20,6 +20,7 @@ from bot.telegram_bot.formatters import (
     format_paginated_list_text,
 )
 from bot.telegram_bot.keyboards import (
+    create_subscriber_list_keyboard,
     create_toggle_mute_keyboard,
     create_user_selection_keyboard,
 )
@@ -27,10 +28,46 @@ from bot.utils.pagination import paginate_list
 
 if TYPE_CHECKING:
     from bot.core.enums import AdminCommand
+    from bot.database.uow import IUnitOfWork
+    from bot.services.report_service import ReportService
     from bot.services.schemas import ModerationViewData
+    from bot.telegram_bot.callback_data import (
+        SubscriberCallback,
+        SubscriberListCallback,
+    )
+    from bot.telegram_bot.types.bots import EventBot
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
+
+
+async def refresh_subscriber_list_view(
+    query: CallbackQuery,
+    callback_data: "SubscriberCallback | SubscriberListCallback",
+    translator: NullTranslations,
+    bot: "EventBot",
+    report_service: "ReportService",
+    uow: "IUnitOfWork",
+) -> None:
+    """Refresher function for the main subscriber list view."""
+    _ = translator.gettext
+
+    result = await report_service.get_subscribers_info(
+        uow, page=callback_data.page or 0
+    )
+
+    await display_paginated_list(
+        target=query,
+        bot=bot,
+        translator=translator,
+        items_on_page=result.items,
+        total_items=result.total_items,
+        page=result.current_page,
+        title_text=_("Here is the list of subscribers."),
+        empty_list_text=_("No subscribers found."),
+        keyboard_factory=create_subscriber_list_keyboard,
+        keyboard_factory_kwargs={},
+    )
 
 
 async def _display_user_list(
