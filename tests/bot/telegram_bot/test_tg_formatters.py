@@ -122,10 +122,12 @@ def test_format_subscriber_details(mock_translator: MagicMock) -> None:
     """Test the format_subscriber_details function."""
 
     user_settings = SettingsViewDTO(
+        telegram_id=123,
         language_code="en",
         notification_settings=NotificationSetting.ALL,
         mute_list_mode=MuteListMode.blacklist,
         not_on_online_enabled=True,
+        not_on_online_confirmed=True,
         teamtalk_username="test_tt_user",
         muted_users_count=5,
     )

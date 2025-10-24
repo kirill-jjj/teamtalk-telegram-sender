@@ -50,10 +50,12 @@ async def _display_subscriber_view(
     )
     # The user_settings object is now nested inside the view_data DTO
     user_settings_dto = SettingsViewDTO(
+        telegram_id=view_data.user_settings.telegram_id,
         language_code=view_data.user_settings.language_code,
         notification_settings=view_data.user_settings.notification_settings,
         mute_list_mode=view_data.user_settings.mute_list_mode,
         not_on_online_enabled=view_data.user_settings.not_on_online_enabled,
+        not_on_online_confirmed=view_data.user_settings.not_on_online_confirmed,
         teamtalk_username=view_data.user_settings.teamtalk_username,
         muted_users_count=len(view_data.user_settings.muted_users_list),
     )

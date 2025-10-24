@@ -240,10 +240,12 @@ async def set_mute_mode(
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
     await callback_query.answer(success_toast_text)
     user_settings_dto = SettingsViewDTO(
+        telegram_id=updated_user_settings.telegram_id,
         language_code=updated_user_settings.language_code,
         notification_settings=updated_user_settings.notification_settings,
         mute_list_mode=updated_user_settings.mute_list_mode,
         not_on_online_enabled=updated_user_settings.not_on_online_enabled,
+        not_on_online_confirmed=updated_user_settings.not_on_online_confirmed,
         teamtalk_username=updated_user_settings.teamtalk_username,
         muted_users_count=len(updated_user_settings.muted_users_list),
     )

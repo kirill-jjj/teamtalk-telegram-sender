@@ -46,10 +46,12 @@ class UserSettingsService:
         user_settings_model = await self.get_or_create(uow, telegram_id, default_lang)
 
         return SettingsViewDTO(
+            telegram_id=user_settings_model.telegram_id,
             language_code=user_settings_model.language_code,
             notification_settings=user_settings_model.notification_settings,
             mute_list_mode=user_settings_model.mute_list_mode,
             not_on_online_enabled=user_settings_model.not_on_online_enabled,
+            not_on_online_confirmed=user_settings_model.not_on_online_confirmed,
             teamtalk_username=user_settings_model.teamtalk_username,
             muted_users_count=len(user_settings_model.muted_users_list),
         )

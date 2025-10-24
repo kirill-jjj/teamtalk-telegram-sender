@@ -10,10 +10,12 @@ from bot.models import MuteListMode, NotificationSetting, UserSettings
 class SettingsViewDTO(BaseModel):
     """DTO for displaying user settings in the UI."""
 
+    telegram_id: int
     language_code: str
     notification_settings: NotificationSetting
     mute_list_mode: MuteListMode
     not_on_online_enabled: bool
+    not_on_online_confirmed: bool
     teamtalk_username: str | None
     muted_users_count: int
 

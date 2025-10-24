@@ -88,10 +88,12 @@ async def toggle_noon_setting(
     await query.answer(message)
 
     user_settings_dto = SettingsViewDTO(
+        telegram_id=updated_settings.telegram_id,
         language_code=updated_settings.language_code,
         notification_settings=updated_settings.notification_settings,
         mute_list_mode=updated_settings.mute_list_mode,
         not_on_online_enabled=updated_settings.not_on_online_enabled,
+        not_on_online_confirmed=updated_settings.not_on_online_confirmed,
         teamtalk_username=updated_settings.teamtalk_username,
         muted_users_count=len(updated_settings.muted_users_list),
     )

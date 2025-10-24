@@ -21,10 +21,12 @@ from bot.services.schemas import (
 def test_settings_view_dto_valid_data() -> None:
     """Test SettingsViewDTO with valid data."""
     dto = SettingsViewDTO(
+        telegram_id=123,
         language_code="en",
         notification_settings=NotificationSetting.ALL,
         mute_list_mode=MuteListMode.blacklist,
         not_on_online_enabled=True,
+        not_on_online_confirmed=True,
         teamtalk_username="test_user",
         muted_users_count=5,
     )
@@ -39,10 +41,12 @@ def test_settings_view_dto_valid_data() -> None:
 def test_settings_view_dto_optional_fields() -> None:
     """Test SettingsViewDTO with optional fields as None."""
     dto = SettingsViewDTO(
+        telegram_id=456,
         language_code="ru",
         notification_settings=NotificationSetting.NONE,
         mute_list_mode=MuteListMode.whitelist,
         not_on_online_enabled=False,
+        not_on_online_confirmed=False,
         teamtalk_username=None,
         muted_users_count=0,
     )
