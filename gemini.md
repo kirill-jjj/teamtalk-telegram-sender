@@ -198,15 +198,18 @@ Adherence to this fundamental principle is essential for clarity.
 ### 5.6. Code Modification
 When modifying existing code, the `replace` tool is strongly preferred over `write_file`.
 
-*   **Precision:** The `replace` tool is designed for surgical precision. It requires a significant amount of context (the `old_string` parameter) around the code to be changed, which ensures that the modification is applied exactly where intended. This minimizes the risk of accidental changes or corrupting the file.
-*   **Safety:** Unlike `write_file`, which overwrites the entire file, `replace` only targets a specific block of text. This makes it a much safer option for small to medium-sized changes.
-*   **Atomicity:** For complex changes, it is better to break them down into several smaller, atomic `replace` operations. This may take more time, but it significantly reduces the risk of accidentally deleting important code.
-*   **Usage:** To use `replace` effectively, first use `read_file` to get the exact content of the file. Always re-read the file immediately before using `replace` to ensure the `old_string` accurately reflects the current file content. Then, construct the `old_string` parameter by copying at least 3-5 lines of code before and after the target block, including all original whitespace and indentation. The `new_string` parameter will contain the replacement code.
+*   **Precision & Exact Match:** The `replace` tool demands surgical precision. The `old_string` parameter **must be an exact literal match** of the text to be replaced, including all original whitespace, indentation, and newlines. Any deviation will cause the tool to fail.
+*   **Sufficient Context:** To ensure `old_string` uniquely identifies the target, it **must include at least 3-5 lines of context** before and after the target text. This context must also match precisely, including all whitespace and indentation.
+*   **Uniqueness:** The `old_string` **must uniquely identify a single instance** within the file. If it matches multiple locations, the tool will fail, even with self-correction attempts.
+*   **Safety & Atomicity:** `replace` only targets a specific block of text, making it safer than `write_file`. For complex or large changes, **break them down into multiple smaller, atomic `replace` operations**. This significantly reduces risk and improves clarity.
+*   **Up-to-date Content:** Always use `read_file` to get the exact, current content of the file **immediately before** constructing and executing a `replace` operation. This ensures your `old_string` accurately reflects the file's state.
 
 **Example Workflow:**
 1.  `read_file('path/to/file.py')`
-2.  Identify the block to change from the output.
-3.  Use `replace` with the `old_string` containing the identified block plus its surrounding context, and the `new_string` containing the updated code.
+2.  Identify the exact block to change from the output, including surrounding context.
+3.  Construct `old_string` with the identified block and its precise context.
+4.  Construct `new_string` with the updated code.
+5.  Use `replace` with the carefully prepared `old_string` and `new_string`.
 
 Using `write_file` for minor changes is discouraged and should only be used when creating a new file or performing a very large-scale refactoring that makes `replace` impractical.
 
