@@ -287,7 +287,6 @@ async def unlink_tt_account(
         await query.answer(_("Account was not linked."), show_alert=False)
         return
 
-    # Обновление интерфейса
     toast_message = _("Account {username} has been unlinked.").format(
         username=original_username
     )
@@ -296,7 +295,7 @@ async def unlink_tt_account(
     keyboard = create_manage_tt_account_keyboard(
         translator,
         target_telegram_id=target_telegram_id,
-        current_tt_username=None,  # Теперь аккаунт отвязан
+        current_tt_username=None,  # The account is now unlinked
         page=return_page,
     )
     message_text = _(
