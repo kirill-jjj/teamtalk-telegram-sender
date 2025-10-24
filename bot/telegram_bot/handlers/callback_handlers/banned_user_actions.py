@@ -15,7 +15,6 @@ from bot.services.report_service import ReportService
 from bot.telegram_bot.callback_data import SubscriberCallback
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
-    with_view_refresh,
 )
 from bot.telegram_bot.keyboards import (
     create_banned_user_list_keyboard,
@@ -60,7 +59,6 @@ async def refresh_banned_list_view(
     SubscriberCallback.filter(F.action == SubscriberCommand.UNBAN)
 )
 @ensure_message_context
-@with_view_refresh(refresh_banned_list_view)
 async def unban_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
@@ -69,7 +67,7 @@ async def unban_subscriber(
     report_service: Annotated[ReportService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
     uow: Annotated[IUnitOfWork, FromDishka()],
-) -> tuple[bool, str, None]:
+) -> None:
     """Handles unbanning a subscriber."""
     target_telegram_id = callback_data.target_telegram_id
 
@@ -78,8 +76,19 @@ async def unban_subscriber(
             uow, target_telegram_id, translator
         )
         await uow.commit()
+
     message = result.message_key.format(**(result.message_args or {}))
-    return result.success, message, None
+    await query.answer(text=message, show_alert=not result.success)
+
+    if result.success:
+        await refresh_banned_list_view(
+            query=query,
+            callback_data=callback_data,
+            translator=translator,
+            bot=bot,
+            report_service=report_service,
+            uow=uow,
+        )
 
 
 async def refresh_subscriber_list_view(
@@ -114,15 +123,15 @@ async def refresh_subscriber_list_view(
     SubscriberCallback.filter(F.action == SubscriberCommand.BAN)
 )
 @ensure_message_context
-@with_view_refresh(refresh_subscriber_list_view)
 async def ban_subscriber(
     query: CallbackQuery,
     callback_data: SubscriberCallback,
     translator: Annotated[NullTranslations, FromDishka()],
     moderation_service: Annotated[ModerationService, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
+    bot: Annotated[EventBot, FromDishka()],
     uow: Annotated[IUnitOfWork, FromDishka()],
-) -> tuple[bool, str, None]:
+) -> None:
     """Handles banning a subscriber."""
     target_telegram_id = callback_data.target_telegram_id
 
@@ -136,4 +145,14 @@ async def ban_subscriber(
         logger.info("Ban report for %s:\n%s", target_telegram_id, result.long_message)
 
     short_message = result.message_key.format(**(result.message_args or {}))
-    return result.success, short_message, None
+    await query.answer(text=short_message, show_alert=not result.success)
+
+    if result.success:
+        await refresh_subscriber_list_view(
+            query=query,
+            callback_data=callback_data,
+            translator=translator,
+            bot=bot,
+            report_service=report_service,
+            uow=uow,
+        )

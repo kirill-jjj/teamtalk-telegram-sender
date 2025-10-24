@@ -4,91 +4,16 @@ from collections.abc import Awaitable, Callable
 import functools
 from gettext import NullTranslations
 import logging
-from typing import Any, TypeAlias, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
-
-from bot.services.schemas import SettingsViewDTO
-from bot.telegram_bot.callback_data import (
-    AdminSetSubscriberLanguageCallback,
-    AdminSetSubscriberMuteModeCallback,
-    AdminSetSubscriberNotificationPrefCallback,
-    SubscriberCallback,
-)
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "ensure_message_context",
-    "with_view_refresh",
 ]
-
-
-RefreshableViewCallback: TypeAlias = (
-    AdminSetSubscriberLanguageCallback
-    | AdminSetSubscriberNotificationPrefCallback
-    | AdminSetSubscriberMuteModeCallback
-    | SubscriberCallback
-)
-
-
-ViewRefresher: TypeAlias = Callable[..., Awaitable[None]]
-
-
-def with_view_refresh(
-    view_refresher: ViewRefresher,
-) -> Callable[
-    [Callable[..., Awaitable[tuple[bool, str, Any | None]]]],
-    Callable[..., Awaitable[None]],
-]:
-    """Decorator factory for actions that result in refreshing a view.
-
-    The decorated function MUST return a tuple: (success, message, updated_object).
-    """
-
-    def decorator(
-        func: Callable[..., Awaitable[tuple[bool, str, Any | None]]],
-    ) -> Callable[..., Awaitable[None]]:
-        @functools.wraps(func)
-        async def wrapper(
-            query: CallbackQuery,
-            *args: Any,
-            **kwargs: Any,
-        ) -> None:
-            """Wrapper function for the with_view_refresh decorator."""
-            # Call the original handler function
-            success, message, updated_object = await func(query, *args, **kwargs)
-
-            # Manually answer the callback query
-            if message:  # Answer with a message if one was provided
-                await query.answer(text=message, show_alert=not success)
-            else:  # Otherwise, just acknowledge the callback
-                await query.answer()
-
-            # The rest of the logic for refreshing the view
-            if updated_object and isinstance(updated_object, SettingsViewDTO):
-                kwargs["user_settings"] = updated_object
-                if "translator_factory" in kwargs:
-                    translator_factory = kwargs["translator_factory"]
-                    new_translator = translator_factory(updated_object.language_code)
-                    kwargs["translator"] = new_translator
-
-            if "callback_data" not in kwargs and args:
-                for arg in args:
-                    if isinstance(arg, RefreshableViewCallback):
-                        kwargs["callback_data"] = arg
-                        break
-
-            await view_refresher(
-                query,
-                *args,
-                **kwargs,
-            )
-
-        return wrapper
-
-    return decorator
 
 
 F = TypeVar("F", bound=Callable[..., Awaitable[Any | None]])
