@@ -8,6 +8,7 @@ from types import ModuleType
 
 from aiogram import Dispatcher
 from aiogram.exceptions import TelegramAPIError, TelegramNetworkError
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from dishka import make_async_container
 from dishka.integrations.aiogram import (
     AiogramProvider,
@@ -98,6 +99,8 @@ class Application:
         self.dp.include_router(callback_router)
         self.dp.include_router(catch_all_router)
         self.dp.include_router(error_router)
+
+        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
 
         self.dp.startup.register(on_startup)
         self.dp.shutdown.register(on_shutdown)
