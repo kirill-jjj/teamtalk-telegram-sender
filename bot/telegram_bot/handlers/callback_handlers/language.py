@@ -47,7 +47,6 @@ async def show_language_menu(
         text=_("Please choose your language:"),
         reply_markup=language_markup,
     )
-    await callback_query.answer()
 
 
 @language_router.callback_query(
@@ -77,7 +76,6 @@ async def set_language(
         return
 
     if new_lang_code == translator.info().get("language"):
-        await query.answer()
         return
 
     async with uow:

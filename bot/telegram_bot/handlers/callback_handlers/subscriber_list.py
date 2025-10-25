@@ -53,4 +53,3 @@ async def on_subscriber_list_page(
         keyboard_factory=create_subscriber_list_keyboard,
         keyboard_factory_kwargs={},
     )
-    await query.answer()

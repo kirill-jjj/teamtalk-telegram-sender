@@ -68,7 +68,6 @@ async def _display_subscriber_view(
     await cast(Message, query.message).edit_text(
         text, reply_markup=keyboard, parse_mode="HTML"
     )
-    await query.answer()
 
 
 async def refresh_subscriber_view(

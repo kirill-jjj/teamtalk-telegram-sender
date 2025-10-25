@@ -35,4 +35,3 @@ async def back_to_main_settings_menu(
         text=main_settings_text,
         reply_markup=main_settings_builder.as_markup(),
     )
-    await callback_query.answer()

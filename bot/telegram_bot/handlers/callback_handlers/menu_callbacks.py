@@ -65,7 +65,6 @@ async def menu_who_handler(
 
     if query.message:
         await query.message.reply(report_text)
-    await query.answer()
 
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "help"))
@@ -81,7 +80,6 @@ async def menu_help_handler(
         translator=translator,
         cache=cache,
     )
-    await query.answer()
 
 
 @menu_callback_router.callback_query(MenuCallback.filter(F.command == "settings"))
@@ -95,7 +93,6 @@ async def menu_settings_handler(
         message=query.message,
         translator=translator,
     )
-    await query.answer()
 
 
 async def _handle_menu_moderation_command(
@@ -128,7 +125,6 @@ async def _handle_menu_moderation_command(
         command_type=command_type,
         view_data=view_data,
     )
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "kick"))
@@ -208,7 +204,6 @@ async def menu_subscribers_handler(
         keyboard_factory=create_subscriber_list_keyboard,
         keyboard_factory_kwargs={},
     )
-    await query.answer()
 
 
 @admin_menu_callback_router.callback_query(MenuCallback.filter(F.command == "unban"))
@@ -238,4 +233,3 @@ async def menu_unban_handler(
         keyboard_factory=create_banned_user_list_keyboard,
         keyboard_factory_kwargs={},
     )
-    await query.answer()

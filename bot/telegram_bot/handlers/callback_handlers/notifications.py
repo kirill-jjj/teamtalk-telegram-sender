@@ -52,7 +52,6 @@ async def show_notifications_menu(
         text=_("Notification Settings"),
         reply_markup=notification_settings_builder.as_markup(),
     )
-    await callback_query.answer()
 
 
 @notifications_router.callback_query(

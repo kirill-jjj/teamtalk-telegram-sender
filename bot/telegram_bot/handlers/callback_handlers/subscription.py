@@ -54,7 +54,6 @@ async def show_subscriptions_menu(
         text=_("Subscription Settings"),
         reply_markup=subscription_settings_markup,
     )
-    await callback_query.answer()
 
 
 @subscription_router.callback_query(

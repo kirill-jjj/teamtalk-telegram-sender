@@ -73,7 +73,6 @@ async def manage_tt_account(
         text=message_text,
         reply_markup=keyboard,
     )
-    await query.answer()
 
 
 @tt_account_router.callback_query(
@@ -95,7 +94,6 @@ async def link_new_tt_account_choice(
         command_bus=command_bus,
         translator=translator,
     )
-    await query.answer()
 
 
 async def _display_linkable_tt_accounts_page(
@@ -190,7 +188,6 @@ async def paginate_linkable_accounts(
         command_bus=command_bus,
         translator=translator,
     )
-    await query.answer()
 
 
 @tt_account_router.callback_query(LinkTTAccountChosenCallback.filter())

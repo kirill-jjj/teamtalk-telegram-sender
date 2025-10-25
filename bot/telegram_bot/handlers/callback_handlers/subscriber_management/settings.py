@@ -63,7 +63,6 @@ async def _present_subscriber_setting_choice(
     if isinstance(query.message, Message):
         keyboard = keyboard_factory(**keyboard_factory_kwargs)
         await query.message.edit_text(message_text, reply_markup=keyboard)
-        await query.answer()
 
 
 @settings_router.callback_query(
@@ -321,7 +320,6 @@ async def paginate_mute_list(
             subscriber_list_return_page=callback_data.subscriber_context_page,
             mute_list_page_num=callback_data.mute_list_page,
         )
-    await query.answer()
 
 
 AnySettingCallback: TypeAlias = (

@@ -119,7 +119,6 @@ async def _show_all_accounts_list(
             "back_button_destination": _("Mute Management"),
         },
     )
-    await callback_query.answer()
 
 
 async def _refresh_mute_related_ui(
@@ -183,7 +182,6 @@ async def show_manage_muted_menu(
         text=full_text,
         reply_markup=manage_muted_builder.as_markup(),
     )
-    await callback_query.answer()
 
 
 async def refresh_manage_muted_menu(
@@ -215,7 +213,6 @@ async def set_mute_mode(
             uow, callback_query.from_user.id, "en"
         )
         if new_mode.value == user_settings.mute_list_mode:
-            await callback_query.answer()
             return
 
         updated_user_settings = await user_settings_service.update_mute_mode(
@@ -280,7 +277,6 @@ async def display_internal_user_list(
         callback_data.list_type,
         callback_data.page,
     )
-    await callback_query.answer()
 
 
 @mute_router.callback_query(
