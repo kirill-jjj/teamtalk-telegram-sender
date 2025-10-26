@@ -13,6 +13,7 @@ from aiogram.exceptions import (
 )
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.formatting import Bold, Text
+from dishka import AsyncContainer
 from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -20,7 +21,7 @@ from bot.config import Settings
 from bot.constants import DEFAULT_LANGUAGE
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
-from bot.database.uow import SqlModelUnitOfWork
+from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import (
@@ -55,6 +56,7 @@ class TelegramNotificationHandler:
         event_bus: EventBus,
         recipient_service: NotificationRecipientService,
         session_factory: AsyncSessionFactoryType,
+        app_container: AsyncContainer,
     ) -> None:
         """Initializes the TelegramNotificationHandler."""
         self.event_bot = event_bot
@@ -65,6 +67,7 @@ class TelegramNotificationHandler:
         self.event_bus = event_bus
         self.recipient_service = recipient_service
         self.session_factory = session_factory
+        self.app_container = app_container
 
     async def on_user_joined(self, event: UserJoinedEvent) -> None:
         """Handles the UserJoinedEvent and sends notifications."""
@@ -267,12 +270,14 @@ class TelegramNotificationHandler:
             )
             # Use a default translator for the deletion process logs/messages
             default_translator = self.translator_factory(DEFAULT_LANGUAGE)
-            async with SqlModelUnitOfWork(self.session_factory) as uow:
-                subscription_service = SubscriptionService(uow, self.cache)
-                await subscription_service.delete_profile(
-                    uow, chat_id, default_translator
-                )
-                await uow.commit()
+            async with self.app_container() as request_container:
+                uow = await request_container.get(IUnitOfWork)
+                subscription_service = await request_container.get(SubscriptionService)
+                async with uow:
+                    await subscription_service.delete_profile(
+                        uow, chat_id, default_translator
+                    )
+                    await uow.commit()
         except (
             TelegramAPIError,
             TelegramNetworkError,

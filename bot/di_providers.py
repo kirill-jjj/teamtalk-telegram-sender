@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
 from cachetools import LRUCache
-from dishka import FromDishka, Provider, Scope, provide, provide_all
+from dishka import AsyncContainer, FromDishka, Provider, Scope, provide, provide_all
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
@@ -188,6 +188,7 @@ class AppProvider(Provider):
         event_bus: FromDishka[EventBus],
         recipient_service: FromDishka[NotificationRecipientService],
         session_factory: FromDishka[AsyncSessionFactoryType],
+        app_container: FromDishka[AsyncContainer],
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(
@@ -199,6 +200,7 @@ class AppProvider(Provider):
             event_bus=event_bus,
             recipient_service=recipient_service,
             session_factory=session_factory,
+            app_container=app_container,
         )
 
 
