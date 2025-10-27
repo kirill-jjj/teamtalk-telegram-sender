@@ -43,7 +43,6 @@ dependencies = [
     "alembic~=1.16",
     "cachetools~=6.1",
     "toml~=0.10", # For writing TOML files (e.g., in env-to-toml script)
-    "types-toml", # For mypy toml type checking
     "dishka~=1.7.2"
 ]
 
@@ -102,7 +101,6 @@ ignore = [
     "D213",
     "PLR0913",
     "PLR0915", # Ignore too many statements in a function
-    "TRY301", # Abstract `raise` to an inner function
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
     "RUF001", # Ignore ambiguous unicode character rule, as we use emojis
 ]
@@ -120,7 +118,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "bot/telegram_bot/handlers/*" = ["ARG001", "PLR0917"]
 "bot/telegram_bot/keyboards/*" = ["PLR0917"]
 "bot/telegram_bot/ui_utils.py" = ["PLR0917"]
-"bot/event_handlers/telegram_notifier.py" = ["PLR0917"]
 "bot/lifecycle.py" = ["PLR0917"]
 "bot/services/moderation_service.py" = ["PLR0917"]
 "bot/services/report_service.py" = ["PLR0917"]

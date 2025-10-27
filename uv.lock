@@ -936,7 +936,6 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "toml" },
-    { name = "types-toml" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
 ]
 
@@ -974,7 +973,6 @@ requires-dist = [
     { name = "sqlmodel", specifier = "~=0.0" },
     { name = "toml", specifier = "~=0.10" },
     { name = "types-cachetools", marker = "extra == 'dev'" },
-    { name = "types-toml" },
     { name = "types-toml", marker = "extra == 'dev'" },
     { name = "uvloop", marker = "sys_platform != 'win32'", specifier = "~=0.21" },
 ]
