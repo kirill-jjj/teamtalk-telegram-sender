@@ -14,7 +14,7 @@ from aiogram.types import (
     Message,
 )
 
-from bot.constants import USERS_PER_PAGE
+from bot.core.constants import USERS_PER_PAGE
 from bot.telegram_bot.formatters import (
     format_moderation_prompt,
     format_paginated_list_text,

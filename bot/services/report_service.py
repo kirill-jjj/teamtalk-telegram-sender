@@ -7,14 +7,14 @@ import pytalk
 
 from bot.command_bus.bus import CommandBus
 from bot.command_bus.exceptions import NoHandlerFoundError
-from bot.commands import (
+from bot.config import Settings
+from bot.core.commands import (
     GetAllTeamTalkAccountsCommand,
     GetAllTeamTalkAccountsResult,
     GetOnlineUsersCommand,
     GetOnlineUsersResult,
 )
-from bot.config import Settings
-from bot.constants import USERS_PER_PAGE
+from bot.core.constants import USERS_PER_PAGE
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode
 from bot.database.uow import IUnitOfWork

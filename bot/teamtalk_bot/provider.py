@@ -11,7 +11,7 @@ from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
 from bot.config import Settings
-from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
+from bot.core.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.cache import TeamTalkCache

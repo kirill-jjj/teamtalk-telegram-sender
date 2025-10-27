@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytalk
 
-from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
+from bot.core.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.teamtalk_bot.formatters import (

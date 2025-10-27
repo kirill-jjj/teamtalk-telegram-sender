@@ -5,7 +5,7 @@ import logging
 from dishka import AsyncContainer
 
 from bot.command_bus.bus import CommandBus
-from bot.commands import (
+from bot.core.commands import (
     BanUserCommand,
     GetAllTeamTalkAccountsCommand,
     GetOnlineUsersCommand,

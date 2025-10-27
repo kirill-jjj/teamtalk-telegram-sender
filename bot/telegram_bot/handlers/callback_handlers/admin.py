@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.commands import BanUserCommand, KickUserCommand, ModerationResult
+from bot.core.commands import BanUserCommand, KickUserCommand, ModerationResult
 from bot.core.enums import AdminCommand
 from bot.telegram_bot.callback_data import AdminCallback
 from bot.telegram_bot.handlers.decorators import (

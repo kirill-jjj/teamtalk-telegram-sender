@@ -8,7 +8,8 @@ import logging
 from pytalk.exceptions import PermissionError as PytalkPermissionError
 from pytalk.exceptions import TeamTalkException as PytalkException
 
-from bot.commands import (
+from bot.config import Settings
+from bot.core.commands import (
     BanUserCommand,
     GetAllTeamTalkAccountsCommand,
     GetAllTeamTalkAccountsResult,
@@ -17,7 +18,6 @@ from bot.commands import (
     KickUserCommand,
     ModerationResult,
 )
-from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.services.schemas import UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection

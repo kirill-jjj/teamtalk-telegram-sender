@@ -7,8 +7,11 @@ from typing import Annotated, TypeVar
 from pydantic import ConfigDict, Field, validate_call
 
 from bot.command_bus.bus import CommandBus
-from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.config import Settings
+from bot.core.commands import (
+    GetAllTeamTalkAccountsCommand,
+    GetAllTeamTalkAccountsResult,
+)
 from bot.core.enums import UserListAction
 from bot.database.models import MutedUser, UserSettings
 from bot.database.uow import IUnitOfWork

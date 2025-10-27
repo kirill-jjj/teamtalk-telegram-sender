@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bot.commands import GetAllTeamTalkAccountsResult, GetOnlineUsersResult
+from bot.core.commands import GetAllTeamTalkAccountsResult, GetOnlineUsersResult
 from bot.database.models import BanList, SubscribedUser, UserSettings
 from bot.database.types import MuteListMode
 from bot.services.report_service import ReportService

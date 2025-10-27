@@ -18,7 +18,7 @@ from pytalk.user import User as TeamTalkUser
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
-from bot.constants import DEFAULT_LANGUAGE
+from bot.core.constants import DEFAULT_LANGUAGE
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import IUnitOfWork

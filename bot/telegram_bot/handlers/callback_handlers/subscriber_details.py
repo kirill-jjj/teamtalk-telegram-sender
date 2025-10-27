@@ -9,8 +9,11 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from dishka.integrations.aiogram import FromDishka
 
 from bot.command_bus.bus import CommandBus
-from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
-from bot.constants import MUTE_LIST_ITEMS_PER_PAGE, USERS_PER_PAGE
+from bot.core.commands import (
+    GetAllTeamTalkAccountsCommand,
+    GetAllTeamTalkAccountsResult,
+)
+from bot.core.constants import MUTE_LIST_ITEMS_PER_PAGE, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
     ManageTTAccountAction,

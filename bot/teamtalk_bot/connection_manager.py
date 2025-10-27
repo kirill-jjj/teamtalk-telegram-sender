@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytalk
 
-from bot.constants import INVALID_CHANNEL_ID
+from bot.core.constants import INVALID_CHANNEL_ID
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection

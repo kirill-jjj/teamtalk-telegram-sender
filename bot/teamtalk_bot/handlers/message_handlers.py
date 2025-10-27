@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytalk
 
-from bot.constants import (
+from bot.core.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )

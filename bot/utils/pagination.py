@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from bot.constants import USERS_PER_PAGE
+from bot.core.constants import USERS_PER_PAGE
 
 T = TypeVar("T")
 

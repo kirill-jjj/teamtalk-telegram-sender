@@ -3,7 +3,7 @@
 import logging
 import sys
 
-from bot.constants import LOG_FORMAT
+from bot.core.constants import LOG_FORMAT
 
 
 def setup_logging() -> logging.Logger:

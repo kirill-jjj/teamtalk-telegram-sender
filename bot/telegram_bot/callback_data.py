@@ -2,7 +2,7 @@
 
 from aiogram.filters.callback_data import CallbackData
 
-from bot.constants import (
+from bot.core.constants import (
     CB_PREFIX_ADMIN_ACTION,
     CB_PREFIX_ADMIN_SET_SUB_LANG,
     CB_PREFIX_ADMIN_SET_SUB_MUTE_MODE,
