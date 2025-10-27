@@ -178,6 +178,7 @@ dev = [
     "ruff",
     "types-toml",
     "types-cachetools",
+    "pre-commit",
 ]
 [tool.mypy]
 strict = true
@@ -185,7 +186,7 @@ files = ["bot", "scripts", "sender.py"]
 exclude = [
     "alembic/versions/.*\\.py$",
     "\\.venv",
-    
+
     "build/", # Exclude the build directory from mypy checking
 ]
 ignore_missing_imports = true
