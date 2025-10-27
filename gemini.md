@@ -243,11 +243,8 @@ Follow this workflow for every task.
         *   Always question if a destructive change (like dropping a table or column) is truly necessary and plan for it carefully.
 
 4.  **Validation:**
-    1.  Run `uv run ruff format .` to format the code.
-    2.  Run `uv run ruff check --fix .` to check for and fix issues.
-    3.  Run `uv run mypy` to validate type hints.
-    4.  Run `uv run pytest` to execute the test suite.
-    5.  **Runtime Verification:** After all static checks pass, you **must** attempt to run the application with `uv run sender` to ensure it initializes without errors. **Do not proceed to the commit step if the application fails to start.**
+    1.  **Pre-commit Hooks:** All static checks (formatting, linting, type-checking, and unit tests) are enforced via `pre-commit` hooks. These will run automatically before each commit. To manually run them, execute `uv run pre-commit run --all-files`.
+    2.  **Runtime Verification:** After all static checks and tests pass, you **must** attempt to run the application with `uv run sender` to ensure it initializes without errors. **Do not proceed to the commit step if the application fails to start.**
 
 5.  **Commit:** After successfully implementing and validating a task (including the runtime verification), you **must** always proactively offer to create a commit for the changes.
 
