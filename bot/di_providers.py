@@ -18,7 +18,6 @@ from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_langua
 from bot.database.engine import AsyncSessionFactoryType, create_session_factory
 from bot.database.uow import IUnitOfWork, SqlModelUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
@@ -29,10 +28,13 @@ from bot.services.schemas import SettingsViewDTO
 from bot.services.subscription_service import SubscriptionService
 from bot.services.teamtalk_command_service import TeamTalkCommandService
 from bot.services.user_settings_service import UserSettingsService
-from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
-from bot.teamtalk_bot.command_router import CommandRouter
 from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.handlers.message_handlers import (
+    CommandRouter,
+    PrivateMessageCommandHandlers,
+)
 from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.telegram_bot.handlers.event_subscribers import TelegramNotificationHandler
 from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 

@@ -26,11 +26,11 @@ if TYPE_CHECKING:
     from bot.database.uow import IUnitOfWork
     from bot.event_bus.bus import EventBus
     from bot.services.cache_service import CacheService
-    from bot.teamtalk_bot.command_handlers import (
+    from bot.teamtalk_bot.connection import TeamTalkConnection
+    from bot.teamtalk_bot.handlers.message_handlers import (
+        CommandRouter,
         PrivateMessageCommandHandlers,
     )
-    from bot.teamtalk_bot.command_router import CommandRouter
-    from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
 logger = logging.getLogger(__name__)

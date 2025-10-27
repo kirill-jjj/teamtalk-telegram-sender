@@ -12,7 +12,7 @@ from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
-from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
+from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
 
 
 @pytest.fixture

@@ -10,16 +10,16 @@ from typing import Any
 from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
 
-from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.config import Settings
 from bot.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
 from bot.core.exceptions import TeamTalkConnectionError
 from bot.event_bus.bus import EventBus
-from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
-from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
+from bot.teamtalk_bot.handlers.command_bus_handlers import TeamTalkCommandHandlers
+from bot.teamtalk_bot.handlers.event_bus_subscribers import TeamTalkReplyHandler
+from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
 logger = logging.getLogger(__name__)

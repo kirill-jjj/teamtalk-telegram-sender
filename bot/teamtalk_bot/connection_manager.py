@@ -12,7 +12,7 @@ from bot.constants import INVALID_CHANNEL_ID
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
-    from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
+    from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
 
 logger = logging.getLogger(__name__)
 

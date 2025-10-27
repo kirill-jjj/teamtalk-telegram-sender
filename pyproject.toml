@@ -188,6 +188,7 @@ exclude = [
     "\\.venv",
 
     "build/", # Exclude the build directory from mypy checking
+    "tests/", # Exclude the tests directory from mypy checking
 ]
 ignore_missing_imports = true
 plugins = [

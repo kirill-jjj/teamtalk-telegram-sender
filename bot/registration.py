@@ -5,7 +5,6 @@ import logging
 from dishka import AsyncContainer
 
 from bot.command_bus.bus import CommandBus
-from bot.command_handlers.teamtalk_handlers import TeamTalkCommandHandlers
 from bot.commands import (
     BanUserCommand,
     GetAllTeamTalkAccountsCommand,
@@ -13,8 +12,6 @@ from bot.commands import (
     KickUserCommand,
 )
 from bot.event_bus.bus import EventBus
-from bot.event_handlers.teamtalk_replier import TeamTalkReplyHandler
-from bot.event_handlers.telegram_notifier import TelegramNotificationHandler
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
     PrivateMessageReceivedEvent,
@@ -22,6 +19,9 @@ from bot.teamtalk_bot.events import (
     UserJoinedEvent,
     UserLeftEvent,
 )
+from bot.teamtalk_bot.handlers.command_bus_handlers import TeamTalkCommandHandlers
+from bot.teamtalk_bot.handlers.event_bus_subscribers import TeamTalkReplyHandler
+from bot.telegram_bot.handlers.event_subscribers import TelegramNotificationHandler
 
 logger = logging.getLogger(__name__)
 

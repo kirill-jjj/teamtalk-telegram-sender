@@ -1,3 +1,4 @@
+import typing
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from dishka import AsyncContainer
@@ -11,7 +12,7 @@ import pytest
 
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
+from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
 from bot.teamtalk_bot.message_handler import MessageHandler
 from bot.teamtalk_bot.pytalk_event_router import (
     PytalkEventRouter,
@@ -116,7 +117,7 @@ def pytalk_event_router(
     ],
 )
 def test_get_tt_instance_from_event(
-    event_obj_attr: str, get_expected_instance: callable
+    event_obj_attr: str, get_expected_instance: typing.Callable
 ) -> None:
     """Test _get_tt_instance_from_event extracts instance correctly."""
     expected_instance = get_expected_instance()

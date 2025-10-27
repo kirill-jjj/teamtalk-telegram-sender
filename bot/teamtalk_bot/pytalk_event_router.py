@@ -15,7 +15,7 @@ from pytalk.user import User as PytalkUser
 
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
+from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
 from bot.teamtalk_bot.message_handler import MessageHandler
 
 logger = logging.getLogger(__name__)
