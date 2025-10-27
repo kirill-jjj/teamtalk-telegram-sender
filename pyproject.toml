@@ -195,7 +195,3 @@ plugins = [
 ]
 python_version = "3.11"
 show_error_context = true
-
-[[tool.mypy.overrides]]
-module = "bot.core.notifications"
-ignore_errors = true
