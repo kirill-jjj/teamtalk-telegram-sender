@@ -2,7 +2,6 @@
 
 from collections.abc import Iterable
 import logging
-from logging.config import fileConfig
 import os
 from pathlib import Path
 
@@ -28,9 +27,6 @@ from bot.database.models import (  # noqa: F401
 logger = logging.getLogger(__name__)
 
 config = context.config
-
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
 
 
 target_metadata = SQLModel.metadata
@@ -67,18 +63,43 @@ def prevent_empty_revisions(
 
 
 def get_db_url() -> str:
-    """Constructs the database URL from 'config.toml' using the Settings model.
+    """Constructs the database URL for Alembic.
+
+    It first attempts to retrieve the URL from Alembic's context (set by the
+    application). If not found, it checks the APP_CONFIG_FILE environment
+    variable. If still not found, it falls back to loading the default
+    application's configuration file.
 
     Returns:
         str: The fully constructed SQLite database URL.
 
     Raises:
-        FileNotFoundError: If 'config.toml' is not found.
-        ValueError: If critical configuration keys are missing or invalid.
+        FileNotFoundError: If the configuration file is not found during fallback.
+        ValueError: If critical configuration keys are missing or invalid during
+            fallback.
     """
-    config_file_str = os.environ.get("APP_CONFIG_FILE", str(DEFAULT_CONFIG_PATH))
-    config_file = Path(config_file_str)
-    logger.info("Attempting to load configuration from: %s", config_file)
+    # 1. Try to get the URL from Alembic's context (set by the application's
+    # programmatic invocation)
+    url = context.config.get_main_option("sqlalchemy.url")
+    if url:
+        logger.info("Using database URL from Alembic context: %s", url)
+        return url
+
+    # 2. Fallback: Check APP_CONFIG_FILE environment variable (set by
+    # scripts/run_alembic.py)
+    config_file_str = os.environ.get("APP_CONFIG_FILE")
+    if config_file_str:
+        config_file = Path(config_file_str)
+        logger.info(
+            "Attempting to load configuration from APP_CONFIG_FILE: %s", config_file
+        )
+    else:
+        # 3. Fallback: If not set in context or env var, load from default
+        # application config
+        config_file = DEFAULT_CONFIG_PATH
+        logger.info(
+            "Attempting to load configuration from default path: %s", config_file
+        )
 
     try:
         settings = Settings.from_toml(str(config_file))  # Ensure it's a string for mypy

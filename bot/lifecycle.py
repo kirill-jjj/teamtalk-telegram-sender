@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiogram import Dispatcher
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
+from bot.database.migration import run_migrations
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.registration import register_all_handlers
@@ -45,6 +47,13 @@ async def on_startup(
     logger = logging.getLogger(__name__)
 
     logger.info("Application startup...")
+
+    # Define project root relative to the current file
+    project_root = await asyncio.to_thread(
+        lambda: Path(__file__).resolve().parent.parent  # noqa: ASYNC240
+    )
+    # Run migrations before doing anything with the database
+    await run_migrations(settings, project_root)
 
     # Start the pytalk event loop in the background
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")

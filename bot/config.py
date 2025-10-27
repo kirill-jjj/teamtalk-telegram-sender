@@ -115,6 +115,7 @@ class Settings(BaseSettings):
         default_factory=OperationalParameters
     )
     _config_dir: Path = PrivateAttr()
+    _config_path: str = PrivateAttr()
 
     @classmethod
     def from_toml(cls, path_str: str) -> "Settings":
@@ -135,4 +136,5 @@ class Settings(BaseSettings):
 
         instance = cls(**data)
         instance._config_dir = path.parent.resolve()
+        instance._config_path = path_str
         return instance

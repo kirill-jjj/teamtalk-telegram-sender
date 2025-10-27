@@ -1,6 +1,7 @@
 """Database package."""
 
 from .engine import create_session_factory
+from .migration import run_migrations
 from .repositories.admin_repository import AdminRepository
 from .repositories.ban_repository import BanRepository
 from .repositories.base import BaseRepository
@@ -16,4 +17,5 @@ __all__ = [
     "SubscriberRepository",
     "UserRepository",
     "create_session_factory",
+    "run_migrations",
 ]
