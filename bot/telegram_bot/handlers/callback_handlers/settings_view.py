@@ -10,6 +10,7 @@ from bot.services.schemas import SettingsViewDTO
 from bot.telegram_bot.keyboards import (
     create_main_settings_keyboard,
     create_notification_settings_keyboard,
+    create_subscription_settings_keyboard,
 )
 from bot.telegram_bot.ui_utils import edit_message_text
 
@@ -60,4 +61,28 @@ async def refresh_notification_settings_view(
         message_to_edit=cast(Message, query.message),
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),
+    )
+
+
+async def refresh_subscription_settings_view(
+    query: CallbackQuery,
+    translator: NullTranslations,
+    user_settings: SettingsViewDTO,
+    **kwargs: object,
+) -> None:
+    """Refreshes the subscription settings view."""
+    _ = translator.gettext
+    if not query.message:
+        await query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
+        return
+
+    keyboard_markup = create_subscription_settings_keyboard(
+        translator, user_settings.notification_settings
+    )
+    await edit_message_text(
+        message_to_edit=cast(Message, query.message),
+        text=_("Subscription Settings"),
+        reply_markup=keyboard_markup,
     )

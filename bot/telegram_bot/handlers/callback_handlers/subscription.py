@@ -20,6 +20,8 @@ from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard
 from bot.telegram_bot.ui_utils import edit_message_text
 
+from .settings_view import refresh_subscription_settings_view
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,11 +106,19 @@ async def set_subscription_setting(
     )
     await callback_query.answer(toast_text)
 
-    keyboard_markup = create_subscription_settings_keyboard(
-        translator, updated_settings.notification_settings
+    user_settings_dto = SettingsViewDTO(
+        telegram_id=updated_settings.telegram_id,
+        language_code=updated_settings.language_code,
+        notification_settings=updated_settings.notification_settings,
+        mute_list_mode=updated_settings.mute_list_mode,
+        not_on_online_enabled=updated_settings.not_on_online_enabled,
+        not_on_online_confirmed=updated_settings.not_on_online_confirmed,
+        teamtalk_username=updated_settings.teamtalk_username,
+        muted_users_count=len(updated_settings.muted_users_list),
     )
-    await edit_message_text(
-        message_to_edit=callback_query.message,  # type: ignore[arg-type]
-        text=_("Subscription Settings"),
-        reply_markup=keyboard_markup,
+
+    await refresh_subscription_settings_view(
+        query=callback_query,
+        translator=translator,
+        user_settings=user_settings_dto,
     )
