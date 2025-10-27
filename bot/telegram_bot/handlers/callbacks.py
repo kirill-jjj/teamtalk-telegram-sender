@@ -14,8 +14,8 @@ from .callback_handlers.menu_callbacks import (
 from .callback_handlers.mute import mute_router
 from .callback_handlers.navigation import navigation_router
 from .callback_handlers.notifications import notifications_router
+from .callback_handlers.subscriber_details import subscriber_details_router
 from .callback_handlers.subscriber_list import subscriber_list_router
-from .callback_handlers.subscriber_management import subscriber_management_router
 from .callback_handlers.subscription import subscription_router
 
 # Main router that aggregates all callback handlers
@@ -26,7 +26,7 @@ callback_router.callback_query.filter(IsSubscribed())
 callback_router.include_router(menu_callback_router)
 callback_router.include_router(admin_menu_callback_router)
 callback_router.include_router(admin_actions_router)
-callback_router.include_router(subscriber_management_router)
+callback_router.include_router(subscriber_details_router)
 callback_router.include_router(language_router)
 callback_router.include_router(subscription_router)
 callback_router.include_router(notifications_router)
