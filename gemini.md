@@ -138,7 +138,7 @@ You may encounter business logic within handlers. This is a known area for futur
 The goal is to leave the code better than you found it. Always strive to move business logic to the service layer when you touch a related part of the code.
 
 ## 3. Database and Migrations
-*   **Models:** All database tables are defined as `SQLModel` classes in `bot/models.py`.
+*   **Models:** All database tables are defined as `SQLModel` classes in `bot/database/models.py`.
 *   **Migrations:** Database schema changes are managed by `Alembic`. Any modification to `bot/models.py` requires a new migration.
 *   **Migrations Must Be Non-Destructive:** **The paramount principle of database migration is that existing user data must NEVER be lost.** `autogenerate` is a tool, not a source of truth. It can misinterpret changes like column renames as "drop and add," leading to catastrophic data loss. All generated scripts require careful manual inspection and, if necessary, correction.
 
@@ -307,7 +307,7 @@ Use this as a quick guide to locate code for common tasks:
 
 *   **User-facing text & keyboards:** Look in `bot/telegram_bot/handlers/` for the command logic and `bot/telegram_bot/keyboards/` for the button layouts and text. User-facing strings must be wrapped in `_()` for localization.
 *   **Business Logic (e.g., subscribing a user, banning):** All core logic should be in the `bot/services/` directory. Start your search here for how the application *works*.
-*   **Database Schema:** The single source of truth for the database structure is `bot/models.py`.
+*   **Database Schema:** The single source of truth for the database structure is `bot/database/models.py`.
 *   **Database Queries:** All `SELECT`, `INSERT`, `UPDATE`, `DELETE` operations are encapsulated within repositories in `bot/database/repositories/`.
 *   **Dependency Injection:** To see how components are wired together or to add a new one, see `bot/di_providers.py`.
 *   **TeamTalk Events (Join/Leave):** The initial handling and routing of raw events from the `py-talk-ex` library happens in `bot/teamtalk_bot/pytalk_event_router.py`.
