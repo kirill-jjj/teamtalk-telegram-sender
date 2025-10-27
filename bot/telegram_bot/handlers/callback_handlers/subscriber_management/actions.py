@@ -65,7 +65,7 @@ async def _display_subscriber_view(
 
     # This assumes query.message is a Message, which is guaranteed by
     # @ensure_message_context
-    await cast(Message, query.message).edit_text(
+    await cast("Message", query.message).edit_text(
         text, reply_markup=keyboard, parse_mode="HTML"
     )
 

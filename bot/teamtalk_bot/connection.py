@@ -1,7 +1,7 @@
 """Manages a single connection to a TeamTalk server, including state and caches."""
 
-from datetime import datetime
 import logging
+from typing import TYPE_CHECKING
 
 import pytalk
 from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
@@ -10,6 +10,9 @@ from bot.config import Settings
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

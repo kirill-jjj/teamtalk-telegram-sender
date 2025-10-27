@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING
 import pytalk
 
 from bot.constants import INVALID_CHANNEL_ID
-from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
 
 if TYPE_CHECKING:
     from bot.teamtalk_bot.connection import TeamTalkConnection
+    from bot.teamtalk_bot.handlers.event_handlers import PytalkEventHandlers
 
 logger = logging.getLogger(__name__)
 

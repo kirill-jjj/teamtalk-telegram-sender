@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from gettext import NullTranslations
+from gettext import NullTranslations  # noqa: TC003
 import logging
 from typing import Annotated
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery  # noqa: TC002
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
-from bot.database.uow import IUnitOfWork
+from bot.database.uow import IUnitOfWork  # noqa: TC001
 from bot.models import NotificationSetting
 from bot.services.schemas import SettingsViewDTO
-from bot.services.user_settings_service import UserSettingsService
+from bot.services.user_settings_service import UserSettingsService  # noqa: TC001
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_subscription_settings_keyboard

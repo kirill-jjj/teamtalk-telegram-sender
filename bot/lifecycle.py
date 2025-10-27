@@ -4,11 +4,14 @@ import asyncio
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
+from typing import TYPE_CHECKING
 
 from aiogram import Dispatcher
-from dishka import AsyncContainer
 from dishka.integrations.aiogram import FromDishka, inject
 import pytalk
+
+if TYPE_CHECKING:
+    from dishka import AsyncContainer
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings

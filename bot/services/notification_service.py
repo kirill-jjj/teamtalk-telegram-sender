@@ -132,4 +132,4 @@ class NotificationRecipientService:
             stmt = stmt.where(mute_logic)
 
             result = await uow.session.execute(stmt)
-            return cast(list[tuple[int, str | None]], result.all())
+            return cast("list[tuple[int, str | None]]", result.all())

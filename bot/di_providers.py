@@ -97,14 +97,14 @@ class AppProvider(Provider):
     def get_bot_event(settings: Settings) -> EventBot:
         """Provides the event-handling Bot instance."""
         bot = _create_bot(token=settings.telegram.event_token)
-        return cast(EventBot, bot)
+        return cast("EventBot", bot)
 
     @provide(provides=MessageBot)
     @staticmethod
     def get_bot_message(settings: Settings) -> MessageBot:
         """Provides the message-sending Bot instance."""
         bot = _create_bot(token=settings.telegram.message_token)
-        return cast(MessageBot, bot)
+        return cast("MessageBot", bot)
 
     @provide
     @staticmethod

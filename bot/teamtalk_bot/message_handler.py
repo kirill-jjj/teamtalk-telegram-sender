@@ -2,22 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
 import pytalk
 
-from bot.config import Settings
 from bot.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
-from bot.database.uow import IUnitOfWork
-from bot.event_bus.bus import EventBus
-from bot.services.cache_service import CacheService
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.command_handlers import (
-    PrivateMessageCommandHandlers,
-)
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
 from bot.teamtalk_bot.formatters import (
     format_teamtalk_help_message,
@@ -26,8 +17,18 @@ from bot.teamtalk_bot.formatters import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from gettext import NullTranslations
+
     from pytalk.message import Message as TeamTalkMessage
 
+    from bot.config import Settings
+    from bot.database.uow import IUnitOfWork
+    from bot.event_bus.bus import EventBus
+    from bot.services.cache_service import CacheService
+    from bot.teamtalk_bot.command_handlers import (
+        PrivateMessageCommandHandlers,
+    )
     from bot.teamtalk_bot.command_router import CommandRouter
     from bot.teamtalk_bot.connection import TeamTalkConnection
 

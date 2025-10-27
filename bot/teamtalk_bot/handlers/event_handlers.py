@@ -6,20 +6,14 @@ from the connection state management.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import datetime as dt
 from datetime import datetime
-from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
 import pytalk
-from pytalk.channel import Channel as PytalkChannel
 from pytalk.enums import Status as PytalkStatus
-from pytalk.server import Server as PytalkServer
-from pytalk.user import User as PytalkUser
 
-from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.enums import PytalkEvent
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.formatters import (
@@ -28,6 +22,14 @@ from bot.teamtalk_bot.formatters import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from gettext import NullTranslations
+
+    from pytalk.channel import Channel as PytalkChannel
+    from pytalk.server import Server as PytalkServer
+    from pytalk.user import User as PytalkUser
+
+    from bot.event_bus.bus import EventBus
     from bot.teamtalk_bot.connection import TeamTalkConnection
 
 

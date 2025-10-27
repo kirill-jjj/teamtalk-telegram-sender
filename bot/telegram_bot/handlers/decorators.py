@@ -29,7 +29,7 @@ def ensure_message_context(func: F) -> F:
         **kwargs: Any,
     ) -> Any | None:
         translator = cast(
-            NullTranslations, kwargs.get("translator", NullTranslations())
+            "NullTranslations", kwargs.get("translator", NullTranslations())
         )
         _ = translator.gettext
         error_message_for_missing_context = _("Error processing command.")
@@ -52,4 +52,4 @@ def ensure_message_context(func: F) -> F:
 
         return await func(query, *args, **kwargs)
 
-    return cast(F, wrapper)
+    return cast("F", wrapper)

@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING
 
-from pytalk.message import Message as TeamTalkMessage
-
-from bot.database.uow import IUnitOfWork
 from bot.teamtalk_bot import command_constants as tt_cmds
-from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
 
 if TYPE_CHECKING:
-    pass
+    from gettext import NullTranslations
+
+    from pytalk.message import Message as TeamTalkMessage
+
+    from bot.database.uow import IUnitOfWork
+    from bot.teamtalk_bot.command_handlers import PrivateMessageCommandHandlers
 
 logger = logging.getLogger(__name__)
 

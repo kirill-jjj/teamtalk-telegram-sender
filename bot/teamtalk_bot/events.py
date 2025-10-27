@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import pytalk
+import pytalk  # noqa: TC002
 
 from bot.event_bus.types import BaseEvent
 

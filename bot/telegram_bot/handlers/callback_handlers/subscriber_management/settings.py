@@ -1,9 +1,8 @@
 """Callback query handlers for an admin managing a subscriber's settings."""
 
-from collections.abc import Callable
 from gettext import NullTranslations
 import logging
-from typing import TypeAlias, TypedDict
+from typing import TYPE_CHECKING, TypeAlias, TypedDict
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -39,6 +38,9 @@ from bot.telegram_bot.keyboards import (
 )
 from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import display_paginated_list
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SettingChoiceConfig(TypedDict):

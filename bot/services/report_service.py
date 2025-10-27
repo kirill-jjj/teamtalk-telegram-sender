@@ -2,7 +2,6 @@
 
 from gettext import NullTranslations
 import logging
-from typing import TYPE_CHECKING
 
 import pytalk
 
@@ -35,9 +34,6 @@ from bot.telegram_bot.models import (
     WhoUser,
 )
 from bot.telegram_bot.types.bots import EventBot
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr

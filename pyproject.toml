@@ -95,6 +95,7 @@ select = [
     "FIX", # flake8-fixme
     "FURB",# refurb
     "Q",   # flake8-quotes
+    "TCH", # flake8-type-checking
 ]
 ignore = [
     "D203",

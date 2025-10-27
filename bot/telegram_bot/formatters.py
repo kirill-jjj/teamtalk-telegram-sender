@@ -9,12 +9,12 @@ from aiogram import html
 from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
-if TYPE_CHECKING:
-    from bot.telegram_bot.models import WhoReport
-
-from bot.core.enums import AdminCommand
 from bot.models import MuteListMode, NotificationSetting
 from bot.services.schemas import SettingsViewDTO
+
+if TYPE_CHECKING:
+    from bot.core.enums import AdminCommand
+    from bot.telegram_bot.models import WhoReport
 
 logger = logging.getLogger(__name__)
 

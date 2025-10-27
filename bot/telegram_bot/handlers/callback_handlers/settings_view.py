@@ -32,7 +32,7 @@ async def refresh_main_settings_view(
 
     main_settings_builder = create_main_settings_keyboard(translator)
     await edit_message_text(
-        message_to_edit=cast(Message, query.message),
+        message_to_edit=cast("Message", query.message),
         text=_("Settings"),
         reply_markup=main_settings_builder.as_markup(),
     )
@@ -58,7 +58,7 @@ async def refresh_notification_settings_view(
     )
 
     await edit_message_text(
-        message_to_edit=cast(Message, query.message),
+        message_to_edit=cast("Message", query.message),
         text=menu_text,
         reply_markup=updated_keyboard_markup.as_markup(),
     )
@@ -82,7 +82,7 @@ async def refresh_subscription_settings_view(
         translator, user_settings.notification_settings
     )
     await edit_message_text(
-        message_to_edit=cast(Message, query.message),
+        message_to_edit=cast("Message", query.message),
         text=_("Subscription Settings"),
         reply_markup=keyboard_markup,
     )

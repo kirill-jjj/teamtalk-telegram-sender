@@ -3,28 +3,29 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
 import functools
-from gettext import NullTranslations
 import logging
 from typing import TYPE_CHECKING, Any
 
 import pytalk
-from pytalk.message import Message as TeamTalkMessage
 
 from bot.constants import (
     TT_HELP_MESSAGE_PART_DELAY,
     TT_MAX_MESSAGE_BYTES,
 )
-from bot.database.uow import IUnitOfWork
-from bot.services.teamtalk_command_service import TeamTalkCommandService
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,
     format_admin_management_result,
 )
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Awaitable, Callable
+    from gettext import NullTranslations
+
+    from pytalk.message import Message as TeamTalkMessage
+
+    from bot.database.uow import IUnitOfWork
+    from bot.services.teamtalk_command_service import TeamTalkCommandService
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr

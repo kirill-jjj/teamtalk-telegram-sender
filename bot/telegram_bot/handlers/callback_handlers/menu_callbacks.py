@@ -193,7 +193,7 @@ async def menu_subscribers_handler(
         result = await report_service.get_subscribers_info(uow, page=0)
 
     await display_paginated_list(
-        target=cast(Message, query.message),
+        target=cast("Message", query.message),
         bot=bot,
         translator=translator,
         items_on_page=result.items,
@@ -222,7 +222,7 @@ async def menu_unban_handler(
         result = await report_service.get_banned_users_info(uow, page=0)
 
     await display_paginated_list(
-        target=cast(Message, query.message),
+        target=cast("Message", query.message),
         bot=bot,
         translator=translator,
         items_on_page=result.items,
