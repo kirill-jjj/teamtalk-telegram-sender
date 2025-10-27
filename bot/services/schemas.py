@@ -4,7 +4,8 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 
 
 class SettingsViewDTO(BaseModel):

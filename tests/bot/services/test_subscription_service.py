@@ -3,11 +3,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bot.database.uow import IUnitOfWork
-from bot.models import (
+from bot.database.models import (
     SubscribedUser,
     UserSettings,
 )  # Import Admin for completeness if needed
+from bot.database.uow import IUnitOfWork
 from bot.services.subscription_service import SubscriptionService
 
 

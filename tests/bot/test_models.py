@@ -11,7 +11,7 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
-from bot.models import (
+from bot.database.models import (
     Admin,
     BanList,
     Deeplink,

@@ -3,8 +3,8 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import Admin
 from bot.database.repositories.base import BaseRepository
-from bot.models import Admin
 
 
 class AdminRepository(BaseRepository[Admin]):

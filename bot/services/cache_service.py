@@ -4,7 +4,7 @@ import logging
 
 from cachetools import LRUCache
 
-from bot.models import UserSettings
+from bot.database.models import UserSettings
 
 logger = logging.getLogger(__name__)
 

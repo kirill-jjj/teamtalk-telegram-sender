@@ -7,7 +7,7 @@ from aiogram.types import Chat
 import pytest
 
 from bot.core.enums import AdminCommand
-from bot.models import MuteListMode, NotificationSetting
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 from bot.telegram_bot.formatters import (
     format_help_text,

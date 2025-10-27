@@ -13,7 +13,7 @@ from bot.core.enums import (
     SubscriberListAction,
 )
 from bot.core.languages import LanguageInfo
-from bot.models import MuteListMode, NotificationSetting
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.services.schemas import SubscriberInfo, UserAccountInfo, UserDTO
 from bot.telegram_bot.callback_data import (
     AdminCallback,

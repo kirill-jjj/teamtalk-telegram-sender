@@ -7,9 +7,9 @@ import logging
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.config import Settings
+from bot.database.models import Admin
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
-from bot.models import Admin
 from bot.services.cache_service import CacheService
 from bot.services.schemas import AdminManagementResult, BatchOperationResult
 from bot.teamtalk_bot.events import AdminStatusChangedEvent

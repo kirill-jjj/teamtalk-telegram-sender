@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import Admin
 from bot.database.repositories.admin_repository import AdminRepository
-from bot.models import Admin
 
 
 @pytest.fixture(name="engine")

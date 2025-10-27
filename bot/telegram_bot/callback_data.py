@@ -35,7 +35,7 @@ from bot.core.enums import (
     SubscriptionSetting,
     UserListAction,
 )
-from bot.models import MuteListMode
+from bot.database.types import MuteListMode
 
 
 # For main settings navigation

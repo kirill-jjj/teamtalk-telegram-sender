@@ -10,8 +10,8 @@ from bot.command_bus.bus import CommandBus
 from bot.commands import GetAllTeamTalkAccountsCommand, GetAllTeamTalkAccountsResult
 from bot.config import Settings
 from bot.core.enums import UserListAction
+from bot.database.models import MutedUser, UserSettings
 from bot.database.uow import IUnitOfWork
-from bot.models import MutedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     OperationResult,

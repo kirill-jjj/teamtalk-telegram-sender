@@ -1,6 +1,6 @@
 import pytest
 
-from bot.models import UserSettings
+from bot.database.models import UserSettings
 from bot.services.cache_service import CacheService
 
 

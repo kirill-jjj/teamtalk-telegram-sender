@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import SubscribedUser
 from bot.database.repositories.subscriber_repository import SubscriberRepository
-from bot.models import SubscribedUser
 
 
 @pytest.fixture(name="engine")

@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import BanList
 from bot.database.repositories.ban_repository import BanRepository
-from bot.models import BanList
 
 
 @pytest.fixture(name="engine")

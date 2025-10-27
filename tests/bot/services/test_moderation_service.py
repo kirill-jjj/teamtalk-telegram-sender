@@ -11,8 +11,8 @@ from bot.config import (
     TelegramSettings,
 )  # Added imports
 from bot.core.enums import UserListAction
+from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
-from bot.models import UserSettings
 from bot.services.moderation_service import ModerationService
 
 

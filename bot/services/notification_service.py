@@ -10,8 +10,9 @@ from sqlmodel import select
 
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
+from bot.database.models import MutedUser, UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import SqlModelUnitOfWork
-from bot.models import MutedUser, MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)

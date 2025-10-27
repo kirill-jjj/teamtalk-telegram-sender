@@ -1,7 +1,7 @@
 """Shared utility functions for creating keyboards."""
 
 from bot.core.languages import LanguageInfo
-from bot.models import NotificationSetting
+from bot.database.types import NotificationSetting
 
 
 def get_notification_settings_options() -> list[tuple[str, str]]:

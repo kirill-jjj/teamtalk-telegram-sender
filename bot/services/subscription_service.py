@@ -6,8 +6,8 @@ from typing import Annotated
 
 from pydantic import ConfigDict, Field, validate_call
 
+from bot.database.models import SubscribedUser, UserSettings
 from bot.database.uow import IUnitOfWork
-from bot.models import SubscribedUser, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
 

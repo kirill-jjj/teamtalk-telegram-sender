@@ -4,9 +4,9 @@ from gettext import NullTranslations
 import logging
 
 from bot.core.enums import DeeplinkAction
+from bot.database.models import Deeplink as DeeplinkModel
+from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork
-from bot.models import Deeplink as DeeplinkModel
-from bot.models import UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.subscription_service import SubscriptionService
 

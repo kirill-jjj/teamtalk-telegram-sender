@@ -15,8 +15,9 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode
 from bot.database.uow import IUnitOfWork
-from bot.models import MuteListMode, UserSettings
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO

@@ -15,7 +15,7 @@ from bot.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.core.enums import DeeplinkAction
-from bot.models import Deeplink as DeeplinkModel
+from bot.database.models import Deeplink as DeeplinkModel
 from bot.services.schemas import AdminManagementResult
 
 logger = logging.getLogger(__name__)

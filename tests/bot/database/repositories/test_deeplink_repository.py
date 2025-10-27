@@ -8,8 +8,8 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.enums import DeeplinkAction
+from bot.database.models import Deeplink
 from bot.database.repositories.deeplink_repository import DeeplinkRepository
-from bot.models import Deeplink
 
 
 @pytest.fixture(name="engine")

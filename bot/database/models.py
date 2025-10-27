@@ -1,31 +1,15 @@
 """SQLModel definitions for database tables."""
 
 from datetime import UTC, datetime
-from enum import StrEnum
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from bot.core.enums import DeeplinkAction
+from bot.database.types import MuteListMode, NotificationSetting
 
 SQLModel.model_rebuild(force=True)
-
-
-class NotificationSetting(StrEnum):
-    """Enum for user notification preferences."""
-
-    ALL = "all"
-    JOIN_OFF = "join_off"
-    LEAVE_OFF = "leave_off"
-    NONE = "none"
-
-
-class MuteListMode(StrEnum):
-    """Enum for mute list behavior (blacklist or whitelist)."""
-
-    blacklist = "blacklist"
-    whitelist = "whitelist"
 
 
 class UserSettings(SQLModel, table=True):

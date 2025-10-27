@@ -15,8 +15,9 @@ from bot.commands import (
 )
 from bot.config import Settings
 from bot.constants import USERS_PER_PAGE
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode
 from bot.database.uow import IUnitOfWork
-from bot.models import MuteListMode, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AllAccountsViewData,

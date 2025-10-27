@@ -6,8 +6,8 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import UserSettings
 from bot.database.repositories.base import BaseRepository
-from bot.models import UserSettings
 
 
 class UserRepository(BaseRepository[UserSettings]):

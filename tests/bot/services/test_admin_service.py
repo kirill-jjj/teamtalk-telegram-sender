@@ -11,8 +11,8 @@ from bot.config import (
     TeamTalkSettings,
     TelegramSettings,
 )
+from bot.database.models import Admin, UserSettings
 from bot.database.uow import IUnitOfWork
-from bot.models import Admin, UserSettings
 from bot.services.admin_service import AdminService
 from bot.teamtalk_bot.events import AdminStatusChangedEvent
 

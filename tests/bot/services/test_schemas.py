@@ -1,6 +1,7 @@
 import pytest
 
-from bot.models import MuteListMode, NotificationSetting, UserSettings
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.services.schemas import (
     AccountManagementData,
     AdminManagementResult,

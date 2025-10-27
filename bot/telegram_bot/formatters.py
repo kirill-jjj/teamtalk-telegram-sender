@@ -9,7 +9,7 @@ from aiogram import html
 from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
-from bot.models import MuteListMode, NotificationSetting
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 
 if TYPE_CHECKING:

@@ -3,8 +3,8 @@
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import BanList
 from bot.database.repositories.base import BaseRepository
-from bot.models import BanList
 
 
 class BanRepository(BaseRepository[BanList]):

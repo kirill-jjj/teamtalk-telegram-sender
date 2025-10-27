@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot import models  # Important for SQLModel to discover models
 from bot.config import Settings
+from bot.database import models  # Important for SQLModel to discover models
 
 logger = logging.getLogger(__name__)
 

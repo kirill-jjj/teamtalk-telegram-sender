@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from bot.core.enums import DeeplinkAction
+from bot.database.models import Deeplink
 from bot.database.uow import IUnitOfWork
-from bot.models import Deeplink
 from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService

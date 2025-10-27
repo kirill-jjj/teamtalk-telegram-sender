@@ -2,8 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import IUnitOfWork
-from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.user_settings_service import UserSettingsService
 
 

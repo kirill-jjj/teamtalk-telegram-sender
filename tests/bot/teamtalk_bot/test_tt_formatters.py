@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from bot.core.enums import DeeplinkAction
-from bot.models import Deeplink
+from bot.database.models import Deeplink
 from bot.services.schemas import AdminManagementResult, BatchOperationResult
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,

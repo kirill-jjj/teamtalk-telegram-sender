@@ -11,8 +11,8 @@ from aiogram.types import CallbackQuery  # noqa: TC002
 from dishka.integrations.aiogram import FromDishka
 
 from bot.core.enums import Actor, SettingsNavAction, SubscriptionSetting
+from bot.database.types import NotificationSetting
 from bot.database.uow import IUnitOfWork  # noqa: TC001
-from bot.models import NotificationSetting
 from bot.services.schemas import SettingsViewDTO
 from bot.services.user_settings_service import UserSettingsService  # noqa: TC001
 from bot.telegram_bot.callback_data import SettingsCallback, SubscriptionCallback

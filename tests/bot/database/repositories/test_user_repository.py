@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import MutedUser, UserSettings
 from bot.database.repositories.user_repository import UserRepository
-from bot.models import MutedUser, UserSettings
 
 
 @pytest.fixture(name="engine")

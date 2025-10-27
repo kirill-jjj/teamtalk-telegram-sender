@@ -18,12 +18,9 @@ from bot.core.enums import (
     SubscriberListAction,
 )
 from bot.core.languages import LanguageInfo
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import IUnitOfWork
-from bot.models import (
-    MuteListMode,
-    NotificationSetting,
-    UserSettings,
-)
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO, SubscriberView
@@ -175,7 +172,9 @@ async def delete_subscriber_from_list(
         )
         await uow.commit()
 
-    message = result.message_key.format(**(cast(dict[str, Any], result.message_args) or {}))
+    message = result.message_key.format(
+        **(cast("dict[str, Any]", result.message_args) or {})
+    )
     await query.answer(message, show_alert=True)
 
     if result.success:
@@ -253,7 +252,9 @@ async def delete_subscriber(
         )
         await uow.commit()
 
-    message = result.message_key.format(**(cast(dict[str, Any], result.message_args) or {}))
+    message = result.message_key.format(
+        **(cast("dict[str, Any]", result.message_args) or {})
+    )
     await query.answer(message, show_alert=True)
 
     if result.success:

@@ -7,7 +7,8 @@ import pytest
 
 from bot.core.enums import NotificationType
 from bot.database.uow import SqlModelUnitOfWork
-from bot.models import MuteListMode, UserSettings
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import (
     NotificationRecipientService,

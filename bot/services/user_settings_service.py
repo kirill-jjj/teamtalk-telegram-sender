@@ -7,8 +7,9 @@ from pydantic import ConfigDict, validate_call
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.core.enums import Actor
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import IUnitOfWork
-from bot.models import MuteListMode, NotificationSetting, UserSettings
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AccountManagementData,

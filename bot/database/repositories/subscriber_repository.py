@@ -3,8 +3,8 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.database.models import SubscribedUser
 from bot.database.repositories.base import BaseRepository
-from bot.models import SubscribedUser
 
 
 class SubscriberRepository(BaseRepository[SubscribedUser]):
