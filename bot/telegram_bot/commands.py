@@ -1,5 +1,6 @@
 """Functions for setting and managing Telegram bot commands."""
 
+import asyncio
 from collections.abc import Callable
 from gettext import NullTranslations
 import logging
@@ -56,27 +57,29 @@ async def set_telegram_commands(
     """Set bot commands globally for all languages and individually for admins."""
     logger.info("Setting up global and admin-specific Telegram commands...")
 
+    global_command_tasks = []
     for lang_info in available_languages:
         lang_code = lang_info["code"]
         translator = translator_factory(lang_code)
         user_commands = get_user_commands(translator.gettext)
 
-        try:
-            await bot.set_my_commands(
+        global_command_tasks.append(
+            bot.set_my_commands(
                 commands=user_commands,
                 scope=BotCommandScopeAllPrivateChats(),
                 language_code=lang_code
                 if lang_code != settings.general.default_lang
                 else None,
             )
-            logger.info(
-                "Successfully set global user commands for language: '%s'.", lang_code
-            )
-        except TelegramAPIError:
-            logger.exception(
-                "Failed to set global commands for language '%s'.", lang_code
-            )
+        )
 
+    try:
+        await asyncio.gather(*global_command_tasks)
+        logger.info("Successfully set global user commands for all languages.")
+    except TelegramAPIError:
+        logger.exception("Failed to set global commands for one or more languages.")
+
+    admin_command_tasks = []
     for admin_id in cache.get_all_admin_ids():
         admin_lang_code = settings.general.default_lang
         admin_settings = cache.get_user_settings(admin_id)
@@ -87,37 +90,29 @@ async def set_telegram_commands(
         admin_commands = get_admin_commands(admin_translator.gettext)
         admin_scope = BotCommandScopeChat(chat_id=admin_id)
 
-        try:
-            await bot.set_my_commands(
+        admin_command_tasks.append(
+            bot.set_my_commands(
                 commands=admin_commands,
                 scope=admin_scope,
                 language_code=admin_lang_code
                 if admin_lang_code != settings.general.default_lang
                 else None,
             )
-            logger.info(
-                "Successfully set custom commands for admin %s in language '%s'.",
-                admin_id,
-                admin_lang_code,
+        )
+
+    try:
+        await asyncio.gather(*admin_command_tasks)
+        logger.info("Successfully set custom commands for all admins.")
+    except TelegramBadRequest as e:
+        if "chat not found" in str(e).lower():
+            logger.warning(
+                "Could not set commands for one or more admins: chat not found. "
+                "This is expected if the admin has not started the bot yet."
             )
-        except TelegramBadRequest as e:
-            if "chat not found" in str(e).lower():
-                logger.warning(
-                    "Could not set commands for admin %s: chat not found. "
-                    "This is expected if the admin has not started the bot yet.",
-                    admin_id,
-                )
-            else:
-                logger.exception(
-                    "TelegramBadRequest while setting commands for admin %s.",
-                    admin_id,
-                )
-        except TelegramAPIError:
-            logger.exception(
-                "Failed to set commands for admin %s (lang: %s).",
-                admin_id,
-                admin_lang_code,
-            )
+        else:
+            logger.exception("TelegramBadRequest while setting commands for admins.")
+    except TelegramAPIError:
+        logger.exception("Failed to set commands for one or more admins.")
 
 
 async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:

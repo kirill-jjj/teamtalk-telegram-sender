@@ -6,6 +6,7 @@ from the connection state management.
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 from datetime import datetime
 import logging
@@ -245,6 +246,9 @@ class PytalkEventHandlers:
             "[%s] Initial online users cache population...", connection.server_info.host
         )
         connection.cache_manager.start_background_tasks()
+        # Defer user account cache population to improve startup responsiveness
+        await asyncio.sleep(1)  # Give the bot a moment to become responsive
+        connection.cache_manager.start_populate_accounts_task()
         try:
             gender = connection.settings.general.gender.lower()
             status_val = PytalkStatus.online.neutral

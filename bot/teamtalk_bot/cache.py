@@ -102,6 +102,11 @@ class TeamTalkCache:
             return
         if self._periodic_sync_task is None or self._periodic_sync_task.done():
             self._periodic_sync_task = asyncio.create_task(self._periodic_cache_sync())
+
+    def start_populate_accounts_task(self) -> None:
+        """Starts the background task to populate user accounts cache."""
+        if not self.connection or not self.connection.instance:
+            return
         if self._populate_accounts_task is None or self._populate_accounts_task.done():
             self._populate_accounts_task = asyncio.create_task(
                 self.populate_user_accounts_cache()
