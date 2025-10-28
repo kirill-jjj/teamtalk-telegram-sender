@@ -8,7 +8,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import TelegramObject, User
-from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
+from dishka import AsyncContainer, Provider, Scope, provide
 
 from bot.config import Settings
 from bot.database.engine import AsyncSessionFactoryType
@@ -53,15 +53,15 @@ class TelegramProvider(Provider):
     @provide(scope=Scope.APP)
     @staticmethod
     def get_telegram_notification_handler(  # noqa: PLR0917
-        event_bot: FromDishka[EventBot],
-        message_bot: FromDishka[MessageBot],
-        cache: FromDishka[CacheService],
-        settings: FromDishka[Settings],
-        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
-        event_bus: FromDishka[EventBus],
-        recipient_service: FromDishka[NotificationRecipientService],
-        session_factory: FromDishka[AsyncSessionFactoryType],
-        app_container: FromDishka[AsyncContainer],
+        event_bot: EventBot,
+        message_bot: MessageBot,
+        cache: CacheService,
+        settings: Settings,
+        translator_factory: Callable[[str | None], NullTranslations],
+        event_bus: EventBus,
+        recipient_service: NotificationRecipientService,
+        session_factory: AsyncSessionFactoryType,
+        app_container: AsyncContainer,
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
         return TelegramNotificationHandler(

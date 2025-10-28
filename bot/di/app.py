@@ -5,7 +5,7 @@ import gettext
 from gettext import NullTranslations
 
 from cachetools import LRUCache
-from dishka import FromDishka, Provider, Scope, provide
+from dishka import Provider, Scope, provide
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
@@ -81,7 +81,7 @@ class AppProvider(Provider):
     @provide(provides=Callable[[str], NullTranslations], scope=Scope.APP)
     @staticmethod
     def get_str_translator_factory(
-        translator_factory: FromDishka[Callable[[str | None], NullTranslations]],
+        translator_factory: Callable[[str | None], NullTranslations],
     ) -> Callable[[str], NullTranslations]:
         """Provides a factory for creating translators that only accepts strings."""
 
@@ -104,7 +104,7 @@ class AppProvider(Provider):
 
     @provide
     @staticmethod
-    def get_cache_service(settings: FromDishka[Settings]) -> CacheService:
+    def get_cache_service(settings: Settings) -> CacheService:
         """Provides the application-wide cache service."""
         return CacheService(
             user_settings_cache=LRUCache(

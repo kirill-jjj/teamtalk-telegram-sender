@@ -4,7 +4,7 @@ from collections.abc import Callable
 from gettext import NullTranslations
 
 from aiogram.types import User
-from dishka import FromDishka, Provider, Scope, provide, provide_all
+from dishka import Provider, Scope, provide, provide_all
 
 from bot.command_bus.bus import CommandBus
 from bot.config import Settings
@@ -31,8 +31,8 @@ class ServicesProvider(Provider):
     @provide(scope=Scope.APP)
     @staticmethod
     def get_notification_recipient_service(
-        session_factory: FromDishka[AsyncSessionFactoryType],
-        cache: FromDishka[CacheService],
+        session_factory: AsyncSessionFactoryType,
+        cache: CacheService,
     ) -> NotificationRecipientService:
         """Provides a NotificationRecipientService."""
         return NotificationRecipientService(session_factory, cache)
@@ -40,10 +40,10 @@ class ServicesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     @staticmethod
     def get_report_service(
-        settings: FromDishka[Settings],
-        uow: FromDishka[IUnitOfWork],
-        bot: FromDishka[EventBot],
-        command_bus: FromDishka[CommandBus],
+        settings: Settings,
+        uow: IUnitOfWork,
+        bot: EventBot,
+        command_bus: CommandBus,
     ) -> ReportService:
         """Provides a ReportService."""
         return ReportService(
@@ -56,10 +56,10 @@ class ServicesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     @staticmethod
     def get_admin_service(
-        uow: FromDishka[IUnitOfWork],
-        cache: FromDishka[CacheService],
-        event_bus: FromDishka[EventBus],
-        settings: FromDishka[Settings],
+        uow: IUnitOfWork,
+        cache: CacheService,
+        event_bus: EventBus,
+        settings: Settings,
     ) -> AdminService:
         """Provides an AdminService."""
         return AdminService(
@@ -76,11 +76,11 @@ class ServicesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     @staticmethod
     def get_moderation_service(
-        uow: FromDishka[IUnitOfWork],
-        subscription_service: FromDishka[SubscriptionService],
-        cache: FromDishka[CacheService],
-        command_bus: FromDishka[CommandBus],
-        settings: FromDishka[Settings],
+        uow: IUnitOfWork,
+        subscription_service: SubscriptionService,
+        cache: CacheService,
+        command_bus: CommandBus,
+        settings: Settings,
     ) -> ModerationService:
         """Provides a ModerationService."""
         return ModerationService(
@@ -97,7 +97,7 @@ class ServicesProvider(Provider):
         user: User | None,
         user_settings_service: UserSettingsService,
         settings: Settings,
-        uow: FromDishka[IUnitOfWork],
+        uow: IUnitOfWork,
     ) -> SettingsViewDTO | None:
         """Provides SettingsViewDTO if a user is present in the event."""
         if not user:
