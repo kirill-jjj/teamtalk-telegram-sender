@@ -64,7 +64,7 @@ The project is built on modern asynchronous patterns with an emphasis on modular
 
 *   **Event-Driven Model**: An `EventBus` is used for loose coupling between components. Components that interact with TeamTalk publish domain events (e.g., `UserJoinedEvent`), and other parts of the system (like the Telegram notifier) subscribe to these events and react accordingly. This allows the `teamtalk_bot` and `telegram_bot` components to be independent of each other.
 
-A more detailed description of the architecture and contribution guidelines can be found in the [AGENTS.md](AGENTS.md) file.
+A more detailed description of the architecture and contribution guidelines can be found in the [gemini.md](gemini.md) file.
 
 ## Installation and Setup
 

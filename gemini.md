@@ -56,7 +56,7 @@ This document is the single source of truth for any agent contributing to this c
 The architecture is designed to be modular, testable, and maintainable. Any changes or new features must align with these principles.
 
 ### 2.1. Dependency Injection (DI)
-This is the central architectural pattern of the application. Dependencies are managed by the `dishka` library and defined in `bot/di_providers.py`.
+This is the central architectural pattern of the application. Dependencies are managed by the `dishka` library and defined in the `bot/di/` package.
 
 *   **No Global State:** Do not instantiate global clients (like `Bot` or `Dispatcher`) or session factories outside the main application setup.
 *   **Use `dishka` Providers:** Handlers and services receive necessary dependencies (like database sessions, repositories, other services, or caches) via `dishka`'s injection mechanism.
@@ -310,7 +310,7 @@ Use this as a quick guide to locate code for common tasks:
 *   **Business Logic (e.g., subscribing a user, banning):** All core logic should be in the `bot/services/` directory. Start your search here for how the application *works*.
 *   **Database Schema:** The single source of truth for the database structure is `bot/database/models.py`.
 *   **Database Queries:** All `SELECT`, `INSERT`, `UPDATE`, `DELETE` operations are encapsulated within repositories in `bot/database/repositories/`.
-*   **Dependency Injection:** To see how components are wired together or to add a new one, see `bot/di_providers.py`.
+*   **Dependency Injection:** To see how components are wired together or to add a new one, see the provider files in the `bot/di/` package.
 *   **TeamTalk Events (Join/Leave):** The initial handling and routing of raw events from the `py-talk-ex` library happens in `bot/teamtalk_bot/pytalk_event_router.py`.
 *   **Startup & Shutdown Logic:** See `bot/lifecycle.py`.
 
@@ -319,7 +319,7 @@ Use this as a quick guide to locate code for common tasks:
 This project uses `dishka` for dependency injection. To add a new service and make it available to a handler, follow these steps:
 
 1.  **Create the Service:** Write your new service class in a file within the `bot/services/` directory.
-2.  **Add a Provider:** Open `bot/di_providers.py`. In the appropriate provider class (`AppProvider` for app-level singletons, `RequestProvider` for per-request instances), add a new `@provide` method that creates and returns an instance of your service.
+2.  **Add a Provider:** Open the appropriate provider file in the `bot/di/` package (e.g., `bot/di/services.py` for a new service). In the provider class (`ServicesProvider`), add a new `@provide` method that creates and returns an instance of your service.
 3.  **Inject the Service:** In the `__init__` or handler function where you need the service, add it as a parameter with the type hint `FromDishka[YourNewService]`. Dishka will automatically provide it.
 
 ## 9. Debugging
