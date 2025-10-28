@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bot.core.commands import GetAllTeamTalkAccountsResult, GetOnlineUsersResult
 from bot.database.models import BanList, SubscribedUser, UserSettings
 from bot.database.types import MuteListMode
 from bot.services.report_service import ReportService
@@ -30,11 +29,6 @@ def mock_bot() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_command_bus() -> AsyncMock:
-    return AsyncMock()
-
-
-@pytest.fixture
 def mock_translator() -> MagicMock:
     translator = MagicMock(spec=NullTranslations)
     translator.gettext.side_effect = lambda s: s
@@ -53,13 +47,18 @@ def mock_user_settings_service() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_teamtalk_service() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
 def report_service(
     mock_settings: MagicMock,
     mock_uow: AsyncMock,
     mock_bot: AsyncMock,
-    mock_command_bus: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
 ) -> ReportService:
-    return ReportService(mock_settings, mock_uow, mock_bot, mock_command_bus)
+    return ReportService(mock_settings, mock_uow, mock_bot, mock_teamtalk_service)
 
 
 @pytest.mark.asyncio
@@ -69,20 +68,20 @@ async def test_get_who_report_data_success(
     mock_translator: MagicMock,
     mock_cache_service: MagicMock,
     mock_user_settings_service: AsyncMock,
-    mock_command_bus: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
 ) -> None:
     """Test get_who_report_data with a successful result."""
     mock_user_settings_service.get_or_create.return_value = MagicMock(
         language_code="en"
     )
     mock_cache_service.is_admin.return_value = False
-    mock_command_bus.execute.return_value = GetOnlineUsersResult(
-        success=True,
-        users=[
+    mock_teamtalk_service.fetch_online_users.return_value = (
+        [
             UserDTO(id=1, nickname="User1", channel_name="Channel1"),
             UserDTO(id=2, nickname="User2", channel_name="Channel1"),
         ],
-        server_name="TestServer",
+        "TestServer",
+        None,
     )
 
     report = await report_service.get_who_report_data(
@@ -91,7 +90,6 @@ async def test_get_who_report_data_success(
         mock_translator,
         mock_cache_service,
         mock_user_settings_service,
-        mock_command_bus,
     )
 
     assert report.error_message is None
@@ -156,20 +154,20 @@ async def test_get_banned_users_info(
 @pytest.mark.asyncio
 async def test_get_sorted_online_users_for_moderation(
     report_service: ReportService,
-    mock_command_bus: AsyncMock,
     mock_user_settings_service: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
 ) -> None:
     """Test get_sorted_online_users_for_moderation method."""
     mock_user_settings_service.get_or_create.return_value = MagicMock(
         language_code="en"
     )
-    mock_command_bus.execute.return_value = GetOnlineUsersResult(
-        success=True,
-        users=[
+    mock_teamtalk_service.fetch_online_users.return_value = (
+        [
             UserDTO(id=2, nickname="UserB", channel_name="Channel1"),
             UserDTO(id=1, nickname="UserA", channel_name="Channel1"),
         ],
-        server_name="TestServer",
+        "TestServer",
+        None,
     )
 
     result = await report_service.get_sorted_online_users_for_moderation(
@@ -178,7 +176,6 @@ async def test_get_sorted_online_users_for_moderation(
         MagicMock(),
         MagicMock(),
         mock_user_settings_service,
-        mock_command_bus,
     )
 
     assert len(result.users) == 2
@@ -189,13 +186,13 @@ async def test_get_sorted_online_users_for_moderation(
 @pytest.mark.asyncio
 async def test_get_all_server_accounts_view_data(
     report_service: ReportService,
-    mock_command_bus: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     """Test get_all_server_accounts_view_data method."""
-    mock_command_bus.execute.return_value = GetAllTeamTalkAccountsResult(
-        success=True,
-        accounts=[UserAccountInfo(username="UserB"), UserAccountInfo(username="UserA")],
+    mock_teamtalk_service.fetch_all_accounts.return_value = (
+        [UserAccountInfo(username="UserB"), UserAccountInfo(username="UserA")],
+        None,
     )
 
     result = await report_service.get_all_server_accounts_view_data(

@@ -9,7 +9,6 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
@@ -35,7 +34,6 @@ async def show_moderation_user_list(
     report_service: ReportService,
     cache_service: CacheService,
     user_settings_service: UserSettingsService,
-    command_bus: CommandBus,
     uow: IUnitOfWork,
 ) -> None:
     """Generic handler for moderation commands like kick and ban."""
@@ -49,7 +47,6 @@ async def show_moderation_user_list(
             translator=translator,
             cache_service=cache_service,
             user_settings_service=user_settings_service,
-            command_bus=command_bus,
         )
 
     await display_moderation_view(
@@ -64,7 +61,6 @@ async def show_moderation_user_list(
 async def on_kick_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
     cache_service: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
@@ -78,7 +74,6 @@ async def on_kick_command(
         report_service,
         cache_service,
         user_settings_service,
-        command_bus,
         uow,
     )
 
@@ -87,7 +82,6 @@ async def on_kick_command(
 async def on_ban_command(
     message: Message,
     translator: Annotated[NullTranslations, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
     cache_service: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
@@ -101,7 +95,6 @@ async def on_ban_command(
         report_service,
         cache_service,
         user_settings_service,
-        command_bus,
         uow,
     )
 

@@ -62,19 +62,10 @@ This is the central architectural pattern of the application. Dependencies are m
 *   **Use `dishka` Providers:** Handlers and services receive necessary dependencies (like database sessions, repositories, other services, or caches) via `dishka`'s injection mechanism.
 *   **Explicit is Better than Implicit:** Functions should receive their dependencies as explicit arguments, type-hinted with `FromDishka[...]`.
 
-### 2.2. Command and Event Buses
-The application uses two distinct messaging patterns to decouple components: the Command Bus for imperative actions and the Event Bus for reactive processes.
+### 2.2. Event Bus
+The application uses the Event Bus for reactive processes to decouple components.
 
-#### Command Bus (1-to-1, Expects Result)
-The Command Bus decouples the *intent* to perform an action from its *execution*. It is used when a component needs a specific operation to be performed and requires a result.
 
-*   **Purpose:** To execute a specific action and get a result back.
-*   **Flow:** A caller dispatches a **Command** object. The bus finds the single, registered **Command Handler** for that command, executes it, and returns the handler's result to the original caller.
-*   **When to use:** Use a Command when you need to get data for a handler (e.g., `GetOnlineUsersCommand` to fetch users for the `/who` command) or to trigger an operation and know its outcome (e.g., `KickUserCommand`).
-*   **Key Characteristics:**
-    *   **Command:** An imperative instruction (e.g., `DoSomething`). Defined in `bot/commands.py`.
-    *   **Handler:** Exactly one handler per command. Located in `bot/command_handlers/`.
-    *   **Return Value:** The handler's result is returned to the caller.
 
 #### Event Bus (1-to-Many, Fire-and-Forget)
 The Event Bus decouples components by allowing them to react to things that have happened without being directly called. It is used for broadcasting information.
@@ -88,15 +79,14 @@ The Event Bus decouples components by allowing them to react to things that have
     *   **Return Value:** None. The process is asynchronous and fire-and-forget.
 
 ### 2.3. Separation of Concerns (SoC)
-The codebase is organized into distinct layers, each with a single responsibility. This separation is critical. The typical flow of a user-initiated request is: **Handler -> Command Bus -> Service -> Repository -> Service -> Formatter -> Handler**.
+The codebase is organized into distinct layers, each with a single responsibility. This separation is critical. The typical flow of a user-initiated request is: **Handler -> Service -> Repository -> Service -> Formatter -> Handler**.
 
 #### Target Architecture
 *   **Handlers (`bot/telegram_bot/handlers`)**
     *   **Role:** Entry point for user interaction (UI Layer).
     *   **Responsibilities:**
         *   Parse incoming Telegram `Message` or `CallbackQuery`.
-        *   Dispatch a **Command** to the `CommandBus` to request data or an action.
-        *   Receive a data object (DTO) or result from the `CommandBus`.
+        *   Receive a data object (DTO) or result.
         *   Pass the data object to a **Formatter** to get a user-facing representation (e.g., an HTML string).
         *   Send the formatted string and any keyboards back to the user.
     *   **Rule:** Handlers **must be thin**. They do not contain business logic. Their job is to translate user input into commands and user output into UI.
@@ -108,7 +98,7 @@ The codebase is organized into distinct layers, each with a single responsibilit
         *   Orchestrate operations between different components, primarily repositories.
         *   Interact with the database **only** through a `Unit of Work (UoW)` instance. The `UoW` is provided on a per-request basis by the DI container, ensuring that all database operations within a single handler's execution (even across multiple service calls) are atomic and part of the same transaction.
         *   May call other services to compose more complex operations.
-    *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service. Services are often invoked by Command Handlers.
+    *   **Rule:** If it's a business rule or a multi-step process, it belongs in a service.
 
 *   **Formatters (`bot/telegram_bot/formatters`, `bot/teamtalk_bot/formatters`)**
     *   **Role:** Presentation Logic.

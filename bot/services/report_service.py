@@ -5,15 +5,7 @@ import logging
 
 import pytalk
 
-from bot.command_bus.bus import CommandBus
-from bot.command_bus.exceptions import NoHandlerFoundError
 from bot.config import Settings
-from bot.core.commands import (
-    GetAllTeamTalkAccountsCommand,
-    GetAllTeamTalkAccountsResult,
-    GetOnlineUsersCommand,
-    GetOnlineUsersResult,
-)
 from bot.core.constants import USERS_PER_PAGE
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode
@@ -26,6 +18,7 @@ from bot.services.schemas import (
     PaginatedResult,
     SubscriberInfo,
 )
+from bot.services.teamtalk_service import TeamTalkService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.api import get_display_names_for_ids
 from bot.telegram_bot.models import (
@@ -48,13 +41,13 @@ class ReportService:
         settings: Settings,
         uow: IUnitOfWork,
         bot: EventBot,
-        command_bus: CommandBus,
+        teamtalk_service: TeamTalkService,
     ) -> None:
         """Initializes the report service."""
         self._settings = settings
         self._uow = uow
         self._bot = bot
-        self._command_bus = command_bus
+        self._teamtalk_service = teamtalk_service
 
     async def get_who_report_data(
         self,
@@ -63,7 +56,6 @@ class ReportService:
         translator: NullTranslations,
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
-        command_bus: CommandBus,
     ) -> WhoReport:
         """Gathers online user data and returns a structured report DTO."""
         _ = translator.gettext
@@ -71,32 +63,30 @@ class ReportService:
             uow, telegram_user_id, self._settings.general.default_lang
         )
         is_admin = cache_service.is_admin(telegram_user_id)
-        command = GetOnlineUsersCommand(
+
+        (
+            users,
+            server_name,
+            error_message,
+        ) = await self._teamtalk_service.fetch_online_users(
             is_caller_admin=is_admin, lang_code=user_settings.language_code
         )
 
-        try:
-            result: GetOnlineUsersResult = await command_bus.execute(command)
-        except NoHandlerFoundError:
-            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
-            return WhoReport(
-                error_message=_("This feature is temporarily unavailable.")
-            )
+        if error_message:
+            return WhoReport(error_message=error_message)
 
-        if not result.success or not result.users:
-            return WhoReport(
-                error_message=result.error_message or _("No users found online.")
-            )
+        if not users:
+            return WhoReport(error_message=error_message or _("No users found online."))
 
         # Grouping logic is now part of the service
         channels_data: dict[str, list[str]] = {}
-        for user in result.users:
+        for user in users:
             channel_name = user.channel_name
             if channel_name not in channels_data:
                 channels_data[channel_name] = []
             channels_data[channel_name].append(user.nickname)
 
-        user_count = len(result.users)
+        user_count = len(users)
 
         grouped_data = [
             WhoChannelGroup(
@@ -106,7 +96,7 @@ class ReportService:
         ]
 
         report_payload = WhoReportPayload(
-            server_name=result.server_name,
+            server_name=server_name,
             total_users=user_count,
             grouped_data=grouped_data,
         )
@@ -213,7 +203,6 @@ class ReportService:
         translator: NullTranslations,
         cache_service: CacheService,
         user_settings_service: UserSettingsService,
-        command_bus: CommandBus,
     ) -> ModerationViewData:
         """Fetches and sorts online users for moderation purposes."""
         _ = translator.gettext
@@ -221,52 +210,52 @@ class ReportService:
             uow, telegram_user_id, self._settings.general.default_lang
         )
         is_admin = cache_service.is_admin(telegram_user_id)
-        command = GetOnlineUsersCommand(
+
+        (
+            users,
+            server_name,
+            error_message,
+        ) = await self._teamtalk_service.fetch_online_users(
             is_caller_admin=is_admin, lang_code=user_settings.language_code
         )
 
-        try:
-            result: GetOnlineUsersResult = await command_bus.execute(command)
-        except NoHandlerFoundError:
-            logger.critical("CRITICAL: No handler for GetOnlineUsersCommand!")
+        if error_message:
             return ModerationViewData(
                 users=[],
                 server_name=self._settings.teamtalk.host_name,
-                error_message=_("This feature is temporarily unavailable."),
+                error_message=error_message,
             )
 
-        if not result.success or not result.users:
+        if not users:
             return ModerationViewData(
                 users=[],
                 server_name=self._settings.teamtalk.host_name,
-                error_message=result.error_message or _("No users found online."),
+                error_message=error_message or _("No users found online."),
             )
 
-        sorted_users = sorted(result.users, key=lambda u: u.nickname.lower())
-        return ModerationViewData(
-            users=sorted_users, server_name=self._settings.teamtalk.host_name
-        )
+        sorted_users = sorted(users, key=lambda u: u.nickname.lower())
+        return ModerationViewData(users=sorted_users, server_name=server_name)
 
     async def get_all_server_accounts_view_data(
         self, lang_code: str, translator: NullTranslations
     ) -> AllAccountsViewData:
         """Fetches and prepares data for the all server accounts list view."""
         _ = translator.gettext
-        result: GetAllTeamTalkAccountsResult = await self._command_bus.execute(
-            GetAllTeamTalkAccountsCommand(lang_code=lang_code)
+        accounts, error_message = await self._teamtalk_service.fetch_all_accounts(
+            lang_code=lang_code
         )
 
         title = _("All Server Accounts")
         empty_text = _("No user accounts found on the server.")
 
-        if not result.success:
+        if error_message:
             return AllAccountsViewData(
                 accounts=[],
                 title=title,
-                empty_list_text=result.error_message or empty_text,
+                empty_list_text=error_message or empty_text,
             )
 
-        sorted_accounts = sorted(result.accounts, key=lambda acc: acc.username.lower())
+        sorted_accounts = sorted(accounts, key=lambda acc: acc.username.lower())
         return AllAccountsViewData(
             accounts=sorted_accounts, title=title, empty_list_text=empty_text
         )

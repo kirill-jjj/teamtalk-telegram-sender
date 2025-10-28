@@ -6,7 +6,6 @@ from gettext import NullTranslations
 from aiogram.types import User
 from dishka import Provider, Scope, provide, provide_all
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import IUnitOfWork
@@ -19,7 +18,9 @@ from bot.services.notification_service import NotificationRecipientService
 from bot.services.report_service import ReportService
 from bot.services.schemas import SettingsViewDTO
 from bot.services.subscription_service import SubscriptionService
+from bot.services.teamtalk_service import TeamTalkService
 from bot.services.user_settings_service import UserSettingsService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.telegram_bot.types.bots import EventBot
 
 
@@ -39,18 +40,32 @@ class ServicesProvider(Provider):
 
     @provide(scope=Scope.REQUEST)
     @staticmethod
+    def get_teamtalk_service(
+        tt_connection: TeamTalkConnection,
+        settings: Settings,
+        translator_factory: Callable[[str], NullTranslations],
+    ) -> TeamTalkService:
+        """Provides the TeamTalkService."""
+        return TeamTalkService(
+            tt_connection=tt_connection,
+            settings=settings,
+            translator_factory=translator_factory,
+        )
+
+    @provide(scope=Scope.REQUEST)
+    @staticmethod
     def get_report_service(
         settings: Settings,
         uow: IUnitOfWork,
         bot: EventBot,
-        command_bus: CommandBus,
+        teamtalk_service: TeamTalkService,
     ) -> ReportService:
         """Provides a ReportService."""
         return ReportService(
             settings=settings,
             uow=uow,
             bot=bot,
-            command_bus=command_bus,
+            teamtalk_service=teamtalk_service,
         )
 
     @provide(scope=Scope.REQUEST)
@@ -70,7 +85,11 @@ class ServicesProvider(Provider):
         )
 
     services = provide_all(
-        DeeplinkService, UserSettingsService, SubscriptionService, scope=Scope.REQUEST
+        DeeplinkService,
+        UserSettingsService,
+        SubscriptionService,
+        TeamTalkService,
+        scope=Scope.REQUEST,
     )
 
     @provide(scope=Scope.REQUEST)
@@ -79,16 +98,18 @@ class ServicesProvider(Provider):
         uow: IUnitOfWork,
         subscription_service: SubscriptionService,
         cache: CacheService,
-        command_bus: CommandBus,
         settings: Settings,
+        tt_connection: TeamTalkConnection,
+        teamtalk_service: TeamTalkService,
     ) -> ModerationService:
         """Provides a ModerationService."""
         return ModerationService(
             uow=uow,
             subscription_service=subscription_service,
             cache=cache,
-            command_bus=command_bus,
             settings=settings,
+            tt_connection=tt_connection,
+            teamtalk_service=teamtalk_service,
         )
 
     @provide(provides=SettingsViewDTO | None, scope=Scope.REQUEST)

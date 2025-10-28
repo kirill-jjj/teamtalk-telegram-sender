@@ -10,6 +10,7 @@ from bot.database.models import SubscribedUser, UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
+from bot.services.teamtalk_service import TeamTalkService
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +18,19 @@ logger = logging.getLogger(__name__)
 class SubscriptionService:
     """Service for managing user subscriptions."""
 
-    def __init__(self, uow: IUnitOfWork, cache: CacheService) -> None:
+    def __init__(
+        self, uow: IUnitOfWork, cache: CacheService, teamtalk_service: TeamTalkService
+    ) -> None:
         """Initializes the subscription service.
 
         Args:
             uow: The unit of work.
             cache: The cache service.
+            teamtalk_service: The TeamTalk service.
         """
         self._uow = uow
         self._cache = cache
+        self._teamtalk_service = teamtalk_service
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def create_subscription(

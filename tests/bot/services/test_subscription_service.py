@@ -9,6 +9,7 @@ from bot.database.models import (
 )  # Import Admin for completeness if needed
 from bot.database.uow import IUnitOfWork
 from bot.services.subscription_service import SubscriptionService
+from bot.services.teamtalk_service import TeamTalkService
 
 
 @pytest.fixture
@@ -37,10 +38,15 @@ def mock_translator() -> MagicMock:
 
 
 @pytest.fixture
+def mock_teamtalk_service() -> AsyncMock:
+    return AsyncMock(spec=TeamTalkService)
+
+
+@pytest.fixture
 def subscription_service(
-    mock_uow: AsyncMock, mock_cache: MagicMock
+    mock_uow: AsyncMock, mock_cache: MagicMock, mock_teamtalk_service: AsyncMock
 ) -> SubscriptionService:
-    return SubscriptionService(mock_uow, mock_cache)
+    return SubscriptionService(mock_uow, mock_cache, mock_teamtalk_service)
 
 
 @pytest.mark.asyncio

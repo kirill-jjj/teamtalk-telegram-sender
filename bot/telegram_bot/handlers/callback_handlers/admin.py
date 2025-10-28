@@ -8,9 +8,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
-from bot.core.commands import BanUserCommand, KickUserCommand, ModerationResult
 from bot.core.enums import AdminCommand
+from bot.services.moderation_service import ModerationService
 from bot.telegram_bot.callback_data import AdminCallback
 from bot.telegram_bot.handlers.decorators import (
     ensure_message_context,
@@ -29,32 +28,32 @@ async def on_moderation_confirm(
     callback_query: CallbackQuery,
     callback_data: AdminCallback,
     translator: Annotated[NullTranslations, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
+    moderation_service: Annotated[ModerationService, FromDishka()],
 ) -> None:
     """Processes admin actions (kick/ban) selected from an inline keyboard."""
     _ = translator.gettext
 
-    command: KickUserCommand | BanUserCommand
-    lang_code = translator.info().get("language", "en")
     if callback_data.action == AdminCommand.KICK:
-        command = KickUserCommand(
+        moderation_result = await moderation_service.kick_user_from_server(
             user_id=callback_data.user_id,
             admin_telegram_id=callback_query.from_user.id,
-            lang_code=lang_code,
+            translator=translator,
         )
     elif callback_data.action == AdminCommand.BAN:
-        command = BanUserCommand(
+        moderation_result = await moderation_service.ban_user_from_server(
             user_id=callback_data.user_id,
             admin_telegram_id=callback_query.from_user.id,
-            lang_code=lang_code,
+            translator=translator,
         )
-    result: ModerationResult = await command_bus.execute(command)
 
-    await callback_query.answer(text=result.message, show_alert=not result.success)
+    await callback_query.answer(
+        text=moderation_result.message_key,
+        show_alert=not moderation_result.success,
+    )
 
-    if result.success and callback_query.message:
+    if moderation_result.success and callback_query.message:
         await edit_message_text(
             message_to_edit=callback_query.message,
-            text=result.message,
+            text=moderation_result.message_key,
             reply_markup=None,
         )

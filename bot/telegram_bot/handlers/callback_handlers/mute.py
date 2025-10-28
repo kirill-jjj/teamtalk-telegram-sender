@@ -8,7 +8,6 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.enums import (
     Actor,
@@ -126,7 +125,6 @@ async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     translator: NullTranslations,
     user_settings: UserSettings,
-    command_bus: CommandBus,
     report_service: ReportService,
     moderation_service: ModerationService,
     callback_data: ToggleMuteCallback,
@@ -311,7 +309,6 @@ async def display_all_accounts_list(
 async def toggle_user_mute(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    command_bus: FromDishka[CommandBus],
     callback_data: ToggleMuteCallback,
     moderation_service: FromDishka[ModerationService],
     report_service: FromDishka[ReportService],
@@ -325,7 +322,6 @@ async def toggle_user_mute(
             list_type=callback_data.list_type,
             page=callback_data.current_page,
             index_on_page=callback_data.user_idx,
-            command_bus=command_bus,
             translator=translator,
         )
         await uow.commit()
@@ -348,7 +344,6 @@ async def toggle_user_mute(
             callback_query,
             translator,
             toggle_result.user_settings,
-            command_bus,
             report_service,  # Pass the report service
             moderation_service,  # Pass the moderation service
             callback_data,

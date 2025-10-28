@@ -11,7 +11,6 @@ from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionSender
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
@@ -97,7 +96,6 @@ async def on_who_command(
     report_service: Annotated[ReportService, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
     uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the /who command by calling the report service and formatter."""
@@ -112,7 +110,6 @@ async def on_who_command(
                 translator=translator,
                 cache_service=cache,
                 user_settings_service=user_settings_service,
-                command_bus=command_bus,
             )
         report_text = format_who_report_to_html(report_dto, translator)
         await message.reply(report_text)

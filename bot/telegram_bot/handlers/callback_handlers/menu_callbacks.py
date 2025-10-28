@@ -8,7 +8,6 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.enums import AdminCommand
 from bot.database.uow import IUnitOfWork
@@ -41,7 +40,6 @@ async def menu_who_handler(
     translator: Annotated[NullTranslations, FromDishka()],
     cache: Annotated[CacheService, FromDishka()],
     bot: Annotated[EventBot, FromDishka()],
-    command_bus: Annotated[CommandBus, FromDishka()],
     user_settings_service: Annotated[UserSettingsService, FromDishka()],
     settings: Annotated[Settings, FromDishka()],
     report_service: Annotated[ReportService, FromDishka()],
@@ -58,7 +56,6 @@ async def menu_who_handler(
             translator=translator,
             cache_service=cache,
             user_settings_service=user_settings_service,
-            command_bus=command_bus,
         )
 
     report_text = format_who_report_to_html(report_dto, translator)
@@ -102,7 +99,6 @@ async def _handle_menu_moderation_command(
     report_service: ReportService,
     cache_service: CacheService,
     user_settings_service: UserSettingsService,
-    command_bus: CommandBus,
     uow: IUnitOfWork,
 ) -> None:
     """Generic handler for menu-based moderation commands."""
@@ -116,7 +112,6 @@ async def _handle_menu_moderation_command(
             translator=translator,
             cache_service=cache_service,
             user_settings_service=user_settings_service,
-            command_bus=command_bus,
         )
 
     await display_moderation_view(
@@ -135,7 +130,6 @@ async def menu_kick_handler(
     report_service: FromDishka[ReportService],
     cache_service: FromDishka[CacheService],
     user_settings_service: FromDishka[UserSettingsService],
-    command_bus: FromDishka[CommandBus],
     uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the 'Kick User' admin menu button click."""
@@ -146,7 +140,6 @@ async def menu_kick_handler(
         report_service,
         cache_service,
         user_settings_service,
-        command_bus,
         uow,
     )
 
@@ -159,7 +152,6 @@ async def menu_ban_handler(
     report_service: FromDishka[ReportService],
     cache_service: FromDishka[CacheService],
     user_settings_service: FromDishka[UserSettingsService],
-    command_bus: FromDishka[CommandBus],
     uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Handles the 'Ban User' admin menu button click."""
@@ -170,7 +162,6 @@ async def menu_ban_handler(
         report_service,
         cache_service,
         user_settings_service,
-        command_bus,
         uow,
     )
 

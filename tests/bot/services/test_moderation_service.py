@@ -14,6 +14,8 @@ from bot.core.enums import UserListAction
 from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
 from bot.services.moderation_service import ModerationService
+from bot.services.teamtalk_service import TeamTalkService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 
 
 @pytest.fixture
@@ -47,8 +49,15 @@ def mock_event_bus() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_command_bus() -> AsyncMock:
-    return AsyncMock()
+def mock_tt_connection() -> AsyncMock:
+    conn = AsyncMock(spec=TeamTalkConnection)
+    conn.ttstr = lambda x: x.decode() if isinstance(x, bytes) else x
+    return conn
+
+
+@pytest.fixture
+def mock_teamtalk_service() -> AsyncMock:
+    return AsyncMock(spec=TeamTalkService)
 
 
 @pytest.fixture
@@ -90,15 +99,17 @@ def moderation_service(
     mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_cache: MagicMock,
-    mock_command_bus: AsyncMock,
     mock_settings: Settings,
+    mock_tt_connection: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
 ) -> ModerationService:
     return ModerationService(
         uow=mock_uow,
         subscription_service=mock_subscription_service,
         cache=mock_cache,
-        command_bus=mock_command_bus,
         settings=mock_settings,
+        tt_connection=mock_tt_connection,
+        teamtalk_service=mock_teamtalk_service,
     )
 
 
@@ -154,6 +165,71 @@ async def test_unban_subscriber_success(
 
 
 @pytest.mark.asyncio
+async def test_kick_user_from_server_success(
+    moderation_service: ModerationService,
+    mock_tt_connection: AsyncMock,
+    mock_translator: MagicMock,
+) -> None:
+    user_id = 1
+    admin_telegram_id = 123
+    mock_user_to_act_on = MagicMock(
+        id=user_id, nickname="KickUser", username=b"kickuser"
+    )
+    mock_tt_connection.instance = MagicMock()
+    mock_tt_connection.instance.get_user.return_value = mock_user_to_act_on
+    mock_tt_connection.instance.server = MagicMock()
+    mock_tt_connection.instance.server.get_properties.return_value.server_name = (
+        "TestServer"
+    )
+    mock_tt_connection.is_ready = True
+    mock_tt_connection.ttstr.side_effect = (
+        lambda x: x.decode() if isinstance(x, bytes) else x
+    )
+
+    result = await moderation_service.kick_user_from_server(
+        user_id=user_id, admin_telegram_id=admin_telegram_id, translator=mock_translator
+    )
+
+    assert result.success is True
+    assert "User KickUser kicked from server TestServer." in result.message_key
+    mock_tt_connection.instance.get_user.assert_called_once_with(user_id)
+    mock_user_to_act_on.kick.assert_called_once_with(from_server=True)
+
+
+@pytest.mark.asyncio
+async def test_ban_user_from_server_success(
+    moderation_service: ModerationService,
+    mock_tt_connection: AsyncMock,
+    mock_translator: MagicMock,
+) -> None:
+    user_id = 1
+    admin_telegram_id = 123
+    mock_user_to_act_on = MagicMock(id=user_id, nickname="BanUser", username=b"banuser")
+    mock_tt_connection.instance = MagicMock()
+    mock_tt_connection.instance.get_user.return_value = mock_user_to_act_on
+    mock_tt_connection.instance.server = MagicMock()
+    mock_tt_connection.instance.server.get_properties.return_value.server_name = (
+        "TestServer"
+    )
+    mock_tt_connection.is_ready = True
+    mock_tt_connection.ttstr.side_effect = (
+        lambda x: x.decode() if isinstance(x, bytes) else x
+    )
+
+    result = await moderation_service.ban_user_from_server(
+        user_id=user_id, admin_telegram_id=admin_telegram_id, translator=mock_translator
+    )
+
+    assert result.success is True
+    assert (
+        "User BanUser banned and kicked from server TestServer." in result.message_key
+    )
+    mock_tt_connection.instance.get_user.assert_called_once_with(user_id)
+    mock_user_to_act_on.ban.assert_called_once_with(from_server=True)
+    mock_user_to_act_on.kick.assert_called_once_with(from_server=True)
+
+
+@pytest.mark.asyncio
 async def test_toggle_mute_status_mute_new_user(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
@@ -202,12 +278,13 @@ async def test_toggle_mute_status_unmute_existing_user(
 @pytest.mark.asyncio
 async def test_get_target_username_for_toggle_all_accounts(
     moderation_service: ModerationService,
-    mock_command_bus: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     user_settings = MagicMock()
-    mock_command_bus.execute.return_value = MagicMock(
-        success=True, accounts=[MagicMock(username="test_user")]
+    mock_teamtalk_service.fetch_all_accounts.return_value = (
+        [MagicMock(username="test_user")],
+        None,
     )
 
     username = await moderation_service.get_target_username_for_toggle(
@@ -215,19 +292,18 @@ async def test_get_target_username_for_toggle_all_accounts(
         page=0,
         index_on_page=0,
         user_settings=user_settings,
-        command_bus=mock_command_bus,
         translator=mock_translator,
     )
 
     assert username == "test_user"
-    mock_command_bus.execute.assert_called_once()
+    mock_teamtalk_service.fetch_all_accounts.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_toggle_mute_from_paginated_list_success(
     moderation_service: ModerationService,
     mock_uow: AsyncMock,
-    mock_command_bus: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
@@ -236,8 +312,9 @@ async def test_toggle_mute_from_paginated_list_success(
     user_settings.muted_users_list = []
 
     mock_uow.users.get_by_id.return_value = user_settings
-    mock_command_bus.execute.return_value = MagicMock(
-        success=True, accounts=[MagicMock(username=tt_username)]
+    mock_teamtalk_service.fetch_all_accounts.return_value = (
+        [MagicMock(username=tt_username)],
+        None,
     )
 
     result = await moderation_service.toggle_mute_from_paginated_list(
@@ -246,7 +323,6 @@ async def test_toggle_mute_from_paginated_list_success(
         list_type=UserListAction.LIST_ALL_ACCOUNTS,
         page=0,
         index_on_page=0,
-        command_bus=mock_command_bus,
         translator=mock_translator,
     )
 

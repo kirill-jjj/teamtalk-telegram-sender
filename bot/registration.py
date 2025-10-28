@@ -4,13 +4,6 @@ import logging
 
 from dishka import AsyncContainer
 
-from bot.command_bus.bus import CommandBus
-from bot.core.commands import (
-    BanUserCommand,
-    GetAllTeamTalkAccountsCommand,
-    GetOnlineUsersCommand,
-    KickUserCommand,
-)
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
@@ -19,35 +12,23 @@ from bot.teamtalk_bot.events import (
     UserJoinedEvent,
     UserLeftEvent,
 )
-from bot.teamtalk_bot.handlers.command_bus_handlers import TeamTalkCommandHandlers
 from bot.teamtalk_bot.handlers.event_bus_subscribers import TeamTalkReplyHandler
 from bot.telegram_bot.handlers.event_subscribers import TelegramNotificationHandler
 
 logger = logging.getLogger(__name__)
 
 
-async def register_all_handlers(
-    command_bus: CommandBus, event_bus: EventBus, container: AsyncContainer
-) -> None:
+async def register_all_handlers(event_bus: EventBus, container: AsyncContainer) -> None:
     """Get all handler instances from the DI container and register them.
 
     Args:
-        command_bus: The command bus instance.
         event_bus: The event bus instance.
         container: The dishka container instance.
     """
     # Get handlers from the container
     # This ensures they are created with all their dependencies
-    tt_handlers = await container.get(TeamTalkCommandHandlers)
     telegram_handler = await container.get(TelegramNotificationHandler)
     teamtalk_replier = await container.get(TeamTalkReplyHandler)
-
-    # Register command handlers
-    command_bus.register(GetOnlineUsersCommand, tt_handlers.get_online_users)
-    command_bus.register(KickUserCommand, tt_handlers.kick_user)
-    command_bus.register(BanUserCommand, tt_handlers.ban_user)
-    command_bus.register(GetAllTeamTalkAccountsCommand, tt_handlers.get_all_tt_accounts)
-    logger.debug("Command handlers registered.")
 
     # Register event handlers (subscribers)
     event_bus.subscribe(UserJoinedEvent, telegram_handler.on_user_joined)

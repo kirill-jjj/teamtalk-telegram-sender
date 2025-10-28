@@ -7,7 +7,6 @@ from gettext import NullTranslations
 from cachetools import LRUCache
 from dishka import Provider, Scope, provide
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import DOMAIN, LOCALE_DIR, LanguageInfo, discover_languages
 from bot.event_bus.bus import EventBus
@@ -95,12 +94,6 @@ class AppProvider(Provider):
     def get_event_bus() -> EventBus:
         """Provides the application-wide event bus."""
         return EventBus()
-
-    @provide
-    @staticmethod
-    def get_command_bus() -> CommandBus:
-        """Provides the application-wide command bus."""
-        return CommandBus()
 
     @provide
     @staticmethod

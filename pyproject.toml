@@ -128,6 +128,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "bot/services/report_service.py" = ["PLR0917"]
 "bot/teamtalk_bot/private_message_router.py" = ["PLR0917"]
 "bot/di/teamtalk.py" = ["PLR0917"]
+"bot/di/services.py" = ["PLR0917"]
 "bot/teamtalk_bot/pytalk_event_router.py" = ["PLR0917"]
 "bot/telegram_bot/formatters.py" = ["PLR0917"]
 "scripts/env_to_toml.py" = ["PLR6201", "PLC1901"]

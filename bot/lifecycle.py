@@ -14,7 +14,6 @@ import pytalk
 if TYPE_CHECKING:
     from dishka import AsyncContainer
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
 from bot.core.languages import LanguageInfo
 from bot.database.migration import run_migrations
@@ -23,6 +22,7 @@ from bot.event_bus.bus import EventBus
 from bot.registration import register_all_handlers
 from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
+from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
@@ -40,8 +40,6 @@ async def on_startup(
     translator_factory: FromDishka[Callable[[str], NullTranslations]],
     available_languages: FromDishka[list[LanguageInfo]],
     event_bus: FromDishka[EventBus],
-    command_bus: FromDishka[CommandBus],
-    _tt_event_handler: FromDishka[PytalkEventRouter],
 ) -> None:
     """Application startup handler."""
     logger = logging.getLogger(__name__)
@@ -65,9 +63,16 @@ async def on_startup(
     else:
         logger.info("Pytalk main event loop task is already running.")
 
+    app_container: AsyncContainer = dispatcher.workflow_data["dishka_container"]
+    # Explicitly get PytalkEventRouter to ensure its handlers are registered
+    await app_container.get(PytalkEventRouter)
+
+    tt_connection = await app_container.get(TeamTalkConnection)
+    if not tt_connection.is_ready:
+        logger.error("TeamTalk connection is not ready after startup.")
+
     logger.info("Loading all caches from database...")
-    container: AsyncContainer = dispatcher.workflow_data["dishka_container"]
-    async with container() as request_container:
+    async with app_container() as request_container:
         uow = await request_container.get(IUnitOfWork)
         async with uow:
             db_admin_ids = await uow.admins.get_all_ids()
@@ -96,8 +101,7 @@ async def on_startup(
     logger.debug("Telegram bot commands set.")
 
     # Get container from dispatcher to pass to registration function
-    container = dispatcher.workflow_data["dishka_container"]
-    await register_all_handlers(command_bus, event_bus, container)
+    await register_all_handlers(event_bus, app_container)
 
     logger.debug("Final admin count after startup: %s", cache.get_admin_count())
     logger.debug("Application startup sequence complete.")

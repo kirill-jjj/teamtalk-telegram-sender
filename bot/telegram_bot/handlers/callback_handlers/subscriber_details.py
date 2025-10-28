@@ -8,11 +8,6 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from dishka.integrations.aiogram import FromDishka
 
-from bot.command_bus.bus import CommandBus
-from bot.core.commands import (
-    GetAllTeamTalkAccountsCommand,
-    GetAllTeamTalkAccountsResult,
-)
 from bot.core.constants import MUTE_LIST_ITEMS_PER_PAGE, USERS_PER_PAGE
 from bot.core.enums import (
     Actor,
@@ -62,8 +57,6 @@ from bot.utils.pagination import paginate_list
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from bot.services.schemas import UserAccountInfo
 
 
 logger = logging.getLogger(__name__)
@@ -753,7 +746,7 @@ async def link_new_tt_account_choice(
     query: CallbackQuery,
     callback_data: ManageTTAccountCallback,
     translator: FromDishka[NullTranslations],
-    command_bus: Annotated[CommandBus, FromDishka()],
+    subscription_service: Annotated[SubscriptionService, FromDishka()],
 ) -> None:
     """Handle 'Link/Change TeamTalk Account' action by showing linkable accounts."""
     await _display_linkable_tt_accounts_page(
@@ -761,7 +754,7 @@ async def link_new_tt_account_choice(
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_context_page=callback_data.page,
         linkable_accounts_page_to_show=0,
-        command_bus=command_bus,
+        subscription_service=subscription_service,
         translator=translator,
     )
 
@@ -771,26 +764,27 @@ async def _display_linkable_tt_accounts_page(
     target_telegram_id: int,
     subscriber_context_page: int,
     linkable_accounts_page_to_show: int,
-    command_bus: CommandBus,
+    subscription_service: SubscriptionService,
     translator: NullTranslations,
 ) -> None:
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
 
-    result: GetAllTeamTalkAccountsResult = await command_bus.execute(
-        GetAllTeamTalkAccountsCommand(lang_code=translator.info().get("language", "en"))
+    (
+        all_server_accounts,
+        error_message,
+    ) = await subscription_service._teamtalk_service.fetch_all_accounts(
+        lang_code=translator.info().get("language", "en")
     )
 
-    if not result.success:
+    if error_message:
         logger.warning(
             "Failed to get TeamTalk accounts for linking. User %s. Error: %s",
             query.from_user.id,
-            result.error_message,
+            error_message,
         )
-        await query.answer(result.error_message, show_alert=True)
+        await query.answer(error_message, show_alert=True)
         return
-
-    all_server_accounts: list[UserAccountInfo] = result.accounts
 
     try:
         all_server_accounts.sort(key=lambda acc: acc.username.lower())
@@ -846,8 +840,8 @@ async def _display_linkable_tt_accounts_page(
 async def paginate_linkable_accounts(
     query: CallbackQuery,
     callback_data: PaginateLinkableAccountsCallback,
-    command_bus: Annotated[CommandBus, FromDishka()],
     translator: FromDishka[NullTranslations],
+    subscription_service: Annotated[SubscriptionService, FromDishka()],
 ) -> None:
     """Handles pagination for the list of linkable TeamTalk accounts."""
     await _display_linkable_tt_accounts_page(
@@ -855,7 +849,7 @@ async def paginate_linkable_accounts(
         target_telegram_id=callback_data.target_telegram_id,
         subscriber_context_page=callback_data.subscriber_context_page,
         linkable_accounts_page_to_show=callback_data.page,
-        command_bus=command_bus,
+        subscription_service=subscription_service,
         translator=translator,
     )
 

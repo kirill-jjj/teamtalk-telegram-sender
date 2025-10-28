@@ -21,7 +21,6 @@ from bot.services.teamtalk_command_service import TeamTalkCommandService
 from bot.teamtalk_bot.cache import TeamTalkCache
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
-from bot.teamtalk_bot.handlers.command_bus_handlers import TeamTalkCommandHandlers
 from bot.teamtalk_bot.handlers.event_bus_subscribers import TeamTalkReplyHandler
 from bot.teamtalk_bot.handlers.message_handlers import (
     PrivateMessageCommandHandlers,
@@ -184,20 +183,6 @@ class TeamTalkProvider(Provider):
     ) -> TeamTalkReplyHandler:
         """Provides the TeamTalk reply handler."""
         return TeamTalkReplyHandler(connections=connections)
-
-    @provide
-    @staticmethod
-    def get_teamtalk_command_handlers(
-        tt_connection: TeamTalkConnection,
-        translator_factory: Callable[[str | None], NullTranslations],
-        settings: Settings,
-    ) -> TeamTalkCommandHandlers:
-        """Provides the TeamTalk command handlers if a connection is available."""
-        return TeamTalkCommandHandlers(
-            tt_connection=tt_connection,
-            translator_factory=translator_factory,
-            settings=settings,
-        )
 
 
 class RequestProvider(Provider):

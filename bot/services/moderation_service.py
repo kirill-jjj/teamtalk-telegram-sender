@@ -1,25 +1,27 @@
 """Service for moderation actions like banning and muting."""
 
 from gettext import NullTranslations
+from html import escape
 import logging
 from typing import Annotated, TypeVar
 
 from pydantic import ConfigDict, Field, validate_call
+from pytalk.exceptions import PermissionError as PytalkPermissionError
+from pytalk.exceptions import TeamTalkException as PytalkException
 
-from bot.command_bus.bus import CommandBus
 from bot.config import Settings
-from bot.core.commands import (
-    GetAllTeamTalkAccountsCommand,
-    GetAllTeamTalkAccountsResult,
-)
-from bot.core.enums import UserListAction
+from bot.core.enums import AdminCommand, UserListAction
 from bot.database.models import MutedUser, UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
-from bot.services.schemas import (
-    OperationResult,
-)
+from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
+from bot.services.teamtalk_service import TeamTalkService
+from bot.teamtalk_bot.connection import TeamTalkConnection
+from bot.teamtalk_bot.formatters import (
+    get_server_display_name,
+    get_tt_user_display_name,
+)
 from bot.utils.pagination import get_item_from_paginated_list
 
 T = TypeVar("T")
@@ -35,15 +37,17 @@ class ModerationService:
         uow: IUnitOfWork,
         subscription_service: SubscriptionService,
         cache: CacheService,
-        command_bus: CommandBus,
         settings: Settings,
+        tt_connection: TeamTalkConnection,
+        teamtalk_service: TeamTalkService,
     ) -> None:
         """Initializes the moderation service."""
         self._uow = uow
         self._subscription_service = subscription_service
         self._cache = cache
-        self._command_bus = command_bus
         self._settings = settings
+        self._tt_connection = tt_connection
+        self._teamtalk_service = teamtalk_service
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def ban_subscriber(  # noqa: PLR6301
@@ -117,6 +121,102 @@ class ModerationService:
         )
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    async def kick_user_from_server(
+        self,
+        user_id: int,
+        admin_telegram_id: int,
+        translator: NullTranslations,
+    ) -> OperationResult:
+        """Kicks a user from the TeamTalk server."""
+        return await self._apply_moderation_action(
+            user_id=user_id,
+            admin_telegram_id=admin_telegram_id,
+            action=AdminCommand.KICK,
+            translator=translator,
+        )
+
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    async def ban_user_from_server(
+        self,
+        user_id: int,
+        admin_telegram_id: int,
+        translator: NullTranslations,
+    ) -> OperationResult:
+        """Bans a user from the TeamTalk server."""
+        return await self._apply_moderation_action(
+            user_id=user_id,
+            admin_telegram_id=admin_telegram_id,
+            action=AdminCommand.BAN,
+            translator=translator,
+        )
+
+    async def _apply_moderation_action(
+        self,
+        user_id: int,
+        admin_telegram_id: int,
+        action: AdminCommand,
+        translator: NullTranslations,
+    ) -> OperationResult:
+        """Generic method to apply kick or ban."""
+        _ = translator.gettext
+        if not self._tt_connection or not self._tt_connection.instance:
+            return OperationResult(
+                success=False, message_key=_("Error: No active TeamTalk connection.")
+            )
+
+        user_to_act_on = self._tt_connection.instance.get_user(user_id)
+        server_name_for_display = get_server_display_name(
+            self._tt_connection.instance, translator, self._settings
+        )
+
+        if not user_to_act_on:
+            msg = _("User not found on server {server_host} anymore.").format(
+                server_host=server_name_for_display
+            )
+            return OperationResult(success=False, message_key=msg)
+
+        user_nickname = get_tt_user_display_name(user_to_act_on, translator)
+
+        try:
+            if action == AdminCommand.KICK:
+                user_to_act_on.kick(from_server=True)
+                logger.info(
+                    "Admin %s kicked TT user '%s' (ID: %s)",
+                    admin_telegram_id,
+                    user_nickname,
+                    user_id,
+                )
+                msg = _(
+                    "User {user_nickname} kicked from server {server_host}."
+                ).format(
+                    user_nickname=escape(user_nickname),
+                    server_host=server_name_for_display,
+                )
+                return OperationResult(success=True, message_key=msg)
+            if action == AdminCommand.BAN:
+                user_to_act_on.ban(from_server=True)
+                user_to_act_on.kick(from_server=True)
+                logger.info(
+                    "Admin %s banned and kicked TT user '%s' (ID: %s)",
+                    admin_telegram_id,
+                    user_nickname,
+                    user_id,
+                )
+                msg = _(
+                    "User {user_nickname} banned and kicked from server {server_host}."
+                ).format(
+                    user_nickname=escape(user_nickname),
+                    server_host=server_name_for_display,
+                )
+                return OperationResult(success=True, message_key=msg)
+        except (PytalkPermissionError, PytalkException):
+            logger.exception("Error during '%s' on TT user ID %s", action, user_id)
+            return OperationResult(
+                success=False,
+                message_key=_("An error occurred. Please try again later."),
+            )
+
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def toggle_mute_status(
         self,
         uow: IUnitOfWork,
@@ -169,13 +269,12 @@ class ModerationService:
             user_settings=user_settings,
         )
 
-    async def get_target_username_for_toggle(  # noqa: PLR6301
+    async def get_target_username_for_toggle(
         self,
         list_type: UserListAction,
         page: int,
         index_on_page: int,
         user_settings: UserSettings,
-        command_bus: CommandBus,
         translator: NullTranslations,
     ) -> str | None:
         """Determines the username to toggle mute status for based on list context."""
@@ -183,14 +282,12 @@ class ModerationService:
         username_to_toggle = None
 
         if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-            result: GetAllTeamTalkAccountsResult = await command_bus.execute(
-                GetAllTeamTalkAccountsCommand(
-                    lang_code=translator.info().get("language", "en")
-                )
+            accounts, error_message = await self._teamtalk_service.fetch_all_accounts(
+                lang_code=translator.info().get("language", "en")
             )
-            if result.success:
+            if not error_message:
                 account = get_item_from_paginated_list(
-                    items=result.accounts,
+                    items=accounts,
                     sort_key_extractor=lambda acc: acc.username.lower(),
                     page=page,
                     idx_on_page=index_on_page,
@@ -216,7 +313,6 @@ class ModerationService:
         list_type: UserListAction,
         page: int,
         index_on_page: int,
-        command_bus: CommandBus,
         translator: NullTranslations,
     ) -> OperationResult:
         """Toggles a user's mute status based on an action from a paginated list."""
@@ -239,7 +335,6 @@ class ModerationService:
             page=page,
             index_on_page=index_on_page,
             user_settings=user_settings,
-            command_bus=command_bus,
             translator=translator,
         )
 
