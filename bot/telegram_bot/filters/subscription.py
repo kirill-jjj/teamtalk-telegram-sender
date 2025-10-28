@@ -17,7 +17,7 @@ class IsSubscribed(Filter):
     async def __call__(
         self,
         event: Message | CallbackQuery,
-        **data: Any,
+        **data: Any,  # noqa: ANN401
     ) -> bool:
         """Filter logic."""
         if not event.from_user:

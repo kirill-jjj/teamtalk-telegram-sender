@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, cast
 
 import pytalk
 
@@ -20,7 +20,7 @@ from bot.teamtalk_bot.formatters import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Coroutine
     from gettext import NullTranslations
 
     from pytalk.message import Message as TeamTalkMessage
@@ -28,25 +28,29 @@ if TYPE_CHECKING:
     from bot.database.uow import IUnitOfWork
     from bot.services.teamtalk_command_service import TeamTalkCommandService
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
 logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
 def _is_tt_admin(
-    func: Callable[..., Awaitable[None]],
-) -> Callable[..., Awaitable[None]]:
+    func: Callable[
+        Concatenate[PrivateMessageCommandHandlers, P], Coroutine[Any, Any, R]
+    ],
+) -> Callable[Concatenate[PrivateMessageCommandHandlers, P], Coroutine[Any, Any, R]]:
     """Decorator to check if a TeamTalk user is the configured main admin."""
 
     @functools.wraps(func)
     async def wrapper(
         self: PrivateMessageCommandHandlers,
-        uow: IUnitOfWork,
-        tt_message: TeamTalkMessage,
-        translator: NullTranslations,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
+        tt_message: TeamTalkMessage = cast("TeamTalkMessage", args[1])
+        translator: NullTranslations = cast("NullTranslations", args[2])
+
         _ = translator.gettext
         if not self.tt_command_service.admin_service.is_main_teamtalk_admin(
             ttstr(tt_message.user.username)
@@ -59,10 +63,16 @@ def _is_tt_admin(
             await self._reply_to_tt_message(
                 tt_message.reply, _("You are not authorized to perform this action.")
             )
-            return
-        await func(self, uow, tt_message, translator, *args, **kwargs)
+            return cast("R", None)
+        return await cast("Awaitable[R]", func(self, *args, **kwargs))
 
-    return wrapper
+    return cast(
+        (
+            "Callable[Concatenate[PrivateMessageCommandHandlers, P], "
+            "Coroutine[Any, Any, R]]"
+        ),
+        wrapper,
+    )
 
 
 class PrivateMessageCommandHandlers:

@@ -25,9 +25,9 @@ def ensure_message_context(func: F) -> F:
     @functools.wraps(func)
     async def wrapper(
         query: CallbackQuery,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Any | None:
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any | None:  # noqa: ANN401
         translator = cast(
             "NullTranslations", kwargs.get("translator", NullTranslations())
         )

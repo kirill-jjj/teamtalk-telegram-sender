@@ -4,7 +4,6 @@ from collections.abc import Awaitable, Callable
 import functools
 from gettext import NullTranslations
 import logging
-from typing import Any
 
 from dishka import AsyncContainer
 import pytalk
@@ -29,9 +28,15 @@ def route_event_to_connection(
     @functools.wraps(handler_method_on_router)
     async def wrapper(
         self_event_router: "PytalkEventRouter",
-        event_primary_obj: Any,
-        *args: Any,
-        **kwargs: Any,
+        event_primary_obj: (
+            PytalkServer
+            | PytalkUser
+            | PytalkChannel
+            | TeamTalkMessage
+            | pytalk.UserAccount
+        ),
+        *args: object,
+        **kwargs: dict[str, object],
     ) -> None:
         """Wrapper function for the decorator to handle event routing."""
         tt_instance = _get_tt_instance_from_event(event_primary_obj)
@@ -103,7 +108,11 @@ def route_event_to_connection(
     return wrapper
 
 
-def _get_tt_instance_from_event(event_obj: Any) -> pytalk.TeamTalkInstance | None:
+def _get_tt_instance_from_event(
+    event_obj: (
+        PytalkServer | PytalkUser | PytalkChannel | TeamTalkMessage | pytalk.UserAccount
+    ),
+) -> pytalk.TeamTalkInstance | None:
     """Extracts the TeamTalkInstance from a given Pytalk event object."""
     if tt_instance := getattr(event_obj, "teamtalk_instance", None):
         return tt_instance

@@ -3,12 +3,14 @@
 from collections.abc import Callable
 import logging
 from pathlib import Path
-from typing import Any, TypeAlias  # For sessionmaker type hint
+from typing import TypeAlias  # For sessionmaker type hint
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import ConnectionPoolEntry
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.config import Settings
@@ -46,8 +48,8 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # as it allows concurrent reads and writes, reducing "database is locked" errors.
     @event.listens_for(Engine, "connect")
     def set_sqlite_pragma(
-        dbapi_connection: Any,
-        _connection_record: Any,
+        dbapi_connection: DBAPIConnection,
+        _connection_record: ConnectionPoolEntry,
     ) -> None:
         """Set SQLite PRAGMA for new connections."""
         # In aiosqlite execute() is async, but here we operate at the raw DBAPI

@@ -25,7 +25,7 @@ async def send_telegram_message(
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     disable_notification: bool = False,
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401
 ) -> bool:
     """Sends a single Telegram message, logs errors, and returns success status."""
     try:

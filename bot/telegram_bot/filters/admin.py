@@ -17,7 +17,7 @@ class IsAdmin(Filter):
     async def __call__(
         self,
         event: Message | CallbackQuery,
-        **data: Any,
+        **data: Any,  # noqa: ANN401
     ) -> bool:
         """Check if the user ID from the event is in the admin cache.
 

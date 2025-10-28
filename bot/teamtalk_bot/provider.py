@@ -5,7 +5,6 @@ from collections.abc import AsyncGenerator, Callable
 import functools
 from gettext import NullTranslations
 import logging
-from typing import Any
 
 from dishka import AsyncContainer, FromDishka, Provider, Scope, provide
 import pytalk
@@ -29,8 +28,8 @@ def _thread_safe_dispatch(
     bot_instance: pytalk.TeamTalkBot,
     event: str,
     /,
-    *args: Any,
-    **kwargs: Any,
+    *args: object,
+    **kwargs: object,
 ) -> None:
     """Thread-safe version of the dispatch method for pytalk.
 
