@@ -196,6 +196,10 @@ plugins = [
 ]
 python_version = "3.11"
 show_error_context = true
+strict_optional = true
+warn_unreachable = true
+disallow_untyped_globals = true
+disallow_redefinition = true
 
 [[tool.mypy.overrides]]
 module = "pytalk.*"

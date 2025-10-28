@@ -152,12 +152,6 @@ def test_update_user_settings(cache_service: CacheService) -> None:
     assert cache_service._user_settings_cache[telegram_id] == settings
 
 
-def test_update_user_settings_invalid_type(cache_service: CacheService) -> None:
-    # Attempt to update with a non-UserSettings object
-    cache_service.update_user_settings("invalid_settings")
-    assert len(cache_service._user_settings_cache) == 0
-
-
 def test_remove_user_settings(cache_service: CacheService) -> None:
     telegram_id = 123
     settings = UserSettings(telegram_id=telegram_id, language_code="en")
@@ -185,19 +179,6 @@ def test_load_all_user_settings(cache_service: CacheService) -> None:
     assert len(cache_service._user_settings_cache) == expected_len
     assert cache_service._user_settings_cache[1] == settings_list[0]
     assert cache_service._user_settings_cache[2] == settings_list[1]
-
-
-def test_load_all_user_settings_with_invalid_type(cache_service: CacheService) -> None:
-    settings_list = [
-        UserSettings(telegram_id=1, language_code="en"),
-        "invalid_settings",  # Invalid type
-        UserSettings(telegram_id=2, language_code="ru"),
-    ]
-    cache_service.load_all_user_settings(settings_list)
-    expected_len = 2
-    assert len(cache_service._user_settings_cache) == expected_len
-    assert cache_service._user_settings_cache[1] == settings_list[0]
-    assert cache_service._user_settings_cache[2] == settings_list[2]
 
 
 def test_remove_user_profile(cache_service: CacheService) -> None:

@@ -309,27 +309,6 @@ async def test_execute_deeplink_unsubscribe_action(
 
 
 @pytest.mark.asyncio
-async def test_execute_deeplink_unknown_action(
-    deeplink_service: DeeplinkService,
-    mock_translator: MagicMock,
-) -> None:
-    deeplink_token_value = "abc"
-    deeplink = DeeplinkModel(
-        action="UNKNOWN_ACTION",
-        token=deeplink_token_value,
-        expiry_time=datetime.now(UTC) + timedelta(minutes=5),
-    )
-    telegram_id = 123
-    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
-
-    result = await deeplink_service.execute_deeplink(
-        mock_uow, deeplink, user_settings, mock_translator
-    )
-
-    assert "Invalid deeplink action." in result
-
-
-@pytest.mark.asyncio
 async def test_execute_telegram_deeplink_success(
     deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,

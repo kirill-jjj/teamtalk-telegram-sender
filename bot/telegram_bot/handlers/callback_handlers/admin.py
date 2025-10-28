@@ -48,11 +48,6 @@ async def on_moderation_confirm(
             admin_telegram_id=callback_query.from_user.id,
             lang_code=lang_code,
         )
-    else:
-        # This case should not be reached if the filter is correct
-        await callback_query.answer(_("Unknown action."), show_alert=True)
-        return
-
     result: ModerationResult = await command_bus.execute(command)
 
     await callback_query.answer(text=result.message, show_alert=not result.success)

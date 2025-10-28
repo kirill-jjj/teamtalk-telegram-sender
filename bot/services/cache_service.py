@@ -97,12 +97,6 @@ class CacheService:
 
     def update_user_settings(self, settings: UserSettings) -> None:
         """Updates or adds user settings in the cache."""
-        if not isinstance(settings, UserSettings):
-            logger.error(
-                "Attempted to update cache with non-UserSettings object: %s",
-                type(settings),
-            )
-            return
         self._user_settings_cache[settings.telegram_id] = settings
         logger.debug("User settings for %s updated in cache.", settings.telegram_id)
 
@@ -121,12 +115,6 @@ class CacheService:
         """Load all user settings from a list into the cache, clearing existing ones."""
         self._user_settings_cache.clear()  # Clear before loading
         for setting in all_settings:
-            if not isinstance(setting, UserSettings):
-                logger.warning(
-                    "Skipping non-UserSettings object during bulk load: %s",
-                    type(setting),
-                )
-                continue
             self._user_settings_cache[setting.telegram_id] = setting
         logger.debug(
             "Loaded %s user settings into cache.", len(self._user_settings_cache)

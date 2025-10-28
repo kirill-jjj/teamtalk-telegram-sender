@@ -104,7 +104,7 @@ class DeeplinkService:
             return _("You have successfully unsubscribed from notifications.")
         return _("You were not subscribed to notifications.")
 
-    async def execute_deeplink(
+    async def execute_deeplink(  # noqa: RET503
         self,
         uow: IUnitOfWork,
         deeplink: DeeplinkModel,
@@ -121,9 +121,6 @@ class DeeplinkService:
             )
         if action == DeeplinkAction.UNSUBSCRIBE:
             return await self._execute_unsubscribe(uow, telegram_id, translator)
-
-        logger.warning("No handler for deeplink action: %s", action)
-        return translator.gettext("Invalid deeplink action.")
 
     async def execute_telegram_deeplink(
         self,

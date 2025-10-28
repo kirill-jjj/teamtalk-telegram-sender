@@ -194,5 +194,3 @@ class TeamTalkCommandHandlers:
                 success=False,
                 message=_("An error occurred. Please try again later."),
             )
-
-        return ModerationResult(success=False, message=_("Unknown action."))
