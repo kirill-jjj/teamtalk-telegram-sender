@@ -49,7 +49,6 @@ class UserSettings(SQLModel, table=True):
     muted_users_list: list["MutedUser"] = Relationship(
         back_populates="user_settings",
         cascade_delete=True,
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
 

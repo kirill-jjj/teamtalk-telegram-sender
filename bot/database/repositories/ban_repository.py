@@ -1,6 +1,6 @@
 """Repository for managing ban list entries."""
 
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.models import BanList
@@ -124,7 +124,7 @@ class BanRepository(BaseRepository[BanList]):
         statement = (
             select(func.count(BanList.id))  # type: ignore[arg-type]
             .select_from(self._model)
-            .where(BanList.telegram_id != None)  # noqa: E711
+            .where(col(BanList.telegram_id).is_not(None))
         )
         result = await self._session.exec(statement)
         count = result.one_or_none()
@@ -136,7 +136,7 @@ class BanRepository(BaseRepository[BanList]):
         """Retrieves a paginated list of ban entries that have a Telegram ID."""
         statement = (
             select(self._model)
-            .where(BanList.telegram_id != None)  # noqa: E711
+            .where(col(BanList.telegram_id).is_not(None))
             .order_by(BanList.telegram_id)  # type: ignore[arg-type]
             .offset(offset)
             .limit(limit)
