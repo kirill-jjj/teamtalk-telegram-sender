@@ -1,9 +1,9 @@
 """Repository for managing user settings."""
 
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.database.models import UserSettings
@@ -22,7 +22,7 @@ class UserRepository(BaseRepository[UserSettings]):
         statement = (
             select(UserSettings)
             .where(UserSettings.telegram_id == pk)
-            .options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
+            .options(selectinload(cast("Any", UserSettings.muted_users_list)))
         )
         result = await self._session.exec(statement)
         return result.first()
@@ -54,7 +54,7 @@ class UserRepository(BaseRepository[UserSettings]):
     async def get_all(self) -> list[UserSettings]:
         """Retrieves all instances of the model, preloading muted users."""
         statement = select(self._model).options(
-            selectinload(UserSettings.muted_users_list)  # type: ignore[arg-type]
+            selectinload(cast("Any", UserSettings.muted_users_list))
         )
         result = await self._session.exec(statement)
         return list(result.all())
@@ -63,8 +63,8 @@ class UserRepository(BaseRepository[UserSettings]):
         """Retrieves multiple UserSettings instances by their Telegram IDs."""
         statement = (
             select(UserSettings)
-            .where(UserSettings.telegram_id.in_(telegram_ids))  # type: ignore[attr-defined]
-            .options(selectinload(UserSettings.muted_users_list))  # type: ignore[arg-type]
+            .where(col(UserSettings.telegram_id).in_(telegram_ids))
+            .options(selectinload(cast("Any", UserSettings.muted_users_list)))
         )
         result = await self._session.exec(statement)
         return list(result.all())

@@ -122,7 +122,7 @@ class BanRepository(BaseRepository[BanList]):
     async def count_with_telegram_id(self) -> int:
         """Counts all ban entries that have a Telegram ID."""
         statement = (
-            select(func.count(BanList.id))  # type: ignore[arg-type]
+            select(func.count(col(BanList.id)))
             .select_from(self._model)
             .where(col(BanList.telegram_id).is_not(None))
         )
@@ -137,7 +137,7 @@ class BanRepository(BaseRepository[BanList]):
         statement = (
             select(self._model)
             .where(col(BanList.telegram_id).is_not(None))
-            .order_by(BanList.telegram_id)  # type: ignore[arg-type]
+            .order_by(col(BanList.telegram_id))
             .offset(offset)
             .limit(limit)
         )

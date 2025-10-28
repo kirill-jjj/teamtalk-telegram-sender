@@ -6,7 +6,7 @@ from typing import cast
 import pytalk  # Required for ttstr
 from pytalk.user import User as TeamTalkUser
 import sqlalchemy as sa
-from sqlmodel import select
+from sqlmodel import col, select
 
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
@@ -100,13 +100,14 @@ class NotificationRecipientService:
                 .join(
                     MutedUser,
                     sa.and_(
-                        UserSettings.telegram_id == MutedUser.user_settings_telegram_id,  # type: ignore[arg-type]
-                        MutedUser.muted_teamtalk_username == username_to_check,  # type: ignore[arg-type]
+                        col(UserSettings.telegram_id)
+                        == MutedUser.user_settings_telegram_id,
+                        col(MutedUser.muted_teamtalk_username) == username_to_check,
                     ),
                     isouter=True,
                 )
                 .where(
-                    UserSettings.telegram_id.in_(subscriber_ids),  # type: ignore[attr-defined]
+                    col(UserSettings.telegram_id).in_(subscriber_ids),
                     UserSettings.notification_settings != NotificationSetting.NONE,
                 )
             )
@@ -122,12 +123,12 @@ class NotificationRecipientService:
 
             mute_logic = sa.or_(
                 sa.and_(
-                    UserSettings.mute_list_mode == MuteListMode.blacklist.value,  # type: ignore[arg-type]
-                    MutedUser.id.is_(None),  # type: ignore[union-attr]
+                    col(UserSettings.mute_list_mode) == MuteListMode.blacklist.value,
+                    col(MutedUser.id).is_(None),
                 ),
                 sa.and_(
-                    UserSettings.mute_list_mode == MuteListMode.whitelist.value,  # type: ignore[arg-type]
-                    MutedUser.id.is_not(None),  # type: ignore[union-attr]
+                    col(UserSettings.mute_list_mode) == MuteListMode.whitelist.value,
+                    col(MutedUser.id).is_not(None),
                 ),
             )
             stmt = stmt.where(mute_logic)
