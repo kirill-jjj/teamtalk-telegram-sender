@@ -47,7 +47,7 @@ async def register_all_handlers(
     command_bus.register(KickUserCommand, tt_handlers.kick_user)
     command_bus.register(BanUserCommand, tt_handlers.ban_user)
     command_bus.register(GetAllTeamTalkAccountsCommand, tt_handlers.get_all_tt_accounts)
-    logger.info("Command handlers registered.")
+    logger.debug("Command handlers registered.")
 
     # Register event handlers (subscribers)
     event_bus.subscribe(UserJoinedEvent, telegram_handler.on_user_joined)
@@ -59,4 +59,4 @@ async def register_all_handlers(
         AdminStatusChangedEvent, telegram_handler.on_admin_status_changed
     )
     event_bus.subscribe(ReplyToTeamTalkUserEvent, teamtalk_replier.on_reply_event)
-    logger.info("Event handlers subscribed.")
+    logger.debug("Event handlers subscribed.")

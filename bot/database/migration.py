@@ -32,7 +32,7 @@ async def run_migrations(settings: Settings, project_root: Path) -> None:
     db_path = db_file_path.resolve()
     db_url = f"sqlite+aiosqlite:///{db_path}"
 
-    logger.info("Checking and applying Alembic migrations for DB: %s", db_url)
+    logger.info("Checking and applying Alembic migrations for DB file: %s", db_path)
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
 

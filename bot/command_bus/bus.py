@@ -47,7 +47,7 @@ class CommandBus:
             raise HandlerAlreadyRegisteredError
 
         self._handlers[command_type] = handler
-        logger.info(
+        logger.debug(
             "Handler %s registered for command %s",
             getattr(handler, "__name__", "Unknown Handler"),
             command_type.__name__,

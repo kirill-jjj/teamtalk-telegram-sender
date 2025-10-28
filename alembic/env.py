@@ -24,7 +24,7 @@ from bot.database.models import (  # noqa: F401
     UserSettings,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("alembic.env")
 
 config = context.config
 
@@ -82,7 +82,7 @@ def get_db_url() -> str:
     # programmatic invocation)
     url = context.config.get_main_option("sqlalchemy.url")
     if url:
-        logger.info("Using database URL from Alembic context: %s", url)
+        logger.debug("Using database URL from Alembic context.")
         return url
 
     # 2. Fallback: Check APP_CONFIG_FILE environment variable (set by

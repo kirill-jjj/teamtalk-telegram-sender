@@ -32,7 +32,7 @@ class EventBus:
             handler: The asynchronous callable that will handle the event.
         """
         self._subscribers[event_type].append(handler)
-        logger.info(
+        logger.debug(
             "Handler %s subscribed to event %s",
             getattr(handler, "__name__", "Unknown Handler"),
             event_type.__name__,

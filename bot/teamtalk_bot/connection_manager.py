@@ -39,7 +39,7 @@ class TeamTalkConnectionManager:
             return False
 
         conn = self.connection
-        logger.info(
+        logger.debug(
             "Adding server %s:%s to PytalkBot.",
             conn.server_info.host,
             conn.server_info.tcp_port,
@@ -158,7 +158,7 @@ class TeamTalkConnectionManager:
         chan_pass = conn.settings.teamtalk.channel_password or ""
 
         if final_chan_id != INVALID_CHANNEL_ID:
-            logger.info(
+            logger.debug(
                 "[%s] Joining chan: '%s' (ID: %s).",
                 conn.server_info.host,
                 target_chan_name,

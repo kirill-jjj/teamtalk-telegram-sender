@@ -85,7 +85,7 @@ class PytalkEventHandlers:
     @staticmethod
     async def on_my_login(server: PytalkServer, connection: TeamTalkConnection) -> None:
         """Handles the bot's own login event for a connection."""
-        logger.info("[%s] on_my_login event received.", connection.server_info.host)
+        logger.debug("[%s] on_my_login event received.", connection.server_info.host)
         _ = server  # Mark as unused
         connection.login_complete_time = None
         connection.mark_finalized(status=False)
@@ -111,10 +111,9 @@ class PytalkEventHandlers:
 
             return
 
-        logger.info(
-            "[%s] Logged in to TT. Instance: %s",
+        logger.debug(
+            "[%s] Logged in to TeamTalk server.",
             connection.server_info.host,
-            connection.instance,
         )
         await connection.connection_manager.join_configured_channel()
 
@@ -141,7 +140,7 @@ class PytalkEventHandlers:
             if not connection.is_finalized:
                 await self.finalize_bot_login_sequence(channel, connection)
             else:
-                logger.info(
+                logger.debug(
                     "[%s] Bot re-joined chan %s (finalized).",
                     connection.server_info.host,
                     self.ttstr(channel.name),
@@ -220,7 +219,7 @@ class PytalkEventHandlers:
     ) -> None:
         """Finalizes the bot's login sequence for a connection."""
         if connection.is_finalized:
-            logger.info(
+            logger.debug(
                 "[%s] Login sequence already finalized. Skipping.",
                 connection.server_info.host,
             )
@@ -236,13 +235,13 @@ class PytalkEventHandlers:
             if hasattr(channel, "name") and channel.name
             else "Unknown"
         )
-        logger.info(
+        logger.debug(
             "[%s] Bot in channel: %s. Finalizing login...",
             connection.server_info.host,
             ch_name,
         )
 
-        logger.info(
+        logger.debug(
             "[%s] Initial online users cache population...", connection.server_info.host
         )
         connection.cache_manager.start_background_tasks()
@@ -261,10 +260,9 @@ class PytalkEventHandlers:
             connection.instance.change_status(status_val, status_text)
             connection.login_complete_time = datetime.now(dt.UTC)
             connection.mark_finalized(status=True)
-            logger.debug(
-                "[%s] Login finalized at %s.",
+            logger.info(
+                "[%s] Successfully connected to TeamTalk server.",
                 connection.server_info.host,
-                connection.login_complete_time,
             )
         except (pytalk.exceptions.PermissionError, pytalk.exceptions.TeamTalkException):
             logger.exception(

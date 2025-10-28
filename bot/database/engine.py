@@ -39,7 +39,7 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
 
     db_path = db_file_path.resolve()
     db_url = f"sqlite+aiosqlite:///{db_path}"
-    logger.info("Creating database engine for: %s", db_url)
+    logger.debug("Creating database engine for: %s", db_url)
 
     engine = create_async_engine(db_url)
 

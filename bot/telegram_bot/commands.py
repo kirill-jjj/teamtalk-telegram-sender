@@ -55,7 +55,7 @@ async def set_telegram_commands(
     settings: Settings,
 ) -> None:
     """Set bot commands globally for all languages and individually for admins."""
-    logger.info("Setting up global and admin-specific Telegram commands...")
+    logger.debug("Setting up global and admin-specific Telegram commands...")
 
     global_command_tasks = []
     for lang_info in available_languages:
@@ -75,7 +75,7 @@ async def set_telegram_commands(
 
     try:
         await asyncio.gather(*global_command_tasks)
-        logger.info("Successfully set global user commands for all languages.")
+        logger.debug("Successfully set global user commands for all languages.")
     except TelegramAPIError:
         logger.exception("Failed to set global commands for one or more languages.")
 
@@ -102,7 +102,7 @@ async def set_telegram_commands(
 
     try:
         await asyncio.gather(*admin_command_tasks)
-        logger.info("Successfully set custom commands for all admins.")
+        logger.debug("Successfully set custom commands for all admins.")
     except TelegramBadRequest as e:
         if "chat not found" in str(e).lower():
             logger.warning(
@@ -148,7 +148,7 @@ async def update_user_bot_commands(
         await bot.set_my_commands(
             commands=commands, scope=scope, language_code=new_lang_code
         )
-        logger.info(
+        logger.debug(
             "Successfully updated commands for user %s (admin: %s) in language '%s'.",
             telegram_id,
             is_admin,

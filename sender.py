@@ -133,7 +133,7 @@ class Application:
 
         setup_dishka(container, router=self.dp, auto_inject=True)
 
-        self.logger.info("Starting Telegram polling...")
+        self.logger.debug("Starting Telegram polling...")
         try:
             bot_instance = await container.get(EventBot)
             await self.dp.start_polling(bot_instance)

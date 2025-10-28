@@ -46,7 +46,7 @@ async def on_startup(
     """Application startup handler."""
     logger = logging.getLogger(__name__)
 
-    logger.info("Application startup...")
+    logger.debug("Application startup...")
 
     # Define project root relative to the current file
     project_root = await asyncio.to_thread(
@@ -99,5 +99,5 @@ async def on_startup(
     container = dispatcher.workflow_data["dishka_container"]
     await register_all_handlers(command_bus, event_bus, container)
 
-    logger.info("Final admin count after startup: %s", cache.get_admin_count())
+    logger.debug("Final admin count after startup: %s", cache.get_admin_count())
     logger.debug("Application startup sequence complete.")

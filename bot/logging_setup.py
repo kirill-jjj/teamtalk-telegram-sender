@@ -28,7 +28,8 @@ def setup_logging() -> logging.Logger:
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
     logging.getLogger("aiogram.dispatcher").setLevel(logging.WARNING)
     logging.getLogger("pytalk").setLevel(logging.DEBUG)
+    logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
     logger = logging.getLogger(__name__)
-    logger.info("Logging configured.")
+    logger.debug("Logging configured.")
     return logger

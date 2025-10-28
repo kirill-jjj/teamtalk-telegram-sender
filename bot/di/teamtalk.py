@@ -84,7 +84,7 @@ class TeamTalkProvider(Provider):
 
         await bot._async_setup_hook()
 
-        logger.info("Applying thread-safe patch to pytalk dispatcher.")
+        logger.debug("Applying thread-safe patch to pytalk dispatcher.")
 
         bot.dispatch = functools.partial(_thread_safe_dispatch, bot)
 

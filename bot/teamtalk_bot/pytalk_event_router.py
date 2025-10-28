@@ -150,7 +150,7 @@ class PytalkEventRouter:
         self.pytalk_event_handlers = pytalk_event_handlers
         self.logger = logging.getLogger(__name__)
         self._register_pytalk_event_handlers()
-        self.logger.info(
+        self.logger.debug(
             "PytalkEventRouter initialized and Pytalk event handlers registered."
         )
 

@@ -70,8 +70,8 @@ class TeamTalkConnection:
     def mark_finalized(self, *, status: bool = True) -> None:
         """Marks the login sequence as finalized or not."""
         self._is_finalized = status
-        logger.info(
-            "[%s] Connection marked: %s.",
+        logger.debug(
+            "[%s] Connection state changed to: %s.",
             self.server_info.host,
             "finalized" if status else "NOT finalized",
         )

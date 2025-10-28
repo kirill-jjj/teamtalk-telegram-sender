@@ -28,7 +28,7 @@ class CacheService:
     def set_bot_username(self, username: str) -> None:
         """Sets the bot's username in the cache."""
         self._bot_username = username
-        logger.info("Bot username '%s' stored in cache.", username)
+        logger.debug("Bot username '%s' stored in cache.", username)
 
     def get_bot_username(self) -> str | None:
         """Gets the bot's username from the cache."""
@@ -53,7 +53,7 @@ class CacheService:
         """Loads admin IDs from the database into the cache, clearing existing ones."""
         self._admin_ids_cache.clear()  # Clear before loading to ensure consistency
         self._admin_ids_cache.update(admin_ids)
-        logger.info("Admin cache populated with %d IDs.", len(admin_ids))
+        logger.debug("Admin cache populated with %d IDs.", len(admin_ids))
 
     def get_all_admin_ids(self) -> set[int]:
         """Returns a copy of all admin IDs from the cache."""
@@ -84,7 +84,7 @@ class CacheService:
         """Load subscriber IDs from DB into cache, clearing existing ones."""
         self._subscribed_users_cache.clear()  # Clear before loading
         self._subscribed_users_cache.update(subscriber_ids)
-        logger.info("Subscriber cache populated with %d IDs.", len(subscriber_ids))
+        logger.debug("Subscriber cache populated with %d IDs.", len(subscriber_ids))
 
     def get_all_subscriber_ids(self) -> set[int]:
         """Returns a copy of all subscriber IDs from the cache."""
@@ -128,7 +128,7 @@ class CacheService:
                 )
                 continue
             self._user_settings_cache[setting.telegram_id] = setting
-        logger.info(
+        logger.debug(
             "Loaded %s user settings into cache.", len(self._user_settings_cache)
         )
 
