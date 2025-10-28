@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from bot.services.cache_service import CacheService
     from bot.teamtalk_bot.connection import TeamTalkConnection
     from bot.teamtalk_bot.handlers.message_handlers import (
-        CommandRouter,
         PrivateMessageCommandHandlers,
     )
 
@@ -38,12 +37,11 @@ logger = logging.getLogger(__name__)
 ttstr = pytalk.instance.sdk.ttstr
 
 
-class MessageHandler:
+class PrivateMessageRouter:
     """Parses, routes, and handles incoming private messages from TeamTalk."""
 
     def __init__(
         self,
-        command_router: CommandRouter,
         event_bus: EventBus,
         settings: Settings,
         cache: CacheService,
@@ -53,7 +51,6 @@ class MessageHandler:
         uow: IUnitOfWork,
     ) -> None:
         """Initializes the message handler with injected dependencies."""
-        self.command_router = command_router
         self.event_bus = event_bus
         self.settings = settings
         self.cache = cache
@@ -75,25 +72,18 @@ class MessageHandler:
             cmd = parts[0].lower()
             args = parts[1] if len(parts) > 1 else None
 
-            known_commands = [
-                tt_cmds.TT_CMD_SUBSCRIBE,
-                tt_cmds.TT_CMD_UNSUBSCRIBE,
-                tt_cmds.TT_CMD_ADD_ADMIN,
-                tt_cmds.TT_CMD_REMOVE_ADMIN,
-            ]
+            handlers = self.command_handlers.get_handlers()
+            handler = handlers.get(cmd)
 
             async with self.uow:
                 if cmd == tt_cmds.TT_CMD_HELP:
                     await self._on_help(tt_message, translator)
-                elif cmd in known_commands:
-                    await self.command_router.route(
-                        cmd,
-                        args,
-                        self.command_handlers,
-                        tt_message,
-                        translator,
-                        self.uow,
-                    )
+                elif handler:
+                    # Commands requiring arguments
+                    if cmd in {tt_cmds.TT_CMD_ADD_ADMIN, tt_cmds.TT_CMD_REMOVE_ADMIN}:
+                        await handler(self.uow, tt_message, translator, args)
+                    else:
+                        await handler(self.uow, tt_message, translator)
                 else:
                     await self._on_unknown(tt_message, translator)
                 await self.uow.commit()

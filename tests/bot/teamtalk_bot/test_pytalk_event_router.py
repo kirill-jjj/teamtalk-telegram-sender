@@ -13,7 +13,7 @@ import pytest
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
-from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.teamtalk_bot.private_message_router import PrivateMessageRouter
 from bot.teamtalk_bot.pytalk_event_router import (
     PytalkEventRouter,
     _get_tt_instance_from_event,
@@ -296,11 +296,11 @@ async def test_on_pytalk_message_routes_to_message_handler(
     mock_message = MagicMock(spec=TeamTalkMessage)
     mock_message.teamtalk_instance = mock_teamtalk_connection.instance
 
-    mock_message_handler = AsyncMock(spec=MessageHandler)
+    mock_message_router = AsyncMock(spec=PrivateMessageRouter)
 
     # Correctly mock the async context manager
     mock_request_container = AsyncMock()
-    mock_request_container.get.return_value = mock_message_handler
+    mock_request_container.get.return_value = mock_message_router
 
     async_context_manager_mock = AsyncMock()
     async_context_manager_mock.__aenter__.return_value = mock_request_container
@@ -318,7 +318,7 @@ async def test_on_pytalk_message_routes_to_message_handler(
     assert context_arg[TeamTalkConnection] is mock_teamtalk_connection
 
     # Verify that the handler's method was called
-    mock_message_handler.route_message.assert_called_once_with(mock_message)
+    mock_message_router.route_message.assert_called_once_with(mock_message)
 
 
 @pytest.mark.asyncio

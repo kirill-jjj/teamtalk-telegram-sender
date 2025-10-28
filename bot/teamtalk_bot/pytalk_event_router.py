@@ -15,7 +15,7 @@ from pytalk.user import User as PytalkUser
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
-from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.teamtalk_bot.private_message_router import PrivateMessageRouter
 
 logger = logging.getLogger(__name__)
 
@@ -218,8 +218,8 @@ class PytalkEventRouter:
         async with self.app_container(
             context={TeamTalkMessage: message, TeamTalkConnection: connection}
         ) as request_container:
-            message_handler = await request_container.get(MessageHandler)
-            await message_handler.route_message(message)
+            message_router = await request_container.get(PrivateMessageRouter)
+            await message_router.route_message(message)
 
     @route_event_to_connection
     async def on_pytalk_user_login(self, user: PytalkUser) -> None:

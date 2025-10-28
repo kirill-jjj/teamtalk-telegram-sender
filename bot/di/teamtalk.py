@@ -24,11 +24,10 @@ from bot.teamtalk_bot.connection_manager import TeamTalkConnectionManager
 from bot.teamtalk_bot.handlers.command_bus_handlers import TeamTalkCommandHandlers
 from bot.teamtalk_bot.handlers.event_bus_subscribers import TeamTalkReplyHandler
 from bot.teamtalk_bot.handlers.message_handlers import (
-    CommandRouter,
     PrivateMessageCommandHandlers,
 )
 from bot.teamtalk_bot.handlers.pytalk_event_handlers import PytalkEventHandlers
-from bot.teamtalk_bot.message_handler import MessageHandler
+from bot.teamtalk_bot.private_message_router import PrivateMessageRouter
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 
 logger = logging.getLogger(__name__)
@@ -208,14 +207,7 @@ class RequestProvider(Provider):
 
     @provide
     @staticmethod
-    def get_command_router() -> CommandRouter:
-        """Provides a CommandRouter instance."""
-        return CommandRouter()
-
-    @provide
-    @staticmethod
     def get_message_handler(
-        command_router: CommandRouter,
         event_bus: EventBus,
         settings: Settings,
         cache: CacheService,
@@ -223,10 +215,9 @@ class RequestProvider(Provider):
         command_handlers: PrivateMessageCommandHandlers,
         connection: TeamTalkConnection,
         uow: IUnitOfWork,
-    ) -> MessageHandler:
-        """Provides a MessageHandler instance for a request."""
-        return MessageHandler(
-            command_router=command_router,
+    ) -> PrivateMessageRouter:
+        """Provides a PrivateMessageRouter instance for a request."""
+        return PrivateMessageRouter(
             event_bus=event_bus,
             settings=settings,
             cache=cache,

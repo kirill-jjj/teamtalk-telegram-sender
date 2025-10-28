@@ -201,33 +201,11 @@ class PrivateMessageCommandHandlers:
         response_message = format_admin_management_result(result, translator)
         await self._reply_to_tt_message(tt_message.reply, response_message)
 
-
-class CommandRouter:
-    """Maps commands to their handlers and executes them."""
-
-    def __init__(self) -> None:
-        """Initializes the command router."""
-
-    @staticmethod
-    async def route(  # noqa: PLR0917
-        cmd: str,
-        args: str | None,
-        handlers: PrivateMessageCommandHandlers,
-        tt_message: TeamTalkMessage,
-        translator: NullTranslations,
-        uow: IUnitOfWork,
-    ) -> None:
-        """Routes a command to the appropriate handler."""
-        # The caller (MessageHandler) will now handle 'help' and 'unknown' commands.
-        # This router is only for commands that have a dedicated handler method.
-        if cmd == tt_cmds.TT_CMD_SUBSCRIBE:
-            await handlers.on_subscribe(uow, tt_message, translator)
-        elif cmd == tt_cmds.TT_CMD_UNSUBSCRIBE:
-            await handlers.on_unsubscribe(uow, tt_message, translator)
-        elif cmd == tt_cmds.TT_CMD_ADD_ADMIN:
-            await handlers.on_add_admin(uow, tt_message, translator, args)
-        elif cmd == tt_cmds.TT_CMD_REMOVE_ADMIN:
-            await handlers.on_remove_admin(uow, tt_message, translator, args)
-        else:
-            # This else should ideally not be reached if the caller filters commands.
-            logger.warning("CommandRouter received an unhandled command: %s", cmd)
+    def get_handlers(self) -> dict[str, Callable[..., Coroutine[Any, Any, None]]]:
+        """Returns a dictionary mapping command strings to their handlers."""
+        return {
+            tt_cmds.TT_CMD_SUBSCRIBE: self.on_subscribe,
+            tt_cmds.TT_CMD_UNSUBSCRIBE: self.on_unsubscribe,
+            tt_cmds.TT_CMD_ADD_ADMIN: self.on_add_admin,
+            tt_cmds.TT_CMD_REMOVE_ADMIN: self.on_remove_admin,
+        }
