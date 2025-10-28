@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 name = "teamtalk-telegram-sender"
 version = "0.1.0"
 description = "A bot that bridges TeamTalk 5 server events (user join/leave) to Telegram notifications and forwards PMs."
-readme = "README.md"
+readme = "Readme.md"
 requires-python = ">=3.11, <3.13"
 license = "GPL-3.0-or-later"
 authors = [
