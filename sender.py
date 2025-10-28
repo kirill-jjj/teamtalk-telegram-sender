@@ -21,11 +21,14 @@ from pydantic import ValidationError
 from toml import TomlDecodeError
 
 from bot.config import Settings
-from bot.di_providers import AppProvider, RequestProvider
+from bot.di.app import AppProvider
+from bot.di.database import DatabaseProvider
+from bot.di.services import ServicesProvider
+from bot.di.teamtalk import RequestProvider, TeamTalkProvider
+from bot.di.telegram import TelegramProvider
 from bot.lifecycle import on_startup
 from bot.logging_setup import setup_logging
 from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.provider import TeamTalkProvider
 from bot.telegram_bot.handlers.admin import admin_router
 from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.errors import error_router
@@ -105,7 +108,13 @@ class Application:
             settings=self.app_config, config_path=self.config_path
         )
         container = make_async_container(
-            app_provider, TeamTalkProvider(), RequestProvider(), AiogramProvider()
+            app_provider,
+            DatabaseProvider(),
+            ServicesProvider(),
+            TelegramProvider(),
+            TeamTalkProvider(),
+            RequestProvider(),
+            AiogramProvider(),
         )
 
         self.dp = await container.get(Dispatcher)
