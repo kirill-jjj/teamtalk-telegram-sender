@@ -1001,4 +1001,3 @@ msgstr "{item_display_name} (Статус: в списке игнорирова�
 #, python-brace-format
 msgid "{item_display_name} (Status: Not Muted)"
 msgstr "{item_display_name} (Статус: не в списке игнорирования)"
-

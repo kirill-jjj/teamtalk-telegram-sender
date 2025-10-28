@@ -1007,4 +1007,3 @@ msgstr "{item_display_name} (Статус: в ігнорі)"
 #, python-brace-format
 msgid "{item_display_name} (Status: Not Muted)"
 msgstr "{item_display_name} (Статус: не в ігнорі)"
-
