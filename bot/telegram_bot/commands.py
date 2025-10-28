@@ -74,7 +74,9 @@ async def set_telegram_commands(
         )
 
     try:
-        await asyncio.gather(*global_command_tasks)
+        async with asyncio.TaskGroup() as tg:
+            for task in global_command_tasks:
+                tg.create_task(task)
         logger.debug("Successfully set global user commands for all languages.")
     except TelegramAPIError:
         logger.exception("Failed to set global commands for one or more languages.")
@@ -101,7 +103,9 @@ async def set_telegram_commands(
         )
 
     try:
-        await asyncio.gather(*admin_command_tasks)
+        async with asyncio.TaskGroup() as tg:
+            for task in admin_command_tasks:
+                tg.create_task(task)
         logger.debug("Successfully set custom commands for all admins.")
     except TelegramBadRequest as e:
         if "chat not found" in str(e).lower():
