@@ -9,6 +9,7 @@ from types import ModuleType
 from aiogram import Dispatcher
 from aiogram.exceptions import TelegramAPIError, TelegramNetworkError
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
+import aiohttp
 from dishka import make_async_container
 from dishka.integrations.aiogram import (
     AiogramProvider,
@@ -30,7 +31,7 @@ from bot.telegram_bot.handlers.callbacks import callback_router
 from bot.telegram_bot.handlers.errors import error_router
 from bot.telegram_bot.handlers.unknown import catch_all_router
 from bot.telegram_bot.handlers.user import user_commands_router
-from bot.telegram_bot.types.bots import EventBot
+from bot.telegram_bot.types.bots import EventBot, MessageBot
 
 uvloop: ModuleType | None = None
 try:
@@ -47,9 +48,25 @@ logger = logging.getLogger(__name__)
 async def on_shutdown(
     dispatcher: FromDishka[Dispatcher],
     tt_connection: FromDishka[TeamTalkConnection],
+    event_bot: FromDishka[EventBot],
+    message_bot: FromDishka[MessageBot],
 ) -> None:
     """Handles application shutdown."""
     logger.info("Application shutting down...")
+
+    # Close aiogram Bot sessions
+    try:
+        await event_bot.session.close()
+        logger.info("EventBot session closed.")
+    except (asyncio.CancelledError, aiohttp.ClientError):
+        logger.exception("Error closing EventBot session: %s")
+
+    try:
+        await message_bot.session.close()
+        logger.info("MessageBot session closed.")
+    except (asyncio.CancelledError, aiohttp.ClientError):
+        logger.exception("Error closing MessageBot session: %s")
+
     if tt_connection:
         try:
             await tt_connection.disconnect_instance()
