@@ -85,65 +85,52 @@ async def on_shutdown(
             logger.info("TeamTalk event loop task cancelled.")
 
 
-class Application:
-    """Main application class that manages the bot's lifecycle and components."""
+async def run_bot(config_path: str) -> None:
+    """Sets up and runs the main application event loops."""
+    logger.info("Application starting...")
 
-    def __init__(self, app_config_instance: Settings, config_path: str) -> None:
-        """Initializes the Application.
+    app_config_instance = Settings.from_toml(config_path)
 
-        Args:
-            app_config_instance: The loaded application settings.
-            config_path: The path to the configuration file.
-        """
-        self.app_config = app_config_instance
-        self.config_path = config_path
-        self.logger = setup_logging()
-        self.dp: Dispatcher | None = None
+    app_provider = AppProvider(settings=app_config_instance, config_path=config_path)
+    container = make_async_container(
+        app_provider,
+        DatabaseProvider(),
+        ServicesProvider(),
+        TelegramProvider(),
+        TeamTalkProvider(),
+        RequestProvider(),
+        AiogramProvider(),
+    )
 
-    async def run(self) -> None:
-        """Sets up and runs the main application event loops."""
-        self.logger.info("Application starting...")
+    dp = await container.get(Dispatcher)
+    dp.workflow_data["dishka_container"] = container
 
-        app_provider = AppProvider(
-            settings=self.app_config, config_path=self.config_path
-        )
-        container = make_async_container(
-            app_provider,
-            DatabaseProvider(),
-            ServicesProvider(),
-            TelegramProvider(),
-            TeamTalkProvider(),
-            RequestProvider(),
-            AiogramProvider(),
-        )
+    dp.include_router(user_commands_router)
+    dp.include_router(admin_router)
+    dp.include_router(callback_router)
+    dp.include_router(catch_all_router)
+    dp.include_router(error_router)
 
-        self.dp = await container.get(Dispatcher)
-        self.dp.workflow_data["dishka_container"] = container
+    dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-        self.dp.include_router(user_commands_router)
-        self.dp.include_router(admin_router)
-        self.dp.include_router(callback_router)
-        self.dp.include_router(catch_all_router)
-        self.dp.include_router(error_router)
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
 
-        self.dp.callback_query.middleware(CallbackAnswerMiddleware())
+    setup_dishka(container, router=dp, auto_inject=True)
 
-        self.dp.startup.register(on_startup)
-        self.dp.shutdown.register(on_shutdown)
-
-        setup_dishka(container, router=self.dp, auto_inject=True)
-
-        self.logger.debug("Starting Telegram polling...")
-        try:
-            bot_instance = await container.get(EventBot)
-            await self.dp.start_polling(bot_instance)
-        finally:
-            self.logger.info("Closing dishka container.")
-            await container.close()
+    logger.debug("Starting Telegram polling...")
+    try:
+        bot_instance = await container.get(EventBot)
+        await dp.start_polling(bot_instance)
+    finally:
+        logger.info("Closing dishka container.")
+        await container.close()
 
 
 def main_cli() -> None:
     """Main command-line interface function to start the bot."""
+    setup_logging()
+
     parser = argparse.ArgumentParser(description="TeamTalk Telegram Sender Bot")
     parser.add_argument(
         "--config",
@@ -155,7 +142,6 @@ def main_cli() -> None:
 
     try:
         print(f"Loading configuration from: {args.config}")
-        app_config_instance = Settings.from_toml(args.config)
 
         if uvloop:
             uvloop.install()
@@ -163,8 +149,7 @@ def main_cli() -> None:
         else:
             print("uvloop not found, using default asyncio event loop.")
 
-        app = Application(app_config_instance, config_path=args.config)
-        asyncio.run(app.run())
+        asyncio.run(run_bot(config_path=args.config))
 
     except (KeyboardInterrupt, SystemExit):
         print("Bot stopped by user.")
