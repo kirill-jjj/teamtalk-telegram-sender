@@ -50,13 +50,13 @@ class ModerationService:
         self._teamtalk_service = teamtalk_service
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    async def ban_subscriber(  # noqa: PLR6301
+    async def ban_subscriber(
         self,
         uow: IUnitOfWork,
         telegram_id: Annotated[int, Field(gt=0)],
         translator: NullTranslations,
     ) -> OperationResult:
-        """Bans a user by adding them to the ban list."""
+        """Bans a user by adding them to the ban list and deleting their profile."""
         _ = translator.gettext
         user_settings = await uow.users.get_by_id(telegram_id)
         tt_username = user_settings.teamtalk_username if user_settings else None
@@ -67,10 +67,21 @@ class ModerationService:
             teamtalk_username=tt_username,  # Pass both telegram_id and tt_username
             reason="Banned by admin",
         )
+        logger.info(
+            "User %s (TT username: '%s') added to the ban list.",
+            telegram_id,
+            tt_username,
+        )
+
+        # After banning, completely delete the user's profile
+        await self._subscription_service.delete_profile(uow, telegram_id, translator)
+        logger.info("User %s profile deleted as part of the ban process.", telegram_id)
 
         return OperationResult(
             success=True,
-            message_key=_("User {telegram_id} was banned."),
+            message_key=_(
+                "User {telegram_id} was banned and their profile was deleted."
+            ),
             message_args={"telegram_id": telegram_id, "tt_username": tt_username},
         )
 
