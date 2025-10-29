@@ -136,6 +136,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "scripts/run_alembic.py" = ["S404"]
 "tests/bot/services/test_moderation_service.py" = ["RUF027"]
 "tests/bot/services/test_subscription_service.py" = ["RUF027"]
+"tests/bot/core/test_languages.py" = ["PT019"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -170,6 +171,7 @@ pythonpath = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 norecursedirs = ["ai-docs"]
+addopts = ["-q", "-rF", "-l", "--tb=long"]
 
 [project.optional-dependencies]
 dev = [

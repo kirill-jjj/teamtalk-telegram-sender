@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
@@ -145,6 +146,31 @@ async def test_update_language_user_not_found(
 
 
 @pytest.mark.asyncio
+async def test_update_language_sqlalchemy_error(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    telegram_id = 123
+    new_lang_code = "ru"
+    user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+
+    mock_uow.users.get_by_id.return_value = user_settings
+    mock_uow.users.save.side_effect = SQLAlchemyError("DB Error")
+
+    result = await user_settings_service.update_language(
+        mock_uow, telegram_id, new_lang_code
+    )
+
+    assert result is None
+    assert user_settings.language_code == "en"
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_called_once_with(user_settings)
+    mock_cache.update_user_settings.assert_not_called()
+    mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_update_mute_mode_success(
     user_settings_service: UserSettingsService,
     mock_uow: AsyncMock,
@@ -172,6 +198,25 @@ async def test_update_mute_mode_success(
 
 
 @pytest.mark.asyncio
+async def test_update_mute_mode_user_not_found(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    new_mode = MuteListMode.whitelist
+
+    mock_uow.users.get_by_id.return_value = None
+
+    result = await user_settings_service.update_mute_mode(
+        mock_uow, telegram_id, new_mode
+    )
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_update_notification_preference_success(
     user_settings_service: UserSettingsService,
     mock_uow: AsyncMock,
@@ -187,7 +232,6 @@ async def test_update_notification_preference_success(
 
     mock_uow.users.get_by_id.return_value = user_settings
 
-    # Note: update_notification_preference takes user_settings directly, not telegram_id
     result = await user_settings_service.update_notification_preference(
         mock_uow, telegram_id, new_pref
     )
@@ -196,6 +240,25 @@ async def test_update_notification_preference_success(
     mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
     mock_uow.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_notification_preference_user_not_found(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    new_pref = NotificationSetting.JOIN_OFF
+
+    mock_uow.users.get_by_id.return_value = None
+
+    result = await user_settings_service.update_notification_preference(
+        mock_uow, telegram_id, new_pref
+    )
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -219,7 +282,7 @@ async def test_toggle_noon_setting_enable(
     assert result.not_on_online_enabled is True
     assert result.not_on_online_confirmed is True
     expected_calls = 2
-    assert mock_uow.users.save.call_count == expected_calls  # Enable/confirm
+    assert mock_uow.users.save.call_count == expected_calls
     assert mock_cache.update_user_settings.call_count == expected_calls
 
 
@@ -242,10 +305,50 @@ async def test_toggle_noon_setting_disable(
     )
 
     assert result.not_on_online_enabled is False
-    assert result.not_on_online_confirmed is True  # Confirmed status should remain true
+    assert result.not_on_online_confirmed is True
     expected_calls = 1
     assert mock_uow.users.save.call_count == expected_calls
     assert mock_cache.update_user_settings.call_count == expected_calls
+
+
+@pytest.mark.asyncio
+async def test_toggle_noon_setting_user_not_found(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    mock_uow.users.get_by_id.return_value = None
+
+    result = await user_settings_service.toggle_noon_setting(mock_uow, telegram_id)
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_toggle_noon_setting_update_fails(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+) -> None:
+    user_settings = UserSettings(
+        telegram_id=123,
+        language_code="en",
+        not_on_online_enabled=False,
+        not_on_online_confirmed=False,
+    )
+    mock_uow.users.get_by_id.return_value = user_settings
+    mock_uow.users.save.side_effect = SQLAlchemyError("DB Error")
+
+    result = await user_settings_service.toggle_noon_setting(
+        mock_uow, user_settings.telegram_id
+    )
+
+    assert result is None
+    mock_uow.users.get_by_id.assert_called_once_with(user_settings.telegram_id)
+    assert mock_uow.users.save.call_count == 1
+    mock_cache.update_user_settings.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -284,10 +387,28 @@ async def test_unlink_tt_account_no_account_linked(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result_settings.teamtalk_username is None
+    assert result_settings is not None
     assert result_username is None
     mock_uow.users.save.assert_not_called()
     mock_cache.update_user_settings.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_unlink_tt_account_user_not_found(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    mock_uow.users.get_by_id.return_value = None
+
+    result_settings, result_username = await user_settings_service.unlink_tt_account(
+        mock_uow, telegram_id
+    )
+
+    assert result_settings is None
+    assert result_username is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
+    mock_uow.users.save.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -304,10 +425,12 @@ async def test_get_user_settings_view(
         notification_settings=NotificationSetting.ALL,
         mute_list_mode=MuteListMode.blacklist,
         not_on_online_enabled=True,
+        not_on_online_confirmed=True,
         teamtalk_username="test_user",
         muted_users_list=[],
     )
-    mock_cache.get_user_settings.return_value = user_settings
+    mock_cache.get_user_settings.return_value = None
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await user_settings_service.get_user_settings_view(
         mock_uow, telegram_id, default_lang
@@ -348,6 +471,35 @@ async def test_get_subscriber_view_data(
 
 
 @pytest.mark.asyncio
+async def test_get_subscriber_view_data_user_settings_none(
+    user_settings_service: UserSettingsService,
+    mock_uow: AsyncMock,
+    mock_cache: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telegram_id = 123
+    default_lang = "en"
+    mock_cache.get_user_settings.return_value = None
+    mock_uow.users.get_or_create.return_value = None
+    mock_bot = AsyncMock()
+    mock_get_display_name = AsyncMock(return_value="John Doe")
+    monkeypatch.setattr(
+        "bot.services.user_settings_service.get_display_name_for_id",
+        mock_get_display_name,
+    )
+
+    result = await user_settings_service.get_subscriber_view_data(
+        mock_uow, telegram_id, default_lang, mock_bot
+    )
+
+    assert result is None
+    mock_uow.users.get_or_create.assert_called_once_with(
+        telegram_id, defaults={"language_code": default_lang}
+    )
+    mock_get_display_name.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_get_account_management_data(
     mock_uow: AsyncMock,
 ) -> None:
@@ -360,3 +512,18 @@ async def test_get_account_management_data(
     )
 
     assert result.current_tt_username == "test_user"
+
+
+@pytest.mark.asyncio
+async def test_get_account_management_data_user_settings_none(
+    mock_uow: AsyncMock,
+) -> None:
+    telegram_id = 123
+    mock_uow.users.get_by_id.return_value = None
+
+    result = await UserSettingsService.get_account_management_data(
+        mock_uow, telegram_id
+    )
+
+    assert result.current_tt_username is None
+    mock_uow.users.get_by_id.assert_called_once_with(telegram_id)

@@ -2,7 +2,6 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
@@ -36,10 +35,10 @@ user_commands_router = Router(name="user_commands_router")
 async def on_start_with_payload(
     message: Message,
     token: str,
-    translator: Annotated[NullTranslations, FromDishka()],
-    deeplink_service: Annotated[DeeplinkService, FromDishka()],
-    settings: Annotated[Settings, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    translator: FromDishka[NullTranslations],
+    deeplink_service: FromDishka[DeeplinkService],
+    settings: FromDishka[Settings],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handle the /start command with a deeplink, using a magic filter."""
     _ = translator.gettext
@@ -63,10 +62,10 @@ async def on_start_with_payload(
 @user_commands_router.message(CommandStart(deep_link=False))
 async def on_start_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
-    bot: Annotated[EventBot, FromDishka()],
-    user_settings: Annotated[SettingsViewDTO, FromDishka()],
+    translator: FromDishka[NullTranslations],
+    cache: FromDishka[CacheService],
+    bot: FromDishka[EventBot],
+    user_settings: FromDishka[SettingsViewDTO],
 ) -> None:
     """Handles the /start command without a deeplink."""
     _ = translator.gettext
@@ -91,12 +90,12 @@ async def on_start_command(
 @user_commands_router.message(Command("who"), IsSubscribed())
 async def on_who_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-    bot: Annotated[EventBot, FromDishka()],
-    report_service: Annotated[ReportService, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
-    user_settings_service: Annotated[UserSettingsService, FromDishka()],
-    uow: Annotated[IUnitOfWork, FromDishka()],
+    translator: FromDishka[NullTranslations],
+    bot: FromDishka[EventBot],
+    report_service: FromDishka[ReportService],
+    cache: FromDishka[CacheService],
+    user_settings_service: FromDishka[UserSettingsService],
+    uow: FromDishka[IUnitOfWork],
 ) -> None:
     """Handles the /who command by calling the report service and formatter."""
     if not message.from_user:
@@ -118,8 +117,8 @@ async def on_who_command(
 @user_commands_router.message(Command("help"), IsSubscribed())
 async def on_help_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
+    translator: FromDishka[NullTranslations],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /help command, showing available commands."""
     if not message.from_user:
@@ -133,7 +132,7 @@ async def on_help_command(
 @user_commands_router.message(Command("settings"), IsSubscribed())
 async def on_settings_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
+    translator: FromDishka[NullTranslations],
 ) -> None:
     """Handles the /settings command, showing the main settings menu."""
     _ = translator.gettext
@@ -153,8 +152,8 @@ async def on_settings_command(
 @user_commands_router.message(Command("menu"), IsSubscribed())
 async def on_menu_command(
     message: Message,
-    translator: Annotated[NullTranslations, FromDishka()],
-    cache: Annotated[CacheService, FromDishka()],
+    translator: FromDishka[NullTranslations],
+    cache: FromDishka[CacheService],
 ) -> None:
     """Handles the /menu command, showing the main command menu."""
     _ = translator.gettext

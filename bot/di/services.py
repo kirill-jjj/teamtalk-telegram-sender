@@ -139,8 +139,9 @@ class ServicesProvider(Provider):
             ValueError: If SettingsViewDTO cannot be provided because no user
                         is present in the event context.
         """
+        user_settings_none_error = "User settings cannot be None."
         if user_settings is None:
-            raise ValueError
+            raise ValueError(user_settings_none_error)
         return user_settings
 
     @provide(provides=NullTranslations, scope=Scope.REQUEST)

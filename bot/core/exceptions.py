@@ -4,6 +4,12 @@
 class BotError(Exception):
     """Base class for custom exceptions in the bot."""
 
+    def __init__(self, message: str | None = None) -> None:
+        """Initializes the exception with a message or the docstring."""
+        if message is None:
+            message = self.__doc__
+        super().__init__(message)
+
 
 class AdminAuthError(BotError):
     """Raised when an admin command fails due to authorization issues."""

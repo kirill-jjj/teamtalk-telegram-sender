@@ -119,6 +119,22 @@ async def test_uow_rollback_method(
 
 
 @pytest.mark.asyncio
+async def test_uow_commit_no_session(uow: SqlModelUnitOfWork) -> None:
+    """Test that commit does nothing when no session is active."""
+    uow._session = None
+    await uow.commit()
+    # No exception, no calls to a non-existent session mock
+
+
+@pytest.mark.asyncio
+async def test_uow_rollback_no_session(uow: SqlModelUnitOfWork) -> None:
+    """Test that rollback does nothing when no session is active."""
+    uow._session = None
+    await uow.rollback()
+    # No exception, no calls to a non-existent session mock
+
+
+@pytest.mark.asyncio
 async def test_uow_session_property_access(
     uow: SqlModelUnitOfWork, mock_session: AsyncMock
 ) -> None:
