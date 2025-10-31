@@ -93,6 +93,9 @@ class OperationalParameters(BaseSettings):
     user_settings_cache_max_size: int = Field(
         1000, description="Maximum number of user settings to keep in cache."
     )
+    deeplink_cleanup_interval_seconds: int = Field(
+        3600, description="Interval for cleaning up expired deeplinks in seconds."
+    )
 
 
 class Settings(BaseSettings):

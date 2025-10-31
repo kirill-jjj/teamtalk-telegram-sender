@@ -116,3 +116,40 @@ async def test_resolve_token_not_found(
     token = "non_existent_token"
     resolved_deeplink = await deeplink_repository.resolve_token(token)
     assert resolved_deeplink is None
+
+
+@pytest.mark.asyncio
+async def test_delete_expired(
+    deeplink_repository: DeeplinkRepository, session: AsyncSession
+) -> None:
+    """Test deleting expired deeplinks."""
+    # Arrange
+    now = datetime.now(UTC)
+    expired_deeplink1 = Deeplink(
+        token="expired1",
+        action=DeeplinkAction.SUBSCRIBE,
+        expiry_time=now - timedelta(minutes=1),
+    )
+    expired_deeplink2 = Deeplink(
+        token="expired2",
+        action=DeeplinkAction.SUBSCRIBE,
+        expiry_time=now - timedelta(seconds=1),
+    )
+    valid_deeplink = Deeplink(
+        token="valid",
+        action=DeeplinkAction.UNSUBSCRIBE,
+        expiry_time=now + timedelta(minutes=5),
+    )
+    session.add_all([expired_deeplink1, expired_deeplink2, valid_deeplink])
+    await session.commit()
+
+    # Act
+    deleted_count = await deeplink_repository.delete_expired()
+    await session.commit()
+
+    # Assert
+    assert deleted_count == 2
+
+    remaining_deeplinks = await deeplink_repository.get_all()
+    assert len(remaining_deeplinks) == 1
+    assert remaining_deeplinks[0].token == "valid"

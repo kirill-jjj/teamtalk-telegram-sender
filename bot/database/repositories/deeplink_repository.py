@@ -4,6 +4,7 @@ import datetime as dt
 from datetime import datetime, timedelta
 import secrets
 
+from sqlmodel import col, delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from bot.core.constants import DEEPLINK_TOKEN_LENGTH_BYTES
@@ -66,3 +67,16 @@ class DeeplinkRepository(BaseRepository[Deeplink]):
                 await self.delete(deeplink)
                 return None
         return deeplink
+
+    async def delete_expired(self) -> int:
+        """Deletes all expired deeplinks from the database.
+
+        Returns:
+            The number of deleted deeplinks.
+        """
+        now = datetime.now(dt.UTC)
+        statement = delete(self._model).where(col(self._model.expiry_time) < now)
+        result = await self._session.exec(statement)
+        deleted_count = result.rowcount
+        await self._session.flush()
+        return deleted_count

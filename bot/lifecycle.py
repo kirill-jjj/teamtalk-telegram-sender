@@ -22,12 +22,39 @@ from bot.event_bus.bus import EventBus
 from bot.registration import register_all_handlers
 from bot.services.admin_service import AdminService
 from bot.services.cache_service import CacheService
+from bot.services.deeplink_service import DeeplinkService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 from bot.telegram_bot.commands import (
     set_telegram_commands as set_telegram_commands_for_bot,
 )
 from bot.telegram_bot.types.bots import EventBot
+
+
+async def deeplink_cleanup_task(
+    app_container: "AsyncContainer",
+    settings: "Settings",
+) -> None:
+    """A background task that periodically cleans up expired deeplinks."""
+    logger = logging.getLogger(__name__)
+    logger.info("Starting periodic deeplink cleanup task.")
+    interval = settings.operational_parameters.deeplink_cleanup_interval_seconds
+    while True:
+        await asyncio.sleep(interval)
+        logger.info("Running deeplink cleanup...")
+        try:
+            async with app_container() as request_container:
+                uow = await request_container.get(IUnitOfWork)
+                deeplink_service = await request_container.get(DeeplinkService)
+                async with uow:
+                    deleted_count = await deeplink_service.cleanup_expired_deeplinks()
+
+                if deleted_count > 0:
+                    logger.info("Cleaned up %d expired deeplinks.", deleted_count)
+                else:
+                    logger.debug("No expired deeplinks to clean up.")
+        except Exception:
+            logger.exception("Error during periodic deeplink cleanup.")
 
 
 @inject
@@ -53,6 +80,8 @@ async def on_startup(
     # Run migrations before doing anything with the database
     await run_migrations(settings, project_root)
 
+    app_container: AsyncContainer = dispatcher.workflow_data["dishka_container"]
+
     # Start the pytalk event loop in the background
     teamtalk_task = dispatcher.workflow_data.get("teamtalk_task")
     if teamtalk_task is None or teamtalk_task.done():
@@ -63,7 +92,18 @@ async def on_startup(
     else:
         logger.info("Pytalk main event loop task is already running.")
 
-    app_container: AsyncContainer = dispatcher.workflow_data["dishka_container"]
+    # Start the deeplink cleanup task
+    cleanup_task = dispatcher.workflow_data.get("deeplink_cleanup_task")
+    if cleanup_task is None or cleanup_task.done():
+        task_name = "deeplink_cleanup_task"
+        cleanup_task = asyncio.create_task(
+            deeplink_cleanup_task(app_container, settings), name=task_name
+        )
+        dispatcher.workflow_data["deeplink_cleanup_task"] = cleanup_task
+        logger.info("Deeplink cleanup task started as '%s'.", task_name)
+    else:
+        logger.info("Deeplink cleanup task is already running.")
+
     # Explicitly get PytalkEventRouter to ensure its handlers are registered
     await app_container.get(PytalkEventRouter)
 

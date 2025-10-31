@@ -170,3 +170,13 @@ class DeeplinkService:
         # The token is now used, so we should delete it.
         await uow.deeplinks.delete(deeplink)
         return reply_text, True
+
+    async def cleanup_expired_deeplinks(self) -> int:
+        """Deletes expired deeplinks and returns the count of deleted items.
+
+        The caller is responsible for managing the Unit of Work transaction.
+
+        Returns:
+            The number of deeplinks that were deleted.
+        """
+        return await self._uow.deeplinks.delete_expired()

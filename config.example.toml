@@ -66,3 +66,6 @@ tt_reconnect_check_interval_seconds = 10
 
 # Interval in seconds for synchronizing the cache of online users from TeamTalk.
 online_users_cache_sync_interval_seconds = 300 # 5 minutes
+
+# Interval in seconds for the periodic cleanup of expired deeplinks from the database.
+deeplink_cleanup_interval_seconds = 3600 # 1 hour

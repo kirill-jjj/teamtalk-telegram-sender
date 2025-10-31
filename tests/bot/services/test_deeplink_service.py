@@ -409,3 +409,21 @@ async def test_execute_telegram_deeplink_intended_for_different_user(
         in reply_text
     )
     assert success is False
+
+
+@pytest.mark.asyncio
+async def test_cleanup_expired_deeplinks(
+    deeplink_service: DeeplinkService,
+    mock_uow: AsyncMock,
+) -> None:
+    """Test the cleanup_expired_deeplinks method."""
+    # Arrange
+    expected_deleted_count = 5
+    mock_uow.deeplinks.delete_expired.return_value = expected_deleted_count
+
+    # Act
+    deleted_count = await deeplink_service.cleanup_expired_deeplinks()
+
+    # Assert
+    assert deleted_count == expected_deleted_count
+    mock_uow.deeplinks.delete_expired.assert_called_once()

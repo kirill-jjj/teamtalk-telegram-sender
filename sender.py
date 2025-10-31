@@ -84,6 +84,14 @@ async def on_shutdown(
         except asyncio.CancelledError:
             logger.info("TeamTalk event loop task cancelled.")
 
+    cleanup_task = dispatcher.workflow_data.get("deeplink_cleanup_task")
+    if cleanup_task and not cleanup_task.done():
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            logger.info("Deeplink cleanup task cancelled.")
+
 
 async def run_bot(config_path: str) -> None:
     """Sets up and runs the main application event loops."""
