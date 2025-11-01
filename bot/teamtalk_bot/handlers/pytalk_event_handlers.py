@@ -224,7 +224,7 @@ class PytalkEventHandlers:
             return
 
         ch_name = (
-            channel.name if hasattr(channel, "name") and channel.name else "Unknown"
+            channel.path if hasattr(channel, "path") and channel.path else "Unknown"
         )
         logger.debug(
             "[%s] Bot in channel: %s. Finalizing login...",
