@@ -6,8 +6,8 @@ import logging
 from typing import Annotated, TypeVar
 
 from pydantic import ConfigDict, Field, validate_call
-from pytalk.exceptions import PermissionError as PytalkPermissionError
-from pytalk.exceptions import TeamTalkException as PytalkException
+from pytalk.exceptions import PytalkPermissionError
+from pytalk.exceptions import TeamTalkError as PytalkException
 
 from bot.config import Settings
 from bot.core.enums import AdminCommand, UserListAction

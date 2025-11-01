@@ -3,8 +3,6 @@
 from gettext import NullTranslations
 import logging
 
-import pytalk
-
 from bot.config import Settings
 from bot.core.constants import USERS_PER_PAGE
 from bot.database.models import UserSettings
@@ -30,7 +28,6 @@ from bot.telegram_bot.models import (
 from bot.telegram_bot.types.bots import EventBot
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 class ReportService:

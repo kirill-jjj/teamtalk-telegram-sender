@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytalk
 import pytest
 
 from bot.core.enums import NotificationType
@@ -16,10 +15,6 @@ from bot.services.notification_service import (
     is_muted,
     is_user_subject_to_noon_check,
     should_send_silently,
-)
-
-pytalk.instance.sdk.ttstr.__call__ = (
-    lambda x: x.decode() if isinstance(x, bytes) else str(x)
 )
 
 
@@ -73,14 +68,7 @@ def mock_online_users() -> dict:
     return {1: user1}
 
 
-def test_is_linked_user_online(
-    mock_cache: MagicMock, mock_online_users: dict, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test the is_linked_user_online function."""
-    monkeypatch.setattr(
-        "bot.services.notification_service.ttstr",
-        lambda x: x.decode() if isinstance(x, bytes) else str(x),
-    )
+def test_is_linked_user_online(mock_cache: MagicMock, mock_online_users: dict) -> None:
     mock_cache.get_user_settings.return_value = UserSettings(
         teamtalk_username="test_user"
     )
@@ -92,14 +80,9 @@ def test_is_linked_user_online(
     assert is_linked_user_online(123, mock_cache, mock_online_users) is False
 
 
-def test_should_send_silently(
-    mock_cache: MagicMock, mock_online_users: dict, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) -> None:
     """Test the should_send_silently function."""
-    monkeypatch.setattr(
-        "bot.services.notification_service.ttstr",
-        lambda x: x.decode() if isinstance(x, bytes) else str(x),
-    )
+
     # NOON enabled and user online
     mock_cache.get_user_settings.return_value = UserSettings(
         not_on_online_enabled=True,

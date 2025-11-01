@@ -6,14 +6,11 @@ from typing import Any, Protocol
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-import pytalk
 
 from bot.core.enums import UserListAction
 from bot.database.types import MuteListMode
 from bot.services.notification_service import is_muted  # Updated import
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
-
-ttstr = pytalk.instance.sdk.ttstr
 
 
 def _create_back_button_text(

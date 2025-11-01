@@ -2,12 +2,12 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Callable
-import functools
 from gettext import NullTranslations
 import logging
 
 from dishka import AsyncContainer, Provider, Scope, provide
-import pytalk
+from pytalk.bot import TeamTalkBot
+from pytalk.enums import TeamTalkServerInfo
 
 from bot.config import Settings
 from bot.core.constants import INVALID_CHANNEL_ID, MSG_TEAMTALK_CONNECTION_FAILED
@@ -32,32 +32,6 @@ from bot.teamtalk_bot.pytalk_event_router import PytalkEventRouter
 logger = logging.getLogger(__name__)
 
 
-def _thread_safe_dispatch(
-    bot_instance: pytalk.TeamTalkBot,
-    event: str,
-    /,
-    *args: object,
-    **kwargs: object,
-) -> None:
-    """Thread-safe version of the dispatch method for pytalk.
-
-    Uses call_soon_threadsafe to call _schedule_event in the main asyncio loop.
-
-    """
-    try:
-        coro = getattr(bot_instance, "on_" + event)
-
-        bot_instance.loop.call_soon_threadsafe(
-            bot_instance._schedule_event, coro, "on_" + event, *args, **kwargs
-        )
-
-    except AttributeError:
-        pass  # Ignore events without handlers
-
-    except RuntimeError:
-        logger.exception("Error in thread-safe dispatch.")
-
-
 class TeamTalkProvider(Provider):
     """Provides application-scoped dependencies related to TeamTalk."""
 
@@ -72,19 +46,15 @@ class TeamTalkProvider(Provider):
         """Provides the Pytalk event handlers."""
         return PytalkEventHandlers(event_bus, translator_factory)
 
-    @provide(provides=pytalk.TeamTalkBot)
+    @provide(provides=TeamTalkBot)
     @staticmethod
     async def get_patched_pytalk_bot(
         settings: Settings,
-    ) -> pytalk.TeamTalkBot:
+    ) -> TeamTalkBot:
         """Creates, configures, and patches the TeamTalkBot instance."""
-        bot = pytalk.TeamTalkBot(client_name=settings.teamtalk.client_name)
+        bot = TeamTalkBot(client_name=settings.teamtalk.client_name)
 
         await bot._async_setup_hook()
-
-        logger.debug("Applying thread-safe patch to pytalk dispatcher.")
-
-        bot.dispatch = functools.partial(_thread_safe_dispatch, bot)
 
         return bot
 
@@ -98,7 +68,7 @@ class TeamTalkProvider(Provider):
     @staticmethod
     async def get_tt_connection(
         settings: Settings,
-        pytalk_bot: pytalk.TeamTalkBot,
+        pytalk_bot: TeamTalkBot,
         event_bus: EventBus,
         connections: dict[str, TeamTalkConnection],
         pytalk_event_handlers: PytalkEventHandlers,
@@ -106,18 +76,20 @@ class TeamTalkProvider(Provider):
         """Provider for TeamTalkConnection with managed lifecycle."""
         tt_config = settings.teamtalk
 
-        server_info = pytalk.TeamTalkServerInfo(
-            host=tt_config.host_name,
-            tcp_port=tt_config.port,
-            udp_port=tt_config.port,
-            username=tt_config.user_name,
-            password=tt_config.password,
-            encrypted=tt_config.encrypted,
-            nickname=settings.teamtalk.nick_name,
-            join_channel_id=int(tt_config.channel)
-            if tt_config.channel.isdigit()
-            else INVALID_CHANNEL_ID,
-            join_channel_password=tt_config.channel_password or "",
+        server_info = TeamTalkServerInfo(
+            {
+                "host": tt_config.host_name,
+                "tcp_port": tt_config.port,
+                "udp_port": tt_config.port,
+                "username": tt_config.user_name,
+                "password": tt_config.password,
+                "encrypted": tt_config.encrypted,
+                "nickname": settings.teamtalk.nick_name,
+                "join_channel_id": int(tt_config.channel)
+                if tt_config.channel.isdigit()
+                else INVALID_CHANNEL_ID,
+                "join_channel_password": tt_config.channel_password or "",
+            }
         )
 
         conn_manager = TeamTalkConnectionManager(pytalk_bot, pytalk_event_handlers)
@@ -160,7 +132,7 @@ class TeamTalkProvider(Provider):
     @staticmethod
     def get_pytalk_event_router(
         app_container: AsyncContainer,
-        tt_bot: pytalk.TeamTalkBot,
+        tt_bot: TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
         translator_factory: Callable[[str | None], NullTranslations],

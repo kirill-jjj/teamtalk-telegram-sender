@@ -3,8 +3,10 @@
 import logging
 from typing import TYPE_CHECKING
 
-import pytalk
 from pytalk.enums import TeamTalkServerInfo as PytalkTeamTalkServerInfo
+
+if TYPE_CHECKING:
+    import pytalk
 
 from bot.config import Settings
 from bot.event_bus.bus import EventBus
@@ -43,7 +45,6 @@ class TeamTalkConnection:
         self.instance: pytalk.instance.TeamTalkInstance | None = None
         self.login_complete_time: datetime | None = None
         self._is_finalized = False
-        self.ttstr = pytalk.instance.sdk.ttstr
 
     def connect(self) -> bool:
         """Establishes a connection to the TeamTalk server."""

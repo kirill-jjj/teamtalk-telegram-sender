@@ -32,7 +32,6 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 def _is_tt_admin(
@@ -53,11 +52,11 @@ def _is_tt_admin(
 
         _ = translator.gettext
         if not self.tt_command_service.admin_service.is_main_teamtalk_admin(
-            ttstr(tt_message.user.username)
+            str(tt_message.user.username)
         ):
             logger.warning(
                 "Unauthorized admin command by TT user %s for %s.",
-                ttstr(tt_message.user.username),
+                tt_message.user.username,
                 func.__name__,
             )
             await self._reply_to_tt_message(
@@ -107,7 +106,7 @@ class PrivateMessageCommandHandlers:
                     )
                     if part_idx < len(parts_to_send_list) - 1:
                         await asyncio.sleep(TT_HELP_MESSAGE_PART_DELAY)
-                except pytalk.exceptions.TeamTalkException:
+                except pytalk.exceptions.TeamTalkError:
                     logger.exception(
                         "Error sending part %s of TT message.", part_idx + 1
                     )
@@ -121,7 +120,7 @@ class PrivateMessageCommandHandlers:
     ) -> None:
         """Handles the subscribe command."""
         _ = translator.gettext
-        if not tt_message.user or not ttstr(tt_message.user.username):
+        if not tt_message.user or not tt_message.user.username:
             logger.warning(
                 "Subscribe command received from TT user without a username. "
                 "TT User ID: %s",
@@ -134,7 +133,7 @@ class PrivateMessageCommandHandlers:
             return
 
         reply_text = await self.tt_command_service.handle_subscribe(
-            uow, ttstr(tt_message.user.username), translator
+            uow, str(tt_message.user.username), translator
         )
         await self._reply_to_tt_message(tt_message.reply, reply_text)
 

@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING
 
 import pytalk
 
+if TYPE_CHECKING:
+    from pytalk.bot import TeamTalkBot
+    from pytalk.instance import TeamTalkInstance
+
 from bot.core.constants import INVALID_CHANNEL_ID
 
 if TYPE_CHECKING:
@@ -21,7 +25,7 @@ class TeamTalkConnectionManager:
     """Handles connection/disconnection logic for a TeamTalkConnection."""
 
     def __init__(
-        self, pytalk_bot: pytalk.TeamTalkBot, pytalk_event_handlers: PytalkEventHandlers
+        self, pytalk_bot: TeamTalkBot, pytalk_event_handlers: PytalkEventHandlers
     ) -> None:
         """Initializes the TeamTalkConnectionManager."""
         self.pytalk_bot = pytalk_bot
@@ -63,7 +67,7 @@ class TeamTalkConnectionManager:
             conn.mark_finalized(status=False)
             conn.login_complete_time = None
 
-        except pytalk.exceptions.TeamTalkException as e:
+        except pytalk.exceptions.TeamTalkError as e:
             logger.critical("Failed to connect or login to TeamTalk server: %s", e)
             return False
         except OSError:
@@ -110,7 +114,7 @@ class TeamTalkConnectionManager:
             final_chan_id = int(chan_path)
             ch_obj = instance.get_channel(final_chan_id)
             if ch_obj:
-                target_chan_name = conn.ttstr(ch_obj.name)
+                target_chan_name = str(ch_obj.name)
             else:  # Channel ID specified but not found
                 logger.warning(
                     "[%s] Channel ID '%s' not found.", conn.server_info.host, chan_path
@@ -120,7 +124,7 @@ class TeamTalkConnectionManager:
             ch_obj = instance.get_channel_from_path(chan_path)
             if ch_obj:
                 final_chan_id = ch_obj.id
-                target_chan_name = conn.ttstr(ch_obj.name)
+                target_chan_name = str(ch_obj.name)
             else:
                 logger.error(
                     "[%s] Channel path '%s' not found.",
@@ -138,20 +142,20 @@ class TeamTalkConnectionManager:
         instance = conn.instance
         try:
             await self._try_join_channel(conn, instance)
-        except pytalk.exceptions.PermissionError as e:
+        except pytalk.exceptions.PytalkPermissionError as e:
             await self._handle_join_permission_error(conn, instance, e)
-        except (pytalk.exceptions.TeamTalkException, ValueError, OSError) as e:
+        except (pytalk.exceptions.TeamTalkError, ValueError, OSError) as e:
             await self._handle_generic_join_error(conn, e)
 
     @staticmethod
     async def _handle_no_instance(
         conn: TeamTalkConnection | None,
-        _instance: pytalk.TeamTalkInstance | None,
+        _instance: TeamTalkInstance | None,
     ) -> None:
         """Handles the case where there is no connection or instance."""
 
     async def _try_join_channel(
-        self, conn: TeamTalkConnection, instance: pytalk.TeamTalkInstance
+        self, conn: TeamTalkConnection, instance: TeamTalkInstance
     ) -> None:
         """Tries to join the configured channel."""
         final_chan_id, target_chan_name = await self.determine_target_channel()
@@ -169,7 +173,7 @@ class TeamTalkConnectionManager:
             await self._handle_no_target_channel(conn, instance)
 
     async def _handle_no_target_channel(
-        self, conn: TeamTalkConnection, instance: pytalk.TeamTalkInstance
+        self, conn: TeamTalkConnection, instance: TeamTalkInstance
     ) -> None:
         """Handles the case where no valid target channel is found."""
         logger.warning(
@@ -177,7 +181,7 @@ class TeamTalkConnectionManager:
             "Staying in default channel.",
             conn.server_info.host,
         )
-        curr_chan_id = instance.getMyCurrentChannelID()
+        curr_chan_id = instance.getMyCurrentChannelID()  # type: ignore [attr-defined]
         ch_to_finalize = instance.get_channel(
             curr_chan_id if curr_chan_id is not None else 0
         )
@@ -194,8 +198,8 @@ class TeamTalkConnectionManager:
     async def _handle_join_permission_error(
         self,
         conn: TeamTalkConnection,
-        instance: pytalk.TeamTalkInstance,
-        _error: pytalk.exceptions.PermissionError,
+        instance: TeamTalkInstance,
+        _error: pytalk.exceptions.PytalkPermissionError,
     ) -> None:
         """Handles a permission error when joining a channel."""
         _, target_chan_name = await self.determine_target_channel()
@@ -205,7 +209,7 @@ class TeamTalkConnectionManager:
             conn.server_info.host,
             target_chan_name,
         )
-        curr_chan_id_after_fail = instance.getMyCurrentChannelID()
+        curr_chan_id_after_fail = instance.getMyCurrentChannelID()  # type: ignore [attr-defined]
         ch_id_to_get = (
             curr_chan_id_after_fail if curr_chan_id_after_fail is not None else 0
         )

@@ -11,11 +11,9 @@ from aiogram.exceptions import (
     TelegramForbiddenError,
 )
 from aiogram.types import InaccessibleMessage, InlineKeyboardMarkup, Message
-import pytalk
 
 from bot.telegram_bot.formatters import format_telegram_user_display_name
 
-ttstr = pytalk.instance.sdk.ttstr
 logger = logging.getLogger(__name__)
 
 

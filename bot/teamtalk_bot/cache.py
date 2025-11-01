@@ -3,7 +3,7 @@
 import asyncio
 import contextlib
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytalk
 from pytalk.user import User as PytalkUser
@@ -29,15 +29,13 @@ class TeamTalkCache:
         self.user_accounts_cache: dict[str, PytalkUserAccount] = {}
         self._periodic_sync_task: asyncio.Task[Any] | None = None
         self._populate_accounts_task: asyncio.Task[Any] | None = None
-        self.ttstr = pytalk.instance.sdk.ttstr
 
     def set_connection(self, connection: "TeamTalkConnection") -> None:
         """Sets the connection context after initialization to avoid circular deps."""
         self.connection = connection
 
-    def _get_username_as_str(
-        self, user_or_account: PytalkUser | PytalkUserAccount
-    ) -> str:
+    @staticmethod
+    def _get_username_as_str(user_or_account: PytalkUser | PytalkUserAccount) -> str:
         """Extract username as a string from a TeamTalkUser or TeamTalkUserAccount."""
         username = None
         if hasattr(user_or_account, "username"):
@@ -49,7 +47,7 @@ class TeamTalkCache:
         elif hasattr(user_or_account, "szUsername"):
             username = user_or_account.szUsername
         if isinstance(username, bytes):
-            return str(self.ttstr(username))
+            return str(username)
         return str(username) if username is not None else ""
 
     async def _periodic_cache_sync(self) -> None:
@@ -72,8 +70,8 @@ class TeamTalkCache:
                     await asyncio.sleep(reconnect_check_interval)
                     continue
             except (
-                pytalk.exceptions.PermissionError,
-                pytalk.exceptions.TeamTalkException,
+                pytalk.exceptions.PytalkPermissionError,
+                pytalk.exceptions.TeamTalkError,
                 OSError,
             ):
                 await asyncio.sleep(sync_interval)
@@ -92,9 +90,9 @@ class TeamTalkCache:
                     )
                     self.user_accounts_cache.clear()
                     for acc in all_accounts:
-                        username_str = self.ttstr(acc.username)
+                        username_str = acc.username
                         if username_str:
-                            self.user_accounts_cache[username_str] = acc
+                            self.user_accounts_cache[str(username_str)] = acc
 
     def start_background_tasks(self) -> None:
         """Starts background tasks for this connection (cache syncs)."""
@@ -132,19 +130,19 @@ class TeamTalkCache:
             PytalkEvent.USER_JOIN,
             PytalkEvent.USER_UPDATE,
         }:
-            user_data: PytalkUser = data
+            user_data: PytalkUser = cast("PytalkUser", data)
             if user_id is not None:
                 self.online_users_cache[user_id] = user_data
         elif event_type == PytalkEvent.USER_LOGOUT:
             if user_id is not None and user_id in self.online_users_cache:
                 del self.online_users_cache[user_id]
         elif event_type == PytalkEvent.USER_ACCOUNT_NEW:
-            new_acc: PytalkUserAccount = data
+            new_acc: PytalkUserAccount = cast("PytalkUserAccount", data)
             acc_username = self._get_username_as_str(new_acc)
             if acc_username:
                 self.user_accounts_cache[acc_username] = new_acc
         elif event_type == PytalkEvent.USER_ACCOUNT_REMOVE:
-            removed_acc: PytalkUserAccount = data
+            removed_acc: PytalkUserAccount = cast("PytalkUserAccount", data)
             acc_username = self._get_username_as_str(removed_acc)
             if acc_username and acc_username in self.user_accounts_cache:
                 del self.user_accounts_cache[acc_username]

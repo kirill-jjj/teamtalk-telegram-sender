@@ -87,8 +87,7 @@ class TeamTalkService:
             )
 
         accounts_info = [
-            UserAccountInfo(username=self._tt_connection.ttstr(acc.username))
-            for acc in cache.values()
+            UserAccountInfo(username=acc.username) for acc in cache.values()
         ]
 
         return accounts_info, None

@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import pytalk
-
 from bot.core.constants import TEAMTALK_PRIVATE_MESSAGE_TYPE
 from bot.teamtalk_bot import command_constants as tt_cmds
 from bot.teamtalk_bot.events import PrivateMessageReceivedEvent
@@ -33,8 +31,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
-ttstr = pytalk.instance.sdk.ttstr
 
 
 class PrivateMessageRouter:
@@ -94,7 +90,7 @@ class PrivateMessageRouter:
         self, tt_message: TeamTalkMessage, translator: NullTranslations
     ) -> None:
         """Handles the /help command from a TeamTalk user."""
-        tt_username_str = ttstr(tt_message.user.username)
+        tt_username_str = tt_message.user.username
         is_main_tt_admin = bool(
             self.settings.general.admin_username
             and tt_username_str == self.settings.general.admin_username
@@ -123,7 +119,7 @@ class PrivateMessageRouter:
         if self.connection:
             logger.warning(
                 "Unknown TT command from %s on %s: %s",
-                ttstr(tt_message.user.username),
+                tt_message.user.username,
                 self.connection.server_info.host,
                 tt_message.content[:100],
             )
@@ -137,7 +133,7 @@ class PrivateMessageRouter:
 
         from_user = tt_message.user
         from_user_nickname = get_tt_user_display_name(from_user, translator)
-        from_user_username = ttstr(from_user.username)
+        from_user_username = from_user.username
 
         logger.debug(
             "[%s] Private msg from %s: '%s'",
@@ -179,7 +175,7 @@ class PrivateMessageRouter:
             logger.warning("Handler has no connection instance, skipping message.")
             return False
 
-        my_user_id = self.connection.instance.getMyUserID()
+        my_user_id = self.connection.instance._get_my_user().id
         if tt_message.from_id == my_user_id:
             return False  # Ignore messages from self
 

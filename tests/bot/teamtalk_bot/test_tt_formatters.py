@@ -14,7 +14,6 @@ from bot.teamtalk_bot.formatters import (
     format_deeplink_reply,
     format_teamtalk_help_message,
     get_server_display_name,
-    get_tt_user_display_name,
     get_user_display_channel_name,
 )
 
@@ -159,7 +158,7 @@ def test_split_text_for_tt(text: str, max_len: int, expected_parts: list[str]) -
 @pytest.fixture
 def mock_tt_instance() -> MagicMock:
     instance = MagicMock()
-    instance.server.get_properties.return_value.server_name = b"Instance Server Name"
+    instance.server.get_properties.return_value.server_name = "Instance Server Name"
     instance.connected = True
     return instance
 
@@ -191,39 +190,17 @@ def test_get_server_display_name_from_instance(
     mock_tt_instance: MagicMock,
     mock_settings: MagicMock,
     mock_translator: MagicMock,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        "bot.teamtalk_bot.formatters.ttstr",
-        lambda x: x.decode() if isinstance(x, bytes) else str(x),
-    )
     result = get_server_display_name(mock_tt_instance, mock_translator, mock_settings)
     assert result == "Instance Server Name"
-
-
-def test_get_tt_user_display_name_prioritizes_nickname(
-    mock_user: MagicMock,
-    mock_translator: MagicMock,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "bot.teamtalk_bot.formatters.ttstr",
-        lambda x: x.decode() if isinstance(x, bytes) else str(x),
-    )
-    result = get_tt_user_display_name(mock_user, mock_translator)
-    assert result == "User Nickname"
 
 
 def test_get_user_display_channel_name_for_admin(
     mock_user: MagicMock,
     mock_translator: MagicMock,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mock_user.channel.name = b"Hidden Channel"
-    monkeypatch.setattr(
-        "bot.teamtalk_bot.formatters.ttstr",
-        lambda x: x.decode() if isinstance(x, bytes) else str(x),
-    )
+    mock_user.channel.name = "Hidden Channel"
+
     result = get_user_display_channel_name(
         mock_user, is_caller_admin=True, translator=mock_translator
     )

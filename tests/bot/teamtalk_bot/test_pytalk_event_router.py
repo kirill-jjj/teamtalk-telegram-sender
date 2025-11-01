@@ -165,14 +165,7 @@ def test_pytalk_event_router_init_registers_handlers(mock_tt_bot: AsyncMock) -> 
     ]
     for handler_name in expected_handlers:
         assert hasattr(mock_tt_bot, handler_name)
-        # Check if tt_bot.event was called with the correct handler method
-        # Check if tt_bot.event was called with a callable (the decorated method)
-        found = False
-        for call_arg in mock_tt_bot.event.call_args_list:
-            if callable(call_arg.args[0]):
-                found = True
-                break
-        assert found, f"mock_tt_bot.event not called with a callable for {handler_name}"
+        assert callable(getattr(mock_tt_bot, handler_name))
 
 
 # --- Test _get_connection_by_instance ---

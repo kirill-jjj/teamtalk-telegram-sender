@@ -8,7 +8,6 @@ from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.events import ReplyToTeamTalkUserEvent
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 class TeamTalkReplyHandler:
@@ -38,7 +37,7 @@ class TeamTalkReplyHandler:
         user_to_reply = connection.instance.get_user(event.user_id)
         if user_to_reply:
             try:
-                encoded_text = ttstr(event.text)
+                encoded_text = event.text
                 user_to_reply.send_message(encoded_text)
                 logger.info(
                     "Sent reply to TT user %d on connection %s.",
@@ -46,8 +45,8 @@ class TeamTalkReplyHandler:
                     event.connection_id,
                 )
             except (
-                pytalk.exceptions.PermissionError,
-                pytalk.exceptions.TeamTalkException,
+                pytalk.exceptions.PytalkPermissionError,
+                pytalk.exceptions.TeamTalkError,
                 UnicodeEncodeError,
             ):
                 logger.exception(

@@ -81,15 +81,17 @@ def teamtalk_connection(
     mock_teamtalk_cache: MagicMock,
 ) -> TeamTalkConnection:
     server_info = pytalk.TeamTalkServerInfo(
-        host=mock_settings.teamtalk.host_name,
-        tcp_port=mock_settings.teamtalk.port,
-        udp_port=mock_settings.teamtalk.port,
-        username=mock_settings.teamtalk.user_name,
-        password=mock_settings.teamtalk.password,
-        encrypted=mock_settings.teamtalk.encrypted,
-        nickname=mock_settings.teamtalk.nick_name,
-        join_channel_id=0,
-        join_channel_password="",
+        {
+            "host": mock_settings.teamtalk.host_name,
+            "tcp_port": mock_settings.teamtalk.port,
+            "udp_port": mock_settings.teamtalk.port,
+            "username": mock_settings.teamtalk.user_name,
+            "password": mock_settings.teamtalk.password,
+            "encrypted": mock_settings.teamtalk.encrypted,
+            "nickname": mock_settings.teamtalk.nick_name,
+            "join_channel_id": 0,
+            "join_channel_password": "",
+        }
     )
     return TeamTalkConnection(
         server_info=server_info,
@@ -261,7 +263,7 @@ async def test_teamtalk_connection_manager_determine_target_channel_by_path(
     mock_instance = MagicMock(spec=pytalk.TeamTalkInstance)
     mock_channel = MagicMock(spec=pytalk.Channel)
     mock_channel.id = 123
-    mock_channel.name = b"Test Channel"
+    mock_channel.name = "Test Channel"
     mock_instance.get_channel_from_path.return_value = mock_channel
     teamtalk_connection.instance = mock_instance
     teamtalk_connection.ttstr = lambda x: x.decode()
@@ -286,7 +288,7 @@ async def test_teamtalk_connection_manager_determine_target_channel_by_id(
     mock_instance = MagicMock(spec=pytalk.TeamTalkInstance)
     mock_channel = MagicMock(spec=pytalk.Channel)
     mock_channel.id = 456
-    mock_channel.name = b"ID Channel"
+    mock_channel.name = "ID Channel"
     mock_instance.get_channel.return_value = mock_channel
     teamtalk_connection.instance = mock_instance
     teamtalk_connection.ttstr = lambda x: x.decode()
@@ -335,8 +337,8 @@ async def test_teamtalk_connection_manager_join_configured_channel_permission_er
 ) -> None:
     teamtalk_connection_manager.set_connection(teamtalk_connection)
     mock_instance = MagicMock(spec=pytalk.TeamTalkInstance)
-    mock_instance.join_channel_by_id.side_effect = pytalk.exceptions.PermissionError(
-        "Permission denied"
+    mock_instance.join_channel_by_id.side_effect = (
+        pytalk.exceptions.PytalkPermissionError("Permission denied")
     )
     mock_instance.getMyCurrentChannelID = MagicMock(return_value=0)  # Root channel
     mock_channel = MagicMock(spec=pytalk.Channel)

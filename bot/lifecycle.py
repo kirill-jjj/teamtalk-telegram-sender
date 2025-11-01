@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from aiogram import Dispatcher
 from dishka.integrations.aiogram import FromDishka, inject
-import pytalk
+from pytalk.bot import TeamTalkBot
 
 if TYPE_CHECKING:
     from dishka import AsyncContainer
@@ -61,7 +61,7 @@ async def deeplink_cleanup_task(
 async def on_startup(
     dispatcher: FromDishka[Dispatcher],
     bot: FromDishka[EventBot],
-    tt_bot: FromDishka[pytalk.TeamTalkBot],
+    tt_bot: FromDishka[TeamTalkBot],
     cache: FromDishka[CacheService],
     settings: FromDishka[Settings],
     translator_factory: FromDishka[Callable[[str], NullTranslations]],

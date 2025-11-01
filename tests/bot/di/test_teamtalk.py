@@ -35,7 +35,7 @@ def test_get_pytalk_event_handlers() -> None:
 
 
 @pytest.mark.asyncio
-@patch("bot.di.teamtalk.pytalk.TeamTalkBot")
+@patch("bot.di.teamtalk.TeamTalkBot")
 async def test_get_patched_pytalk_bot(mock_pytalk_bot: MagicMock) -> None:
     """Test the get_patched_pytalk_bot provider."""
     # Arrange

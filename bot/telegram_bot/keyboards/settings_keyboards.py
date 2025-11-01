@@ -4,7 +4,6 @@ from gettext import NullTranslations
 
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-import pytalk
 
 from bot.core.enums import (
     LanguageChoice,
@@ -33,8 +32,6 @@ from .shared import (
     _create_option_selection_keyboard,
     add_back_button,
 )
-
-ttstr = pytalk.instance.sdk.ttstr
 
 
 def create_main_settings_keyboard(

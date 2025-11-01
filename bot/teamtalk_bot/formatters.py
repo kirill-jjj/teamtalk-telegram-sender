@@ -19,7 +19,6 @@ from bot.database.models import Deeplink as DeeplinkModel
 from bot.services.schemas import AdminManagementResult
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 def format_deeplink_reply(
@@ -46,7 +45,6 @@ def format_deeplink_reply(
 
 
 logger = logging.getLogger(__name__)
-ttstr = pytalk.instance.sdk.ttstr
 
 
 def format_admin_management_result(
@@ -159,10 +157,10 @@ def get_server_display_name(
     server_name_from_instance: str | None = None
     if tt_instance and tt_instance.connected:
         try:
-            server_name_from_instance = ttstr(
+            server_name_from_instance = str(
                 tt_instance.server.get_properties().server_name
             )
-        except (TimeoutError, pytalk.exceptions.TeamTalkException, Exception):
+        except (TimeoutError, pytalk.exceptions.TeamTalkError, Exception):
             logger.exception(
                 "Error getting server name from TT instance %s.",
                 tt_instance.server_info.host if tt_instance.server_info else "N/A",
@@ -190,9 +188,9 @@ def get_tt_user_display_name(
         The display name string.
     """
     _ = translator.gettext
-    display_name = str(ttstr(user.nickname))
+    display_name = str(user.nickname)
     if not display_name:
-        display_name = str(ttstr(user.username))
+        display_name = str(user.username)
     if not display_name:
         display_name = _("unknown user")
     return display_name
@@ -207,8 +205,8 @@ def get_user_display_channel_name(
         return translator.gettext("in unknown location")
 
     is_channel_hidden = (
-        hasattr(pytalk.instance.sdk, "ChannelType")
-        and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN)
+        hasattr(pytalk.instance.sdk, "ChannelType")  # type: ignore [attr-defined]
+        and (channel_obj.channel_type & pytalk.instance.sdk.ChannelType.CHANNEL_HIDDEN)  # type: ignore [attr-defined]
         != 0
     )
 
@@ -221,7 +219,7 @@ def get_user_display_channel_name(
         return translator.gettext("under server")
 
     if is_caller_admin or not is_channel_hidden:
-        channel_name = ttstr(channel_obj.name)
+        channel_name = channel_obj.name
         # If the channel name is empty and it's the root channel, use a fallback name
         if not channel_name and channel_obj.id == WHO_CHANNEL_ID_ROOT:
             channel_name = translator.gettext("the root channel")

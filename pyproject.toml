@@ -31,7 +31,7 @@ classifiers = [
 
 dependencies = [
     "aiogram~=3.20",
-    "py-talk-ex~=1.6",
+    "py-talk-ex~=2.0",
     "python-dotenv~=1.1",
     "SQLAlchemy~=2.0",
     "aiosqlite~=0.21",

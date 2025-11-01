@@ -4,13 +4,17 @@ from collections.abc import Awaitable, Callable
 import functools
 from gettext import NullTranslations
 import logging
+from typing import cast
 
 from dishka import AsyncContainer
-import pytalk
+from pytalk.bot import TeamTalkBot
 from pytalk.channel import Channel as PytalkChannel
+from pytalk.enums import TeamTalkServerInfo
+from pytalk.instance import TeamTalkInstance
 from pytalk.message import Message as TeamTalkMessage
 from pytalk.server import Server as PytalkServer
 from pytalk.user import User as PytalkUser
+from pytalk.user_account import UserAccount
 
 from bot.event_bus.bus import EventBus
 from bot.teamtalk_bot.connection import TeamTalkConnection
@@ -29,11 +33,7 @@ def route_event_to_connection(
     async def wrapper(
         self_event_router: "PytalkEventRouter",
         event_primary_obj: (
-            PytalkServer
-            | PytalkUser
-            | PytalkChannel
-            | TeamTalkMessage
-            | pytalk.UserAccount
+            PytalkServer | PytalkUser | PytalkChannel | TeamTalkMessage | UserAccount
         ),
         *args: object,
         **kwargs: dict[str, object],
@@ -110,22 +110,22 @@ def route_event_to_connection(
 
 def _get_tt_instance_from_event(
     event_obj: (
-        PytalkServer | PytalkUser | PytalkChannel | TeamTalkMessage | pytalk.UserAccount
+        PytalkServer | PytalkUser | PytalkChannel | TeamTalkMessage | UserAccount
     ),
-) -> pytalk.TeamTalkInstance | None:
+) -> TeamTalkInstance | None:
     """Extracts the TeamTalkInstance from a given Pytalk event object."""
     if tt_instance := getattr(event_obj, "teamtalk_instance", None):
-        return tt_instance
+        return cast("TeamTalkInstance | None", tt_instance)
     if (
         hasattr(event_obj, "server")
         and (server_obj := event_obj.server)
         and (tt_instance := getattr(server_obj, "teamtalk_instance", None))
     ):
-        return tt_instance
+        return cast("TeamTalkInstance | None", tt_instance)
     if hasattr(event_obj, "teamtalk") and (
         tt_instance := getattr(event_obj, "teamtalk", None)
     ):
-        return tt_instance
+        return cast("TeamTalkInstance | None", tt_instance)
     return None
 
 
@@ -135,7 +135,7 @@ class PytalkEventRouter:
     def __init__(
         self,
         app_container: AsyncContainer,
-        tt_bot: pytalk.TeamTalkBot,
+        tt_bot: TeamTalkBot,
         connections: dict[str, TeamTalkConnection],
         event_bus: EventBus,
         translator_factory: Callable[[str | None], NullTranslations],
@@ -169,10 +169,10 @@ class PytalkEventRouter:
             "on_user_account_remove": self.on_pytalk_user_account_remove,
         }
         for event_name, handler_method in event_handlers_map.items():
-            setattr(self.tt_bot, event_name, self.tt_bot.event(handler_method))
+            setattr(self.tt_bot, event_name, handler_method)
 
     def _get_connection_by_instance(
-        self, tt_instance: pytalk.instance.TeamTalkInstance
+        self, tt_instance: TeamTalkInstance
     ) -> TeamTalkConnection | None:
         """Get an active TeamTalkConnection for the given Pytalk instance."""
         for conn in self.connections.values():
@@ -184,7 +184,7 @@ class PytalkEventRouter:
         return None
 
     def _get_connection_by_server_info(
-        self, server_info: pytalk.TeamTalkServerInfo
+        self, server_info: TeamTalkServerInfo
     ) -> TeamTalkConnection | None:
         """Retrieves an active TeamTalkConnection by server host and port."""
         server_key = f"{server_info.host}:{server_info.tcp_port}"
@@ -234,9 +234,9 @@ class PytalkEventRouter:
         """Routes a user update event."""
 
     @route_event_to_connection
-    async def on_pytalk_user_account_new(self, account: pytalk.UserAccount) -> None:
+    async def on_pytalk_user_account_new(self, account: UserAccount) -> None:
         """Routes a new user account event."""
 
     @route_event_to_connection
-    async def on_pytalk_user_account_remove(self, account: pytalk.UserAccount) -> None:
+    async def on_pytalk_user_account_remove(self, account: UserAccount) -> None:
         """Routes a removed user account event."""

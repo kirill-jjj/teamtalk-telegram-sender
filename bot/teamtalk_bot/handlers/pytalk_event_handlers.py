@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 import pytalk
 from pytalk.enums import Status as PytalkStatus
 
+if TYPE_CHECKING:
+    from pytalk.user_account import UserAccount as PytalkUserAccount
+
 from bot.teamtalk_bot.enums import PytalkEvent
 from bot.teamtalk_bot.events import UserJoinedEvent, UserLeftEvent
 from bot.teamtalk_bot.formatters import (
@@ -46,7 +49,6 @@ class PytalkEventHandlers:
         translator_factory: Callable[[str | None], NullTranslations],
     ) -> None:
         """Initializes the PytalkEventHandlers."""
-        self.ttstr = pytalk.instance.sdk.ttstr
         self.event_bus = event_bus
         self.translator_factory = translator_factory
 
@@ -63,7 +65,7 @@ class PytalkEventHandlers:
         if event_class is UserJoinedEvent and not connection.is_finalized:
             logger.debug(
                 "Ignoring initial user joined event for %s (connection not finalized).",
-                connection.ttstr(user.username),
+                user.username,
             )
             return
 
@@ -75,7 +77,7 @@ class PytalkEventHandlers:
 
         event = event_class(
             user_nickname=user_display_name,
-            username=connection.ttstr(user.username),
+            username=user.username,
             user_id=user.id,
             server_name=server_name,
             online_users_cache=connection.cache_manager.online_users_cache,
@@ -95,8 +97,8 @@ class PytalkEventHandlers:
                 if connection.instance.server.get_properties():
                     pass  # Properties fetched, but not used for now
             except (
-                pytalk.exceptions.PermissionError,
-                pytalk.exceptions.TeamTalkException,
+                pytalk.exceptions.PytalkPermissionError,
+                pytalk.exceptions.TeamTalkError,
             ) as e:
                 logger.warning(
                     "[%s] Error getting server props: %s",
@@ -128,13 +130,7 @@ class PytalkEventHandlers:
             )
             return
 
-        my_user_id = connection.instance.getMyUserID()
-        if my_user_id is None:
-            logger.error(
-                "[%s] Failed to get bot's ID in on_user_join.",
-                connection.server_info.host,
-            )
-            return
+        my_user_id = connection.instance._get_my_user().id
 
         if user.id == my_user_id:
             if not connection.is_finalized:
@@ -143,7 +139,7 @@ class PytalkEventHandlers:
                 logger.debug(
                     "[%s] Bot re-joined chan %s (finalized).",
                     connection.server_info.host,
-                    self.ttstr(channel.name),
+                    channel.name,
                 )
 
     async def on_user_login(
@@ -173,15 +169,12 @@ class PytalkEventHandlers:
         connection.login_complete_time = None
         await connection.cache_manager.stop_background_tasks()
 
+    @staticmethod
     async def on_my_kicked_from_channel(
-        self, channel_obj: PytalkChannel, connection: TeamTalkConnection
+        channel_obj: PytalkChannel, connection: TeamTalkConnection
     ) -> None:
         """Handles being kicked from a channel on this server connection."""
-        ch_name = (
-            self.ttstr(channel_obj.name)
-            if channel_obj and channel_obj.name
-            else "Unknown"
-        )
+        ch_name = channel_obj.name if channel_obj and channel_obj.name else "Unknown"
         logger.warning(
             "[%s] Kicked from chan '%s'. Reconnecting...",
             connection.server_info.host,
@@ -198,7 +191,7 @@ class PytalkEventHandlers:
 
     @staticmethod
     async def on_user_account_new(
-        account: pytalk.UserAccount, connection: TeamTalkConnection
+        account: PytalkUserAccount, connection: TeamTalkConnection
     ) -> None:
         """Handles a new user account being created on this server."""
         connection.cache_manager.update_caches_on_event(
@@ -207,14 +200,14 @@ class PytalkEventHandlers:
 
     @staticmethod
     async def on_user_account_remove(
-        account: pytalk.UserAccount, connection: TeamTalkConnection
+        account: PytalkUserAccount, connection: TeamTalkConnection
     ) -> None:
         """Handles a user account being removed from this server."""
         connection.cache_manager.update_caches_on_event(
             PytalkEvent.USER_ACCOUNT_REMOVE, account
         )
 
-    async def finalize_bot_login_sequence(
+    async def finalize_bot_login_sequence(  # noqa: PLR6301
         self, channel: PytalkChannel, connection: TeamTalkConnection
     ) -> None:
         """Finalizes the bot's login sequence for a connection."""
@@ -231,9 +224,7 @@ class PytalkEventHandlers:
             return
 
         ch_name = (
-            self.ttstr(channel.name)
-            if hasattr(channel, "name") and channel.name
-            else "Unknown"
+            channel.name if hasattr(channel, "name") and channel.name else "Unknown"
         )
         logger.debug(
             "[%s] Bot in channel: %s. Finalizing login...",
@@ -250,11 +241,11 @@ class PytalkEventHandlers:
         connection.cache_manager.start_populate_accounts_task()
         try:
             gender = connection.settings.general.gender.lower()
-            status_val = PytalkStatus.online.neutral
+            status_val = PytalkStatus.online().neutral
             if gender == "male":
-                status_val = PytalkStatus.online.male
+                status_val = PytalkStatus.online().male
             elif gender == "female":
-                status_val = PytalkStatus.online.female
+                status_val = PytalkStatus.online().female
 
             status_text = connection.settings.teamtalk.status_text
             connection.instance.change_status(status_val, status_text)
@@ -264,7 +255,10 @@ class PytalkEventHandlers:
                 "[%s] Successfully connected to TeamTalk server.",
                 connection.server_info.host,
             )
-        except (pytalk.exceptions.PermissionError, pytalk.exceptions.TeamTalkException):
+        except (
+            pytalk.exceptions.PytalkPermissionError,
+            pytalk.exceptions.TeamTalkError,
+        ):
             logger.exception(
                 "[%s] Error finalizing login (status/time).",
                 connection.server_info.host,
