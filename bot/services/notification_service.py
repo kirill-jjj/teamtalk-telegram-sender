@@ -56,7 +56,7 @@ def is_linked_user_online(
 
     linked_tt_username = user_settings.teamtalk_username
     return any(
-        cast("bytes", tt_user_obj.username).decode() == linked_tt_username
+        tt_user_obj.username == linked_tt_username
         for tt_user_obj in online_users_cache.values()
     )
 

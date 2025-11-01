@@ -64,7 +64,7 @@ def mock_cache() -> MagicMock:
 @pytest.fixture
 def mock_online_users() -> dict:
     user1 = MagicMock()
-    user1.username = b"test_user"
+    user1.username = "test_user"
     return {1: user1}
 
 
