@@ -18,7 +18,7 @@ def setup_logging() -> logging.Logger:
     log_formatter = logging.Formatter(LOG_FORMAT)
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
 
     console_handler_all = logging.StreamHandler(sys.stdout)
     console_handler_all.setFormatter(log_formatter)
@@ -27,7 +27,6 @@ def setup_logging() -> logging.Logger:
 
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
     logging.getLogger("aiogram.dispatcher").setLevel(logging.WARNING)
-    logging.getLogger("pytalk").setLevel(logging.DEBUG)
     logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
     logger = logging.getLogger(__name__)
