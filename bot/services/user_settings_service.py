@@ -70,7 +70,17 @@ class UserSettingsService:
             return None
 
         display_name = await get_display_name_for_id(bot, telegram_id)
-        return SubscriberView(user_settings=user_settings, display_name=display_name)
+        return SubscriberView(
+            telegram_id=user_settings.telegram_id,
+            language_code=user_settings.language_code,
+            notification_settings=user_settings.notification_settings,
+            mute_list_mode=user_settings.mute_list_mode,
+            not_on_online_enabled=user_settings.not_on_online_enabled,
+            not_on_online_confirmed=user_settings.not_on_online_confirmed,
+            teamtalk_username=user_settings.teamtalk_username,
+            muted_users_count=len(user_settings.muted_users_list),
+            display_name=display_name,
+        )
 
     @staticmethod
     async def get_account_management_data(

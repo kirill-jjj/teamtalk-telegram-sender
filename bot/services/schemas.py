@@ -105,7 +105,14 @@ class AccountManagementData(BaseModel):
 class SubscriberView(BaseModel):
     """DTO for subscriber data including settings and display name."""
 
-    user_settings: UserSettings
+    telegram_id: int
+    language_code: str
+    notification_settings: NotificationSetting
+    mute_list_mode: MuteListMode
+    not_on_online_enabled: bool
+    not_on_online_confirmed: bool
+    teamtalk_username: str | None
+    muted_users_count: int
     display_name: str
 
 

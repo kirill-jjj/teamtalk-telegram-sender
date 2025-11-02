@@ -217,9 +217,25 @@ def test_account_management_data_optional_fields() -> None:
 
 def test_subscriber_view_valid_data() -> None:
     """Test SubscriberView with valid data."""
-    user_settings = UserSettings(telegram_id=1, language_code="en")
-    dto = SubscriberView(user_settings=user_settings, display_name="Test User")
-    assert dto.user_settings == user_settings
+    dto = SubscriberView(
+        telegram_id=1,
+        language_code="en",
+        notification_settings=NotificationSetting.ALL,
+        mute_list_mode=MuteListMode.blacklist,
+        not_on_online_enabled=False,
+        not_on_online_confirmed=False,
+        teamtalk_username="test_tt_user",
+        muted_users_count=0,
+        display_name="Test User",
+    )
+    assert dto.telegram_id == 1
+    assert dto.language_code == "en"
+    assert dto.notification_settings == NotificationSetting.ALL
+    assert dto.mute_list_mode == MuteListMode.blacklist
+    assert dto.not_on_online_enabled is False
+    assert dto.not_on_online_confirmed is False
+    assert dto.teamtalk_username == "test_tt_user"
+    assert dto.muted_users_count == 0
     assert dto.display_name == "Test User"
 
 

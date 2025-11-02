@@ -453,7 +453,15 @@ async def test_get_subscriber_view_data(
 ) -> None:
     telegram_id = 123
     default_lang = "en"
-    user_settings = UserSettings(telegram_id=telegram_id, language_code=default_lang)
+    user_settings = UserSettings(
+        telegram_id=telegram_id,
+        language_code=default_lang,
+        notification_settings=NotificationSetting.ALL,
+        mute_list_mode=MuteListMode.blacklist,
+        not_on_online_enabled=False,
+        not_on_online_confirmed=False,
+        muted_users_list=[],
+    )
     mock_cache.get_user_settings.return_value = user_settings
     mock_bot = AsyncMock()
     monkeypatch.setattr(
@@ -466,7 +474,14 @@ async def test_get_subscriber_view_data(
     )
 
     assert result is not None
-    assert result.user_settings == user_settings
+    assert result.telegram_id == user_settings.telegram_id
+    assert result.language_code == user_settings.language_code
+    assert result.notification_settings == user_settings.notification_settings
+    assert result.mute_list_mode == user_settings.mute_list_mode
+    assert result.not_on_online_enabled == user_settings.not_on_online_enabled
+    assert result.not_on_online_confirmed == user_settings.not_on_online_confirmed
+    assert result.teamtalk_username == user_settings.teamtalk_username
+    assert result.muted_users_count == len(user_settings.muted_users_list)
     assert result.display_name == "John Doe"
 
 
