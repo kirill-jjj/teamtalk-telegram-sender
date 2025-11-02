@@ -27,6 +27,7 @@ def setup_logging() -> logging.Logger:
 
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
     logging.getLogger("aiogram.dispatcher").setLevel(logging.WARNING)
+    logging.getLogger("aiogram.middlewares").setLevel(logging.WARNING)
     logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
     logger = logging.getLogger(__name__)
