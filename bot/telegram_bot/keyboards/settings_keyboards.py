@@ -14,7 +14,7 @@ from bot.core.enums import (
 )
 from bot.core.languages import LanguageInfo
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, SettingsViewDTO
 from bot.telegram_bot.callback_data import (
     LanguageCallback,
     NotificationCallback,
@@ -141,7 +141,7 @@ def create_notification_settings_keyboard(
 
 
 def create_manage_muted_users_keyboard(
-    translator: NullTranslations, user_settings: SettingsViewDTO
+    translator: NullTranslations, manage_muted_menu_data: ManageMutedMenuDTO
 ) -> InlineKeyboardBuilder:
     """Creates the 'Manage Mute List' keyboard."""
     _ = translator.gettext
@@ -151,12 +151,12 @@ def create_manage_muted_users_keyboard(
 
     blacklist_marker = (
         active_marker
-        if user_settings.mute_list_mode == MuteListMode.blacklist
+        if manage_muted_menu_data.mute_list_mode == MuteListMode.blacklist
         else inactive_marker
     )
     whitelist_marker = (
         active_marker
-        if user_settings.mute_list_mode == MuteListMode.whitelist
+        if manage_muted_menu_data.mute_list_mode == MuteListMode.whitelist
         else inactive_marker
     )
 
@@ -173,7 +173,7 @@ def create_manage_muted_users_keyboard(
     )
     builder.adjust(2)
 
-    if user_settings.mute_list_mode == MuteListMode.blacklist:
+    if manage_muted_menu_data.mute_list_mode == MuteListMode.blacklist:
         list_mode_text = _("Manage Blacklist")
     else:
         list_mode_text = _("Manage Whitelist")

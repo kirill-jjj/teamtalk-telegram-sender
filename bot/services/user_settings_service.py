@@ -13,6 +13,8 @@ from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import (
     AccountManagementData,
+    ManageMutedMenuDTO,
+    MuteListDisplayDTO,
     SettingsViewDTO,
     SubscriberView,
 )
@@ -80,6 +82,47 @@ class UserSettingsService:
             teamtalk_username=user_settings.teamtalk_username,
             muted_users_count=len(user_settings.muted_users_list),
             display_name=display_name,
+        )
+
+    async def get_mute_list_display_data(
+        self,
+        uow: IUnitOfWork,
+        telegram_id: int,
+        default_lang: str,
+        bot: EventBot,
+    ) -> MuteListDisplayDTO | None:
+        """Retrieves data for displaying a user's mute list."""
+        user_settings = await self.get_or_create(uow, telegram_id, default_lang)
+        if not user_settings:
+            return None
+
+        display_name = await get_display_name_for_id(bot, telegram_id)
+        muted_usernames = sorted(
+            [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
+        )
+
+        return MuteListDisplayDTO(
+            telegram_id=user_settings.telegram_id,
+            display_name=display_name,
+            mute_list_mode=user_settings.mute_list_mode,
+            muted_usernames=muted_usernames,
+            language_code=user_settings.language_code,
+        )
+
+    async def get_manage_muted_menu_data(
+        self,
+        uow: IUnitOfWork,
+        telegram_id: int,
+        default_lang: str,
+    ) -> ManageMutedMenuDTO | None:
+        """Retrieves data for rendering the manage muted users menu."""
+        user_settings = await self.get_or_create(uow, telegram_id, default_lang)
+        if not user_settings:
+            return None
+
+        return ManageMutedMenuDTO(
+            mute_list_mode=user_settings.mute_list_mode,
+            not_on_online_enabled=user_settings.not_on_online_enabled,
         )
 
     @staticmethod

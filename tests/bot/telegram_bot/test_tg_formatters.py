@@ -8,7 +8,7 @@ import pytest
 
 from bot.core.enums import AdminCommand
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, SettingsViewDTO
 from bot.telegram_bot.formatters import (
     format_help_text,
     format_manage_muted_menu_text,
@@ -233,7 +233,12 @@ def test_format_manage_muted_menu_text(mock_translator: MagicMock) -> None:
     """Test the format_manage_muted_menu_text function."""
 
     mock_translator.gettext.return_value = "Current mode is Blacklist."
-    result = format_manage_muted_menu_text(mock_translator, MuteListMode.blacklist)
+    # Create a mock ManageMutedMenuDTO
+    mock_manage_muted_menu_data = ManageMutedMenuDTO(
+        mute_list_mode=MuteListMode.blacklist,
+        not_on_online_enabled=True,
+    )
+    result = format_manage_muted_menu_text(mock_translator, mock_manage_muted_menu_data)
     assert "Current mode is Blacklist." in result
 
 

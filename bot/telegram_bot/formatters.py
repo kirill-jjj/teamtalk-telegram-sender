@@ -10,7 +10,7 @@ from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, SettingsViewDTO
 
 if TYPE_CHECKING:
     from bot.core.enums import AdminCommand
@@ -220,11 +220,11 @@ def format_moderation_prompt(
 
 def format_manage_muted_menu_text(
     translator: NullTranslations,
-    mute_list_mode: MuteListMode,
+    manage_muted_menu_data: ManageMutedMenuDTO,
 ) -> str:
     """Formats the text for the mute management menu."""
     _ = translator.gettext
-    if mute_list_mode == MuteListMode.blacklist:
+    if manage_muted_menu_data.mute_list_mode == MuteListMode.blacklist:
         current_mode_text = _(
             "Current mode is Blacklist. You receive notifications from everyone "
             "except those on the list."

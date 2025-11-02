@@ -16,12 +16,11 @@ from bot.core.enums import (
     SubscriberListAction,
 )
 from bot.core.languages import LanguageInfo
-from bot.database.models import UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
-from bot.services.schemas import SettingsViewDTO, SubscriberView
+from bot.services.schemas import MuteListDisplayDTO, SettingsViewDTO, SubscriberView
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
@@ -342,11 +341,11 @@ async def admin_set_setting_choice(
     action = callback_data.action
 
     async with uow:
-        user_settings = await user_settings_service.get_or_create(
+        settings_view_dto = await user_settings_service.get_user_settings_view(
             uow, target_telegram_id, "en"
         )
 
-    if not user_settings:
+    if not settings_view_dto:
         await query.answer(_("Subscriber settings not found."), show_alert=True)
         return
 
@@ -364,7 +363,7 @@ async def admin_set_setting_choice(
             ).format(tg_id=target_telegram_id),
             "keyboard_factory": create_admin_subscriber_notification_pref_keyboard,
             "keyboard_factory_kwargs": {
-                "current_setting": user_settings.notification_settings
+                "current_setting": settings_view_dto.notification_settings
             },
         },
         SubscriberCommand.ADMIN_SET_MUTE_MODE: {
@@ -372,7 +371,9 @@ async def admin_set_setting_choice(
                 tg_id=target_telegram_id
             ),
             "keyboard_factory": create_admin_subscriber_mute_mode_keyboard,
-            "keyboard_factory_kwargs": {"current_mode": user_settings.mute_list_mode},
+            "keyboard_factory_kwargs": {
+                "current_mode": settings_view_dto.mute_list_mode
+            },
         },
     }
 
@@ -439,20 +440,20 @@ async def admin_toggle_noon(
 
 def _build_mute_list_title(
     translator: NullTranslations,
-    user_settings: UserSettings,
-    subscriber_display_name: str,
+    mute_list_display_data: MuteListDisplayDTO,
 ) -> str:
     """Builds the title for the mute list view."""
     _ = translator.gettext
     mode = (
         _("Blacklist")
-        if user_settings.mute_list_mode == MuteListMode.blacklist
+        if mute_list_display_data.mute_list_mode == MuteListMode.blacklist
         else _("Whitelist")
     )
     return "\n".join(
         [
             _("Mute list for: {name} (ID: {id})").format(
-                name=subscriber_display_name, id=user_settings.telegram_id
+                name=mute_list_display_data.display_name,
+                id=mute_list_display_data.telegram_id,
             ),
             _("Mute Mode: {mode}").format(mode=mode),
         ]
@@ -507,15 +508,14 @@ async def _display_subscriber_mute_list_page(
     r"""Displays a paginated view of a subscriber\'s mute list."""
     _ = translator.gettext
     target_telegram_id = view_data.telegram_id
-    display_name = view_data.display_name
 
-    # Fetch UserSettings directly for the mute list
-    user_settings = await user_settings_service.get_or_create(
-        uow, target_telegram_id, view_data.language_code
+    # Fetch MuteListDisplayDTO
+    mute_list_display_data = await user_settings_service.get_mute_list_display_data(
+        uow, target_telegram_id, view_data.language_code, bot
     )
-    if not user_settings:
+    if not mute_list_display_data:
         logger.error(
-            "UserSettings not found for mute list display for TG ID %s",
+            "MuteListDisplayDTO not found for mute list display for TG ID %s",
             target_telegram_id,
         )
         await query.answer(
@@ -526,9 +526,7 @@ async def _display_subscriber_mute_list_page(
     if not query.bot:
         return
 
-    full_mute_list = sorted(
-        [mu.muted_teamtalk_username for mu in user_settings.muted_users_list]
-    )
+    full_mute_list = sorted(mute_list_display_data.muted_usernames)
     # Inlining pagination logic to bypass a stubborn mypy error
     total_items = len(full_mute_list)
     page_size = MUTE_LIST_ITEMS_PER_PAGE
@@ -544,7 +542,7 @@ async def _display_subscriber_mute_list_page(
         items_on_page=page_slice,
         total_items=total_items,
         page=current_page_idx,
-        title_text=_build_mute_list_title(translator, user_settings, display_name),
+        title_text=_build_mute_list_title(translator, mute_list_display_data),
         empty_list_text=_("The mute list is currently empty."),
         keyboard_factory=create_view_mute_list_keyboard,
         keyboard_factory_kwargs={

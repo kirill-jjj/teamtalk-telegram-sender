@@ -122,3 +122,20 @@ class ModerationViewData(BaseModel):
     users: list[UserDTO]
     server_name: str
     error_message: str | None = None
+
+
+class MuteListDisplayDTO(BaseModel):
+    """DTO for displaying a user's mute list."""
+
+    telegram_id: int
+    display_name: str
+    mute_list_mode: MuteListMode
+    muted_usernames: list[str]
+    language_code: str
+
+
+class ManageMutedMenuDTO(BaseModel):
+    """DTO for data required to render the manage muted users menu."""
+
+    mute_list_mode: MuteListMode
+    not_on_online_enabled: bool

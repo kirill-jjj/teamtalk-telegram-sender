@@ -2,7 +2,7 @@
 
 from gettext import NullTranslations
 import logging
-from typing import Annotated, TypeVar
+from typing import Annotated, TypeVar, cast
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -14,12 +14,11 @@ from bot.core.enums import (
     NotificationControl,
     UserListAction,
 )
-from bot.database.models import UserSettings
 from bot.database.types import MuteListMode
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
-from bot.services.schemas import SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, MuteListDisplayDTO
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
     NotificationCallback,
@@ -33,6 +32,7 @@ from bot.telegram_bot.formatters import (
 )
 from bot.telegram_bot.handlers.decorators import ensure_message_context
 from bot.telegram_bot.keyboards import create_manage_muted_users_keyboard
+from bot.telegram_bot.types.bots import EventBot
 from bot.telegram_bot.ui_utils import (
     _display_user_list,
     edit_message_text,
@@ -48,29 +48,28 @@ T = TypeVar("T")
 async def _display_internal_user_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: UserSettings,
-    report_service: ReportService,  # Add service dependency
+    mute_list_display_data: MuteListDisplayDTO,
+    report_service: ReportService,
     list_type: UserListAction,
     page: int = 0,
 ) -> None:
     _ = translator.gettext
 
-    view_data = report_service.prepare_mute_list_view_data(user_settings, translator)
-    muted_usernames = {
-        user.muted_teamtalk_username for user in user_settings.muted_users_list
-    }
+    muted_usernames = set(mute_list_display_data.muted_usernames)
 
     await _display_user_list(
         callback_query=callback_query,
         translator=translator,
         page=page,
-        items=view_data.items,
+        items=mute_list_display_data.muted_usernames,
         # Sorting is now done in service, but helper still needs it
         sort_key_extractor=lambda x: x.lower(),
-        title_text=view_data.title,
-        empty_list_text=view_data.empty_list_text,
+        title_text=_("Mute list for: {name}").format(
+            name=mute_list_display_data.display_name
+        ),
+        empty_list_text=_("The mute list is currently empty."),
         keyboard_factory_kwargs={
-            "mute_list_mode": user_settings.mute_list_mode,
+            "mute_list_mode": mute_list_display_data.mute_list_mode,
             "muted_usernames": muted_usernames,
             "list_type_for_callback": list_type,
             "item_username_extractor": lambda item: item,
@@ -86,7 +85,7 @@ async def _display_internal_user_list(
 async def _show_all_accounts_list(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: UserSettings,
+    mute_list_display_data: MuteListDisplayDTO,
     report_service: ReportService,
     page: int,
 ) -> None:
@@ -95,9 +94,7 @@ async def _show_all_accounts_list(
     view_data = await report_service.get_all_server_accounts_view_data(
         lang_code=translator.info().get("language", "en"), translator=translator
     )
-    muted_usernames = {
-        user.muted_teamtalk_username for user in user_settings.muted_users_list
-    }
+    muted_usernames = set(mute_list_display_data.muted_usernames)
 
     await _display_user_list(
         callback_query=callback_query,
@@ -108,7 +105,7 @@ async def _show_all_accounts_list(
         title_text=view_data.title,
         empty_list_text=view_data.empty_list_text,
         keyboard_factory_kwargs={
-            "mute_list_mode": user_settings.mute_list_mode,
+            "mute_list_mode": mute_list_display_data.mute_list_mode,
             "muted_usernames": muted_usernames,
             "list_type_for_callback": UserListAction.LIST_ALL_ACCOUNTS,
             "item_username_extractor": lambda item: item.username,
@@ -124,7 +121,7 @@ async def _show_all_accounts_list(
 async def _refresh_mute_related_ui(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: UserSettings,
+    mute_list_display_data: MuteListDisplayDTO,
     report_service: ReportService,
     moderation_service: ModerationService,
     callback_data: ToggleMuteCallback,
@@ -137,7 +134,7 @@ async def _refresh_mute_related_ui(
         await _show_all_accounts_list(
             callback_query=callback_query,
             translator=translator,
-            user_settings=user_settings,
+            mute_list_display_data=mute_list_display_data,
             report_service=report_service,
             page=current_page_for_refresh,
         )
@@ -145,7 +142,7 @@ async def _refresh_mute_related_ui(
         await _display_internal_user_list(
             callback_query,
             translator,
-            user_settings,
+            mute_list_display_data,
             report_service,
             list_type_user_was_on,
             current_page_for_refresh,
@@ -159,11 +156,13 @@ async def _refresh_mute_related_ui(
 async def show_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: FromDishka[NullTranslations],
-    user_settings: FromDishka[SettingsViewDTO | None],
+    user_settings_service: FromDishka[UserSettingsService],
+    settings: FromDishka[Settings],
+    uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
     """Shows the main menu for managing muted users and mute list mode."""
     _ = translator.gettext
-    if not user_settings:
+    if not callback_query.from_user:
         logger.warning(
             "Cannot show manage muted menu for event without a user, "
             "user_settings is None."
@@ -173,8 +172,24 @@ async def show_manage_muted_menu(
         )
         return
 
-    manage_muted_builder = create_manage_muted_users_keyboard(translator, user_settings)
-    full_text = format_manage_muted_menu_text(translator, user_settings.mute_list_mode)
+    async with uow:
+        manage_muted_menu_data = await user_settings_service.get_manage_muted_menu_data(
+            uow, callback_query.from_user.id, settings.general.default_lang
+        )
+    if not manage_muted_menu_data:
+        logger.warning(
+            "Could not retrieve manage muted menu data for user %s",
+            callback_query.from_user.id,
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
+        return
+
+    manage_muted_builder = create_manage_muted_users_keyboard(
+        translator, manage_muted_menu_data
+    )
+    full_text = format_manage_muted_menu_text(translator, manage_muted_menu_data)
 
     await edit_message_text(
         message_to_edit=callback_query.message,  # type: ignore[arg-type]
@@ -186,11 +201,42 @@ async def show_manage_muted_menu(
 async def refresh_manage_muted_menu(
     callback_query: CallbackQuery,
     translator: NullTranslations,
-    user_settings: SettingsViewDTO,
+    manage_muted_menu_data: ManageMutedMenuDTO,
+    user_settings_service: UserSettingsService,
+    settings: Settings,
+    uow: IUnitOfWork,
 ) -> None:
     """Refresher function for the manage muted menu."""
-    await show_manage_muted_menu(callback_query, translator, user_settings)
-    await show_manage_muted_menu(callback_query, translator, user_settings)
+    _ = translator.gettext
+    # Re-fetch the data to ensure it's up-to-date
+    async with uow:
+        updated_manage_muted_menu_data = (
+            await user_settings_service.get_manage_muted_menu_data(
+                uow, callback_query.from_user.id, settings.general.default_lang
+            )
+        )
+    if not updated_manage_muted_menu_data:
+        logger.warning(
+            "Could not refresh manage muted menu data for user %s",
+            callback_query.from_user.id,
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
+        return
+
+    manage_muted_builder = create_manage_muted_users_keyboard(
+        translator, updated_manage_muted_menu_data
+    )
+    full_text = format_manage_muted_menu_text(
+        translator, updated_manage_muted_menu_data
+    )
+
+    await edit_message_text(
+        message_to_edit=callback_query.message,  # type: ignore[arg-type]
+        text=full_text,
+        reply_markup=manage_muted_builder.as_markup(),
+    )
 
 
 @mute_router.callback_query(SetMuteModeCallback.filter())
@@ -201,6 +247,7 @@ async def set_mute_mode(
     callback_data: SetMuteModeCallback,
     user_settings_service: FromDishka[UserSettingsService],
     uow: Annotated[IUnitOfWork, FromDishka()],
+    settings: FromDishka[Settings],
 ) -> None:
     """Handles the action of setting the mute list mode (blacklist/whitelist)."""
     _ = translator.gettext
@@ -234,17 +281,18 @@ async def set_mute_mode(
     )
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
     await callback_query.answer(success_toast_text)
-    user_settings_dto = SettingsViewDTO(
-        telegram_id=updated_user_settings.telegram_id,
-        language_code=updated_user_settings.language_code,
-        notification_settings=updated_user_settings.notification_settings,
+    manage_muted_menu_data = ManageMutedMenuDTO(
         mute_list_mode=updated_user_settings.mute_list_mode,
         not_on_online_enabled=updated_user_settings.not_on_online_enabled,
-        not_on_online_confirmed=updated_user_settings.not_on_online_confirmed,
-        teamtalk_username=updated_user_settings.teamtalk_username,
-        muted_users_count=len(updated_user_settings.muted_users_list),
     )
-    await refresh_manage_muted_menu(callback_query, translator, user_settings_dto)
+    await refresh_manage_muted_menu(
+        callback_query,
+        translator,
+        manage_muted_menu_data,
+        user_settings_service,
+        settings,
+        uow,
+    )
 
 
 @mute_router.callback_query(
@@ -261,16 +309,35 @@ async def display_internal_user_list(
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
     uow: Annotated[IUnitOfWork, FromDishka()],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles pagination for the internal muted/allowed user list."""
-    async with uow:
-        user_settings = await user_settings_service.get_or_create(
-            uow, callback_query.from_user.id, settings.general.default_lang
+    _ = translator.gettext
+    if not callback_query.from_user:
+        logger.warning("display_internal_user_list called without from_user.")
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
         )
+        return
+
+    async with uow:
+        mute_list_display_data = await user_settings_service.get_mute_list_display_data(
+            uow, callback_query.from_user.id, settings.general.default_lang, bot
+        )
+    if not mute_list_display_data:
+        logger.warning(
+            "Could not retrieve mute list display data for user %s",
+            callback_query.from_user.id,
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
+        return
+
     await _display_internal_user_list(
         callback_query,
         translator,
-        user_settings,
+        mute_list_display_data,
         report_service,
         callback_data.list_type,
         callback_data.page,
@@ -289,16 +356,35 @@ async def display_all_accounts_list(
     report_service: FromDishka[ReportService],
     callback_data: PaginateUsersCallback,
     uow: Annotated[IUnitOfWork, FromDishka()],
+    bot: FromDishka[EventBot],
 ) -> None:
     """Handles pagination for the list of all TeamTalk server accounts."""
-    async with uow:
-        user_settings = await user_settings_service.get_or_create(
-            uow, callback_query.from_user.id, settings.general.default_lang
+    _ = translator.gettext
+    if not callback_query.from_user:
+        logger.warning("display_all_accounts_list called without from_user.")
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
         )
+        return
+
+    async with uow:
+        mute_list_display_data = await user_settings_service.get_mute_list_display_data(
+            uow, callback_query.from_user.id, settings.general.default_lang, bot
+        )
+    if not mute_list_display_data:
+        logger.warning(
+            "Could not retrieve mute list display data for user %s",
+            callback_query.from_user.id,
+        )
+        await callback_query.answer(
+            _("An error occurred. Please try again later."), show_alert=True
+        )
+        return
+
     await _show_all_accounts_list(
         callback_query=callback_query,
         translator=translator,
-        user_settings=user_settings,
+        mute_list_display_data=mute_list_display_data,
         report_service=report_service,
         page=callback_data.page,
     )
@@ -313,6 +399,7 @@ async def toggle_user_mute(
     moderation_service: FromDishka[ModerationService],
     report_service: FromDishka[ReportService],
     uow: Annotated[IUnitOfWork, FromDishka()],
+    user_settings_service: FromDishka[UserSettingsService],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
     async with uow:
@@ -339,12 +426,35 @@ async def toggle_user_mute(
     )
     await callback_query.answer(toast_message, show_alert=not toggle_result.success)
 
+    _ = translator.gettext
+
     if toggle_result.success and toggle_result.user_settings:
+        # Fetch the updated mute list display data
+
+        async with uow:
+            mute_list_display_data = (
+                await user_settings_service.get_mute_list_display_data(
+                    uow,
+                    callback_query.from_user.id,
+                    translator.info().get("language", "en"),  # Use current language
+                    cast("EventBot", callback_query.bot),
+                )
+            )
+        if not mute_list_display_data:
+            logger.warning(
+                "Could not retrieve mute list display data for user %s after toggle.",
+                callback_query.from_user.id,
+            )
+            await callback_query.answer(
+                _("An error occurred. Please try again later."), show_alert=True
+            )
+            return
+
         await _refresh_mute_related_ui(
             callback_query,
             translator,
-            toggle_result.user_settings,
-            report_service,  # Pass the report service
-            moderation_service,  # Pass the moderation service
+            mute_list_display_data,
+            report_service,
+            moderation_service,
             callback_data,
         )

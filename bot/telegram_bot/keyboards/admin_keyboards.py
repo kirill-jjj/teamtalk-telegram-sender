@@ -14,7 +14,12 @@ from bot.core.enums import (
 )
 from bot.core.languages import LanguageInfo
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import SubscriberInfo, UserAccountInfo, UserDTO
+from bot.services.schemas import (
+    MuteListDisplayDTO,
+    SubscriberInfo,
+    UserAccountInfo,
+    UserDTO,
+)
 from bot.telegram_bot.callback_data import (
     AdminCallback,
     AdminSetSubscriberLanguageCallback,
@@ -301,7 +306,7 @@ def create_view_mute_list_keyboard(
     page_items: list[Any],  # noqa: ARG001
     current_page: int,
     total_pages: int,
-    target_telegram_id: int,
+    mute_list_display_data: MuteListDisplayDTO,
     subscriber_context_page: int,
 ) -> InlineKeyboardMarkup:
     """Create the keyboard for viewing a paginated mute list for a subscriber."""
@@ -322,7 +327,7 @@ def create_view_mute_list_keyboard(
             current_page=current_page,
             total_pages=total_pages,
             pagination_callback_factory=mute_list_pagination_factory_adapter,
-            target_telegram_id=target_telegram_id,
+            target_telegram_id=mute_list_display_data.telegram_id,
             subscriber_context_page=subscriber_context_page,
         )
 
@@ -331,7 +336,7 @@ def create_view_mute_list_keyboard(
         translator,
         _("User Actions"),
         ViewSubscriberCallback(
-            telegram_id=target_telegram_id,
+            telegram_id=mute_list_display_data.telegram_id,
             page=subscriber_context_page,
         ),
     )
