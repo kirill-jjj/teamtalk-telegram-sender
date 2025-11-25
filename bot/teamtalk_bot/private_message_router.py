@@ -60,18 +60,19 @@ class PrivateMessageRouter:
         if not self.connection or not self._is_valid_message(tt_message):
             return
 
-        translator = await self._get_translator()
         content = tt_message.content.strip()
 
-        if content.startswith("/"):
-            parts = content.split(maxsplit=1)
-            cmd = parts[0].lower()
-            args = parts[1] if len(parts) > 1 else None
+        async with self.uow:
+            translator = await self._get_translator(tt_message)
 
-            handlers = self.command_handlers.get_handlers()
-            handler = handlers.get(cmd)
+            if content.startswith("/"):
+                parts = content.split(maxsplit=1)
+                cmd = parts[0].lower()
+                args = parts[1] if len(parts) > 1 else None
 
-            async with self.uow:
+                handlers = self.command_handlers.get_handlers()
+                handler = handlers.get(cmd)
+
                 if cmd == tt_cmds.TT_CMD_HELP:
                     await self._on_help(tt_message, translator)
                 elif handler:
@@ -83,8 +84,8 @@ class PrivateMessageRouter:
                 else:
                     await self._on_unknown(tt_message, translator)
                 await self.uow.commit()
-        else:
-            await self._publish_private_message_event(tt_message, translator)
+            else:
+                await self._publish_private_message_event(tt_message, translator)
 
     async def _on_help(
         self, tt_message: TeamTalkMessage, translator: NullTranslations
@@ -159,15 +160,20 @@ class PrivateMessageRouter:
             )
         )
 
-    async def _get_translator(self) -> NullTranslations:
-        """Determines the language for the reply and returns a translator."""
-        admin_cfg = self.settings.telegram.admin_chat_id
-        reply_lang = self.settings.general.default_lang
-        if admin_cfg:
-            admin_settings = self.cache.get_user_settings(admin_cfg)
-            if admin_settings and admin_settings.language_code:
-                reply_lang = admin_settings.language_code
-        return self.translator_factory(reply_lang)
+    async def _get_translator(self, tt_message: TeamTalkMessage) -> NullTranslations:
+        """Determines the language for the reply and returns a translator.
+
+        It prioritizes the language of the linked Telegram account.
+        If no account is linked, it falls back to the default language.
+        """
+        lang_code = self.settings.general.default_lang
+        tt_username_obj = tt_message.user.username
+        if tt_username_obj:
+            tt_username = str(tt_username_obj)
+            user_settings = await self.uow.users.get_by_teamtalk_username(tt_username)
+            if user_settings and user_settings.language_code:
+                lang_code = user_settings.language_code
+        return self.translator_factory(lang_code)
 
     def _is_valid_message(self, tt_message: TeamTalkMessage) -> bool:
         """Performs initial checks to see if the message should be processed."""

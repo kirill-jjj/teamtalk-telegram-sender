@@ -140,14 +140,30 @@ class TelegramNotificationHandler:
             )
             return
 
-        translator = self._get_translator_for_admin()
-        _ = translator.gettext
+        # The translator for the confirmation reply is now based on the TT user's
+        # linked account language.
+        reply_translator = await self._get_translator_for_tt_user(
+            event.from_user_username
+        )
+
+        # The translator for the message forwarded to the admin should be in the
+        # admin's own language.
+        admin_settings = self.cache.get_user_settings(admin_chat_id)
+        admin_lang_code = (
+            admin_settings.language_code
+            if admin_settings
+            else self.settings.general.default_lang
+        )
+        admin_translator = self.translator_factory(admin_lang_code)
+
+        gettext_admin = admin_translator.gettext
+        gettext_reply = reply_translator.gettext
 
         content = Text(
-            _("Message from server "),
+            gettext_admin("Message from server "),
             Bold(event.server_name),
             "\n",
-            _("From "),
+            gettext_admin("From "),
             Bold(event.from_user_nickname),
             ":\n\n",
             event.content,
@@ -160,9 +176,9 @@ class TelegramNotificationHandler:
         )
 
         reply_text = (
-            _("Message sent to Telegram successfully.")
+            gettext_reply("Message sent to Telegram successfully.")
             if was_sent
-            else _("Failed to deliver message to Telegram")
+            else gettext_reply("Failed to deliver message to Telegram")
         )
 
         await self.event_bus.publish(
@@ -173,14 +189,22 @@ class TelegramNotificationHandler:
             )
         )
 
-    def _get_translator_for_admin(self) -> NullTranslations:
-        """Gets the appropriate translator for messaging the admin."""
-        admin_chat_id = self.settings.telegram.admin_chat_id
+    async def _get_translator_for_tt_user(self, tt_username: str) -> NullTranslations:
+        """Gets the translator for a TeamTalk user based on their linked TG account.
+
+        Falls back to the default language if no linked account is found.
+        """
         lang_code = self.settings.general.default_lang
-        if admin_chat_id:
-            admin_settings = self.cache.get_user_settings(admin_chat_id)
-            if admin_settings and admin_settings.language_code:
-                lang_code = admin_settings.language_code
+        if tt_username:
+            # This handler is a singleton, so we must create a UoW scope manually.
+            async with self.app_container() as request_container:
+                uow = await request_container.get(IUnitOfWork)
+                async with uow:
+                    user_settings = await uow.users.get_by_teamtalk_username(
+                        tt_username
+                    )
+                    if user_settings and user_settings.language_code:
+                        lang_code = user_settings.language_code
         return self.translator_factory(lang_code)
 
     def format_join_leave_notification(

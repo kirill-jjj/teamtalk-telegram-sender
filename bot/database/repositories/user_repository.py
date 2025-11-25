@@ -68,3 +68,13 @@ class UserRepository(BaseRepository[UserSettings]):
         )
         result = await self._session.exec(statement)
         return list(result.all())
+
+    async def get_by_teamtalk_username(self, username: str) -> UserSettings | None:
+        """Get a UserSettings instance by TeamTalk username."""
+        statement = (
+            select(UserSettings)
+            .where(UserSettings.teamtalk_username == username)
+            .options(selectinload(cast("Any", UserSettings.muted_users_list)))
+        )
+        result = await self._session.exec(statement)
+        return result.first()
