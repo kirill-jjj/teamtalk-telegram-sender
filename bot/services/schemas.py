@@ -146,3 +146,11 @@ class RecipientDTO(BaseModel):
 
     telegram_id: int
     language_code: str | None
+
+
+class TeamTalkFetchResult(BaseModel, Generic[T]):
+    """Result of a fetch operation from TeamTalk service."""
+
+    items: list[T] = Field(default_factory=list)
+    error_message: str | None = None
+    server_name: str | None = None  # Optional, primarily for online users fetch

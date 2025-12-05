@@ -79,15 +79,15 @@ async def test_fetch_online_users_success(
     )
     mock_tt_connection.instance.get_channel.return_value = MagicMock(name=b"Channel1")
 
-    users, server_name, error_message = await teamtalk_service.fetch_online_users(
+    result = await teamtalk_service.fetch_online_users(
         is_caller_admin=False, lang_code="en"
     )
 
-    assert error_message is None
-    assert server_name == "TestServer"
-    assert len(users) == 2
-    assert users[0].nickname == "User1"
-    assert users[1].nickname == "User2"
+    assert result.error_message is None
+    assert result.server_name == "TestServer"
+    assert len(result.items) == 2
+    assert result.items[0].nickname == "User1"
+    assert result.items[1].nickname == "User2"
 
 
 @pytest.mark.asyncio
@@ -97,13 +97,13 @@ async def test_fetch_online_users_no_connection(
 ) -> None:
     mock_tt_connection.is_ready = False
 
-    users, server_name, error_message = await teamtalk_service.fetch_online_users(
+    result = await teamtalk_service.fetch_online_users(
         is_caller_admin=False, lang_code="en"
     )
 
-    assert users == []
-    assert server_name is None
-    assert error_message == "TeamTalk connection is not active."
+    assert result.items == []
+    assert result.server_name is None
+    assert result.error_message == "TeamTalk connection is not active."
 
 
 @pytest.mark.asyncio
@@ -116,12 +116,12 @@ async def test_fetch_all_accounts_success(
         "userB": MagicMock(username=b"userB"),
     }
 
-    accounts, error_message = await teamtalk_service.fetch_all_accounts(lang_code="en")
+    result = await teamtalk_service.fetch_all_accounts(lang_code="en")
 
-    assert error_message is None
-    assert len(accounts) == 2
-    assert accounts[0].username == "userA"
-    assert accounts[1].username == "userB"
+    assert result.error_message is None
+    assert len(result.items) == 2
+    assert result.items[0].username == "userA"
+    assert result.items[1].username == "userB"
 
 
 @pytest.mark.asyncio
@@ -131,10 +131,10 @@ async def test_fetch_all_accounts_no_connection(
 ) -> None:
     mock_tt_connection.is_ready = False
 
-    accounts, error_message = await teamtalk_service.fetch_all_accounts(lang_code="en")
+    result = await teamtalk_service.fetch_all_accounts(lang_code="en")
 
-    assert accounts == []
-    assert error_message == "Error: No active TeamTalk connection."
+    assert result.items == []
+    assert result.error_message == "Error: No active TeamTalk connection."
 
 
 @pytest.mark.asyncio
@@ -144,9 +144,9 @@ async def test_fetch_all_accounts_cache_empty(
 ) -> None:
     mock_tt_connection.cache_manager.user_accounts_cache = {}
 
-    accounts, error_message = await teamtalk_service.fetch_all_accounts(lang_code="en")
+    result = await teamtalk_service.fetch_all_accounts(lang_code="en")
 
-    assert accounts == []
-    assert error_message == (
+    assert result.items == []
+    assert result.error_message == (
         "Server user accounts are not loaded yet. Please try again in a moment."
     )

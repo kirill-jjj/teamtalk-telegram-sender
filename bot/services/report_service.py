@@ -61,29 +61,25 @@ class ReportService:
         )
         is_admin = cache_service.is_admin(telegram_user_id)
 
-        (
-            users,
-            server_name,
-            error_message,
-        ) = await self._teamtalk_service.fetch_online_users(
+        result = await self._teamtalk_service.fetch_online_users(
             is_caller_admin=is_admin, lang_code=user_settings.language_code
         )
 
-        if error_message:
-            return WhoReport(error_message=error_message)
+        if result.error_message:
+            return WhoReport(error_message=result.error_message)
 
-        if not users:
-            return WhoReport(error_message=error_message or _("No users found online."))
+        if not result.items:
+            return WhoReport(error_message=_("No users found online."))
 
         # Grouping logic is now part of the service
         channels_data: dict[str, list[str]] = {}
-        for user in users:
+        for user in result.items:
             channel_name = user.channel_name
             if channel_name not in channels_data:
                 channels_data[channel_name] = []
             channels_data[channel_name].append(user.nickname)
 
-        user_count = len(users)
+        user_count = len(result.items)
 
         grouped_data = [
             WhoChannelGroup(
@@ -93,7 +89,7 @@ class ReportService:
         ]
 
         report_payload = WhoReportPayload(
-            server_name=server_name,
+            server_name=result.server_name,
             total_users=user_count,
             grouped_data=grouped_data,
         )
@@ -208,51 +204,45 @@ class ReportService:
         )
         is_admin = cache_service.is_admin(telegram_user_id)
 
-        (
-            users,
-            server_name,
-            error_message,
-        ) = await self._teamtalk_service.fetch_online_users(
+        result = await self._teamtalk_service.fetch_online_users(
             is_caller_admin=is_admin, lang_code=user_settings.language_code
         )
 
-        if error_message:
+        if result.error_message:
             return ModerationViewData(
                 users=[],
                 server_name=self._settings.teamtalk.host_name,
-                error_message=error_message,
+                error_message=result.error_message,
             )
 
-        if not users:
+        if not result.items:
             return ModerationViewData(
                 users=[],
                 server_name=self._settings.teamtalk.host_name,
-                error_message=error_message or _("No users found online."),
+                error_message=_("No users found online."),
             )
 
-        sorted_users = sorted(users, key=lambda u: u.nickname.lower())
-        return ModerationViewData(users=sorted_users, server_name=server_name)
+        sorted_users = sorted(result.items, key=lambda u: u.nickname.lower())
+        return ModerationViewData(users=sorted_users, server_name=result.server_name)
 
     async def get_all_server_accounts_view_data(
         self, lang_code: str, translator: NullTranslations
     ) -> AllAccountsViewData:
         """Fetches and prepares data for the all server accounts list view."""
         _ = translator.gettext
-        accounts, error_message = await self._teamtalk_service.fetch_all_accounts(
-            lang_code=lang_code
-        )
+        result = await self._teamtalk_service.fetch_all_accounts(lang_code=lang_code)
 
         title = _("All Server Accounts")
         empty_text = _("No user accounts found on the server.")
 
-        if error_message:
+        if result.error_message:
             return AllAccountsViewData(
                 accounts=[],
                 title=title,
-                empty_list_text=error_message or empty_text,
+                empty_list_text=result.error_message or empty_text,
             )
 
-        sorted_accounts = sorted(accounts, key=lambda acc: acc.username.lower())
+        sorted_accounts = sorted(result.items, key=lambda acc: acc.username.lower())
         return AllAccountsViewData(
             accounts=sorted_accounts, title=title, empty_list_text=empty_text
         )

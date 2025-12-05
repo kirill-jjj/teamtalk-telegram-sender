@@ -293,12 +293,12 @@ class ModerationService:
         username_to_toggle = None
 
         if list_type == UserListAction.LIST_ALL_ACCOUNTS:
-            accounts, error_message = await self._teamtalk_service.fetch_all_accounts(
+            result = await self._teamtalk_service.fetch_all_accounts(
                 lang_code=translator.info().get("language", "en")
             )
-            if not error_message:
+            if not result.error_message:
                 account = get_item_from_paginated_list(
-                    items=accounts,
+                    items=result.items,
                     sort_key_extractor=lambda acc: acc.username.lower(),
                     page=page,
                     idx_on_page=index_on_page,

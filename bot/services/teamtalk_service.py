@@ -5,7 +5,7 @@ from gettext import NullTranslations
 import logging
 
 from bot.config import Settings
-from bot.services.schemas import UserAccountInfo, UserDTO
+from bot.services.schemas import TeamTalkFetchResult, UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import (
     get_server_display_name,
@@ -32,17 +32,17 @@ class TeamTalkService:
 
     async def fetch_online_users(
         self, *, is_caller_admin: bool, lang_code: str
-    ) -> tuple[list[UserDTO], str | None, str | None]:
+    ) -> TeamTalkFetchResult[UserDTO]:
         """Fetches online users from TeamTalk and returns them as DTOs.
 
         Returns:
-            A tuple containing:
-            - A list of UserDTOs for online users.
-            - The server name for display.
-            - An error message if the connection is not active.
+            A TeamTalkFetchResult containing the list of users, server name,
+            and an optional error message.
         """
         if not self._tt_connection or not self._tt_connection.is_ready:
-            return [], None, "TeamTalk connection is not active."
+            return TeamTalkFetchResult(
+                error_message="TeamTalk connection is not active."
+            )
 
         translator = self._translator_factory(lang_code)
         server_name = get_server_display_name(
@@ -61,33 +61,36 @@ class TeamTalkService:
             for user in raw_users
         ]
 
-        return user_dtos, server_name, None
+        return TeamTalkFetchResult(items=user_dtos, server_name=server_name)
 
     async def fetch_all_accounts(
         self, lang_code: str
-    ) -> tuple[list[UserAccountInfo], str | None]:
+    ) -> TeamTalkFetchResult[UserAccountInfo]:
         """Fetches all user accounts from the TeamTalk server.
 
         Returns:
-            A tuple containing:
-            - A list of UserAccountInfo DTOs.
-            - An error message if the connection is not active or
-              accounts are not loaded.
+            A TeamTalkFetchResult containing the list of accounts and an
+            optional error message.
         """
         translator = self._translator_factory(lang_code)
         _ = translator.gettext
 
         if not self._tt_connection or not self._tt_connection.is_ready:
-            return [], _("Error: No active TeamTalk connection.")
+            return TeamTalkFetchResult(
+                error_message=_("Error: No active TeamTalk connection.")
+            )
 
         cache = self._tt_connection.cache_manager.user_accounts_cache
         if not cache:
-            return [], _(
-                "Server user accounts are not loaded yet. Please try again in a moment."
+            return TeamTalkFetchResult(
+                error_message=_(
+                    "Server user accounts are not loaded yet. "
+                    "Please try again in a moment."
+                )
             )
 
         accounts_info = [
             UserAccountInfo(username=acc.username) for acc in cache.values()
         ]
 
-        return accounts_info, None
+        return TeamTalkFetchResult(items=accounts_info)

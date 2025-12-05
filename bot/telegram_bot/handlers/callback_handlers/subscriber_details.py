@@ -784,21 +784,20 @@ async def _display_linkable_tt_accounts_page(
     """Helper to display a paginated list of linkable TeamTalk accounts."""
     _ = translator.gettext
 
-    (
-        all_server_accounts,
-        error_message,
-    ) = await subscription_service._teamtalk_service.fetch_all_accounts(
+    result = await subscription_service._teamtalk_service.fetch_all_accounts(
         lang_code=translator.info().get("language", "en")
     )
 
-    if error_message:
+    if result.error_message:
         logger.warning(
             "Failed to get TeamTalk accounts for linking. User %s. Error: %s",
             query.from_user.id,
-            error_message,
+            result.error_message,
         )
-        await query.answer(error_message, show_alert=True)
+        await query.answer(result.error_message, show_alert=True)
         return
+
+    all_server_accounts = result.items
 
     try:
         all_server_accounts.sort(key=lambda acc: acc.username.lower())

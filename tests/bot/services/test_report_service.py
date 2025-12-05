@@ -8,7 +8,11 @@ import pytest
 from bot.database.models import BanList, SubscribedUser, UserSettings
 from bot.database.types import MuteListMode
 from bot.services.report_service import ReportService
-from bot.services.schemas import UserAccountInfo, UserDTO
+from bot.services.schemas import (
+    TeamTalkFetchResult,
+    UserAccountInfo,
+    UserDTO,
+)
 
 
 @pytest.fixture
@@ -75,13 +79,12 @@ async def test_get_who_report_data_success(
         language_code="en"
     )
     mock_cache_service.is_admin.return_value = False
-    mock_teamtalk_service.fetch_online_users.return_value = (
-        [
+    mock_teamtalk_service.fetch_online_users.return_value = TeamTalkFetchResult(
+        items=[
             UserDTO(id=1, nickname="User1", channel_name="Channel1"),
             UserDTO(id=2, nickname="User2", channel_name="Channel1"),
         ],
-        "TestServer",
-        None,
+        server_name="TestServer",
     )
 
     report = await report_service.get_who_report_data(
@@ -161,13 +164,12 @@ async def test_get_sorted_online_users_for_moderation(
     mock_user_settings_service.get_or_create.return_value = MagicMock(
         language_code="en"
     )
-    mock_teamtalk_service.fetch_online_users.return_value = (
-        [
+    mock_teamtalk_service.fetch_online_users.return_value = TeamTalkFetchResult(
+        items=[
             UserDTO(id=2, nickname="UserB", channel_name="Channel1"),
             UserDTO(id=1, nickname="UserA", channel_name="Channel1"),
         ],
-        "TestServer",
-        None,
+        server_name="TestServer",
     )
 
     result = await report_service.get_sorted_online_users_for_moderation(
@@ -190,9 +192,8 @@ async def test_get_all_server_accounts_view_data(
     mock_translator: MagicMock,
 ) -> None:
     """Test get_all_server_accounts_view_data method."""
-    mock_teamtalk_service.fetch_all_accounts.return_value = (
-        [UserAccountInfo(username="UserB"), UserAccountInfo(username="UserA")],
-        None,
+    mock_teamtalk_service.fetch_all_accounts.return_value = TeamTalkFetchResult(
+        items=[UserAccountInfo(username="UserB"), UserAccountInfo(username="UserA")]
     )
 
     result = await report_service.get_all_server_accounts_view_data(

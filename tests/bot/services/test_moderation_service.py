@@ -14,6 +14,7 @@ from bot.core.enums import UserListAction
 from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork  # Import IUnitOfWork
 from bot.services.moderation_service import ModerationService
+from bot.services.schemas import TeamTalkFetchResult
 from bot.services.teamtalk_service import TeamTalkService
 from bot.teamtalk_bot.connection import TeamTalkConnection
 
@@ -287,9 +288,8 @@ async def test_get_target_username_for_toggle_all_accounts(
     mock_translator: MagicMock,
 ) -> None:
     user_settings = MagicMock()
-    mock_teamtalk_service.fetch_all_accounts.return_value = (
-        [MagicMock(username="test_user")],
-        None,
+    mock_teamtalk_service.fetch_all_accounts.return_value = TeamTalkFetchResult(
+        items=[MagicMock(username="test_user")]
     )
 
     username = await moderation_service.get_target_username_for_toggle(
@@ -317,9 +317,8 @@ async def test_toggle_mute_from_paginated_list_success(
     user_settings.muted_users_list = []
 
     mock_uow.users.get_by_id.return_value = user_settings
-    mock_teamtalk_service.fetch_all_accounts.return_value = (
-        [MagicMock(username=tt_username)],
-        None,
+    mock_teamtalk_service.fetch_all_accounts.return_value = TeamTalkFetchResult(
+        items=[MagicMock(username=tt_username)]
     )
 
     result = await moderation_service.toggle_mute_from_paginated_list(
