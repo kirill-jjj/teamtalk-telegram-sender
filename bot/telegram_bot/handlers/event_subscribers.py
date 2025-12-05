@@ -28,6 +28,7 @@ from bot.services.notification_service import (
     NotificationRecipientService,
     should_send_silently,
 )
+from bot.services.schemas import RecipientDTO
 from bot.services.subscription_service import SubscriptionService
 from bot.teamtalk_bot.events import (
     AdminStatusChangedEvent,
@@ -82,7 +83,7 @@ class TelegramNotificationHandler:
             return
 
         await self.broadcast_to_users(
-            recipients_with_lang=recipients,
+            recipients=recipients,
             text_generator=lambda lang_code: self.format_join_leave_notification(
                 event,
                 NotificationType.JOIN,
@@ -104,7 +105,7 @@ class TelegramNotificationHandler:
             return
 
         await self.broadcast_to_users(
-            recipients_with_lang=recipients,
+            recipients=recipients,
             text_generator=lambda lang_code: self.format_join_leave_notification(
                 event,
                 NotificationType.LEAVE,
@@ -229,7 +230,7 @@ class TelegramNotificationHandler:
 
     async def broadcast_to_users(
         self,
-        recipients_with_lang: list[tuple[int, str | None]],
+        recipients: list[RecipientDTO],
         text_generator: Callable[[str | None], str],
         online_users_cache_for_instance: dict[int, TeamTalkUser] | None = None,
         reply_markup_generator: Callable[[str | None, int], InlineKeyboardMarkup | None]
@@ -240,17 +241,16 @@ class TelegramNotificationHandler:
             logger.error("No Telegram bot instance provided to broadcast_to_users.")
             return
 
-        coroutines = []
-        for chat_id, lang_code in recipients_with_lang:
-            coroutines.append(
-                self._send_and_handle_broadcast_error(
-                    chat_id=chat_id,
-                    lang_code=lang_code,
-                    text_generator=text_generator,
-                    online_users_cache_for_instance=online_users_cache_for_instance,
-                    reply_markup_generator=reply_markup_generator,
-                )
+        coroutines = [
+            self._send_and_handle_broadcast_error(
+                chat_id=recipient.telegram_id,
+                lang_code=recipient.language_code,
+                text_generator=text_generator,
+                online_users_cache_for_instance=online_users_cache_for_instance,
+                reply_markup_generator=reply_markup_generator,
             )
+            for recipient in recipients
+        ]
 
         if coroutines:
             async with asyncio.TaskGroup() as tg:

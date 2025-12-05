@@ -13,6 +13,7 @@ from bot.database.models import MutedUser, UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import SqlModelUnitOfWork
 from bot.services.cache_service import CacheService
+from bot.services.schemas import RecipientDTO
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class NotificationRecipientService:
 
     async def find_recipients(
         self, username_to_check: str, event_type: NotificationType
-    ) -> list[tuple[int, str | None]]:
+    ) -> list[RecipientDTO]:
         """Finds all users who should receive a notification for a given event."""
         subscriber_ids = list(self.cache.get_all_subscriber_ids())
         if not subscriber_ids:
@@ -132,4 +133,8 @@ class NotificationRecipientService:
             stmt = stmt.where(mute_logic)
 
             result = await uow.session.execute(stmt)
-            return cast("list[tuple[int, str | None]]", result.all())
+            raw_results = cast("list[tuple[int, str | None]]", result.all())
+            return [
+                RecipientDTO(telegram_id=telegram_id, language_code=lang_code)
+                for telegram_id, lang_code in raw_results
+            ]

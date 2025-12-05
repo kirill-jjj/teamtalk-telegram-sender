@@ -139,3 +139,10 @@ class ManageMutedMenuDTO(BaseModel):
 
     mute_list_mode: MuteListMode
     not_on_online_enabled: bool
+
+
+class RecipientDTO(BaseModel):
+    """DTO for a notification recipient."""
+
+    telegram_id: int
+    language_code: str | None

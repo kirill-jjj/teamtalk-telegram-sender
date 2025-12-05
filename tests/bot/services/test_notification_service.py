@@ -16,6 +16,7 @@ from bot.services.notification_service import (
     is_user_subject_to_noon_check,
     should_send_silently,
 )
+from bot.services.schemas import RecipientDTO
 
 
 @pytest.mark.parametrize(
@@ -131,7 +132,7 @@ async def test_find_recipients(mock_cache: MagicMock) -> None:
 
     recipients = await service.find_recipients("test_user", NotificationType.JOIN)
 
-    assert recipients == [(1, "en")]
+    assert recipients == [RecipientDTO(telegram_id=1, language_code="en")]
     mock_session.execute.assert_called_once()
 
     # Restore original __aenter__
