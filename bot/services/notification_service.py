@@ -1,16 +1,13 @@
 """Service for advanced notification logic like NOON."""
 
 import logging
-from typing import cast
 
 from pytalk.user import User as TeamTalkUser
-import sqlalchemy as sa
-from sqlmodel import col, select
 
 from bot.core.enums import NotificationType
 from bot.database.engine import AsyncSessionFactoryType
-from bot.database.models import MutedUser, UserSettings
-from bot.database.types import MuteListMode, NotificationSetting
+from bot.database.models import UserSettings
+from bot.database.types import MuteListMode
 from bot.database.uow import SqlModelUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import RecipientDTO
@@ -91,49 +88,9 @@ class NotificationRecipientService:
             return []
 
         async with SqlModelUnitOfWork(self.session_factory) as uow:
-            stmt = (
-                select(
-                    UserSettings.telegram_id,
-                    UserSettings.language_code,
-                )
-                .join(
-                    MutedUser,
-                    sa.and_(
-                        col(UserSettings.telegram_id)
-                        == MutedUser.user_settings_telegram_id,
-                        col(MutedUser.muted_teamtalk_username) == username_to_check,
-                    ),
-                    isouter=True,
-                )
-                .where(
-                    col(UserSettings.telegram_id).in_(subscriber_ids),
-                    UserSettings.notification_settings != NotificationSetting.NONE,
-                )
+            raw_results = await uow.users.get_notification_recipients(
+                subscriber_ids, username_to_check, event_type
             )
-
-            if event_type == NotificationType.JOIN:
-                stmt = stmt.where(
-                    UserSettings.notification_settings != NotificationSetting.JOIN_OFF
-                )
-            elif event_type == NotificationType.LEAVE:
-                stmt = stmt.where(
-                    UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
-                )
-
-            mute_logic = sa.or_(
-                sa.and_(
-                    col(UserSettings.mute_list_mode) == MuteListMode.blacklist.value,
-                    col(MutedUser.id).is_(None),
-                ),
-                sa.and_(
-                    col(UserSettings.mute_list_mode) == MuteListMode.whitelist.value,
-                    col(MutedUser.id).is_not(None),
-                ),
-            )
-            stmt = stmt.where(mute_logic)
-
-            result = await uow.session.execute(stmt)
-            raw_results = cast("list[tuple[int, str | None]]", result.all())
             return [
                 RecipientDTO(telegram_id=telegram_id, language_code=lang_code)
                 for telegram_id, lang_code in raw_results

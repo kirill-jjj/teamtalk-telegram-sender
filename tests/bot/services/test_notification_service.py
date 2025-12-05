@@ -112,28 +112,27 @@ def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) ->
 @pytest.mark.asyncio
 async def test_find_recipients(mock_cache: MagicMock) -> None:
     """Test the find_recipients method of NotificationRecipientService."""
-    # Mock the session and UoW
-    mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.all.return_value = [(1, "en")]
-    mock_session.execute.return_value = mock_result
+    # Mock the session factory
+    mock_session_factory = MagicMock()
 
-    # Mock the session factory to return our mock session
-    mock_session_factory = MagicMock(return_value=mock_session)
-
-    # Temporarily patch SqlModelUnitOfWork for this test
-    original_aenter = SqlModelUnitOfWork.__aenter__
+    # Mock the UoW and repository method
     uow_mock = AsyncMock()
-    uow_mock.session = mock_session
+    uow_mock.users.get_notification_recipients = AsyncMock(return_value=[(1, "en")])
+
+    # Temporarily patch SqlModelUnitOfWork to return our UoW mock
+    original_aenter = SqlModelUnitOfWork.__aenter__
     SqlModelUnitOfWork.__aenter__ = AsyncMock(return_value=uow_mock)
 
     service = NotificationRecipientService(mock_session_factory, mock_cache)
-    mock_cache.get_all_subscriber_ids.return_value = {1, 2, 3}
+    subscriber_ids = {1, 2, 3}
+    mock_cache.get_all_subscriber_ids.return_value = subscriber_ids
 
     recipients = await service.find_recipients("test_user", NotificationType.JOIN)
 
     assert recipients == [RecipientDTO(telegram_id=1, language_code="en")]
-    mock_session.execute.assert_called_once()
+    uow_mock.users.get_notification_recipients.assert_called_once_with(
+        list(subscriber_ids), "test_user", NotificationType.JOIN
+    )
 
     # Restore original __aenter__
     SqlModelUnitOfWork.__aenter__ = original_aenter

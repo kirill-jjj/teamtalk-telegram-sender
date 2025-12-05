@@ -2,12 +2,15 @@
 
 from typing import Any, cast
 
+import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from bot.database.models import UserSettings
+from bot.core.enums import NotificationType
+from bot.database.models import MutedUser, UserSettings
 from bot.database.repositories.base import BaseRepository
+from bot.database.types import MuteListMode, NotificationSetting
 
 
 class UserRepository(BaseRepository[UserSettings]):
@@ -78,3 +81,56 @@ class UserRepository(BaseRepository[UserSettings]):
         )
         result = await self._session.exec(statement)
         return result.first()
+
+    async def get_notification_recipients(
+        self,
+        subscriber_ids: list[int],
+        username_to_check: str,
+        event_type: NotificationType,
+    ) -> list[tuple[int, str | None]]:
+        """Get a list of notification recipients from the database."""
+        if not subscriber_ids:
+            return []
+        stmt = (
+            select(
+                UserSettings.telegram_id,
+                UserSettings.language_code,
+            )
+            .join(
+                MutedUser,
+                sa.and_(
+                    col(UserSettings.telegram_id)
+                    == MutedUser.user_settings_telegram_id,
+                    col(MutedUser.muted_teamtalk_username) == username_to_check,
+                ),
+                isouter=True,
+            )
+            .where(
+                col(UserSettings.telegram_id).in_(subscriber_ids),
+                UserSettings.notification_settings != NotificationSetting.NONE,
+            )
+        )
+
+        if event_type == NotificationType.JOIN:
+            stmt = stmt.where(
+                UserSettings.notification_settings != NotificationSetting.JOIN_OFF
+            )
+        elif event_type == NotificationType.LEAVE:
+            stmt = stmt.where(
+                UserSettings.notification_settings != NotificationSetting.LEAVE_OFF
+            )
+
+        mute_logic = sa.or_(
+            sa.and_(
+                col(UserSettings.mute_list_mode) == MuteListMode.blacklist.value,
+                col(MutedUser.id).is_(None),
+            ),
+            sa.and_(
+                col(UserSettings.mute_list_mode) == MuteListMode.whitelist.value,
+                col(MutedUser.id).is_not(None),
+            ),
+        )
+        stmt = stmt.where(mute_logic)
+
+        result = await self._session.execute(stmt)
+        return cast("list[tuple[int, str | None]]", result.all())

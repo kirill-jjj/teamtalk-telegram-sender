@@ -1,10 +1,12 @@
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from bot.core.enums import NotificationType
 from bot.database.models import MutedUser, UserSettings
 from bot.database.repositories.user_repository import UserRepository
 
@@ -160,3 +162,20 @@ async def test_get_by_ids(
     retrieved_users = await user_repository.get_by_ids([10, 30])
     assert len(retrieved_users) == 2
     assert {u.telegram_id for u in retrieved_users} == {10, 30}
+
+
+@pytest.mark.asyncio
+async def test_get_notification_recipients(
+    user_repository: UserRepository,
+) -> None:
+    """Test retrieving notification recipients."""
+    mock_result = MagicMock()
+    mock_result.all.return_value = [(1, "en"), (2, "ru")]
+    user_repository._session.execute = AsyncMock(return_value=mock_result)
+
+    recipients = await user_repository.get_notification_recipients(
+        [1, 2, 3], "test_user", NotificationType.JOIN
+    )
+
+    assert recipients == [(1, "en"), (2, "ru")]
+    user_repository._session.execute.assert_called_once()
