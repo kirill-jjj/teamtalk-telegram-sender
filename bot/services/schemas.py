@@ -4,6 +4,7 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
+from bot.core.enums import DeeplinkAction
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
 
@@ -154,3 +155,11 @@ class TeamTalkFetchResult(BaseModel, Generic[T]):
     items: list[T] = Field(default_factory=list)
     error_message: str | None = None
     server_name: str | None = None  # Optional, primarily for online users fetch
+
+
+class DeeplinkDTO(BaseModel):
+    """Data Transfer Object for a deeplink."""
+
+    token: str
+    action: DeeplinkAction
+    payload: str | None = None

@@ -6,8 +6,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from bot.core.enums import DeeplinkAction
-from bot.database.models import Deeplink
-from bot.services.schemas import AdminManagementResult, BatchOperationResult
+from bot.services.schemas import (
+    AdminManagementResult,
+    BatchOperationResult,
+    DeeplinkDTO,
+)
 from bot.teamtalk_bot.formatters import (
     _split_text_for_tt,
     format_admin_management_result,
@@ -36,9 +39,6 @@ def mock_translator() -> MagicMock:
     translator.gettext.side_effect = gettext_side_effect
     translator.ngettext.side_effect = ngettext_side_effect
     return translator
-
-
-# ... (existing tests for format_deeplink_reply)
 
 
 @pytest.mark.parametrize(
@@ -232,11 +232,10 @@ def test_format_deeplink_reply_subscribe(
     mock_translator: MagicMock,
 ) -> None:
     """Test formatting a subscribe deeplink reply."""
-    deeplink = Deeplink(
+    deeplink = DeeplinkDTO(
         token="sub_token",
         action=DeeplinkAction.SUBSCRIBE,
         payload="test_user",
-        expiry_time=MagicMock(),
     )
     bot_username = "my_test_bot"
 
@@ -250,10 +249,9 @@ def test_format_deeplink_reply_unsubscribe(
     mock_translator: MagicMock,
 ) -> None:
     """Test formatting an unsubscribe deeplink reply."""
-    deeplink = Deeplink(
+    deeplink = DeeplinkDTO(
         token="unsub_token",
         action=DeeplinkAction.UNSUBSCRIBE,
-        expiry_time=MagicMock(),
     )
     bot_username = "my_test_bot"
 
@@ -267,11 +265,9 @@ def test_format_deeplink_reply_invalid_action(
     mock_translator: MagicMock,
 ) -> None:
     """Test formatting a deeplink with an invalid action."""
-    deeplink = Deeplink(
-        token="invalid_token",
-        action="INVALID_ACTION",  # type: ignore[assignment]
-        expiry_time=MagicMock(),
-    )
+    deeplink = MagicMock(spec=DeeplinkDTO)
+    deeplink.token = "invalid_token"
+    deeplink.action = "INVALID_ACTION"
     bot_username = "my_test_bot"
 
     result = format_deeplink_reply(deeplink, bot_username, mock_translator)

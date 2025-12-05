@@ -10,6 +10,7 @@ from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
+from bot.services.schemas import DeeplinkDTO
 from bot.services.subscription_service import SubscriptionService
 
 
@@ -73,7 +74,7 @@ async def test_create_deeplink_success(
     mock_uow.deeplinks.create.assert_called_once_with(
         DeeplinkAction.SUBSCRIBE, 300, payload="test_payload"
     )
-    assert isinstance(result, DeeplinkModel)
+    assert isinstance(result, DeeplinkDTO)
     assert result.action == DeeplinkAction.SUBSCRIBE
     assert result.payload == "test_payload"
 

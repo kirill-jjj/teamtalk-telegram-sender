@@ -8,6 +8,7 @@ from bot.database.models import Deeplink as DeeplinkModel
 from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
+from bot.services.schemas import DeeplinkDTO
 from bot.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,8 @@ class DeeplinkService:
         action: DeeplinkAction,
         ttl_seconds: int,
         payload: str | None = None,
-    ) -> DeeplinkModel:
-        """Creates and saves a deeplink, returning the model."""
+    ) -> DeeplinkDTO:
+        """Creates and saves a deeplink, returning the DTO."""
         deeplink = await uow.deeplinks.create(
             action,
             ttl_seconds,
@@ -45,7 +46,11 @@ class DeeplinkService:
             deeplink.token,
             payload or "(no payload)",
         )
-        return deeplink
+        return DeeplinkDTO(
+            token=deeplink.token,
+            action=deeplink.action,
+            payload=deeplink.payload,
+        )
 
     async def _execute_subscribe(
         self,

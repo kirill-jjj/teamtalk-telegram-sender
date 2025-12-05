@@ -33,7 +33,7 @@ class TeamTalkCommandService:
         self, uow: IUnitOfWork, tt_username: str, translator: NullTranslations
     ) -> str:
         """Handles the subscribe command logic."""
-        deeplink_model = await self.deeplink_service.create_deeplink(
+        deeplink_dto = await self.deeplink_service.create_deeplink(
             uow,
             action=DeeplinkAction.SUBSCRIBE,
             ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
@@ -44,13 +44,13 @@ class TeamTalkCommandService:
             return translator.gettext(
                 "Could not generate a link, bot username is not configured."
             )
-        return format_deeplink_reply(deeplink_model, bot_username, translator)
+        return format_deeplink_reply(deeplink_dto, bot_username, translator)
 
     async def handle_unsubscribe(
         self, uow: IUnitOfWork, translator: NullTranslations
     ) -> str:
         """Handles the unsubscribe command logic."""
-        deeplink_model = await self.deeplink_service.create_deeplink(
+        deeplink_dto = await self.deeplink_service.create_deeplink(
             uow,
             action=DeeplinkAction.UNSUBSCRIBE,
             ttl_seconds=self.settings.operational_parameters.deeplink_ttl_seconds,
@@ -60,7 +60,7 @@ class TeamTalkCommandService:
             return translator.gettext(
                 "Could not generate a link, bot username is not configured."
             )
-        return format_deeplink_reply(deeplink_model, bot_username, translator)
+        return format_deeplink_reply(deeplink_dto, bot_username, translator)
 
     async def handle_admin_update(
         self,

@@ -15,14 +15,13 @@ from bot.core.constants import (
     WHO_CHANNEL_ID_SERVER_ROOT_ALT2,
 )
 from bot.core.enums import DeeplinkAction
-from bot.database.models import Deeplink as DeeplinkModel
-from bot.services.schemas import AdminManagementResult
+from bot.services.schemas import AdminManagementResult, DeeplinkDTO
 
 logger = logging.getLogger(__name__)
 
 
 def format_deeplink_reply(
-    deeplink: DeeplinkModel,
+    deeplink: DeeplinkDTO,
     bot_username: str,
     translator: NullTranslations,
 ) -> str:
