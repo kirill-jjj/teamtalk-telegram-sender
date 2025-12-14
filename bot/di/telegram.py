@@ -11,7 +11,6 @@ from aiogram.types import TelegramObject, User
 from dishka import AsyncContainer, Provider, Scope, provide
 
 from bot.config import Settings
-from bot.database.engine import AsyncSessionFactoryType
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import NotificationRecipientService
@@ -60,7 +59,6 @@ class TelegramProvider(Provider):
         translator_factory: Callable[[str | None], NullTranslations],
         event_bus: EventBus,
         recipient_service: NotificationRecipientService,
-        session_factory: AsyncSessionFactoryType,
         app_container: AsyncContainer,
     ) -> TelegramNotificationHandler:
         """Provides the Telegram notification handler."""
@@ -72,7 +70,6 @@ class TelegramProvider(Provider):
             translator_factory=translator_factory,
             event_bus=event_bus,
             recipient_service=recipient_service,
-            session_factory=session_factory,
             app_container=app_container,
         )
 

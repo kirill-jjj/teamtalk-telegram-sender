@@ -47,7 +47,9 @@ async def deeplink_cleanup_task(
                 uow = await request_container.get(IUnitOfWork)
                 deeplink_service = await request_container.get(DeeplinkService)
                 async with uow:
-                    deleted_count = await deeplink_service.cleanup_expired_deeplinks()
+                    deleted_count = await deeplink_service.cleanup_expired_deeplinks(
+                        uow
+                    )
 
                 if deleted_count > 0:
                     logger.info("Cleaned up %d expired deeplinks.", deleted_count)

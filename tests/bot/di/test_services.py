@@ -24,12 +24,11 @@ from bot.telegram_bot.types.bots import EventBot
 def test_get_notification_recipient_service() -> None:
     """Test the get_notification_recipient_service provider."""
     # Arrange
-    session_factory = MagicMock()
     cache = MagicMock(spec=CacheService)
     provider = ServicesProvider()
 
     # Act
-    service = provider.get_notification_recipient_service(session_factory, cache)
+    service = provider.get_notification_recipient_service(cache)
 
     # Assert
     assert isinstance(service, NotificationRecipientService)

@@ -5,10 +5,9 @@ import logging
 from pytalk.user import User as TeamTalkUser
 
 from bot.core.enums import NotificationType
-from bot.database.engine import AsyncSessionFactoryType
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode
-from bot.database.uow import SqlModelUnitOfWork
+from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import RecipientDTO
 
@@ -72,26 +71,22 @@ def is_muted(
 class NotificationRecipientService:
     """A service to determine who should receive notifications."""
 
-    def __init__(
-        self, session_factory: AsyncSessionFactoryType, cache: CacheService
-    ) -> None:
+    def __init__(self, cache: CacheService) -> None:
         """Initializes the NotificationRecipientService."""
-        self.session_factory = session_factory
         self.cache = cache
 
     async def find_recipients(
-        self, username_to_check: str, event_type: NotificationType
+        self, uow: IUnitOfWork, username_to_check: str, event_type: NotificationType
     ) -> list[RecipientDTO]:
         """Finds all users who should receive a notification for a given event."""
         subscriber_ids = list(self.cache.get_all_subscriber_ids())
         if not subscriber_ids:
             return []
 
-        async with SqlModelUnitOfWork(self.session_factory) as uow:
-            raw_results = await uow.users.get_notification_recipients(
-                subscriber_ids, username_to_check, event_type
-            )
-            return [
-                RecipientDTO(telegram_id=telegram_id, language_code=lang_code)
-                for telegram_id, lang_code in raw_results
-            ]
+        raw_results = await uow.users.get_notification_recipients(
+            subscriber_ids, username_to_check, event_type
+        )
+        return [
+            RecipientDTO(telegram_id=telegram_id, language_code=lang_code)
+            for telegram_id, lang_code in raw_results
+        ]

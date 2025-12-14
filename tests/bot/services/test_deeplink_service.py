@@ -47,16 +47,14 @@ def mock_translator() -> MagicMock:
 
 @pytest.fixture
 def deeplink_service(
-    mock_uow: AsyncMock,
     mock_subscription_service: AsyncMock,
     mock_cache: MagicMock,
 ) -> DeeplinkService:
-    return DeeplinkService(mock_uow, mock_subscription_service, mock_cache)
+    return DeeplinkService(mock_subscription_service, mock_cache)
 
 
 @pytest.mark.asyncio
 async def test_create_deeplink_success(
-    deeplink_service: DeeplinkService,
     mock_uow: AsyncMock,
 ) -> None:
     """Tests that the create_deeplink static method correctly calls the UoW."""
@@ -67,7 +65,7 @@ async def test_create_deeplink_success(
         expiry_time=datetime.now(UTC) + timedelta(minutes=5),
     )
 
-    result = await deeplink_service.create_deeplink(
+    result = await DeeplinkService.create_deeplink(
         mock_uow, DeeplinkAction.SUBSCRIBE, 300, "test_payload"
     )
 
@@ -413,17 +411,14 @@ async def test_execute_telegram_deeplink_intended_for_different_user(
 
 
 @pytest.mark.asyncio
-async def test_cleanup_expired_deeplinks(
-    deeplink_service: DeeplinkService,
-    mock_uow: AsyncMock,
-) -> None:
+async def test_cleanup_expired_deeplinks(mock_uow: AsyncMock) -> None:
     """Test the cleanup_expired_deeplinks method."""
     # Arrange
     expected_deleted_count = 5
     mock_uow.deeplinks.delete_expired.return_value = expected_deleted_count
 
     # Act
-    deleted_count = await deeplink_service.cleanup_expired_deeplinks()
+    deleted_count = await DeeplinkService.cleanup_expired_deeplinks(mock_uow)
 
     # Assert
     assert deleted_count == expected_deleted_count

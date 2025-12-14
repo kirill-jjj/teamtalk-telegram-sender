@@ -19,12 +19,10 @@ class DeeplinkService:
 
     def __init__(
         self,
-        uow: IUnitOfWork,
         subscription_service: SubscriptionService,
         cache: CacheService,
     ) -> None:
         """Initializes the deeplink service."""
-        self._uow = uow
         self._subscription_service = subscription_service
         self._cache = cache
 
@@ -176,12 +174,14 @@ class DeeplinkService:
         await uow.deeplinks.delete(deeplink)
         return reply_text, True
 
-    async def cleanup_expired_deeplinks(self) -> int:
+    @staticmethod
+    async def cleanup_expired_deeplinks(uow: IUnitOfWork) -> int:
         """Deletes expired deeplinks and returns the count of deleted items.
 
-        The caller is responsible for managing the Unit of Work transaction.
+        Args:
+            uow: The unit of work for the database transaction.
 
         Returns:
             The number of deeplinks that were deleted.
         """
-        return await self._uow.deeplinks.delete_expired()
+        return await uow.deeplinks.delete_expired()

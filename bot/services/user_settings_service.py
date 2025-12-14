@@ -30,14 +30,12 @@ T = TypeVar("T")
 class UserSettingsService:
     """Service for managing user settings."""
 
-    def __init__(self, uow: IUnitOfWork, cache: CacheService) -> None:
+    def __init__(self, cache: CacheService) -> None:
         """Initializes the user settings service.
 
         Args:
-            uow: The unit of work.
             cache: The cache service.
         """
-        self._uow = uow
         self._cache = cache
 
     async def get_user_settings_view(

@@ -9,7 +9,6 @@ from aiogram.types import TelegramObject, User
 from dishka import AsyncContainer
 
 from bot.config import Settings, TelegramSettings
-from bot.database.engine import AsyncSessionFactoryType
 from bot.di.telegram import TelegramProvider, _create_bot
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
@@ -89,7 +88,6 @@ def test_get_telegram_notification_handler() -> None:
     translator_factory = MagicMock()
     event_bus = MagicMock(spec=EventBus)
     recipient_service = MagicMock(spec=NotificationRecipientService)
-    session_factory = MagicMock(spec=AsyncSessionFactoryType)
     app_container = MagicMock(spec=AsyncContainer)
     provider = TelegramProvider()
 
@@ -102,7 +100,6 @@ def test_get_telegram_notification_handler() -> None:
         translator_factory,
         event_bus,
         recipient_service,
-        session_factory,
         app_container,
     )
 

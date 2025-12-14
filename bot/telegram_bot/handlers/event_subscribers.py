@@ -20,7 +20,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from bot.config import Settings
 from bot.core.constants import DEFAULT_LANGUAGE
 from bot.core.enums import NotificationType
-from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
@@ -56,7 +55,6 @@ class TelegramNotificationHandler:
         translator_factory: Callable[[str | None], NullTranslations],
         event_bus: EventBus,
         recipient_service: NotificationRecipientService,
-        session_factory: AsyncSessionFactoryType,
         app_container: AsyncContainer,
     ) -> None:
         """Initializes the TelegramNotificationHandler."""
@@ -67,7 +65,6 @@ class TelegramNotificationHandler:
         self.translator_factory = translator_factory
         self.event_bus = event_bus
         self.recipient_service = recipient_service
-        self.session_factory = session_factory
         self.app_container = app_container
 
     async def on_user_joined(self, event: UserJoinedEvent) -> None:
@@ -76,9 +73,12 @@ class TelegramNotificationHandler:
             logger.debug("User %s is globally ignored. Skipping.", event.username)
             return
 
-        recipients = await self.recipient_service.find_recipients(
-            event.username, NotificationType.JOIN
-        )
+        async with self.app_container() as request_container:
+            uow = await request_container.get(IUnitOfWork)
+            async with uow:
+                recipients = await self.recipient_service.find_recipients(
+                    uow, event.username, NotificationType.JOIN
+                )
         if not recipients:
             return
 
@@ -98,9 +98,12 @@ class TelegramNotificationHandler:
             logger.debug("User %s is globally ignored. Skipping.", event.username)
             return
 
-        recipients = await self.recipient_service.find_recipients(
-            event.username, NotificationType.LEAVE
-        )
+        async with self.app_container() as request_container:
+            uow = await request_container.get(IUnitOfWork)
+            async with uow:
+                recipients = await self.recipient_service.find_recipients(
+                    uow, event.username, NotificationType.LEAVE
+                )
         if not recipients:
             return
 

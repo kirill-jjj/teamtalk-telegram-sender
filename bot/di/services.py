@@ -7,7 +7,6 @@ from aiogram.types import User
 from dishka import Provider, Scope, provide, provide_all
 
 from bot.config import Settings
-from bot.database.engine import AsyncSessionFactoryType
 from bot.database.uow import IUnitOfWork
 from bot.event_bus.bus import EventBus
 from bot.services.admin_service import AdminService
@@ -32,11 +31,10 @@ class ServicesProvider(Provider):
     @provide(scope=Scope.APP)
     @staticmethod
     def get_notification_recipient_service(
-        session_factory: AsyncSessionFactoryType,
         cache: CacheService,
     ) -> NotificationRecipientService:
         """Provides a NotificationRecipientService."""
-        return NotificationRecipientService(session_factory, cache)
+        return NotificationRecipientService(cache)
 
     @provide(scope=Scope.REQUEST)
     @staticmethod

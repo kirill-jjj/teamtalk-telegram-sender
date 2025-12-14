@@ -25,10 +25,8 @@ def mock_cache() -> MagicMock:
 
 
 @pytest.fixture
-def user_settings_service(
-    mock_uow: AsyncMock, mock_cache: MagicMock
-) -> UserSettingsService:
-    return UserSettingsService(mock_uow, mock_cache)
+def user_settings_service(mock_cache: MagicMock) -> UserSettingsService:
+    return UserSettingsService(mock_cache)
 
 
 @pytest.mark.asyncio

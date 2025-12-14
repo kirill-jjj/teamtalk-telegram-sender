@@ -7,7 +7,6 @@ import pytest
 from bot.core.enums import NotificationType
 from bot.database.models import UserSettings
 from bot.database.types import MuteListMode
-from bot.database.uow import SqlModelUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import (
     NotificationRecipientService,
@@ -112,27 +111,19 @@ def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) ->
 @pytest.mark.asyncio
 async def test_find_recipients(mock_cache: MagicMock) -> None:
     """Test the find_recipients method of NotificationRecipientService."""
-    # Mock the session factory
-    mock_session_factory = MagicMock()
-
     # Mock the UoW and repository method
     uow_mock = AsyncMock()
     uow_mock.users.get_notification_recipients = AsyncMock(return_value=[(1, "en")])
 
-    # Temporarily patch SqlModelUnitOfWork to return our UoW mock
-    original_aenter = SqlModelUnitOfWork.__aenter__
-    SqlModelUnitOfWork.__aenter__ = AsyncMock(return_value=uow_mock)
-
-    service = NotificationRecipientService(mock_session_factory, mock_cache)
+    service = NotificationRecipientService(mock_cache)
     subscriber_ids = {1, 2, 3}
     mock_cache.get_all_subscriber_ids.return_value = subscriber_ids
 
-    recipients = await service.find_recipients("test_user", NotificationType.JOIN)
+    recipients = await service.find_recipients(
+        uow_mock, "test_user", NotificationType.JOIN
+    )
 
     assert recipients == [RecipientDTO(telegram_id=1, language_code="en")]
     uow_mock.users.get_notification_recipients.assert_called_once_with(
         list(subscriber_ids), "test_user", NotificationType.JOIN
     )
-
-    # Restore original __aenter__
-    SqlModelUnitOfWork.__aenter__ = original_aenter
