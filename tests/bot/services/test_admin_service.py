@@ -101,7 +101,7 @@ async def test_add_admin_success(
 
     result = await admin_service.add_admin(mock_uow, telegram_id)
 
-    assert result is True
+    assert result.success is True
     mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.admins.add.assert_called_once_with(Admin(telegram_id=telegram_id))
     mock_cache.add_admin.assert_called_once_with(telegram_id)
@@ -122,7 +122,8 @@ async def test_add_admin_already_exists(
 
     result = await admin_service.add_admin(mock_uow, telegram_id)
 
-    assert result is False
+    assert result.success is True
+    assert result.message_key == "admin_add_already_exists"
     mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.admins.add.assert_not_called()
     mock_cache.add_admin.assert_not_called()
@@ -145,7 +146,7 @@ async def test_remove_admin_success(
 
     result = await admin_service.remove_admin(mock_uow, telegram_id)
 
-    assert result is True
+    assert result.success is True
     mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.admins.delete.assert_called_once_with(mock_admin_obj)
     mock_cache.remove_admin.assert_called_once_with(telegram_id)
@@ -166,7 +167,8 @@ async def test_remove_admin_not_exists(
 
     result = await admin_service.remove_admin(mock_uow, telegram_id)
 
-    assert result is False
+    assert result.success is True
+    assert result.message_key == "admin_remove_not_exists"
     mock_uow.admins.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.admins.delete.assert_not_called()
     mock_cache.remove_admin.assert_not_called()
@@ -186,7 +188,7 @@ async def test_add_admin_user_settings_none(
 
     result = await admin_service.add_admin(mock_uow, telegram_id)
 
-    assert result is True
+    assert result.success is True
     mock_uow.admins.add.assert_called_once_with(Admin(telegram_id=telegram_id))
     mock_cache.add_admin.assert_called_once_with(telegram_id)
     mock_event_bus.publish.assert_called_once_with(
@@ -208,7 +210,7 @@ async def test_remove_admin_user_settings_none(
 
     result = await admin_service.remove_admin(mock_uow, telegram_id)
 
-    assert result is True
+    assert result.success is True
     mock_uow.admins.delete.assert_called_once_with(mock_admin_obj)
     mock_cache.remove_admin.assert_called_once_with(telegram_id)
     mock_event_bus.publish.assert_called_once_with(
@@ -233,8 +235,8 @@ async def test_add_admins_in_batch(
 
     result = await admin_service.add_admins_in_batch(mock_uow, telegram_ids)
 
-    assert result.successful_ids == [101, 103]
-    assert result.failed_ids == [102]
+    assert sorted(result.successful_ids) == [101, 102, 103]
+    assert result.failed_ids == []
     expected_calls = 2
     assert mock_uow.admins.add.call_count == expected_calls
     assert mock_cache.add_admin.call_count == expected_calls
@@ -260,8 +262,8 @@ async def test_remove_admins_in_batch(
 
     result = await admin_service.remove_admins_in_batch(mock_uow, telegram_ids)
 
-    assert result.successful_ids == [201, 203]
-    assert result.failed_ids == [202]
+    assert sorted(result.successful_ids) == [201, 202, 203]
+    assert result.failed_ids == []
     expected_calls = 2
     assert mock_uow.admins.delete.call_count == expected_calls
     assert mock_cache.remove_admin.call_count == expected_calls

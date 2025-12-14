@@ -79,7 +79,7 @@ async def set_language(
         return
 
     async with uow:
-        updated_settings = await user_settings_service.update_language(
+        result = await user_settings_service.update_language(
             uow,
             telegram_id=query.from_user.id,
             new_lang_code=new_lang_code,
@@ -87,7 +87,7 @@ async def set_language(
         )
         await uow.commit()
 
-    if updated_settings:
+    if result.success and result.message_key == "settings_update_success":
         new_translator = translator_factory(new_lang_code)
         await update_user_bot_commands(
             telegram_id=query.from_user.id,
@@ -98,7 +98,8 @@ async def set_language(
         )
         await query.answer(new_translator.gettext("Language has been changed."))
         await refresh_main_settings_view(query, new_translator)
-    else:
+    elif not result.success:
         await query.answer(
             _("An error occurred. Please try again later."), show_alert=True
         )
+    # If the language was not changed (already set), do nothing.

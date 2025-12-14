@@ -1,6 +1,5 @@
 import pytest
 
-from bot.database.models import UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
 from bot.services.schemas import (
     AccountManagementData,
@@ -127,18 +126,15 @@ def test_paginated_result_valid_data(
 
 def test_operation_result_valid_data() -> None:
     """Test OperationResult with valid data."""
-    user_settings = UserSettings(telegram_id=1, language_code="en")
     dto = OperationResult(
         success=True,
         message_key="success_message",
         message_args={"key": "value"},
-        user_settings=user_settings,
         long_message="Detailed success message",
     )
     assert dto.success is True
     assert dto.message_key == "success_message"
     assert dto.message_args == {"key": "value"}
-    assert dto.user_settings == user_settings
     assert dto.long_message == "Detailed success message"
 
 
@@ -146,7 +142,6 @@ def test_operation_result_optional_fields() -> None:
     """Test OperationResult with optional fields as None."""
     dto = OperationResult(success=False, message_key="error_message")
     assert dto.message_args is None
-    assert dto.user_settings is None
     assert dto.long_message is None
 
 

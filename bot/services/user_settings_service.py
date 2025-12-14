@@ -15,6 +15,7 @@ from bot.services.schemas import (
     AccountManagementData,
     ManageMutedMenuDTO,
     MuteListDisplayDTO,
+    OperationResult,
     SettingsViewDTO,
     SubscriberView,
 )
@@ -160,7 +161,7 @@ class UserSettingsService:
         new_value: T,
         log_context: str,
         uow: IUnitOfWork,
-    ) -> UserSettings | None:
+    ) -> OperationResult:
         """A generic helper to update a field on the UserSettings model."""
         telegram_id = user_settings.telegram_id
         current_value = getattr(user_settings, field_name)
@@ -173,12 +174,13 @@ class UserSettingsService:
                 new_value,
                 log_context,
             )
-            return None
+            return OperationResult(
+                success=True, message_key="settings_update_no_change"
+            )
 
         setattr(user_settings, field_name, new_value)
         try:
             await uow.users.save(user_settings)
-
             self._cache.update_user_settings(user_settings)
             logger.debug(
                 "User %s setting '%s' updated to '%s' by %s.",
@@ -187,6 +189,7 @@ class UserSettingsService:
                 new_value,
                 log_context,
             )
+            return OperationResult(success=True, message_key="settings_update_success")
         except SQLAlchemyError:
             logger.exception(
                 "Failed to update %s for user %s to '%s'%s.",
@@ -197,9 +200,7 @@ class UserSettingsService:
             )
             # Revert in-memory change on failure
             setattr(user_settings, field_name, current_value)
-            return None
-        else:
-            return user_settings
+            return OperationResult(success=False, message_key="settings_update_error")
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def update_language(
@@ -208,7 +209,7 @@ class UserSettingsService:
         telegram_id: int,
         new_lang_code: str,
         actor: Actor = Actor.USER,
-    ) -> UserSettings | None:
+    ) -> OperationResult:
         """Updates the language for a user and refreshes their bot commands."""
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
@@ -217,7 +218,7 @@ class UserSettingsService:
                 "Failed to update language for user %s: UserSettings not found.",
                 telegram_id,
             )
-            return None
+            return OperationResult(success=False, message_key="user_not_found_error")
 
         return await self._update_setting(
             user_settings,
@@ -234,7 +235,7 @@ class UserSettingsService:
         telegram_id: int,
         new_mode: MuteListMode,
         actor: Actor = Actor.USER,
-    ) -> UserSettings | None:
+    ) -> OperationResult:
         """Sets the mute list mode for a user."""
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
@@ -243,7 +244,7 @@ class UserSettingsService:
                 "Failed to update mute mode for user %s: UserSettings not found.",
                 telegram_id,
             )
-            return None
+            return OperationResult(success=False, message_key="user_not_found_error")
 
         return await self._update_setting(
             user_settings, "mute_list_mode", new_mode, log_context, uow=uow
@@ -256,7 +257,7 @@ class UserSettingsService:
         telegram_id: int,
         new_pref: NotificationSetting,
         actor: Actor = Actor.USER,
-    ) -> UserSettings | None:
+    ) -> OperationResult:
         """Sets the notification preference for a user."""
         log_context = f" by {actor.value}"
         user_settings = await uow.users.get_by_id(telegram_id)
@@ -266,7 +267,7 @@ class UserSettingsService:
                 "UserSettings not found.",
                 telegram_id,
             )
-            return None
+            return OperationResult(success=False, message_key="user_not_found_error")
 
         return await self._update_setting(
             user_settings,
@@ -282,7 +283,7 @@ class UserSettingsService:
         uow: IUnitOfWork,
         telegram_id: int,
         actor: Actor = Actor.USER,
-    ) -> UserSettings | None:
+    ) -> OperationResult:
         """Toggles the NOON (Not On Online Notifications) setting for a user."""
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
@@ -290,12 +291,12 @@ class UserSettingsService:
                 "Failed to toggle NOON setting for user %s: UserSettings not found.",
                 telegram_id,
             )
-            return None
+            return OperationResult(success=False, message_key="user_not_found_error")
 
         new_noon_value = not user_settings.not_on_online_enabled
         log_context = f" by {actor.value} (toggle NOON)"
 
-        updated_settings = await self._update_setting(
+        toggle_result = await self._update_setting(
             user_settings,
             "not_on_online_enabled",
             new_noon_value,
@@ -303,13 +304,11 @@ class UserSettingsService:
             uow=uow,
         )
 
-        if not updated_settings:
-            return None
+        if not toggle_result.success:
+            return toggle_result
 
-        if (
-            updated_settings.not_on_online_enabled
-            and not user_settings.not_on_online_confirmed
-        ):
+        # If the setting was just enabled and never confirmed before, confirm it.
+        if new_noon_value and not user_settings.not_on_online_confirmed:
             confirm_log_context = f" by {actor.value} (confirm NOON after toggle)"
             return await self._update_setting(
                 user_settings=user_settings,
@@ -319,7 +318,7 @@ class UserSettingsService:
                 uow=uow,
             )
 
-        return updated_settings
+        return toggle_result
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def unlink_tt_account(
@@ -327,19 +326,19 @@ class UserSettingsService:
         uow: IUnitOfWork,
         telegram_id: int,
         actor: Actor = Actor.ADMIN,
-    ) -> tuple[UserSettings | None, str | None]:
+    ) -> OperationResult:
         """Unlinks a TeamTalk account from a user's settings."""
         user_settings = await uow.users.get_by_id(telegram_id)
         if not user_settings:
-            return None, None
+            return OperationResult(success=False, message_key="user_not_found_error")
 
-        original_username = user_settings.teamtalk_username
-        if not original_username:
-            return user_settings, None
+        if not user_settings.teamtalk_username:
+            return OperationResult(
+                success=True, message_key="settings_account_already_unlinked"
+            )
 
         log_context = f" by {actor.value}"
 
-        updated_settings = await self._update_setting(
+        return await self._update_setting(
             user_settings, "teamtalk_username", None, log_context, uow=uow
         )
-        return updated_settings, original_username

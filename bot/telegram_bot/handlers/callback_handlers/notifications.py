@@ -66,34 +66,33 @@ async def toggle_noon_setting(
 ) -> None:
     """Handles toggling the NOON (Not on Online) setting."""
     _ = translator.gettext
+    telegram_id = query.from_user.id
+    default_lang = translator.info().get("language", "en")
+
     async with uow:
-        updated_settings = await user_settings_service.toggle_noon_setting(
-            uow, telegram_id=query.from_user.id, actor=Actor.USER
+        result = await user_settings_service.toggle_noon_setting(
+            uow, telegram_id=telegram_id, actor=Actor.USER
         )
         await uow.commit()
 
-    if not updated_settings:
+    if not result.success:
         await query.answer(
             _("Failed to update NOON setting. Please try again."), show_alert=True
         )
         return
 
+    # After a successful update, re-fetch the complete view model.
+    async with uow:
+        user_settings_dto = await user_settings_service.get_user_settings_view(
+            uow, telegram_id, default_lang
+        )
+
     new_status_display_text = (
-        _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
+        _("Enabled") if user_settings_dto.not_on_online_enabled else _("Disabled")
     )
     message = _("NOON (Not on Online) is now {status}.").format(
         status=new_status_display_text
     )
     await query.answer(message)
 
-    user_settings_dto = SettingsViewDTO(
-        telegram_id=updated_settings.telegram_id,
-        language_code=updated_settings.language_code,
-        notification_settings=updated_settings.notification_settings,
-        mute_list_mode=updated_settings.mute_list_mode,
-        not_on_online_enabled=updated_settings.not_on_online_enabled,
-        not_on_online_confirmed=updated_settings.not_on_online_confirmed,
-        teamtalk_username=updated_settings.teamtalk_username,
-        muted_users_count=len(updated_settings.muted_users_list),
-    )
     await refresh_notification_settings_view(query, translator, user_settings_dto)

@@ -277,7 +277,6 @@ class ModerationService:
             success=True,
             message_key=message_text,
             message_args={"username": tt_username_to_toggle},
-            user_settings=user_settings,
         )
 
     async def get_target_username_for_toggle(

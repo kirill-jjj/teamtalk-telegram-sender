@@ -94,7 +94,8 @@ async def test_update_language_success(
         mock_uow, telegram_id, new_lang_code
     )
 
-    assert result.language_code == new_lang_code
+    assert result.success is True
+    assert user_settings.language_code == new_lang_code
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
@@ -116,7 +117,8 @@ async def test_update_language_no_change(
         mock_uow, telegram_id, new_lang_code
     )
 
-    assert result is None
+    assert result.success is True
+    assert result.message_key == "settings_update_no_change"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
     mock_cache.update_user_settings.assert_not_called()
@@ -138,7 +140,8 @@ async def test_update_language_user_not_found(
         mock_uow, telegram_id, new_lang_code
     )
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "user_not_found_error"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
     mock_cache.update_user_settings.assert_not_called()
@@ -162,7 +165,8 @@ async def test_update_language_sqlalchemy_error(
         mock_uow, telegram_id, new_lang_code
     )
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "settings_update_error"
     assert user_settings.language_code == "en"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_called_once_with(user_settings)
@@ -190,7 +194,8 @@ async def test_update_mute_mode_success(
         mock_uow, telegram_id, new_mode
     )
 
-    assert result.mute_list_mode == new_mode
+    assert result.success is True
+    assert user_settings.mute_list_mode == new_mode
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
@@ -211,7 +216,8 @@ async def test_update_mute_mode_user_not_found(
         mock_uow, telegram_id, new_mode
     )
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "user_not_found_error"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
 
@@ -236,7 +242,8 @@ async def test_update_notification_preference_success(
         mock_uow, telegram_id, new_pref
     )
 
-    assert result.notification_settings == new_pref
+    assert result.success is True
+    assert user_settings.notification_settings == new_pref
     mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
     mock_uow.rollback.assert_not_called()
@@ -256,7 +263,8 @@ async def test_update_notification_preference_user_not_found(
         mock_uow, telegram_id, new_pref
     )
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "user_not_found_error"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
 
@@ -279,8 +287,9 @@ async def test_toggle_noon_setting_enable(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result.not_on_online_enabled is True
-    assert result.not_on_online_confirmed is True
+    assert result.success is True
+    assert user_settings.not_on_online_enabled is True
+    assert user_settings.not_on_online_confirmed is True
     expected_calls = 2
     assert mock_uow.users.save.call_count == expected_calls
     assert mock_cache.update_user_settings.call_count == expected_calls
@@ -304,8 +313,9 @@ async def test_toggle_noon_setting_disable(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result.not_on_online_enabled is False
-    assert result.not_on_online_confirmed is True
+    assert result.success is True
+    assert user_settings.not_on_online_enabled is False
+    assert user_settings.not_on_online_confirmed is True
     expected_calls = 1
     assert mock_uow.users.save.call_count == expected_calls
     assert mock_cache.update_user_settings.call_count == expected_calls
@@ -321,7 +331,8 @@ async def test_toggle_noon_setting_user_not_found(
 
     result = await user_settings_service.toggle_noon_setting(mock_uow, telegram_id)
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "user_not_found_error"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
 
@@ -345,7 +356,8 @@ async def test_toggle_noon_setting_update_fails(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result is None
+    assert result.success is False
+    assert result.message_key == "settings_update_error"
     mock_uow.users.get_by_id.assert_called_once_with(user_settings.telegram_id)
     assert mock_uow.users.save.call_count == 1
     mock_cache.update_user_settings.assert_not_called()
@@ -362,12 +374,12 @@ async def test_unlink_tt_account_success(
     )
     mock_uow.users.get_by_id.return_value = user_settings
 
-    result_settings, result_username = await user_settings_service.unlink_tt_account(
+    result = await user_settings_service.unlink_tt_account(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result_settings.teamtalk_username is None
-    assert result_username == "linked_tt_user"
+    assert result.success is True
+    assert user_settings.teamtalk_username is None
     mock_uow.users.save.assert_called_once_with(user_settings)
     mock_cache.update_user_settings.assert_called_once_with(user_settings)
 
@@ -383,12 +395,12 @@ async def test_unlink_tt_account_no_account_linked(
     )
     mock_uow.users.get_by_id.return_value = user_settings
 
-    result_settings, result_username = await user_settings_service.unlink_tt_account(
+    result = await user_settings_service.unlink_tt_account(
         mock_uow, user_settings.telegram_id
     )
 
-    assert result_settings is not None
-    assert result_username is None
+    assert result.success is True
+    assert result.message_key == "settings_account_already_unlinked"
     mock_uow.users.save.assert_not_called()
     mock_cache.update_user_settings.assert_not_called()
 
@@ -401,12 +413,10 @@ async def test_unlink_tt_account_user_not_found(
     telegram_id = 123
     mock_uow.users.get_by_id.return_value = None
 
-    result_settings, result_username = await user_settings_service.unlink_tt_account(
-        mock_uow, telegram_id
-    )
+    result = await user_settings_service.unlink_tt_account(mock_uow, telegram_id)
 
-    assert result_settings is None
-    assert result_username is None
+    assert result.success is False
+    assert result.message_key == "user_not_found_error"
     mock_uow.users.get_by_id.assert_called_once_with(telegram_id)
     mock_uow.users.save.assert_not_called()
 

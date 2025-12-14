@@ -411,19 +411,22 @@ async def admin_toggle_noon(
     _ = translator.gettext
     target_telegram_id = callback_data.target_telegram_id
 
+    # We need the pre-update state for the toast message
     async with uow:
-        updated_settings = await user_settings_service.toggle_noon_setting(
+        user_settings_before = await user_settings_service.get_or_create(
+            uow, target_telegram_id, "en"
+        )
+        result = await user_settings_service.toggle_noon_setting(
             uow, target_telegram_id, actor=Actor.ADMIN
         )
         await uow.commit()
 
-    if updated_settings:
-        status = (
-            _("Enabled") if updated_settings.not_on_online_enabled else _("Disabled")
-        )
+    if result.success:
+        new_status = not user_settings_before.not_on_online_enabled
+        status_text = _("Enabled") if new_status else _("Disabled")
         await query.answer(
             _("NOON for subscriber {tg_id} set to: {status}.").format(
-                tg_id=target_telegram_id, status=status
+                tg_id=target_telegram_id, status=status_text
             )
         )
         await _refresh_subscriber_view(
@@ -609,12 +612,12 @@ async def admin_set_language(
     target_telegram_id = callback_data.target_telegram_id
 
     async with uow:
-        updated_settings = await user_settings_service.update_language(
+        result = await user_settings_service.update_language(
             uow, target_telegram_id, callback_data.lang_code, Actor.ADMIN
         )
         await uow.commit()
 
-    if updated_settings:
+    if result.success and result.message_key != "settings_update_no_change":
         success_msg = _("Language for subscriber {tg_id} changed to {value}.").format(
             tg_id=target_telegram_id, value=callback_data.lang_code
         )
@@ -627,7 +630,7 @@ async def admin_set_language(
             user_settings_service=user_settings_service,
             uow=uow,
         )
-    else:
+    elif not result.success:
         await query.answer(
             _("An error occurred. Please try again later."), show_alert=True
         )
@@ -651,12 +654,12 @@ async def admin_set_notification_pref(
     new_pref = NotificationSetting(callback_data.setting_value)
 
     async with uow:
-        updated_settings = await user_settings_service.update_notification_preference(
+        result = await user_settings_service.update_notification_preference(
             uow, target_telegram_id, new_pref, Actor.ADMIN
         )
         await uow.commit()
 
-    if updated_settings:
+    if result.success and result.message_key != "settings_update_no_change":
         success_msg = _(
             "Notification preference for subscriber {tg_id} set to: {value}."
         ).format(tg_id=target_telegram_id, value=new_pref.value)
@@ -669,7 +672,7 @@ async def admin_set_notification_pref(
             user_settings_service=user_settings_service,
             uow=uow,
         )
-    else:
+    elif not result.success:
         await query.answer(
             _("An error occurred. Please try again later."), show_alert=True
         )
@@ -690,12 +693,12 @@ async def admin_set_mute_mode(
     target_telegram_id = callback_data.target_telegram_id
 
     async with uow:
-        updated_settings = await user_settings_service.update_mute_mode(
+        result = await user_settings_service.update_mute_mode(
             uow, target_telegram_id, callback_data.mode, Actor.ADMIN
         )
         await uow.commit()
 
-    if updated_settings:
+    if result.success and result.message_key != "settings_update_no_change":
         success_msg = _(
             "Mute list mode for subscriber {tg_id} set to: {value}."
         ).format(tg_id=target_telegram_id, value=callback_data.mode.value)
@@ -708,7 +711,7 @@ async def admin_set_mute_mode(
             user_settings_service=user_settings_service,
             uow=uow,
         )
-    else:
+    elif not result.success:
         await query.answer(
             _("An error occurred. Please try again later."), show_alert=True
         )
@@ -945,28 +948,36 @@ async def unlink_tt_account(
     return_page = callback_data.page
 
     async with uow:
-        (
-            updated_settings,
-            original_username,
-        ) = await user_settings_service.unlink_tt_account(
+        # First, get the current username for the success message.
+        account_data = await user_settings_service.get_account_management_data(
+            uow, target_telegram_id
+        )
+        original_username = account_data.current_tt_username
+
+        result = await user_settings_service.unlink_tt_account(
             uow, target_telegram_id, actor=Actor.ADMIN
         )
         await uow.commit()
 
-    if not updated_settings:
+    if not result.success:
         await query.answer(
             _("Failed to unlink account. Please try again."), show_alert=True
         )
         return
 
-    if original_username is None:
+    if result.message_key == "settings_account_already_unlinked":
         await query.answer(_("Account was not linked."), show_alert=False)
         return
 
-    toast_message = _("Account {username} has been unlinked.").format(
-        username=original_username
-    )
-    await query.answer(toast_message, show_alert=True)
+    # On successful unlinking
+    if original_username:
+        toast_message = _("Account {username} has been unlinked.").format(
+            username=original_username
+        )
+        await query.answer(toast_message, show_alert=True)
+    else:
+        # Fallback message if for some reason the original username wasn't fetched
+        await query.answer(_("Account has been unlinked."), show_alert=True)
 
     keyboard = create_manage_tt_account_keyboard(
         translator,

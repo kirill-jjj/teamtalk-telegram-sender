@@ -5,7 +5,6 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel, Field
 
 from bot.core.enums import DeeplinkAction
-from bot.database.models import UserSettings
 from bot.database.types import MuteListMode, NotificationSetting
 
 
@@ -62,7 +61,6 @@ class OperationResult(BaseModel):
     success: bool
     message_key: str
     message_args: dict[str, Any] | None = Field(default=None)
-    user_settings: UserSettings | None = Field(default=None)
     long_message: str | None = Field(default=None)
 
 

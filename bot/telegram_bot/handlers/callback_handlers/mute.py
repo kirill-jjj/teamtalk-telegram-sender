@@ -254,13 +254,14 @@ async def set_mute_mode(
     new_mode = callback_data.mode
 
     async with uow:
+        # First, ensure the user settings exist.
         user_settings = await user_settings_service.get_or_create(
             uow, callback_query.from_user.id, "en"
         )
         if new_mode.value == user_settings.mute_list_mode:
             return
 
-        updated_user_settings = await user_settings_service.update_mute_mode(
+        result = await user_settings_service.update_mute_mode(
             uow,
             telegram_id=callback_query.from_user.id,
             new_mode=new_mode,
@@ -268,23 +269,29 @@ async def set_mute_mode(
         )
         await uow.commit()
 
-    if not updated_user_settings:
+    if not result.success:
         await callback_query.answer(
             _("An error occurred. Please try again later."), show_alert=True
         )
         return
 
-    mode_text = (
-        _("Blacklist")
-        if updated_user_settings.mute_list_mode == MuteListMode.blacklist
-        else _("Whitelist")
-    )
+    # Refetch the data needed for the view after a successful update.
+    async with uow:
+        manage_muted_menu_data = await user_settings_service.get_manage_muted_menu_data(
+            uow, callback_query.from_user.id, settings.general.default_lang
+        )
+
+    if not manage_muted_menu_data:
+        # This case is unlikely if the update succeeded, but handle it defensively.
+        await callback_query.answer(
+            _("An error occurred while refreshing the view."), show_alert=True
+        )
+        return
+
+    mode_text = _("Blacklist") if new_mode == MuteListMode.blacklist else _("Whitelist")
     success_toast_text = _("Mute list mode set to {mode}.").format(mode=mode_text)
     await callback_query.answer(success_toast_text)
-    manage_muted_menu_data = ManageMutedMenuDTO(
-        mute_list_mode=updated_user_settings.mute_list_mode,
-        not_on_online_enabled=updated_user_settings.not_on_online_enabled,
-    )
+
     await refresh_manage_muted_menu(
         callback_query,
         translator,
@@ -400,12 +407,23 @@ async def toggle_user_mute(
     report_service: FromDishka[ReportService],
     uow: Annotated[IUnitOfWork, FromDishka()],
     user_settings_service: FromDishka[UserSettingsService],
+    settings: FromDishka[Settings],
 ) -> None:
     """Handles the action of toggling the mute status for a specific user."""
+    _ = translator.gettext
+    user_id = callback_query.from_user.id
+    lang_code = translator.info().get("language", settings.general.default_lang)
+
     async with uow:
+        # Pre-fetch settings to know the current mute mode for the toast message
+        user_settings = await user_settings_service.get_or_create(
+            uow, user_id, lang_code
+        )
+        current_mode = user_settings.mute_list_mode
+
         toggle_result = await moderation_service.toggle_mute_from_paginated_list(
             uow,
-            telegram_id=callback_query.from_user.id,
+            telegram_id=user_id,
             list_type=callback_data.list_type,
             page=callback_data.current_page,
             index_on_page=callback_data.user_idx,
@@ -414,36 +432,31 @@ async def toggle_user_mute(
         await uow.commit()
 
     toast_message = format_mute_toast(
-        username_to_toggle=toggle_result.message_args["username"]
-        if toggle_result.message_args
-        else "",
-        was_added_to_list=toggle_result.message_key
-        == translator.gettext("User {username} has been successfully muted."),
-        current_mode=toggle_result.user_settings.mute_list_mode
-        if toggle_result.user_settings
-        else MuteListMode.blacklist,  # Default to blacklist if None
+        username_to_toggle=(
+            toggle_result.message_args["username"]
+            if toggle_result.message_args and "username" in toggle_result.message_args
+            else ""
+        ),
+        was_added_to_list="unmuted" not in toggle_result.message_key,
+        current_mode=current_mode,
         translator=translator,
     )
     await callback_query.answer(toast_message, show_alert=not toggle_result.success)
 
-    _ = translator.gettext
-
-    if toggle_result.success and toggle_result.user_settings:
-        # Fetch the updated mute list display data
-
+    if toggle_result.success:
         async with uow:
             mute_list_display_data = (
                 await user_settings_service.get_mute_list_display_data(
                     uow,
-                    callback_query.from_user.id,
-                    translator.info().get("language", "en"),  # Use current language
+                    user_id,
+                    lang_code,
                     cast("EventBot", callback_query.bot),
                 )
             )
         if not mute_list_display_data:
             logger.warning(
                 "Could not retrieve mute list display data for user %s after toggle.",
-                callback_query.from_user.id,
+                user_id,
             )
             await callback_query.answer(
                 _("An error occurred. Please try again later."), show_alert=True
