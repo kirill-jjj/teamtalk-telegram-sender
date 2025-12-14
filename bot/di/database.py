@@ -18,7 +18,7 @@ class DatabaseProvider(Provider):
         """Provides the database session factory."""
         return create_session_factory(settings)
 
-    @provide
+    @provide(scope=Scope.REQUEST)
     @staticmethod
     def get_uow(
         factory: AsyncSessionFactoryType,
