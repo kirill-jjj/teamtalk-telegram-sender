@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.core.enums import UserListAction
 from bot.database.types import MuteListMode
-from bot.services.notification_service import is_muted  # Updated import
+from bot.services.notification_service import NotificationRecipientService
 from bot.telegram_bot.callback_data import PaginateUsersCallback, ToggleMuteCallback
 
 
@@ -216,7 +216,9 @@ def create_toggle_mute_keyboard(
     for idx, item in enumerate(page_items):
         username_str = item_username_extractor(item)
         display_name_on_button = item_display_name_extractor(item)
-        is_user_muted = is_muted(username_str, mute_list_mode, muted_usernames)
+        is_user_muted = NotificationRecipientService.is_muted(
+            username_str, mute_list_mode, muted_usernames
+        )
         if is_user_muted:
             button_text = _("{item_display_name} (Status: Muted)").format(
                 item_display_name=display_name_on_button

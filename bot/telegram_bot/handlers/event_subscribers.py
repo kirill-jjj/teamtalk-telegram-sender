@@ -25,7 +25,6 @@ from bot.event_bus.bus import EventBus
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import (
     NotificationRecipientService,
-    should_send_silently,
 )
 from bot.services.schemas import RecipientDTO
 from bot.services.subscription_service import SubscriptionService
@@ -279,8 +278,8 @@ class TelegramNotificationHandler:
                 else None
             )
 
-            send_silently = should_send_silently(
-                chat_id, self.cache, online_users_cache_for_instance
+            send_silently = self.recipient_service.should_send_silently(
+                chat_id, online_users_cache_for_instance
             )
 
             await send_telegram_message(

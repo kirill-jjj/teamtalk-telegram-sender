@@ -14,60 +14,6 @@ from bot.services.schemas import RecipientDTO
 logger = logging.getLogger(__name__)
 
 
-def is_user_subject_to_noon_check(user_settings: UserSettings | None) -> bool:
-    """Checks if a user has NOON enabled and confirmed."""
-    if not user_settings:
-        return False
-    return user_settings.not_on_online_enabled and user_settings.not_on_online_confirmed
-
-
-def should_send_silently(
-    chat_id: int,
-    cache: CacheService,
-    online_users_cache: dict[int, TeamTalkUser] | None,
-) -> bool:
-    """Determmunes if a message to a chat_id should be sent silently based on NOON."""
-    recipient_settings = cache.get_user_settings(chat_id)
-    if not is_user_subject_to_noon_check(recipient_settings):
-        return False
-
-    if online_users_cache and is_linked_user_online(chat_id, cache, online_users_cache):
-        logger.debug(
-            "Message to %s will be silent: linked user is online and NOON is enabled.",
-            chat_id,
-        )
-        return True
-
-    return False
-
-
-def is_linked_user_online(
-    telegram_id: int,
-    cache: CacheService,
-    online_users_cache: dict[int, TeamTalkUser],
-) -> bool:
-    """Checks if the TeamTalk user linked to the given telegram_id is online."""
-    user_settings = cache.get_user_settings(telegram_id)
-    if not user_settings or not user_settings.teamtalk_username:
-        return False
-
-    linked_tt_username = user_settings.teamtalk_username
-    return any(
-        tt_user_obj.username == linked_tt_username
-        for tt_user_obj in online_users_cache.values()
-    )
-
-
-def is_muted(
-    username: str, mute_list_mode: MuteListMode, muted_usernames_set: set[str]
-) -> bool:
-    """Determines if a username is muted based on user settings."""
-    is_in_set = username in muted_usernames_set
-    if mute_list_mode == MuteListMode.whitelist:
-        return not is_in_set  # In whitelist, not in set -> muted
-    return is_in_set  # In blacklist, in set -> muted
-
-
 class NotificationRecipientService:
     """A service to determine who should receive notifications."""
 
@@ -90,3 +36,64 @@ class NotificationRecipientService:
             RecipientDTO(telegram_id=telegram_id, language_code=lang_code)
             for telegram_id, lang_code in raw_results
         ]
+
+    @staticmethod
+    def is_user_subject_to_noon_check(
+        user_settings: UserSettings | None,
+    ) -> bool:
+        """Checks if a user has NOON enabled and confirmed."""
+        if not user_settings:
+            return False
+        return (
+            user_settings.not_on_online_enabled
+            and user_settings.not_on_online_confirmed
+        )
+
+    def should_send_silently(
+        self,
+        chat_id: int,
+        online_users_cache: dict[int, TeamTalkUser] | None,
+    ) -> bool:
+        """Determines if a message should be sent silently based on NOON settings."""
+        recipient_settings = self.cache.get_user_settings(chat_id)
+        if not NotificationRecipientService.is_user_subject_to_noon_check(
+            recipient_settings
+        ):
+            return False
+
+        if online_users_cache and self.is_linked_user_online(
+            chat_id, online_users_cache
+        ):
+            logger.debug(
+                "Message to %s will be silent: linked user is online, NOON enabled.",
+                chat_id,
+            )
+            return True
+
+        return False
+
+    def is_linked_user_online(
+        self,
+        telegram_id: int,
+        online_users_cache: dict[int, TeamTalkUser],
+    ) -> bool:
+        """Checks if the TeamTalk user linked to the given telegram_id is online."""
+        user_settings = self.cache.get_user_settings(telegram_id)
+        if not user_settings or not user_settings.teamtalk_username:
+            return False
+
+        linked_tt_username = user_settings.teamtalk_username
+        return any(
+            tt_user_obj.username == linked_tt_username
+            for tt_user_obj in online_users_cache.values()
+        )
+
+    @staticmethod
+    def is_muted(
+        username: str, mute_list_mode: MuteListMode, muted_usernames_set: set[str]
+    ) -> bool:
+        """Determines if a username is muted based on user settings."""
+        is_in_set = username in muted_usernames_set
+        if mute_list_mode == MuteListMode.whitelist:
+            return not is_in_set  # In whitelist, not in set -> muted
+        return is_in_set  # In blacklist, in set -> muted

@@ -10,18 +10,34 @@ from bot.database.types import MuteListMode
 from bot.services.cache_service import CacheService
 from bot.services.notification_service import (
     NotificationRecipientService,
-    is_linked_user_online,
-    is_muted,
-    is_user_subject_to_noon_check,
-    should_send_silently,
 )
 from bot.services.schemas import RecipientDTO
+
+
+@pytest.fixture
+def mock_cache() -> MagicMock:
+    return MagicMock(spec=CacheService)
+
+
+@pytest.fixture
+def service(mock_cache: MagicMock) -> NotificationRecipientService:
+    return NotificationRecipientService(cache=mock_cache)
+
+
+@pytest.fixture
+def mock_online_users() -> dict:
+    user1 = MagicMock()
+    user1.username = "test_user"
+    return {1: user1}
 
 
 @pytest.mark.parametrize(
     ("user_settings", "expected"),
     [
-        (UserSettings(not_on_online_enabled=True, not_on_online_confirmed=True), True),
+        (
+            UserSettings(not_on_online_enabled=True, not_on_online_confirmed=True),
+            True,
+        ),
         (
             UserSettings(not_on_online_enabled=False, not_on_online_confirmed=True),
             False,
@@ -34,10 +50,13 @@ from bot.services.schemas import RecipientDTO
     ],
 )
 def test_is_user_subject_to_noon_check(
-    user_settings: UserSettings | None, *, expected: bool
+    service: NotificationRecipientService,
+    user_settings: UserSettings | None,
+    *,
+    expected: bool,
 ) -> None:
-    """Test the is_user_subject_to_noon_check function."""
-    assert is_user_subject_to_noon_check(user_settings) == expected
+    """Test the is_user_subject_to_noon_check method."""
+    assert service.is_user_subject_to_noon_check(user_settings) == expected
 
 
 @pytest.mark.parametrize(
@@ -50,46 +69,47 @@ def test_is_user_subject_to_noon_check(
     ],
 )
 def test_is_muted(
-    username: str, mode: MuteListMode, muted_set: set[str], *, expected: bool
+    service: NotificationRecipientService,
+    username: str,
+    mode: MuteListMode,
+    muted_set: set[str],
+    *,
+    expected: bool,
 ) -> None:
-    """Test the is_muted function."""
-    assert is_muted(username, mode, muted_set) == expected
+    """Test the is_muted static method."""
+    assert service.is_muted(username, mode, muted_set) == expected
 
 
-@pytest.fixture
-def mock_cache() -> MagicMock:
-    return MagicMock(spec=CacheService)
-
-
-@pytest.fixture
-def mock_online_users() -> dict:
-    user1 = MagicMock()
-    user1.username = "test_user"
-    return {1: user1}
-
-
-def test_is_linked_user_online(mock_cache: MagicMock, mock_online_users: dict) -> None:
+def test_is_linked_user_online(
+    service: NotificationRecipientService,
+    mock_cache: MagicMock,
+    mock_online_users: dict,
+) -> None:
+    """Test the is_linked_user_online method."""
     mock_cache.get_user_settings.return_value = UserSettings(
         teamtalk_username="test_user"
     )
-    assert is_linked_user_online(123, mock_cache, mock_online_users) is True
+    assert service.is_linked_user_online(123, mock_online_users) is True
 
     mock_cache.get_user_settings.return_value = UserSettings(
         teamtalk_username="another_user"
     )
-    assert is_linked_user_online(123, mock_cache, mock_online_users) is False
+    assert service.is_linked_user_online(123, mock_online_users) is False
 
 
-def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) -> None:
-    """Test the should_send_silently function."""
-
+def test_should_send_silently(
+    service: NotificationRecipientService,
+    mock_cache: MagicMock,
+    mock_online_users: dict,
+) -> None:
+    """Test the should_send_silently method."""
     # NOON enabled and user online
     mock_cache.get_user_settings.return_value = UserSettings(
         not_on_online_enabled=True,
         not_on_online_confirmed=True,
         teamtalk_username="test_user",
     )
-    assert should_send_silently(123, mock_cache, mock_online_users) is True
+    assert service.should_send_silently(123, mock_online_users) is True
 
     # NOON disabled
     mock_cache.get_user_settings.return_value = UserSettings(
@@ -97,7 +117,7 @@ def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) ->
         not_on_online_confirmed=True,
         teamtalk_username="test_user",
     )
-    assert should_send_silently(123, mock_cache, mock_online_users) is False
+    assert service.should_send_silently(123, mock_online_users) is False
 
     # User not online
     mock_cache.get_user_settings.return_value = UserSettings(
@@ -105,17 +125,18 @@ def test_should_send_silently(mock_cache: MagicMock, mock_online_users: dict) ->
         not_on_online_confirmed=True,
         teamtalk_username="another_user",
     )
-    assert should_send_silently(123, mock_cache, mock_online_users) is False
+    assert service.should_send_silently(123, mock_online_users) is False
 
 
 @pytest.mark.asyncio
-async def test_find_recipients(mock_cache: MagicMock) -> None:
+async def test_find_recipients(
+    service: NotificationRecipientService, mock_cache: MagicMock
+) -> None:
     """Test the find_recipients method of NotificationRecipientService."""
     # Mock the UoW and repository method
     uow_mock = AsyncMock()
     uow_mock.users.get_notification_recipients = AsyncMock(return_value=[(1, "en")])
 
-    service = NotificationRecipientService(mock_cache)
     subscriber_ids = {1, 2, 3}
     mock_cache.get_all_subscriber_ids.return_value = subscriber_ids
 
