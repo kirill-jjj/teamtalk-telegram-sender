@@ -60,50 +60,63 @@ class DeeplinkService:
     ) -> str:
         """Handles the logic for a subscribe deeplink."""
         _ = translator.gettext
+        reply_message = ""
+
         if await uow.bans.is_telegram_id_banned(telegram_id):
             logger.warning(
                 "Subscription attempt by banned Telegram ID: %s", telegram_id
             )
-            return _("Your Telegram account is banned from using this service.")
-
-        if not payload:
+            reply_message = _(
+                "Your Telegram account is banned from using this service."
+            )
+        elif not payload:
             logger.error("Subscribe deeplink missing payload for user %s.", telegram_id)
-            return _("Error: Missing required information for subscription.")
-
-        if await uow.bans.is_teamtalk_username_banned(payload):
+            reply_message = _("Error: Missing required information for subscription.")
+        elif await uow.bans.is_teamtalk_username_banned(payload):
             logger.warning(
                 "Subscription attempt with banned TT username: %s by TG ID: %s",
                 payload,
                 telegram_id,
             )
-            return _("The TeamTalk username '{tt_username}' is banned.").format(
-                tt_username=payload
+            reply_message = _(
+                "The TeamTalk username '{tt_username}' is banned."
+            ).format(tt_username=payload)
+        else:
+            result = await self._subscription_service.create_subscription(
+                uow, user_settings, payload
             )
+            if not result.success:
+                reply_message = _(
+                    result.message_key or "An error occurred. Please try again later."
+                )
+            else:
+                self._cache.update_user_settings(user_settings)
+                if await uow.admins.get_by_id(telegram_id):
+                    self._cache.add_admin(telegram_id)
 
-        success = await self._subscription_service.create_subscription(
-            uow, user_settings, payload
-        )
-        if not success:
-            return _("An error occurred. Please try again later.")
-
-        # Cache update for user_settings is now handled here
-        # after successful subscription
-        self._cache.update_user_settings(user_settings)
-
-        # Check if the user is an admin and add them to the cache
-        if await uow.admins.get_by_id(telegram_id):
-            self._cache.add_admin(telegram_id)
-
-        return _("You have successfully subscribed to notifications.")
+                if result.message_key == "subscription_created":
+                    reply_message = _(
+                        "You have successfully subscribed to notifications."
+                    )
+                elif result.message_key == "subscription_updated":
+                    reply_message = _(
+                        "You have successfully re-subscribed to notifications."
+                    )
+                else:
+                    reply_message = _(
+                        "You have successfully subscribed to notifications."
+                    )
+        return reply_message
 
     async def _execute_unsubscribe(
         self, uow: IUnitOfWork, telegram_id: int, translator: NullTranslations
     ) -> str:
         """Handles the logic for an unsubscribe deeplink."""
         _ = translator.gettext
-        if await self._subscription_service.delete_profile(
+        result = await self._subscription_service.delete_profile(
             uow, telegram_id, translator
-        ):
+        )
+        if result.success:
             return _("You have successfully unsubscribed from notifications.")
         return _("You were not subscribed to notifications.")
 

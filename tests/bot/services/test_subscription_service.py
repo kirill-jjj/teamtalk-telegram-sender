@@ -57,11 +57,14 @@ async def test_create_subscription_new_user(
     user_settings = UserSettings(telegram_id=123, language_code="en")
     tt_username = "test_tt_user"
 
+    mock_uow.subscribers.get_by_id.return_value = None
+
     result = await subscription_service.create_subscription(
         mock_uow, user_settings, tt_username
     )
 
-    assert result is True
+    assert result.success is True
+    assert result.message_key == "subscription_created"
 
 
 @pytest.mark.asyncio
@@ -86,7 +89,8 @@ async def test_create_subscription_existing_user(
         mock_uow, user_settings, tt_username
     )
 
-    assert result is True
+    assert result.success is True
+    assert result.message_key == "subscription_updated"
     mock_uow.subscribers.get_by_id.assert_called_once_with(user_settings.telegram_id)
     mock_uow.subscribers.add.assert_not_called()  # Should not add again
     mock_cache.add_subscriber.assert_not_called()  # Should not add again

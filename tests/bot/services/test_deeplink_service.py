@@ -10,7 +10,7 @@ from bot.database.models import UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.deeplink_service import DeeplinkService
-from bot.services.schemas import DeeplinkDTO
+from bot.services.schemas import DeeplinkDTO, OperationResult
 from bot.services.subscription_service import SubscriptionService
 
 
@@ -92,7 +92,9 @@ async def test_execute_subscribe_success(
     mock_uow.reset_mock()
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
-    mock_subscription_service.create_subscription.return_value = True
+    mock_subscription_service.create_subscription.return_value = OperationResult(
+        success=True, message_key="subscription_created"
+    )
     mock_uow.admins.get_by_id.return_value = None  # Ensure user is not an admin
 
     result = await deeplink_service._execute_subscribe(
@@ -188,7 +190,9 @@ async def test_execute_subscribe_create_subscription_fails(
 
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
-    mock_subscription_service.create_subscription.return_value = False
+    mock_subscription_service.create_subscription.return_value = OperationResult(
+        success=False, message_key="error_key"
+    )
     result = await deeplink_service._execute_subscribe(
         mock_uow, telegram_id, mock_translator, payload, user_settings
     )
@@ -196,7 +200,7 @@ async def test_execute_subscribe_create_subscription_fails(
     mock_subscription_service.create_subscription.assert_called_once_with(
         mock_uow, user_settings, payload
     )
-    assert "An error occurred. Please try again later." in result
+    assert "error_key" in result
 
 
 @pytest.mark.asyncio
@@ -213,7 +217,9 @@ async def test_execute_subscribe_user_is_admin(
 
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
-    mock_subscription_service.create_subscription.return_value = True
+    mock_subscription_service.create_subscription.return_value = OperationResult(
+        success=True, message_key="subscription_created"
+    )
     mock_uow.admins.get_by_id.return_value = MagicMock()  # User is an admin
 
     result = await deeplink_service._execute_subscribe(
@@ -233,7 +239,9 @@ async def test_execute_unsubscribe_success(
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
-    mock_subscription_service.delete_profile.return_value = True
+    mock_subscription_service.delete_profile.return_value = OperationResult(
+        success=True, message_key="unsubscribed"
+    )
     result = await deeplink_service._execute_unsubscribe(
         mock_uow, telegram_id, mock_translator
     )
@@ -252,7 +260,9 @@ async def test_execute_unsubscribe_not_subscribed(
     mock_translator: MagicMock,
 ) -> None:
     telegram_id = 123
-    mock_subscription_service.delete_profile.return_value = False
+    mock_subscription_service.delete_profile.return_value = OperationResult(
+        success=False, message_key="not_subscribed"
+    )
     result = await deeplink_service._execute_unsubscribe(
         mock_uow, telegram_id, mock_translator
     )
@@ -279,7 +289,9 @@ async def test_execute_deeplink_subscribe_action(
     user_settings = UserSettings(telegram_id=123, language_code="en")
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
-    mock_subscription_service.create_subscription.return_value = True
+    mock_subscription_service.create_subscription.return_value = OperationResult(
+        success=True, message_key="subscription_created"
+    )
     result = await deeplink_service.execute_deeplink(
         mock_uow, deeplink, user_settings, mock_translator
     )
@@ -290,6 +302,7 @@ async def test_execute_deeplink_subscribe_action(
 @pytest.mark.asyncio
 async def test_execute_deeplink_unsubscribe_action(
     deeplink_service: DeeplinkService,
+    mock_uow: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     deeplink_token_value = "abc"
@@ -300,6 +313,10 @@ async def test_execute_deeplink_unsubscribe_action(
     )
     telegram_id = 123
     user_settings = UserSettings(telegram_id=telegram_id, language_code="en")
+    # We need to mock the return value of _execute_unsubscribe
+    deeplink_service._execute_unsubscribe = AsyncMock(
+        return_value="You have successfully unsubscribed from notifications."
+    )
     result = await deeplink_service.execute_deeplink(
         mock_uow, deeplink, user_settings, mock_translator
     )
@@ -330,7 +347,9 @@ async def test_execute_telegram_deeplink_success(
     mock_uow.deeplinks.resolve_token.return_value = deeplink
     mock_uow.bans.is_telegram_id_banned.return_value = False
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
-    mock_subscription_service.create_subscription.return_value = True
+    mock_subscription_service.create_subscription.return_value = OperationResult(
+        success=True, message_key="subscription_created"
+    )
     mock_uow.admins.get_by_id.return_value = None
 
     reply_text, success = await deeplink_service.execute_telegram_deeplink(

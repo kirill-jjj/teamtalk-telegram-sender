@@ -38,9 +38,10 @@ class SubscriptionService:
         uow: IUnitOfWork,
         user_settings: UserSettings,
         tt_username: str,
-    ) -> bool:
+    ) -> OperationResult:
         """Creates a new subscription, updating the database and cache."""
         telegram_id = user_settings.telegram_id
+        message_key = "subscription_updated"
 
         subscriber = await uow.subscribers.get_by_id(telegram_id)
         if not subscriber:
@@ -48,6 +49,7 @@ class SubscriptionService:
             await uow.subscribers.add(new_subscriber)
             logger.info("User %s newly subscribed.", telegram_id)
             self._cache.add_subscriber(telegram_id)
+            message_key = "subscription_created"
         else:
             logger.info("User %s re-confirmed subscription.", telegram_id)
 
@@ -60,7 +62,7 @@ class SubscriptionService:
             tt_username,
             telegram_id,
         )
-        return True
+        return OperationResult(success=True, message_key=message_key)
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     async def delete_profile(
