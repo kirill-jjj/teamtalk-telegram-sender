@@ -62,6 +62,7 @@ class SubscriptionService:
             tt_username,
             telegram_id,
         )
+        self._cache.update_user_settings(user_settings)
         return OperationResult(success=True, message_key=message_key)
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

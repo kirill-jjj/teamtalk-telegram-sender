@@ -90,7 +90,6 @@ class DeeplinkService:
                     result.message_key or "An error occurred. Please try again later."
                 )
             else:
-                self._cache.update_user_settings(user_settings)
                 if await uow.admins.get_by_id(telegram_id):
                     self._cache.add_admin(telegram_id)
 
