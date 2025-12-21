@@ -37,6 +37,14 @@ class TeamTalkConnectionError(BotError):
     """Raised when a connection to the TeamTalk server fails."""
 
 
+class TeamTalkUserNotFoundError(BotError):
+    """Raised when a user is not found on the TeamTalk server."""
+
+
+class TeamTalkPermissionError(BotError):
+    """Raised for permission errors during moderation actions on TeamTalk."""
+
+
 class MissingTranslatorError(DependencyError):
     """Raised when the translator is not found or of incorrect type."""
 

@@ -97,7 +97,6 @@ class ServicesProvider(Provider):
         subscription_service: SubscriptionService,
         cache: CacheService,
         settings: Settings,
-        tt_connection: TeamTalkConnection,
         teamtalk_service: TeamTalkService,
     ) -> ModerationService:
         """Provides a ModerationService."""
@@ -106,7 +105,6 @@ class ServicesProvider(Provider):
             subscription_service=subscription_service,
             cache=cache,
             settings=settings,
-            tt_connection=tt_connection,
             teamtalk_service=teamtalk_service,
         )
 

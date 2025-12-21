@@ -88,7 +88,6 @@ def test_get_moderation_service() -> None:
     subscription_service = MagicMock(spec=SubscriptionService)
     cache = MagicMock(spec=CacheService)
     settings = MagicMock(spec=Settings)
-    tt_connection = MagicMock(spec=TeamTalkConnection)
     teamtalk_service = MagicMock(spec=TeamTalkService)
     provider = ServicesProvider()
 
@@ -98,7 +97,6 @@ def test_get_moderation_service() -> None:
         subscription_service,
         cache,
         settings,
-        tt_connection,
         teamtalk_service,
     )
 

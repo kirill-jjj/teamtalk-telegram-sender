@@ -4,7 +4,16 @@ from collections.abc import Callable
 from gettext import NullTranslations
 import logging
 
+from pytalk.exceptions import PytalkPermissionError
+from pytalk.exceptions import TeamTalkError as PytalkException
+
 from bot.config import Settings
+from bot.core.exceptions import (
+    NoActiveTeamTalkConnectionError,
+    TeamTalkConnectionError,
+    TeamTalkPermissionError,
+    TeamTalkUserNotFoundError,
+)
 from bot.services.schemas import TeamTalkFetchResult, UserAccountInfo, UserDTO
 from bot.teamtalk_bot.connection import TeamTalkConnection
 from bot.teamtalk_bot.formatters import (
@@ -29,6 +38,16 @@ class TeamTalkService:
         self._tt_connection = tt_connection
         self._settings = settings
         self._translator_factory = translator_factory
+
+    @property
+    def server_name(self) -> str:
+        """Returns the display name of the TeamTalk server."""
+        translator = self._translator_factory(self._settings.general.default_lang)
+        if not self._tt_connection.instance:
+            return "TeamTalk"
+        return get_server_display_name(
+            self._tt_connection.instance, translator, self._settings
+        )
 
     async def fetch_online_users(
         self, *, is_caller_admin: bool, lang_code: str
@@ -94,3 +113,57 @@ class TeamTalkService:
         ]
 
         return TeamTalkFetchResult(items=accounts_info)
+
+    async def kick_user(self, user_id: int) -> UserDTO:
+        """Kicks a user from the server."""
+        if not self._tt_connection.instance:
+            raise NoActiveTeamTalkConnectionError
+
+        user_to_kick = self._tt_connection.instance.get_user(user_id)
+        if not user_to_kick:
+            raise TeamTalkUserNotFoundError
+
+        translator = self._translator_factory(self._settings.general.default_lang)
+        user_dto = UserDTO(
+            id=user_to_kick.id,
+            nickname=get_tt_user_display_name(user_to_kick, translator),
+            channel_name=get_user_display_channel_name(
+                user_to_kick, is_caller_admin=True, translator=translator
+            ),
+        )
+        try:
+            user_to_kick.kick(from_server=True)
+        except PytalkPermissionError as e:
+            raise TeamTalkPermissionError from e
+        except PytalkException as e:
+            raise TeamTalkConnectionError from e
+        else:
+            return user_dto
+
+    async def ban_user(self, user_id: int) -> UserDTO:
+        """Bans a user from the server."""
+        if not self._tt_connection.instance:
+            raise NoActiveTeamTalkConnectionError
+
+        user_to_ban = self._tt_connection.instance.get_user(user_id)
+        if not user_to_ban:
+            raise TeamTalkUserNotFoundError
+
+        translator = self._translator_factory(self._settings.general.default_lang)
+        user_dto = UserDTO(
+            id=user_to_ban.id,
+            nickname=get_tt_user_display_name(user_to_ban, translator),
+            channel_name=get_user_display_channel_name(
+                user_to_ban, is_caller_admin=True, translator=translator
+            ),
+        )
+
+        try:
+            user_to_ban.ban(from_server=True)
+            user_to_ban.kick(from_server=True)  # Banning doesn't auto-kick
+        except PytalkPermissionError as e:
+            raise TeamTalkPermissionError from e
+        except PytalkException as e:
+            raise TeamTalkConnectionError from e
+        else:
+            return user_dto

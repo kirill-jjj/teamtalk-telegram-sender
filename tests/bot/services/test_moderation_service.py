@@ -101,7 +101,6 @@ def moderation_service(
     mock_subscription_service: AsyncMock,
     mock_cache: MagicMock,
     mock_settings: Settings,
-    mock_tt_connection: AsyncMock,
     mock_teamtalk_service: AsyncMock,
 ) -> ModerationService:
     return ModerationService(
@@ -109,7 +108,6 @@ def moderation_service(
         subscription_service=mock_subscription_service,
         cache=mock_cache,
         settings=mock_settings,
-        tt_connection=mock_tt_connection,
         teamtalk_service=mock_teamtalk_service,
     )
 
@@ -173,24 +171,14 @@ async def test_unban_subscriber_success(
 @pytest.mark.asyncio
 async def test_kick_user_from_server_success(
     moderation_service: ModerationService,
-    mock_tt_connection: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     user_id = 1
     admin_telegram_id = 123
-    mock_user_to_act_on = MagicMock(
-        id=user_id, nickname="KickUser", username=b"kickuser"
-    )
-    mock_tt_connection.instance = MagicMock()
-    mock_tt_connection.instance.get_user.return_value = mock_user_to_act_on
-    mock_tt_connection.instance.server = MagicMock()
-    mock_tt_connection.instance.server.get_properties.return_value.server_name = (
-        "TestServer"
-    )
-    mock_tt_connection.is_ready = True
-    mock_tt_connection.ttstr.side_effect = (
-        lambda x: x.decode() if isinstance(x, bytes) else x
-    )
+    mock_user_dto = MagicMock(id=user_id, nickname="KickUser")
+    mock_teamtalk_service.kick_user.return_value = mock_user_dto
+    mock_teamtalk_service.server_name = "TestServer"
 
     result = await moderation_service.kick_user_from_server(
         user_id=user_id, admin_telegram_id=admin_telegram_id, translator=mock_translator
@@ -198,29 +186,20 @@ async def test_kick_user_from_server_success(
 
     assert result.success is True
     assert "User KickUser kicked from server TestServer." in result.message_key
-    mock_tt_connection.instance.get_user.assert_called_once_with(user_id)
-    mock_user_to_act_on.kick.assert_called_once_with(from_server=True)
+    mock_teamtalk_service.kick_user.assert_called_once_with(user_id)
 
 
 @pytest.mark.asyncio
 async def test_ban_user_from_server_success(
     moderation_service: ModerationService,
-    mock_tt_connection: AsyncMock,
+    mock_teamtalk_service: AsyncMock,
     mock_translator: MagicMock,
 ) -> None:
     user_id = 1
     admin_telegram_id = 123
-    mock_user_to_act_on = MagicMock(id=user_id, nickname="BanUser", username=b"banuser")
-    mock_tt_connection.instance = MagicMock()
-    mock_tt_connection.instance.get_user.return_value = mock_user_to_act_on
-    mock_tt_connection.instance.server = MagicMock()
-    mock_tt_connection.instance.server.get_properties.return_value.server_name = (
-        "TestServer"
-    )
-    mock_tt_connection.is_ready = True
-    mock_tt_connection.ttstr.side_effect = (
-        lambda x: x.decode() if isinstance(x, bytes) else x
-    )
+    mock_user_dto = MagicMock(id=user_id, nickname="BanUser")
+    mock_teamtalk_service.ban_user.return_value = mock_user_dto
+    mock_teamtalk_service.server_name = "TestServer"
 
     result = await moderation_service.ban_user_from_server(
         user_id=user_id, admin_telegram_id=admin_telegram_id, translator=mock_translator
@@ -230,9 +209,7 @@ async def test_ban_user_from_server_success(
     assert (
         "User BanUser banned and kicked from server TestServer." in result.message_key
     )
-    mock_tt_connection.instance.get_user.assert_called_once_with(user_id)
-    mock_user_to_act_on.ban.assert_called_once_with(from_server=True)
-    mock_user_to_act_on.kick.assert_called_once_with(from_server=True)
+    mock_teamtalk_service.ban_user.assert_called_once_with(user_id)
 
 
 @pytest.mark.asyncio

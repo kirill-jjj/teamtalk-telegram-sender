@@ -6,22 +6,21 @@ import logging
 from typing import Annotated, TypeVar
 
 from pydantic import ConfigDict, Field, validate_call
-from pytalk.exceptions import PytalkPermissionError
-from pytalk.exceptions import TeamTalkError as PytalkException
 
 from bot.config import Settings
 from bot.core.enums import AdminCommand, UserListAction
+from bot.core.exceptions import (
+    NoActiveTeamTalkConnectionError,
+    TeamTalkConnectionError,
+    TeamTalkPermissionError,
+    TeamTalkUserNotFoundError,
+)
 from bot.database.models import MutedUser, UserSettings
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
 from bot.services.subscription_service import SubscriptionService
 from bot.services.teamtalk_service import TeamTalkService
-from bot.teamtalk_bot.connection import TeamTalkConnection
-from bot.teamtalk_bot.formatters import (
-    get_server_display_name,
-    get_tt_user_display_name,
-)
 from bot.utils.pagination import get_item_from_paginated_list
 
 T = TypeVar("T")
@@ -38,7 +37,6 @@ class ModerationService:
         subscription_service: SubscriptionService,
         cache: CacheService,
         settings: Settings,
-        tt_connection: TeamTalkConnection,
         teamtalk_service: TeamTalkService,
     ) -> None:
         """Initializes the moderation service."""
@@ -46,7 +44,6 @@ class ModerationService:
         self._subscription_service = subscription_service
         self._cache = cache
         self._settings = settings
-        self._tt_connection = tt_connection
         self._teamtalk_service = teamtalk_service
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -170,57 +167,49 @@ class ModerationService:
     ) -> OperationResult:
         """Generic method to apply kick or ban."""
         _ = translator.gettext
-        if not self._tt_connection or not self._tt_connection.instance:
-            return OperationResult(
-                success=False, message_key=_("Error: No active TeamTalk connection.")
-            )
-
-        user_to_act_on = self._tt_connection.instance.get_user(user_id)
-        server_name_for_display = get_server_display_name(
-            self._tt_connection.instance, translator, self._settings
-        )
-
-        if not user_to_act_on:
-            msg = _("User not found on server {server_host} anymore.").format(
-                server_host=server_name_for_display
-            )
-            return OperationResult(success=False, message_key=msg)
-
-        user_nickname = get_tt_user_display_name(user_to_act_on, translator)
+        server_name_for_display = self._teamtalk_service.server_name
 
         try:
             if action == AdminCommand.KICK:
-                user_to_act_on.kick(from_server=True)
+                user_dto = await self._teamtalk_service.kick_user(user_id)
                 logger.info(
                     "Admin %s kicked TT user '%s' (ID: %s)",
                     admin_telegram_id,
-                    user_nickname,
+                    user_dto.nickname,
                     user_id,
                 )
                 msg = _(
                     "User {user_nickname} kicked from server {server_host}."
                 ).format(
-                    user_nickname=escape(user_nickname),
+                    user_nickname=escape(user_dto.nickname),
                     server_host=server_name_for_display,
                 )
                 return OperationResult(success=True, message_key=msg)
             if action == AdminCommand.BAN:
-                user_to_act_on.ban(from_server=True)
-                user_to_act_on.kick(from_server=True)
+                user_dto = await self._teamtalk_service.ban_user(user_id)
                 logger.info(
                     "Admin %s banned and kicked TT user '%s' (ID: %s)",
                     admin_telegram_id,
-                    user_nickname,
+                    user_dto.nickname,
                     user_id,
                 )
                 msg = _(
                     "User {user_nickname} banned and kicked from server {server_host}."
                 ).format(
-                    user_nickname=escape(user_nickname),
+                    user_nickname=escape(user_dto.nickname),
                     server_host=server_name_for_display,
                 )
                 return OperationResult(success=True, message_key=msg)
-        except (PytalkPermissionError, PytalkException):
+        except NoActiveTeamTalkConnectionError:
+            return OperationResult(
+                success=False, message_key=_("Error: No active TeamTalk connection.")
+            )
+        except TeamTalkUserNotFoundError:
+            msg = _("User not found on server {server_host} anymore.").format(
+                server_host=server_name_for_display
+            )
+            return OperationResult(success=False, message_key=msg)
+        except (TeamTalkPermissionError, TeamTalkConnectionError):
             logger.exception("Error during '%s' on TT user ID %s", action, user_id)
             return OperationResult(
                 success=False,
