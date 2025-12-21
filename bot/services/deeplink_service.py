@@ -83,7 +83,7 @@ class DeeplinkService:
             ).format(tt_username=payload)
         else:
             result = await self._subscription_service.create_subscription(
-                uow, user_settings, payload
+                uow, telegram_id, user_settings.language_code, payload
             )
             if not result.success:
                 reply_message = _(

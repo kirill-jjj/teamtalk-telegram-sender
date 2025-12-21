@@ -6,7 +6,7 @@ from typing import Annotated
 
 from pydantic import ConfigDict, Field, validate_call
 
-from bot.database.models import SubscribedUser, UserSettings
+from bot.database.models import SubscribedUser
 from bot.database.uow import IUnitOfWork
 from bot.services.cache_service import CacheService
 from bot.services.schemas import OperationResult
@@ -36,11 +36,14 @@ class SubscriptionService:
     async def create_subscription(
         self,
         uow: IUnitOfWork,
-        user_settings: UserSettings,
+        telegram_id: int,
+        default_lang: str,
         tt_username: str,
     ) -> OperationResult:
         """Creates a new subscription, updating the database and cache."""
-        telegram_id = user_settings.telegram_id
+        user_settings = await uow.users.get_or_create(
+            telegram_id, defaults={"language_code": default_lang}
+        )
         message_key = "subscription_updated"
 
         subscriber = await uow.subscribers.get_by_id(telegram_id)
@@ -101,12 +104,16 @@ class SubscriptionService:
     async def link_tt_account(
         self,
         uow: IUnitOfWork,
-        user_settings: UserSettings,
+        telegram_id: int,
         tt_username: str,
+        default_lang: str,
         translator: NullTranslations,
     ) -> OperationResult:
         """Links a TeamTalk account to a subscriber."""
         _ = translator.gettext
+        user_settings = await uow.users.get_or_create(
+            telegram_id, defaults={"language_code": default_lang}
+        )
 
         if await uow.bans.is_teamtalk_username_banned(tt_username):
             logger.warning(

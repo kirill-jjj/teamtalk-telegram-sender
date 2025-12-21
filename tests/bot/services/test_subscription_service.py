@@ -58,9 +58,10 @@ async def test_create_subscription_new_user(
     tt_username = "test_tt_user"
 
     mock_uow.subscribers.get_by_id.return_value = None
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await subscription_service.create_subscription(
-        mock_uow, user_settings, tt_username
+        mock_uow, user_settings.telegram_id, user_settings.language_code, tt_username
     )
 
     assert result.success is True
@@ -84,9 +85,10 @@ async def test_create_subscription_existing_user(
     mock_uow.subscribers.get_by_id.return_value = SubscribedUser(
         telegram_id=user_settings.telegram_id
     )
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await subscription_service.create_subscription(
-        mock_uow, user_settings, tt_username
+        mock_uow, user_settings.telegram_id, user_settings.language_code, tt_username
     )
 
     assert result.success is True
@@ -165,9 +167,14 @@ async def test_link_tt_account_new_link(
     tt_username = "new_tt_user"
 
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await subscription_service.link_tt_account(
-        mock_uow, user_settings, tt_username, mock_translator
+        mock_uow,
+        user_settings.telegram_id,
+        tt_username,
+        user_settings.language_code,
+        mock_translator,
     )
 
     assert result.success is True
@@ -196,9 +203,14 @@ async def test_link_tt_account_relink(
     tt_username = "new_tt_user"
 
     mock_uow.bans.is_teamtalk_username_banned.return_value = False
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await subscription_service.link_tt_account(
-        mock_uow, user_settings, tt_username, mock_translator
+        mock_uow,
+        user_settings.telegram_id,
+        tt_username,
+        user_settings.language_code,
+        mock_translator,
     )
 
     assert result.success is True
@@ -229,9 +241,14 @@ async def test_link_tt_account_banned_username(
     tt_username = "banned_tt_user"
 
     mock_uow.bans.is_teamtalk_username_banned.return_value = True
+    mock_uow.users.get_or_create.return_value = user_settings
 
     result = await subscription_service.link_tt_account(
-        mock_uow, user_settings, tt_username, mock_translator
+        mock_uow,
+        user_settings.telegram_id,
+        tt_username,
+        user_settings.language_code,
+        mock_translator,
     )
 
     assert result.success is False

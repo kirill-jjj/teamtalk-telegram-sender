@@ -867,7 +867,6 @@ async def link_tt_account_chosen(
     query: CallbackQuery,
     callback_data: LinkTTAccountChosenCallback,
     translator: FromDishka[NullTranslations],
-    user_settings_service: FromDishka[UserSettingsService],
     subscription_service: FromDishka[SubscriptionService],
     uow: Annotated[IUnitOfWork, FromDishka()],
 ) -> None:
@@ -878,17 +877,12 @@ async def link_tt_account_chosen(
     return_page = callback_data.page
 
     async with uow:
-        user_settings = await user_settings_service.get_or_create(
+        result = await subscription_service.link_tt_account(
             uow,
             target_telegram_id,
-            "en",  # Language doesn\'t matter for this operation
-        )
-        if not user_settings:
-            await query.answer(_("Subscriber settings not found."), show_alert=True)
-            return
-
-        result = await subscription_service.link_tt_account(
-            uow, user_settings, tt_username, translator
+            tt_username,
+            translator.info().get("language", "en"),
+            translator,
         )
         await uow.commit()
 
