@@ -10,7 +10,7 @@ from aiogram.types import Chat
 from aiogram.utils.formatting import Bold, Text, as_list
 
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import ManageMutedMenuDTO, SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, SubscriberView
 
 if TYPE_CHECKING:
     from bot.core.enums import AdminCommand
@@ -65,24 +65,23 @@ def format_telegram_user_display_name(chat: Chat | None) -> str:
 
 
 def format_subscriber_details(
-    user_settings: SettingsViewDTO,
-    display_name: str,
+    data: SubscriberView,
     translator: gettext.NullTranslations,
 ) -> str:
     """Formats the detailed view of a subscriber's settings."""
     _ = translator.gettext
 
     translated_subscriber_line = _("Subscriber: {display_name}").format(
-        display_name=display_name
+        display_name=data.display_name
     )
-    noon_status = _("Enabled") if user_settings.not_on_online_enabled else _("Disabled")
+    noon_status = _("Enabled") if data.not_on_online_enabled else _("Disabled")
     details_parts = [f"<b>{translated_subscriber_line}</b>"]
     details_parts.extend(
         [
             _("Linked TT Account: {tt_username}").format(
-                tt_username=user_settings.teamtalk_username or _("None")
+                tt_username=data.teamtalk_username or _("None")
             ),
-            _("Language: {lang}").format(lang=user_settings.language_code),
+            _("Language: {lang}").format(lang=data.language_code),
             _("NOON (Not on Online): {status}").format(status=noon_status),
         ]
     )
@@ -92,7 +91,7 @@ def format_subscriber_details(
         NotificationSetting.JOIN_OFF.value: _("Leave Only"),
         NotificationSetting.NONE.value: _("None"),
     }
-    notif_setting_str = user_settings.notification_settings.value
+    notif_setting_str = data.notification_settings.value
     details_parts.append(
         _("Notifications: {setting}").format(
             setting=notif_setting_map.get(notif_setting_str, notif_setting_str)
@@ -100,7 +99,7 @@ def format_subscriber_details(
     )
     mute_mode_str = (
         _("Blacklist")
-        if user_settings.mute_list_mode == MuteListMode.blacklist
+        if data.mute_list_mode == MuteListMode.blacklist
         else _("Whitelist")
     )
     details_parts.append(_("Mute Mode: {mode}").format(mode=mute_mode_str))

@@ -73,11 +73,7 @@ async def _display_subscriber_view(
     keyboard = create_subscriber_action_menu_keyboard(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
-    # The user_settings object is now nested inside the view_data DTO
-    user_settings_dto = view_data.to_settings_view()
-    text = format_subscriber_details(
-        user_settings_dto, view_data.display_name, translator
-    )
+    text = format_subscriber_details(view_data, translator)
 
     # This assumes query.message is a Message, which is guaranteed by
     # @ensure_message_context

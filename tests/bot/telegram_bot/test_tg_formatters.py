@@ -8,7 +8,7 @@ import pytest
 
 from bot.core.enums import AdminCommand
 from bot.database.types import MuteListMode, NotificationSetting
-from bot.services.schemas import ManageMutedMenuDTO, SettingsViewDTO
+from bot.services.schemas import ManageMutedMenuDTO, SubscriberView
 from bot.telegram_bot.formatters import (
     format_help_text,
     format_manage_muted_menu_text,
@@ -121,8 +121,9 @@ def test_format_telegram_user_display_name(
 def test_format_subscriber_details(mock_translator: MagicMock) -> None:
     """Test the format_subscriber_details function."""
 
-    user_settings = SettingsViewDTO(
+    data = SubscriberView(
         telegram_id=123,
+        display_name="John Doe",
         language_code="en",
         notification_settings=NotificationSetting.ALL,
         mute_list_mode=MuteListMode.blacklist,
@@ -131,27 +132,29 @@ def test_format_subscriber_details(mock_translator: MagicMock) -> None:
         teamtalk_username="test_tt_user",
         muted_users_count=5,
     )
-    display_name = "John Doe"
 
     # Adjust mock to handle specific keys
     key_map = {
-        f"Subscriber: {display_name}": f"Subscriber: {display_name}",
+        "Subscriber: {display_name}": "Subscriber: John Doe",
         "Enabled": "Enabled",
-        f"Linked TT Account: {user_settings.teamtalk_username}": (
-            f"Linked TT Account: {user_settings.teamtalk_username}"
-        ),
-        f"Language: {user_settings.language_code}": (
-            f"Language: {user_settings.language_code}"
-        ),
+        "Linked TT Account: {tt_username}": "Linked TT Account: test_tt_user",
+        "Language: {lang}": "Language: en",
         "NOON (Not on Online): {status}": "NOON (Not on Online): Enabled",
         "All (Join & Leave)": "All (Join & Leave)",
         "Notifications: {setting}": "Notifications: All (Join & Leave)",
         "Blacklist": "Blacklist",
         "Mute Mode: {mode}": "Mute Mode: Blacklist",
     }
-    mock_translator.gettext.side_effect = lambda s: key_map.get(s, s)
+    mock_translator.gettext.side_effect = lambda s: key_map.get(s, s).format(
+        display_name=data.display_name,
+        tt_username=data.teamtalk_username,
+        lang=data.language_code,
+        status="Enabled",
+        setting="All (Join & Leave)",
+        mode="Blacklist",
+    )
 
-    result = format_subscriber_details(user_settings, display_name, mock_translator)
+    result = format_subscriber_details(data, mock_translator)
 
     assert "Subscriber: John Doe" in result
     assert "Linked TT Account: test_tt_user" in result
