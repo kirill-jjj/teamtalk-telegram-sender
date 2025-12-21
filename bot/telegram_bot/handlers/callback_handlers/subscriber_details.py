@@ -20,7 +20,7 @@ from bot.database.types import MuteListMode, NotificationSetting
 from bot.database.uow import IUnitOfWork
 from bot.services.moderation_service import ModerationService
 from bot.services.report_service import ReportService
-from bot.services.schemas import MuteListDisplayDTO, SettingsViewDTO, SubscriberView
+from bot.services.schemas import MuteListDisplayDTO, SubscriberView
 from bot.services.subscription_service import SubscriptionService
 from bot.services.user_settings_service import UserSettingsService
 from bot.telegram_bot.callback_data import (
@@ -74,16 +74,7 @@ async def _display_subscriber_view(
         translator, target_telegram_id=target_telegram_id, page=page_context
     )
     # The user_settings object is now nested inside the view_data DTO
-    user_settings_dto = SettingsViewDTO(
-        telegram_id=view_data.telegram_id,
-        language_code=view_data.language_code,
-        notification_settings=view_data.notification_settings,
-        mute_list_mode=view_data.mute_list_mode,
-        not_on_online_enabled=view_data.not_on_online_enabled,
-        not_on_online_confirmed=view_data.not_on_online_confirmed,
-        teamtalk_username=view_data.teamtalk_username,
-        muted_users_count=view_data.muted_users_count,
-    )
+    user_settings_dto = view_data.to_settings_view()
     text = format_subscriber_details(
         user_settings_dto, view_data.display_name, translator
     )

@@ -114,6 +114,19 @@ class SubscriberView(BaseModel):
     muted_users_count: int
     display_name: str
 
+    def to_settings_view(self) -> "SettingsViewDTO":
+        """Converts this SubscriberView to a SettingsViewDTO."""
+        return SettingsViewDTO(
+            telegram_id=self.telegram_id,
+            language_code=self.language_code,
+            notification_settings=self.notification_settings,
+            mute_list_mode=self.mute_list_mode,
+            not_on_online_enabled=self.not_on_online_enabled,
+            not_on_online_confirmed=self.not_on_online_confirmed,
+            teamtalk_username=self.teamtalk_username,
+            muted_users_count=self.muted_users_count,
+        )
+
 
 class ModerationViewData(BaseModel):
     """A DTO for data required to render a moderation view."""
