@@ -34,8 +34,13 @@ class TelegramSettings(BaseSettings):
     event_token: str = Field(
         description="Main Telegram Bot API token for receiving events."
     )
-    message_token: str = Field(
-        description="Telegram Bot API token for sending messages (can be same as event_token)."
+    message_token: str | None = Field(
+        default=None,
+        description=(
+            "Telegram Bot API token for sending messages (optional). "
+            "If not set, private message forwarding is disabled. "
+            "Can be same as event_token."
+        ),
     )
     admin_chat_id: int = Field(
         description="Telegram Chat ID of the administrator for notifications."

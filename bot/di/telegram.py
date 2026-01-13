@@ -40,7 +40,8 @@ class TelegramProvider(Provider):
     @staticmethod
     def get_bot_message(settings: Settings) -> MessageBot:
         """Provides the message-sending Bot instance."""
-        bot = _create_bot(token=settings.telegram.message_token)
+        token = settings.telegram.message_token or settings.telegram.event_token
+        bot = _create_bot(token=token)
         return cast("MessageBot", bot)
 
     @provide(scope=Scope.APP)

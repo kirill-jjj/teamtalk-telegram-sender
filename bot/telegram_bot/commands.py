@@ -20,6 +20,30 @@ from bot.telegram_bot.types.bots import EventBot
 logger = logging.getLogger(__name__)
 
 
+def _log_command_errors(results: list[object], *, scope: str) -> bool:
+    """Logs errors from concurrent command setup."""
+    had_errors = False
+    for result in results:
+        if not isinstance(result, Exception):
+            continue
+        had_errors = True
+        if (
+            isinstance(result, TelegramBadRequest)
+            and "chat not found" in str(result).lower()
+        ):
+            logger.warning(
+                "Could not set commands for one or more %s: chat not found. "
+                "This is expected if the user hasn't started the bot.",
+                scope,
+            )
+            continue
+        if isinstance(result, TelegramAPIError):
+            logger.error("Failed to set commands for one or more %s.", scope)
+            continue
+        logger.error("Unexpected error while setting commands for %s.", scope)
+    return had_errors
+
+
 def get_user_commands(_: Callable[[str], str]) -> list[BotCommand]:
     """Returns a list of BotCommand objects for regular users, localized."""
     return [
@@ -73,13 +97,11 @@ async def set_telegram_commands(
             )
         )
 
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for task in global_command_tasks:
-                tg.create_task(task)
-        logger.debug("Successfully set global user commands for all languages.")
-    except TelegramAPIError:
-        logger.exception("Failed to set global commands for one or more languages.")
+    if global_command_tasks:
+        results = await asyncio.gather(*global_command_tasks, return_exceptions=True)
+        had_errors = _log_command_errors(results, scope="languages")
+        if not had_errors:
+            logger.debug("Successfully set global user commands for all languages.")
 
     admin_command_tasks = []
     for admin_id in cache.get_all_admin_ids():
@@ -102,21 +124,11 @@ async def set_telegram_commands(
             )
         )
 
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for task in admin_command_tasks:
-                tg.create_task(task)
-        logger.debug("Successfully set custom commands for all admins.")
-    except TelegramBadRequest as e:
-        if "chat not found" in str(e).lower():
-            logger.warning(
-                "Could not set commands for one or more admins: chat not found. "
-                "This is expected if the admin has not started the bot yet."
-            )
-        else:
-            logger.exception("TelegramBadRequest while setting commands for admins.")
-    except TelegramAPIError:
-        logger.exception("Failed to set commands for one or more admins.")
+    if admin_command_tasks:
+        results = await asyncio.gather(*admin_command_tasks, return_exceptions=True)
+        had_errors = _log_command_errors(results, scope="admins")
+        if not had_errors:
+            logger.debug("Successfully set custom commands for all admins.")
 
 
 async def clear_telegram_commands_for_chat(bot: EventBot, chat_id: int) -> None:

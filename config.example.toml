@@ -21,8 +21,9 @@ db_file = "bot_data.db"
 # This is the main bot token.
 event_token = "YOUR_TELEGRAM_BOT_EVENT_TOKEN_HERE" # Replace with your bot's token
 
-# Telegram Bot API token for sending messages (if different from event_token, otherwise can be the same)
-# Often, the same token is used for both receiving and sending.
+# Telegram Bot API token for sending messages (optional).
+# If omitted, private message forwarding from TeamTalk to Telegram is disabled.
+# If different from event_token, otherwise can be the same.
 message_token = "YOUR_TELEGRAM_BOT_MESSAGE_TOKEN_HERE" # Replace or use same as event_token
 
 # Telegram Chat ID of the administrator for receiving administrative notifications or alerts from the bot.

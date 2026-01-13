@@ -136,6 +136,12 @@ class TelegramNotificationHandler:
         event: PrivateMessageReceivedEvent,
     ) -> None:
         """Handles the PrivateMessageReceivedEvent and forwards it to the admin."""
+        if not self.settings.telegram.message_token:
+            logger.info(
+                "Message bot token is not configured, skipping private message "
+                "forwarding."
+            )
+            return
         admin_chat_id = self.settings.telegram.admin_chat_id
         if not admin_chat_id:
             logger.debug(
