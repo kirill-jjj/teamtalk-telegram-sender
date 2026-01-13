@@ -18,6 +18,7 @@ from dishka.integrations.aiogram import (
     setup_dishka,
 )
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncEngine
 from toml import TomlDecodeError
 
 from bot.config import Settings
@@ -53,6 +54,7 @@ async def on_shutdown(
     tt_connection: FromDishka[TeamTalkConnection],
     event_bot: FromDishka[EventBot],
     message_bot: FromDishka[MessageBot],
+    engine: FromDishka[AsyncEngine],
 ) -> None:
     """Handles application shutdown."""
     logger.info("Application shutting down...")
@@ -91,6 +93,12 @@ async def on_shutdown(
             await cleanup_task
         except asyncio.CancelledError:
             logger.info("Deeplink cleanup task cancelled.")
+
+    try:
+        await engine.dispose()
+        logger.info("Database engine disposed.")
+    except RuntimeError:
+        logger.exception("Failed to dispose database engine.")
 
 
 async def run_bot(config_path: str) -> None:

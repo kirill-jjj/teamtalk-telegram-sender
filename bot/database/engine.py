@@ -8,7 +8,7 @@ from typing import TypeAlias  # For sessionmaker type hint
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import ConnectionPoolEntry
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 AsyncSessionFactoryType: TypeAlias = Callable[[], AsyncSession]
 
 
-def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
-    """Creates and returns a new session factory based on the provided configuration."""
+def create_engine(config: Settings) -> AsyncEngine:
+    """Creates and returns a new async engine based on the provided configuration."""
     # This import is needed for SQLModel/Alembic to correctly see all tables.
     # The variable `_` is used to prevent linters from complaining about an unused
     # import.
@@ -65,6 +65,11 @@ def create_session_factory(config: Settings) -> AsyncSessionFactoryType:
     # so that objects do not become "detached" from the session after a commit.
     # Use keyword arguments for clarity and to match mypy's expected signature
     # when class_ is specified.
+    return engine
+
+
+def create_session_factory(engine: AsyncEngine) -> AsyncSessionFactoryType:
+    """Creates and returns a new session factory based on the provided engine."""
     return sessionmaker(  # type: ignore[call-overload, no-any-return]
         bind=engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
     )
