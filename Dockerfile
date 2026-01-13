@@ -1,36 +1,36 @@
-# Этап 1: Сборка и установка зависимостей
 FROM python:3.11-slim AS builder
-
 WORKDIR /app
 
-# Устанавливаем uv
-RUN pip install uv
+# Install uv for dependency sync.
+RUN pip install --no-cache-dir uv
 
-# Копируем файлы зависимостей и устанавливаем их
+# Install dependencies into the project venv.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --all-extras
+RUN uv sync --frozen --no-dev
 
-# Этап 2: Финальный образ
+# Final image.
 FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
 
-# --- ИСПРАВЛЕНИЕ ---
-# Устанавливаем все системные зависимости: для распаковки (p7zip-full) и для работы SDK (libasound2, libpulse0)
-RUN apt-get update && apt-get install -y p7zip-full libasound2 libpulse0 && rm -rf /var/lib/apt/lists/*
+# Runtime system packages.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends p7zip-full libasound2 libpulse0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user.
+RUN useradd --create-home --uid 10001 appuser
 
 WORKDIR /app
 
-# Копируем установленные зависимости из этапа сборки
+# Copy the virtualenv and app sources.
 COPY --from=builder /app/.venv /app/.venv
+COPY --chown=appuser:appuser . .
 
-# Копируем остальные файлы приложения
-COPY . .
+# Compile locales with the venv python.
+RUN python scripts/manage_locales.py compile
 
-# --- ИСПРАВЛЕНИЕ ---
-# Патчим библиотеку pytalk, чтобы она не завершала работу после установки SDK
-RUN sed -i 's/sys.exit(0)/# sys.exit(0)/' /app/.venv/lib/python3.11/site-packages/pytalk/tools/ttsdk_downloader.py
+USER appuser
 
-# Компилируем файлы локализации, добавив .venv/bin в PATH
-RUN PATH="/app/.venv/bin:$PATH" python scripts/manage_locales.py compile
-
-# Указываем команду для запуска приложения
-CMD ["/app/.venv/bin/python", "-m", "sender", "--config", "config.toml"]
+CMD ["python", "-m", "sender", "--config", "config.toml"]
